@@ -1,0 +1,28 @@
+modLoader="javafml" #mandatory
+loaderVersion="[40,)" #mandatory
+license="All Rights Reserved"
+updateJSONURL="${update_json}" #optional
+issueTrackerURL="https://github.com/Carro1001/MonsterHunter-NewWorld/issues" #optional
+displayURL="" #optional
+logoFile=""
+credits="Life" #optional
+authors="carro1001, AlexVR"
+
+[[mods]] #mandatory
+    modId="mhnw" #mandatory
+    version="1" #mandatory
+    displayName="Monster Hunter: New World" #mandatory
+    description='''
+    '''
+## A dependency - use the . to indicate dependency for a specific modid. Dependencies are optional.
+[[dependencies.mhnw]] #optional
+    # the modid of the dependency
+    modId="forge" #mandatory
+    # Does this dependency have to exist - if not, ordering below must be specified
+    mandatory=true #mandatory
+    # The version range of the dependency
+    versionRange="[40,)" #mandatory
+    # An ordering relationship for the dependency - BEFORE or AFTER required if the relationship is not mandatory
+    ordering="NONE"
+    # Side this dependency is applied on - BOTH, CLIENT or SERVER
+    side="BOTH"
