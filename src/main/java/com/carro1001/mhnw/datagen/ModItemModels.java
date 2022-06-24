@@ -6,7 +6,7 @@ import net.minecraft.data.DataGenerator;
 import net.minecraftforge.client.model.generators.ItemModelProvider;
 import net.minecraftforge.common.data.ExistingFileHelper;
 
-import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
+import static com.carro1001.mhnw.utils.MHNWReferences.*;
 
 public class ModItemModels extends ItemModelProvider {
     public ModItemModels(DataGenerator generator, ExistingFileHelper existingFileHelper) {
@@ -65,6 +65,19 @@ public class ModItemModels extends ItemModelProvider {
         singleTexture(Registration.BUCKET_NITROTOAD_ITEM.get().getRegistryName().getPath(),
                 mcLoc("item/handheld"),
                 "layer0",modLoc("item/"+ MHNWReferences.BUCKET_NITROTOAD_ITEM));
+
+        singleTexture(Registration.BONE_HEAD.get().getRegistryName().getPath(),
+                mcLoc("item/generated"),
+                "layer0",modLoc("item/" + BONE_ARMOR_HEAD_ITEM));
+        singleTexture(Registration.BONE_CHEST.get().getRegistryName().getPath(),
+                mcLoc("item/generated"),
+                "layer0",modLoc("item/" + BONE_ARMOR_CHESTPLATE_ITEM));
+        singleTexture(Registration.BONE_LEGGINGS.get().getRegistryName().getPath(),
+                mcLoc("item/generated"),
+                "layer0",modLoc("item/" + BONE_ARMOR_LEGGING_ITEM));
+        singleTexture(Registration.BONE_BOOTS.get().getRegistryName().getPath(),
+                mcLoc("item/generated"),
+                "layer0",modLoc("item/" + BONE_ARMOR_BOOT_ITEM));
 
         withExistingParent(Registration.APTONOTH_EGG_ITEM.get().getRegistryName().getPath(), mcLoc("item/template_spawn_egg"));
 

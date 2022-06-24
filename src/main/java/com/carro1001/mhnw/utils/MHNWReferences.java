@@ -24,6 +24,12 @@ public class MHNWReferences {
     public static final String BUCKET_POISONTOAD_ITEM = "bucketed_poisontoad";
     public static final String BUCKET_PARATOAD_ITEM = "bucketed_paratoad";
     public static final String BUCKET_SLEEPTOAD_ITEM = "bucketed_sleeptoad";
+
+    public static final String BONE_ARMOR_ITEM = "bone_armor";
+    public static final String BONE_ARMOR_HEAD_ITEM = "bone_head";
+    public static final String BONE_ARMOR_CHESTPLATE_ITEM = "bone_chestplate";
+    public static final String BONE_ARMOR_LEGGING_ITEM = "bone_legging";
+    public static final String BONE_ARMOR_BOOT_ITEM = "bone_boots";
     public static final String APTONOTH = "aptonoth";
 
 }

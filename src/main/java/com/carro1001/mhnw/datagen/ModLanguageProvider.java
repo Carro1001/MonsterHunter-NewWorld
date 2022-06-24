@@ -35,6 +35,10 @@ public class ModLanguageProvider extends LanguageProvider {
         add(Registration.BUCKET_PARATOAD_ITEM.get(), "Bucketed Paratoad" );
         add(Registration.BUCKET_POISONTOAD_ITEM.get(), "Bucketed Poisontoad" );
         add(Registration.BUCKET_NITROTOAD_ITEM.get(), "Bucketed Nitrotoad" );
+        add(Registration.BONE_HEAD.get(), "Bone Helmet" );
+        add(Registration.BONE_CHEST.get(), "Bone Chestplate" );
+        add(Registration.BONE_LEGGINGS.get(), "Bone Leggings" );
+        add(Registration.BONE_BOOTS.get(), "Bone Boots" );
         add("itemGroup.mhnw", "MHNW" );
         add(Registration.APTONOTH_EGG_ITEM.get(), "Aptonoth Spawn Egg");
         add(Registration.APTONOTH.get(), "Aptonoth");

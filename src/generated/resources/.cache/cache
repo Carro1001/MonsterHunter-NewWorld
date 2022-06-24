@@ -3,7 +3,7 @@ b05a29087dbdb53227b2ade7e00d9cef93c35d0d assets/mhnw/blockstates/dragonite_ore.j
 b5fe041c8160bedd69d5b18462cecbdad60a05d3 assets/mhnw/blockstates/earth_crystal_cluster.json
 20e1ac1e942a23aeac2452a2ba3dafa097adaeb2 assets/mhnw/blockstates/ice_crystal_cluster.json
 b7352b0dddc5b198e1008fcd13679a03afd54d20 assets/mhnw/blockstates/machalite_ore.json
-45402db585280e6adbc167f6b36afbe861441b6c assets/mhnw/lang/en_us.json
+de1e273985885bbae32e077c87b96b153cf500b0 assets/mhnw/lang/en_us.json
 5ba6d0ad606f3344634842fb04b37ae38b783201 assets/mhnw/models/block/carbalite_ore.json
 29f6129f2b118691c5c4139468550077d0333d7d assets/mhnw/models/block/dragonite_ore.json
 82e648c3e0496d95398071d2180e32b395c996e6 assets/mhnw/models/block/earth_crystal_cluster.json
@@ -11,9 +11,9 @@ b7352b0dddc5b198e1008fcd13679a03afd54d20 assets/mhnw/blockstates/machalite_ore.j
 0cb4386b175a6db2d990e091ae3ccbc37112109a assets/mhnw/models/block/machalite_ore.json
 98167609bf3898587f7565736a6fc24a7966cacd assets/mhnw/models/item/aptonoth.json
 286f00846232a6b7fcf360e43a86929a7708ee03 assets/mhnw/models/item/bone_boots.json
-e52359994f00943be60f6b68eb89db0cb886f2f8 assets/mhnw/models/item/bone_chest.json
+20c0a0c30eebb4635b96aeb550842d89a58626f4 assets/mhnw/models/item/bone_chestplate.json
 50c26f0100a5ea8369b9b920dc957e2c8324021a assets/mhnw/models/item/bone_head.json
-041bbb50bbc571dd6a40d93fd84dc96b4893f766 assets/mhnw/models/item/bone_leggings.json
+b5ad805dbbadd957374c1cf2186dc14e672d754b assets/mhnw/models/item/bone_legging.json
 e4b97a1a4fb4840a40a32c04b3ea8f8305caa560 assets/mhnw/models/item/bucketed_nitrotoad.json
 84c9df8577f86f404cc1583df26d57b33d215fe8 assets/mhnw/models/item/bucketed_paratoad.json
 beb881db9569df5ee793598ce73e1680cdaf0aa0 assets/mhnw/models/item/bucketed_poisontoad.json
