@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cross",
+  "textures": {
+    "cross": "mhnw:block/ice_crystal_cluster"
+  }
+}

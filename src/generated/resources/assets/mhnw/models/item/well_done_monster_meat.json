@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "mhnw:item/well_done_monster_meat"
+  }
+}

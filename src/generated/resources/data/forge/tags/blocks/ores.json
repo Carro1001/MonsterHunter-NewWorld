@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "values": [
+    "mhnw:carbalite_ore",
+    "mhnw:dragonite_ore",
+    "mhnw:machalite_ore",
+    "mhnw:ice_crystal_cluster",
+    "mhnw:earth_crystal_cluster"
+  ]
+}

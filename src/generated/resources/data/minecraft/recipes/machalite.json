@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:smelting",
+  "ingredient": {
+    "item": "mhnw:machalite_ore"
+  },
+  "result": "mhnw:machalite",
+  "experience": 1.0,
+  "cookingtime": 100
+}
