@@ -42,6 +42,8 @@ public class ModLanguageProvider extends LanguageProvider {
         add("itemGroup.mhnw", "MHNW" );
         add(Registration.APTONOTH_EGG_ITEM.get(), "Aptonoth Spawn Egg");
         add(Registration.APTONOTH.get(), "Aptonoth");
+        add(Registration.BITTERBUG_ITEM.get(), "Bitter Bug");
+        add(Registration.BITTERBUG.get(), "Bitter Bug");
 
     }
 

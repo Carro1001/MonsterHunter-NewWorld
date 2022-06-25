@@ -1,8 +1,12 @@
 package com.carro1001.mhnw.setup;
 
+import com.carro1001.mhnw.blocks.ParticleOre;
+import com.carro1001.mhnw.client.particles.sleepParticle.SleepParticleType;
 import com.carro1001.mhnw.entities.aptonoth.AptonothEntity;
+import com.carro1001.mhnw.entities.bitterbug.BitterbugEntity;
 import com.carro1001.mhnw.items.bone_armor.BoneArmorItem;
 import com.carro1001.mhnw.utils.MHNWReferences;
+import net.minecraft.core.particles.ParticleType;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.MobCategory;
@@ -30,6 +34,7 @@ public class Registration {
     private static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, MODID);
     private static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES = DeferredRegister.create(ForgeRegistries.BLOCK_ENTITIES, MODID);
     public static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(ForgeRegistries.ENTITIES, MODID);
+    public static final DeferredRegister<ParticleType<?>> PARTICLES = DeferredRegister.create(ForgeRegistries.PARTICLE_TYPES, MODID);
 
     public static  void init(){
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
@@ -37,8 +42,11 @@ public class Registration {
         BLOCKS.register(bus);
         ITEMS.register(bus);
         BLOCK_ENTITIES.register(bus);
+        PARTICLES.register(bus);
+
         ENTITIES.register(bus);
     }
+    public static final RegistryObject<SleepParticleType> SLEEP_PARTICLE_TYPE = PARTICLES.register(MHNWReferences.SLEEP_PARTICLE_REGNAME, SleepParticleType::new);
 
     private static final BlockBehaviour.Properties ORE_PROPERTIES = BlockBehaviour.Properties.of(Material.STONE).strength(2f);
     private static final BlockBehaviour.Properties CRYSTAL_PROPERTIES = BlockBehaviour.Properties.of(Material.AMETHYST).noOcclusion().strength(2f).dynamicShape();
@@ -48,6 +56,9 @@ public class Registration {
 
     public static final RegistryObject<Block> DRAGONITE_ORE_BLOCK = BLOCKS.register(DRAGONITE_ORE , () -> new OreBlock(ORE_PROPERTIES));
     public static final RegistryObject<Item> DRAGONITE_ORE_ITEM = fromBlock(DRAGONITE_ORE_BLOCK);
+
+    public static final RegistryObject<Block> PARTLICLE_ORE_BLOCK = BLOCKS.register("particle_ore" , () -> new ParticleOre(ORE_PROPERTIES));
+    public static final RegistryObject<Item> PARTLICLE_ORE_ITEM = fromBlock(PARTLICLE_ORE_BLOCK);
 
     public static final RegistryObject<Block> MACHALITE_ORE_BLOCK = BLOCKS.register(MACHALITE_ORE , () -> new OreBlock(ORE_PROPERTIES));
     public static final RegistryObject<Item> MACHALITE_ORE_ITEM = fromBlock(MACHALITE_ORE_BLOCK);
@@ -77,11 +88,18 @@ public class Registration {
     public static final RegistryObject<Item> BUCKET_SLEEPTOAD_ITEM = ITEMS.register(MHNWReferences.BUCKET_SLEEPTOAD_ITEM, () -> new Item(basicItem));
 
     public static final RegistryObject<EntityType<AptonothEntity>> APTONOTH = ENTITIES.register(MHNWReferences.APTONOTH, () -> EntityType.Builder.of(AptonothEntity::new, MobCategory.CREATURE)
-            .sized(0.7f, 1.5f)
+            .sized(1.4f, 3.2f)
             .clientTrackingRange(8)
             .setShouldReceiveVelocityUpdates(false)
             .build(MHNWReferences.APTONOTH));
     public static final RegistryObject<Item> APTONOTH_EGG_ITEM = ITEMS.register(MHNWReferences.APTONOTH, () -> new ForgeSpawnEggItem(APTONOTH, 0x351c75, 0x5b5b5b, new Item.Properties().tab(GROUP)));
+
+    public static final RegistryObject<EntityType<BitterbugEntity>> BITTERBUG = ENTITIES.register(MHNWReferences.BITTERBUG, () -> EntityType.Builder.of(BitterbugEntity::new, MobCategory.CREATURE)
+            .sized(0.4f, 0.2f)
+            .clientTrackingRange(8)
+            .setShouldReceiveVelocityUpdates(false)
+            .build(MHNWReferences.BITTERBUG));
+    public static final RegistryObject<Item> BITTERBUG_ITEM = ITEMS.register(MHNWReferences.BITTERBUG_ITEM, () -> new ForgeSpawnEggItem(BITTERBUG, 0x351c75, 0x5b5b5b, new Item.Properties().tab(GROUP)));
 
     public static final RegistryObject<BoneArmorItem> BONE_HEAD = ITEMS.register(BONE_ARMOR_HEAD_ITEM,
             () -> new BoneArmorItem(ArmorMaterials.CHAIN, EquipmentSlot.HEAD, new Item.Properties()));

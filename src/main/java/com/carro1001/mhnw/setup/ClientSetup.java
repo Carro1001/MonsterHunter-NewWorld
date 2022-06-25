@@ -2,6 +2,8 @@ package com.carro1001.mhnw.setup;
 
 import com.carro1001.mhnw.entities.aptonoth.AptonothModel;
 import com.carro1001.mhnw.entities.aptonoth.AptonothRenderer;
+import com.carro1001.mhnw.entities.bitterbug.BitterbugModel;
+import com.carro1001.mhnw.entities.bitterbug.BitterbugRenderer;
 import com.carro1001.mhnw.items.bone_armor.BoneArmorItem;
 import com.carro1001.mhnw.items.bone_armor.BoneArmorRenderer;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
@@ -24,6 +26,7 @@ public class ClientSetup {
         event.enqueueWork( () -> {
             ItemBlockRenderTypes.setRenderLayer(Registration.EARTH_CRYSTAL_CLUSTER_BLOCK.get(), RenderType.cutout());
             ItemBlockRenderTypes.setRenderLayer(Registration.ICE_CRYSTAL_CLUSTER_BLOCK.get(), RenderType.cutout());
+            ItemBlockRenderTypes.setRenderLayer(Registration.PARTLICLE_ORE_BLOCK.get(), RenderType.cutoutMipped());
 
         });
         MinecraftForge.EVENT_BUS.register(ForgeHooksClient.ClientEvents.class);
@@ -32,6 +35,7 @@ public class ClientSetup {
     @SubscribeEvent
     public static void onRegisterLayers(EntityRenderersEvent.RegisterLayerDefinitions event) {
         event.registerLayerDefinition(AptonothModel.LAYER_LOCATION, AptonothModel::createBodyLayer);
+        event.registerLayerDefinition(BitterbugModel.LAYER_LOCATION, BitterbugModel::createBodyLayer);
    }
     @SubscribeEvent
     public static void registerRenderers(final EntityRenderersEvent.AddLayers event) {
@@ -41,6 +45,7 @@ public class ClientSetup {
     public static void onRegisterRenderer(EntityRenderersEvent.RegisterRenderers event) {
 
         event.registerEntityRenderer(Registration.APTONOTH.get(), AptonothRenderer::new);
+        event.registerEntityRenderer(Registration.BITTERBUG.get(), BitterbugRenderer::new);
 
     }
 }

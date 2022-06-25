@@ -24,6 +24,7 @@ public class ModBlockStates extends BlockStateProvider {
         simpleBlock(Registration.DRAGONITE_ORE_BLOCK.get());
         simpleBlock(Registration.EARTH_CRYSTAL_CLUSTER_BLOCK.get());
         simpleBlock(Registration.ICE_CRYSTAL_CLUSTER_BLOCK.get());
+        simpleBlock(Registration.PARTLICLE_ORE_BLOCK.get());
 
     }
     private BiConsumer<Direction, ModelBuilder<BlockModelBuilder>.ElementBuilder.FaceBuilder> addTexture(String texture) {

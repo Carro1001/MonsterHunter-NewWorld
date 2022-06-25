@@ -21,6 +21,7 @@ public class ModItemModels extends ItemModelProvider {
         withExistingParent(Registration.DRAGONITE_ORE_ITEM.get().getRegistryName().getPath(),modLoc("block/"+ MHNWReferences.DRAGONITE_ORE));
         withExistingParent(Registration.EARTH_CRYSTAL_CLUSTER_BLOCK.get().getRegistryName().getPath(),modLoc("block/" + MHNWReferences.EARTH_CRYSTAL_CLUSTER));
         withExistingParent(Registration.ICE_CRYSTAL_CLUSTER_BLOCK.get().getRegistryName().getPath(),modLoc("block/"+ MHNWReferences.ICE_CRYSTAL_CLUSTER));
+        withExistingParent(Registration.PARTLICLE_ORE_BLOCK.get().getRegistryName().getPath(),modLoc("block/particle_ore"));
 
         singleTexture(Registration.CARBALITE_ITEM.get().getRegistryName().getPath(),
                 mcLoc("item/generated"),
@@ -65,7 +66,9 @@ public class ModItemModels extends ItemModelProvider {
         singleTexture(Registration.BUCKET_NITROTOAD_ITEM.get().getRegistryName().getPath(),
                 mcLoc("item/handheld"),
                 "layer0",modLoc("item/"+ MHNWReferences.BUCKET_NITROTOAD_ITEM));
-
+        singleTexture(Registration.BITTERBUG_ITEM.get().getRegistryName().getPath(),
+                mcLoc("item/handheld"),
+                "layer0",modLoc("item/"+ MHNWReferences.BITTERBUG_ITEM));
         singleTexture(Registration.BONE_HEAD.get().getRegistryName().getPath(),
                 mcLoc("item/generated"),
                 "layer0",modLoc("item/" + BONE_ARMOR_HEAD_ITEM));

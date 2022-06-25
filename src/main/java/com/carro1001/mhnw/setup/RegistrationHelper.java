@@ -1,6 +1,7 @@
 package com.carro1001.mhnw.setup;
 
 import com.carro1001.mhnw.entities.aptonoth.AptonothEntity;
+import com.carro1001.mhnw.entities.bitterbug.BitterbugEntity;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -12,6 +13,7 @@ public class RegistrationHelper {
     @SubscribeEvent
     public static void onAttributeCreate(EntityAttributeCreationEvent event) {
         event.put(Registration.APTONOTH.get(), AptonothEntity.prepareAttributes().build());
+        event.put(Registration.BITTERBUG.get(), BitterbugEntity.prepareAttributes().build());
 
     }
 }
