@@ -55,10 +55,6 @@ public class AptonothEntity  extends AbstractHorse implements IAnimatable, IAnim
             event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.aptonoth.walk", true));
             return PlayState.CONTINUE;
         }
-        if ((this.dead || this.getHealth() < 0.01)) {
-            event.getController().setAnimation(new AnimationBuilder().addAnimation(this.dead ? "animation.aptonoth.dead" : "animation.aptonoth.death", false));
-            return PlayState.CONTINUE;
-        }
         if (!event.isMoving() && this.getSpeed() <= 0) {
             event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.aptonoth.idle", true));
             return PlayState.CONTINUE;
