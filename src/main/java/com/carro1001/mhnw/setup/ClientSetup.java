@@ -1,9 +1,10 @@
 package com.carro1001.mhnw.setup;
 
-import com.carro1001.mhnw.entities.aptonoth.AptonothModel;
 import com.carro1001.mhnw.entities.aptonoth.AptonothRenderer;
 import com.carro1001.mhnw.entities.bitterbug.BitterbugModel;
 import com.carro1001.mhnw.entities.bitterbug.BitterbugRenderer;
+import com.carro1001.mhnw.entities.rathalos.RathalasRenderer;
+import com.carro1001.mhnw.entities.rathian.RathianRenderer;
 import com.carro1001.mhnw.items.bone_armor.BoneArmorItem;
 import com.carro1001.mhnw.items.bone_armor.BoneArmorRenderer;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
@@ -34,7 +35,6 @@ public class ClientSetup {
 
     @SubscribeEvent
     public static void onRegisterLayers(EntityRenderersEvent.RegisterLayerDefinitions event) {
-        event.registerLayerDefinition(AptonothModel.LAYER_LOCATION, AptonothModel::createBodyLayer);
         event.registerLayerDefinition(BitterbugModel.LAYER_LOCATION, BitterbugModel::createBodyLayer);
    }
     @SubscribeEvent
@@ -45,6 +45,8 @@ public class ClientSetup {
     public static void onRegisterRenderer(EntityRenderersEvent.RegisterRenderers event) {
 
         event.registerEntityRenderer(Registration.APTONOTH.get(), AptonothRenderer::new);
+        event.registerEntityRenderer(Registration.RATHIAN.get(), RathianRenderer::new);
+        event.registerEntityRenderer(Registration.RATHALOS.get(), RathalasRenderer::new);
         event.registerEntityRenderer(Registration.BITTERBUG.get(), BitterbugRenderer::new);
 
     }

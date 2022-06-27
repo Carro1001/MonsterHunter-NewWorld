@@ -44,7 +44,10 @@ public class ModLanguageProvider extends LanguageProvider {
         add(Registration.APTONOTH.get(), "Aptonoth");
         add(Registration.BITTERBUG_ITEM.get(), "Bitter Bug");
         add(Registration.BITTERBUG.get(), "Bitter Bug");
-
+        add(Registration.RATHIAN_EGG_ITEM.get(), "Rathian Spawn Egg");
+        add(Registration.RATHIAN.get(), "Rathian");
+        add(Registration.RATHALOS_EGG_ITEM.get(), "Rathalos Spawn Egg");
+        add(Registration.RATHALOS.get(), "Rathalos");
     }
 
 

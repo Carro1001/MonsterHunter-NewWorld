@@ -83,6 +83,8 @@ public class ModItemModels extends ItemModelProvider {
                 "layer0",modLoc("item/" + BONE_ARMOR_BOOT_ITEM));
 
         withExistingParent(Registration.APTONOTH_EGG_ITEM.get().getRegistryName().getPath(), mcLoc("item/template_spawn_egg"));
+        withExistingParent(Registration.RATHIAN_EGG_ITEM.get().getRegistryName().getPath(), mcLoc("item/template_spawn_egg"));
+        withExistingParent(Registration.RATHALOS_EGG_ITEM.get().getRegistryName().getPath(), mcLoc("item/template_spawn_egg"));
 
     }
 }

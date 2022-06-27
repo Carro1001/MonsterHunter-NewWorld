@@ -68,7 +68,7 @@ public class AptonothEntity  extends AbstractHorse implements IAnimatable, IAnim
     }
     @Override
     public void registerControllers(AnimationData data) {
-        data.addAnimationController(new AnimationController<>(this, "controller", 0, this::predicate));
+        data.addAnimationController(new AnimationController<>(this, "controller", 5, this::predicate));
     }
 
     @Override

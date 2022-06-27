@@ -15,13 +15,13 @@ public class AptonothRenderer extends GeoEntityRenderer<AptonothEntity> {
     private static final ResourceLocation RESOURCE_LOCATION =  new ResourceLocation(MODID, "textures/entity/"+ APTONOTH +".png");
 
     public AptonothRenderer(EntityRendererProvider.Context context) {
-        super(context, new AptonothModel(context.bakeLayer(AptonothModel.LAYER_LOCATION)));
+        super(context, new AptonothModel());
     }
     @Override
     public RenderType getRenderType(AptonothEntity animatable, float partialTicks, PoseStack stack,
                                     MultiBufferSource renderTypeBuffer, VertexConsumer vertexBuilder, int packedLightIn,
                                     ResourceLocation textureLocation) {
-        return RenderType.entityCutout(getTextureLocation(animatable));
+        return RenderType.entityCutoutNoCull(getTextureLocation(animatable));
     }
     @Override
     public ResourceLocation getTextureLocation(AptonothEntity pEntity) {

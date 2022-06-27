@@ -4,7 +4,7 @@ b5fe041c8160bedd69d5b18462cecbdad60a05d3 assets/mhnw/blockstates/earth_crystal_c
 20e1ac1e942a23aeac2452a2ba3dafa097adaeb2 assets/mhnw/blockstates/ice_crystal_cluster.json
 b7352b0dddc5b198e1008fcd13679a03afd54d20 assets/mhnw/blockstates/machalite_ore.json
 3e5f4ba7b7164c110cb8280a8db1f3f8d04b838c assets/mhnw/blockstates/particle_ore.json
-e345aa06d333c950a08188726d0bd3767535a7cb assets/mhnw/lang/en_us.json
+0e2d0a597bf0618f952d8f73fca6b7b41333ea32 assets/mhnw/lang/en_us.json
 5ba6d0ad606f3344634842fb04b37ae38b783201 assets/mhnw/models/block/carbalite_ore.json
 29f6129f2b118691c5c4139468550077d0333d7d assets/mhnw/models/block/dragonite_ore.json
 82e648c3e0496d95398071d2180e32b395c996e6 assets/mhnw/models/block/earth_crystal_cluster.json
@@ -33,6 +33,8 @@ d30fbc29b6be7e39af68963c26417b73c7ee2bbc assets/mhnw/models/item/earth_crystal.j
 a1608de2dad43aa4f980ddd03c81ff6ccac9c834 assets/mhnw/models/item/machalite_ore.json
 06c01be06f5478a9c571e986a31e7bc59cde68a6 assets/mhnw/models/item/monster_feces.json
 f2547631da5f17594de0b9ba00ea4e935b6d10cd assets/mhnw/models/item/particle_ore.json
+98167609bf3898587f7565736a6fc24a7966cacd assets/mhnw/models/item/rathalos.json
+98167609bf3898587f7565736a6fc24a7966cacd assets/mhnw/models/item/rathian.json
 8b1a0a30c077c8bf453bf0620922b882a73dc38c assets/mhnw/models/item/raw_carbalite.json
 5a66748cce74d6495784073d3694cab9f6d52a3c assets/mhnw/models/item/raw_dragonite.json
 560e879d64cc7dcd46324b2e495e9ed2e2b10a78 assets/mhnw/models/item/raw_machalite.json
