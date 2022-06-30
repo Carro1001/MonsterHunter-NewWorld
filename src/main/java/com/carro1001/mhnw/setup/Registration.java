@@ -97,14 +97,14 @@ public class Registration {
     public static final RegistryObject<Item> APTONOTH_EGG_ITEM = ITEMS.register(MHNWReferences.APTONOTH, () -> new ForgeSpawnEggItem(APTONOTH, 0x351c75, 0x5b5b5b, new Item.Properties().tab(GROUP)));
 
     public static final RegistryObject<EntityType<RathianEntity>> RATHIAN = ENTITIES.register(MHNWReferences.RATHIAN, () -> EntityType.Builder.of(RathianEntity::new, MobCategory.CREATURE)
-            .sized(10.5f, 4.5f)
+            .sized(5.5f, 5.5f)
             .clientTrackingRange(8)
             .setShouldReceiveVelocityUpdates(false)
             .build(MHNWReferences.RATHIAN));
     public static final RegistryObject<Item> RATHIAN_EGG_ITEM = ITEMS.register(MHNWReferences.RATHIAN, () -> new ForgeSpawnEggItem(RATHIAN, 0x263920, 0x000000, new Item.Properties().tab(GROUP)));
 
     public static final RegistryObject<EntityType<RathalosEntity>> RATHALOS = ENTITIES.register(MHNWReferences.RATHALOS, () -> EntityType.Builder.of(RathalosEntity::new, MobCategory.CREATURE)
-            .sized(10.5f, 4.5f)
+            .sized(5.5f, 4.5f)
             .clientTrackingRange(8)
             .setShouldReceiveVelocityUpdates(false)
             .build(MHNWReferences.RATHALOS));

@@ -1,5 +1,6 @@
 package com.carro1001.mhnw.entities.rathian;
 
+import com.carro1001.mhnw.entities.dragon.DragonPart;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -25,7 +26,7 @@ public class RathianRenderer extends GeoEntityRenderer<RathianEntity> {
         if (super.shouldRender(livingEntityIn, camera, camX, camY, camZ)) {
             return true;
         } else {
-            for(RathianPart part : livingEntityIn.rathianParts){
+            for(DragonPart part : livingEntityIn.dragonParts){
                 if(camera.isVisible(part.getBoundingBox())){
                     return true;
                 }
