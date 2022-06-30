@@ -48,6 +48,21 @@ public class ModLanguageProvider extends LanguageProvider {
         add(Registration.RATHIAN.get(), "Rathian");
         add(Registration.RATHALOS_EGG_ITEM.get(), "Rathalos Spawn Egg");
         add(Registration.RATHALOS.get(), "Rathalos");
+
+        add(Registration.TOAD_EGG_ITEM.get(), "Toads Spawn Egg");
+        add(Registration.TOAD.get(), "Toad");
+        add(Registration.BLANGO_EGG_ITEM.get(), "Blango Spawn Egg");
+        add(Registration.BLANGO.get(), "Rathalos");
+        add(Registration.BLANGONGA_EGG_ITEM.get(), "Blangonga Spawn Egg");
+        add(Registration.BLANGONGA.get(), "Blangonga");
+        add(Registration.GIZUCHI_EGG_ITEM.get(), "Great Izuchi Spawn Egg");
+        add(Registration.GIZUCHI.get(), "Great Izuchi");
+        add(Registration.IZUCHI_EGG_ITEM.get(), "Izuchi Spawn Egg");
+        add(Registration.IZUCHI.get(), "Izuchi");
+        add(Registration.ZAMITE_EGG_ITEM.get(), "Zamite Spawn Egg");
+        add(Registration.ZAMITE.get(), "Zamite");
+        add(Registration.ZINOGRE_EGG_ITEM.get(), "Zinogre Spawn Egg");
+        add(Registration.ZINOGRE.get(), "Zinogre");
     }
 
 

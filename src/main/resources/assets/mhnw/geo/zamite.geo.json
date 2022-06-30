@@ -1,0 +1,78 @@
+{
+	"format_version": "1.12.0",
+	"minecraft:geometry": [
+		{
+			"description": {
+				"identifier": "geometry.CW",
+				"texture_width": 128,
+				"texture_height": 128,
+				"visible_bounds_width": 5,
+				"visible_bounds_height": 2.5,
+				"visible_bounds_offset": [0, 0.75, 0]
+			},
+			"bones": [
+				{
+					"name": "ZamiteA",
+					"pivot": [0, 9, -1]
+				},
+				{
+					"name": "Body",
+					"parent": "ZamiteA",
+					"pivot": [0, 9, -1],
+					"cubes": [
+						{"origin": [-7, 0.18209, -7.65485], "size": [14, 12, 13], "uv": [0, 0]},
+						{"origin": [-9, 12.24, -8], "size": [18, 0, 6], "uv": [22, 33]},
+						{"origin": [0, 12, -9], "size": [0, 5, 6], "uv": [0, 27]}
+					]
+				},
+				{
+					"name": "Rightarm",
+					"parent": "Body",
+					"pivot": [5, 9, -4],
+					"cubes": [
+						{"origin": [5.09995, -0.3227, -5.66912], "size": [2, 9, 4], "pivot": [5, 8.5, -4], "rotation": [5, 0, -10], "uv": [22, 52]},
+						{"origin": [7.0854, -3.99374, 2.83703], "size": [0, 8, 6], "pivot": [7, 3, -3], "rotation": [20, -7.5, -47.5], "uv": [0, 19]}
+					]
+				},
+				{
+					"name": "Leftarm",
+					"parent": "Body",
+					"pivot": [-5, 9, -4],
+					"cubes": [
+						{"origin": [-7.09995, -0.3227, -5.66912], "size": [2, 9, 4], "pivot": [-5, 8.5, -4], "rotation": [5, 0, 10], "uv": [0, 0]},
+						{"origin": [-7.0854, -3.99374, 2.83703], "size": [0, 8, 6], "pivot": [-7, 3, -3], "rotation": [20, 7.5, 47.5], "uv": [0, 50]}
+					]
+				},
+				{
+					"name": "Neck",
+					"parent": "Body",
+					"pivot": [0, 10, -8],
+					"cubes": [
+						{"origin": [-6.5, 3.1, -15], "size": [13, 9, 8], "uv": [34, 39]},
+						{"origin": [-9, 12.25, -15], "size": [18, 0, 8], "uv": [20, 25]},
+						{"origin": [0, 12, -15], "size": [0, 7, 6], "uv": [34, 50]}
+					]
+				},
+				{
+					"name": "Head",
+					"parent": "Neck",
+					"pivot": [0, 10, -14],
+					"cubes": [
+						{"origin": [-4, 6, -20], "size": [8, 6, 7], "uv": [54, 10]},
+						{"origin": [-7, 12.1, -24], "size": [14, 0, 10], "uv": [31, 0]},
+						{"origin": [0, 11.9, -21], "size": [0, 5, 6], "uv": [46, 50]}
+					]
+				},
+				{
+					"name": "Tailbase",
+					"parent": "Body",
+					"pivot": [0, 6, 4],
+					"cubes": [
+						{"origin": [-3.5, 2.08123, 4.26552], "size": [7, 8, 14], "pivot": [0, 6, 4], "rotation": [-7.5, 0, 0], "uv": [0, 25]},
+						{"origin": [0, 0.34204, 10.86166], "size": [0, 9, 13], "pivot": [0, 4, 14], "rotation": [-7.5, 0, 0], "uv": [0, 34]}
+					]
+				}
+			]
+		}
+	]
+}

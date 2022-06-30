@@ -86,5 +86,13 @@ public class ModItemModels extends ItemModelProvider {
         withExistingParent(Registration.RATHIAN_EGG_ITEM.get().getRegistryName().getPath(), mcLoc("item/template_spawn_egg"));
         withExistingParent(Registration.RATHALOS_EGG_ITEM.get().getRegistryName().getPath(), mcLoc("item/template_spawn_egg"));
 
+        withExistingParent(Registration.TOAD_EGG_ITEM.get().getRegistryName().getPath(), mcLoc("item/template_spawn_egg"));
+        withExistingParent(Registration.BLANGONGA_EGG_ITEM.get().getRegistryName().getPath(), mcLoc("item/template_spawn_egg"));
+        withExistingParent(Registration.BLANGO.get().getRegistryName().getPath(), mcLoc("item/template_spawn_egg"));
+        withExistingParent(Registration.GIZUCHI_EGG_ITEM.get().getRegistryName().getPath(), mcLoc("item/template_spawn_egg"));
+        withExistingParent(Registration.IZUCHI_EGG_ITEM.get().getRegistryName().getPath(), mcLoc("item/template_spawn_egg"));
+        withExistingParent(Registration.ZAMITE_EGG_ITEM.get().getRegistryName().getPath(), mcLoc("item/template_spawn_egg"));
+        withExistingParent(Registration.ZINOGRE_EGG_ITEM.get().getRegistryName().getPath(), mcLoc("item/template_spawn_egg"));
+
     }
 }

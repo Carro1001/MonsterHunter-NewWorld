@@ -31,7 +31,18 @@ public class MHNWReferences {
     public static final String BONE_ARMOR_LEGGING_ITEM = "bone_legging";
     public static final String BONE_ARMOR_BOOT_ITEM = "bone_boots";
     public static final String APTONOTH = "aptonoth";
+    public static final String BLANGO = "blango";
+    public static final String BLANGONGA = "blangonga";
+    public static final String IZUCHI = "izuchi";
+    public static final String ZAMITE = "zamite";
+    public static final String ZINOGRE = "zinogre";
+    public static final String GREAT = "great";
     public static final String BITTERBUG = "bitterbug";
+    public static final String TOAD = "toad";
+    public static final String PARALIZE = "para";
+    public static final String BLAST = "blas";
+    public static final String POISON = "poison";
+    public static final String SLEEP = "sleep";
     public static final String GODBUG = "godbug";
 
     public static final String RATHIAN = "rathian";

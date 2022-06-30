@@ -4,8 +4,15 @@ import com.carro1001.mhnw.blocks.ParticleOre;
 import com.carro1001.mhnw.client.particles.sleepParticle.SleepParticleType;
 import com.carro1001.mhnw.entities.aptonoth.AptonothEntity;
 import com.carro1001.mhnw.entities.bitterbug.BitterbugEntity;
+import com.carro1001.mhnw.entities.blango.BlangoEntity;
+import com.carro1001.mhnw.entities.blangonga.BlangongaEntity;
+import com.carro1001.mhnw.entities.greatIzuchi.GreatIzuchiEntity;
+import com.carro1001.mhnw.entities.izuchi.IzuchiEntity;
 import com.carro1001.mhnw.entities.rathalos.RathalosEntity;
 import com.carro1001.mhnw.entities.rathian.RathianEntity;
+import com.carro1001.mhnw.entities.toad.ToadEntity;
+import com.carro1001.mhnw.entities.zamite.ZamiteEntity;
+import com.carro1001.mhnw.entities.zinogre.ZinogreEntity;
 import com.carro1001.mhnw.items.bone_armor.BoneArmorItem;
 import com.carro1001.mhnw.utils.MHNWReferences;
 import net.minecraft.core.particles.ParticleType;
@@ -116,6 +123,54 @@ public class Registration {
             .setShouldReceiveVelocityUpdates(false)
             .build(MHNWReferences.BITTERBUG));
     public static final RegistryObject<Item> BITTERBUG_ITEM = ITEMS.register(MHNWReferences.BITTERBUG_ITEM, () -> new ForgeSpawnEggItem(BITTERBUG, 0x351c75, 0x5b5b5b, new Item.Properties().tab(GROUP)));
+
+    public static final RegistryObject<EntityType<BlangoEntity>> BLANGO = ENTITIES.register(MHNWReferences.BLANGO, () -> EntityType.Builder.of(BlangoEntity::new, MobCategory.CREATURE)
+            .sized(0.4f, 0.2f)
+            .clientTrackingRange(8)
+            .setShouldReceiveVelocityUpdates(false)
+            .build(MHNWReferences.BLANGO));
+    public static final RegistryObject<Item> BLANGO_EGG_ITEM = ITEMS.register(MHNWReferences.BLANGO, () -> new ForgeSpawnEggItem(BLANGO, 0x351c75, 0x5b5b5b, new Item.Properties().tab(GROUP)));
+    public static final RegistryObject<EntityType<BlangongaEntity>> BLANGONGA = ENTITIES.register(MHNWReferences.BLANGONGA, () -> EntityType.Builder.of(BlangongaEntity::new, MobCategory.CREATURE)
+            .sized(0.4f, 0.2f)
+            .clientTrackingRange(8)
+            .setShouldReceiveVelocityUpdates(false)
+            .build(MHNWReferences.BLANGONGA));
+    public static final RegistryObject<Item> BLANGONGA_EGG_ITEM = ITEMS.register(MHNWReferences.BLANGONGA, () -> new ForgeSpawnEggItem(BLANGONGA, 0x351c75, 0x5b5b5b, new Item.Properties().tab(GROUP)));
+
+    public static final RegistryObject<EntityType<IzuchiEntity>> IZUCHI = ENTITIES.register(MHNWReferences.IZUCHI, () -> EntityType.Builder.of(IzuchiEntity::new, MobCategory.CREATURE)
+            .sized(0.4f, 0.2f)
+            .clientTrackingRange(8)
+            .setShouldReceiveVelocityUpdates(false)
+            .build(MHNWReferences.IZUCHI));
+    public static final RegistryObject<Item> IZUCHI_EGG_ITEM = ITEMS.register(MHNWReferences.IZUCHI, () -> new ForgeSpawnEggItem(IZUCHI, 0x351c75, 0x5b5b5b, new Item.Properties().tab(GROUP)));
+    public static final RegistryObject<EntityType<GreatIzuchiEntity>> GIZUCHI = ENTITIES.register(GREAT+MHNWReferences.IZUCHI, () -> EntityType.Builder.of(GreatIzuchiEntity::new, MobCategory.CREATURE)
+            .sized(0.4f, 0.2f)
+            .clientTrackingRange(8)
+            .setShouldReceiveVelocityUpdates(false)
+            .build(GREAT+MHNWReferences.IZUCHI));
+    public static final RegistryObject<Item> GIZUCHI_EGG_ITEM = ITEMS.register(GREAT+MHNWReferences.IZUCHI, () -> new ForgeSpawnEggItem(GIZUCHI, 0x351c75, 0x5b5b5b, new Item.Properties().tab(GROUP)));
+
+    public static final RegistryObject<EntityType<ToadEntity>> TOAD = ENTITIES.register(MHNWReferences.TOAD, () -> EntityType.Builder.of(ToadEntity::new, MobCategory.CREATURE)
+            .sized(0.4f, 0.2f)
+            .clientTrackingRange(8)
+            .setShouldReceiveVelocityUpdates(false)
+            .build(MHNWReferences.TOAD));
+    public static final RegistryObject<Item> TOAD_EGG_ITEM = ITEMS.register(MHNWReferences.TOAD, () -> new ForgeSpawnEggItem(TOAD, 0x351c75, 0x5b5b5b, new Item.Properties().tab(GROUP)));
+
+    public static final RegistryObject<EntityType<ZamiteEntity>> ZAMITE = ENTITIES.register(MHNWReferences.ZAMITE, () -> EntityType.Builder.of(ZamiteEntity::new, MobCategory.CREATURE)
+            .sized(0.4f, 0.2f)
+            .clientTrackingRange(8)
+            .setShouldReceiveVelocityUpdates(false)
+            .build(MHNWReferences.ZAMITE));
+    public static final RegistryObject<Item> ZAMITE_EGG_ITEM = ITEMS.register(MHNWReferences.ZAMITE, () -> new ForgeSpawnEggItem(ZAMITE, 0x351c75, 0x5b5b5b, new Item.Properties().tab(GROUP)));
+
+    public static final RegistryObject<EntityType<ZinogreEntity>> ZINOGRE = ENTITIES.register(MHNWReferences.ZINOGRE, () -> EntityType.Builder.of(ZinogreEntity::new, MobCategory.CREATURE)
+            .sized(0.4f, 0.2f)
+            .clientTrackingRange(8)
+            .setShouldReceiveVelocityUpdates(false)
+            .build(MHNWReferences.ZINOGRE));
+    public static final RegistryObject<Item> ZINOGRE_EGG_ITEM = ITEMS.register(MHNWReferences.ZINOGRE, () -> new ForgeSpawnEggItem(ZINOGRE, 0x351c75, 0x5b5b5b, new Item.Properties().tab(GROUP)));
+
 
     public static final RegistryObject<BoneArmorItem> BONE_HEAD = ITEMS.register(BONE_ARMOR_HEAD_ITEM,
             () -> new BoneArmorItem(ArmorMaterials.CHAIN, EquipmentSlot.HEAD, new Item.Properties()));

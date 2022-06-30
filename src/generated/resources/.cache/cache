@@ -4,7 +4,7 @@ b5fe041c8160bedd69d5b18462cecbdad60a05d3 assets/mhnw/blockstates/earth_crystal_c
 20e1ac1e942a23aeac2452a2ba3dafa097adaeb2 assets/mhnw/blockstates/ice_crystal_cluster.json
 b7352b0dddc5b198e1008fcd13679a03afd54d20 assets/mhnw/blockstates/machalite_ore.json
 3e5f4ba7b7164c110cb8280a8db1f3f8d04b838c assets/mhnw/blockstates/particle_ore.json
-0e2d0a597bf0618f952d8f73fca6b7b41333ea32 assets/mhnw/lang/en_us.json
+b179e46808cc7af92e5f9036ad4455ee56f13e0f assets/mhnw/lang/en_us.json
 5ba6d0ad606f3344634842fb04b37ae38b783201 assets/mhnw/models/block/carbalite_ore.json
 29f6129f2b118691c5c4139468550077d0333d7d assets/mhnw/models/block/dragonite_ore.json
 82e648c3e0496d95398071d2180e32b395c996e6 assets/mhnw/models/block/earth_crystal_cluster.json
@@ -13,6 +13,8 @@ b7352b0dddc5b198e1008fcd13679a03afd54d20 assets/mhnw/blockstates/machalite_ore.j
 3d2e9d342d5b9d94d92a8e180f8234b512e1f57b assets/mhnw/models/block/particle_ore.json
 98167609bf3898587f7565736a6fc24a7966cacd assets/mhnw/models/item/aptonoth.json
 c92bcf6d4d7cbb06ef85501afd4108d65527f03b assets/mhnw/models/item/bitterbug_item.json
+98167609bf3898587f7565736a6fc24a7966cacd assets/mhnw/models/item/blango.json
+98167609bf3898587f7565736a6fc24a7966cacd assets/mhnw/models/item/blangonga.json
 286f00846232a6b7fcf360e43a86929a7708ee03 assets/mhnw/models/item/bone_boots.json
 20c0a0c30eebb4635b96aeb550842d89a58626f4 assets/mhnw/models/item/bone_chestplate.json
 50c26f0100a5ea8369b9b920dc957e2c8324021a assets/mhnw/models/item/bone_head.json
@@ -27,8 +29,10 @@ bf0224102ea427ee1e04de0336a89d644e5d38e2 assets/mhnw/models/item/dragonite.json
 30d0e714f6f064132c5bdee990d4db8f32ae03c7 assets/mhnw/models/item/dragonite_ore.json
 d30fbc29b6be7e39af68963c26417b73c7ee2bbc assets/mhnw/models/item/earth_crystal.json
 327d89fe51ac8b00a95d3ba394bd0c5b92f2ccb3 assets/mhnw/models/item/earth_crystal_cluster.json
+98167609bf3898587f7565736a6fc24a7966cacd assets/mhnw/models/item/greatizuchi.json
 83a2ebd30e161bb9ef5106ca98c74be8e88c5adf assets/mhnw/models/item/ice_crystal.json
 48938de4597c1b98f6f98f27379d63eb56b5bc15 assets/mhnw/models/item/ice_crystal_cluster.json
+98167609bf3898587f7565736a6fc24a7966cacd assets/mhnw/models/item/izuchi.json
 3e539578e091a5e61443d105d795705bc3cf598b assets/mhnw/models/item/machalite.json
 a1608de2dad43aa4f980ddd03c81ff6ccac9c834 assets/mhnw/models/item/machalite_ore.json
 06c01be06f5478a9c571e986a31e7bc59cde68a6 assets/mhnw/models/item/monster_feces.json
@@ -38,7 +42,10 @@ f2547631da5f17594de0b9ba00ea4e935b6d10cd assets/mhnw/models/item/particle_ore.js
 8b1a0a30c077c8bf453bf0620922b882a73dc38c assets/mhnw/models/item/raw_carbalite.json
 5a66748cce74d6495784073d3694cab9f6d52a3c assets/mhnw/models/item/raw_dragonite.json
 560e879d64cc7dcd46324b2e495e9ed2e2b10a78 assets/mhnw/models/item/raw_machalite.json
+98167609bf3898587f7565736a6fc24a7966cacd assets/mhnw/models/item/toad.json
 ffb9677198949694a24ee1b7ed199063a2a58eab assets/mhnw/models/item/well_done_monster_meat.json
+98167609bf3898587f7565736a6fc24a7966cacd assets/mhnw/models/item/zamite.json
+98167609bf3898587f7565736a6fc24a7966cacd assets/mhnw/models/item/zinogre.json
 f2bb9bf6eedc3ed3f16b0288d5a961d4a4c14fde data/forge/tags/blocks/ores.json
 f2bb9bf6eedc3ed3f16b0288d5a961d4a4c14fde data/forge/tags/items/ores.json
 30aae6f29f50ab93646d33b5025347852ee6aff5 data/mhnw/loot_tables/blocks/carbalite_ore.json

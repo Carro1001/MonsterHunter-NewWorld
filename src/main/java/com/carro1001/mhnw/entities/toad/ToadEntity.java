@@ -1,0 +1,80 @@
+package com.carro1001.mhnw.entities.toad;
+
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.level.Level;
+
+import java.util.Random;
+
+public class ToadEntity extends Mob {
+    private static final EntityDataAccessor<Integer> TYPE = SynchedEntityData.defineId(ToadEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> TYPEASSIGNED = SynchedEntityData.defineId(ToadEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> DATA_IS_POWERED = SynchedEntityData.defineId(ToadEntity.class, EntityDataSerializers.BOOLEAN);
+
+    public ToadEntity(EntityType<? extends Mob> p_27557_, Level p_27558_) {
+        super(p_27557_, p_27558_);
+
+    }
+    protected void defineSynchedData() {
+        super.defineSynchedData();
+        this.entityData.define(TYPEASSIGNED, false);
+        this.entityData.define(TYPE, 0);
+
+        this.entityData.define(DATA_IS_POWERED, false);
+    }
+    public void addAdditionalSaveData(CompoundTag pCompound) {
+        super.addAdditionalSaveData(pCompound);
+        if (this.entityData.get(DATA_IS_POWERED)) {
+            pCompound.putBoolean("powered", true);
+        }
+        pCompound.putBoolean("type_assign", getTypeAssignedDir());
+        pCompound.putInt("type", getTypeDir());
+
+    }
+    public boolean getTypeAssignedDir() {
+        return this.entityData.get(TYPEASSIGNED);
+    }
+    public int getTypeDir() {
+        return this.entityData.get(TYPE);
+    }
+    public void setTypeAssignedDir(boolean pState) {
+        this.entityData.set(TYPEASSIGNED, pState);
+    }
+    public void readAdditionalSaveData(CompoundTag pCompound) {
+        super.readAdditionalSaveData(pCompound);
+
+        this.entityData.set(DATA_IS_POWERED, pCompound.getBoolean("powered"));
+
+        this.setTypeDir(pCompound.getInt("type"));
+
+    }
+    public void setTypeDir(int pState) {
+        if(!getTypeAssignedDir()){
+            this.entityData.set(TYPE, pState);
+            this.setTypeAssignedDir(true);
+        }
+    }
+    public void setType() {
+        if (!getTypeAssignedDir()){
+            Random random = new Random();
+            setTypeDir(random.nextInt(4));
+
+        }
+
+    }
+    public static AttributeSupplier.Builder prepareAttributes() {
+        return Mob.createLivingAttributes()
+                .add(Attributes.ATTACK_DAMAGE, 3.0)
+                .add(Attributes.MAX_HEALTH, 10)
+                .add(Attributes.FOLLOW_RANGE, 15.0)
+                .add(Attributes.MOVEMENT_SPEED, 0.3)
+                .add(Attributes.ARMOR, 1.0D)
+                .add(Attributes.ARMOR_TOUGHNESS,1.0D);
+    }
+}
