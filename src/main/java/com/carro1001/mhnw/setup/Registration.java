@@ -19,9 +19,12 @@ import com.carro1001.mhnw.items.ToadBucket;
 import com.carro1001.mhnw.items.bone_armor.BoneArmorItem;
 import com.carro1001.mhnw.utils.MHNWReferences;
 import net.minecraft.core.particles.ParticleType;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.ArmorMaterials;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -92,7 +95,14 @@ public class Registration {
     public static final RegistryObject<Item> RAW_MACHALITE_ITEM = ITEMS.register(MHNWReferences.RAW_MACHALITE_ITEM, () -> new Item(basicItem));
     public static final RegistryObject<Item> EARTH_CRYSTAL_ITEM = ITEMS.register(MHNWReferences.EARTH_CRYSTAL_ITEM, () -> new Item(basicItem));
     public static final RegistryObject<Item> ICE_CRYSTAL_ITEM = ITEMS.register(MHNWReferences.ICE_CRYSTAL_ITEM, () -> new Item(basicItem));
-    public static final RegistryObject<Item> WELL_DONE_MEAT_ITEM = ITEMS.register(MHNWReferences.WELL_DONE_MEAT_ITEM, () -> new Item(basicItem));
+
+    public static final FoodProperties RAW_MEAT = (new FoodProperties.Builder()).nutrition(4).saturationMod(0.1F).effect(new MobEffectInstance(MobEffects.HUNGER, 600, 0), 0.8F).meat().build();
+    public static final FoodProperties RARE_MEAT = (new FoodProperties.Builder()).nutrition(6).saturationMod(0.6F).meat().build();
+    public static final FoodProperties WELL_DONE_MEAT = (new FoodProperties.Builder()).nutrition(8).saturationMod(0.8F).meat().build();
+
+    public static final RegistryObject<Item> RAW_MEAT_ITEM = ITEMS.register(MHNWReferences.RAW_MEAT_ITEM, () -> new Item(basicItem.food(RAW_MEAT)));
+    public static final RegistryObject<Item> RARE_MEAT_ITEM = ITEMS.register(MHNWReferences.RARE_MEAT_ITEM, () -> new Item(basicItem.food(RARE_MEAT)));
+    public static final RegistryObject<Item> WELL_DONE_MEAT_ITEM = ITEMS.register(MHNWReferences.WELL_DONE_MEAT_ITEM, () -> new Item(basicItem.food(WELL_DONE_MEAT)));
     public static final RegistryObject<Item> MONSTER_FECES_ITEM = ITEMS.register(MHNWReferences.MONSTER_FECES_ITEM, () -> new Item(basicItem));
 
     public static final RegistryObject<Item> BUCKET_NITROTOAD_ITEM = ITEMS.register(MHNWReferences.BUCKET_NITROTOAD_ITEM, () ->new ToadBucket(Registration.TOAD,Fluids.WATER,basicItem));

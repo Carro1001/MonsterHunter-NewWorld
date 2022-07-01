@@ -29,6 +29,8 @@ public class ModLanguageProvider extends LanguageProvider {
         add(Registration.RAW_MACHALITE_ITEM.get(), "Raw Machalite" );
         add(Registration.EARTH_CRYSTAL_ITEM.get(), "Earth Crystal" );
         add(Registration.ICE_CRYSTAL_ITEM.get(), "Ice Crystal" );
+        add(Registration.RAW_MEAT_ITEM.get(), "Raw Steak" );
+        add(Registration.RARE_MEAT_ITEM.get(), "Rare Steak" );
         add(Registration.WELL_DONE_MEAT_ITEM.get(), "Well Done Steak" );
         add(Registration.MONSTER_FECES_ITEM.get(), "Monster Feces" );
         add(Registration.BUCKET_SLEEPTOAD_ITEM.get(), "Sleeptoad Bucket" );

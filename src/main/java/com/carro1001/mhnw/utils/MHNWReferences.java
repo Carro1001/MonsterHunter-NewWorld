@@ -17,6 +17,11 @@ public class MHNWReferences {
     public static final String RAW_MACHALITE_ITEM = "raw_machalite";
     public static final String EARTH_CRYSTAL_ITEM = "earth_crystal";
     public static final String ICE_CRYSTAL_ITEM = "ice_crystal";
+
+    public static final String RAW_MEAT_ITEM = "raw_monster_meat";
+
+    public static final String RARE_MEAT_ITEM = "rare_monster_meat";
+    
     public static final String WELL_DONE_MEAT_ITEM = "well_done_monster_meat";
     public static final String MONSTER_FECES_ITEM = "monster_feces";
 

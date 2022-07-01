@@ -35,8 +35,6 @@ public class ClientSetup {
         event.enqueueWork( () -> {
             ItemBlockRenderTypes.setRenderLayer(Registration.EARTH_CRYSTAL_CLUSTER_BLOCK.get(), RenderType.cutout());
             ItemBlockRenderTypes.setRenderLayer(Registration.ICE_CRYSTAL_CLUSTER_BLOCK.get(), RenderType.cutout());
-            ItemBlockRenderTypes.setRenderLayer(Registration.PARTLICLE_ORE_BLOCK.get(), RenderType.cutoutMipped());
-
         });
         MinecraftForge.EVENT_BUS.register(ForgeHooksClient.ClientEvents.class);
     }
