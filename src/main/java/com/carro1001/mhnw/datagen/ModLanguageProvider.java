@@ -32,6 +32,18 @@ public class ModLanguageProvider extends LanguageProvider {
         add(Registration.RAW_MEAT_ITEM.get(), "Raw Steak" );
         add(Registration.RARE_MEAT_ITEM.get(), "Rare Steak" );
         add(Registration.WELL_DONE_MEAT_ITEM.get(), "Well Done Steak" );
+        add(Registration.RATHALOS_PLATE_ITEM.get(), "Rathalos Plate" );
+        add(Registration.RATHALOS_SCALE_ITEM.get(), "Rathalos Scale" );
+        add(Registration.RATHALOS_TAIL_ITEM.get(), "Rathalos Tail" );
+        add(Registration.RATHALOS_WEBBING_ITEM.get(), "Rathalos Webbing" );
+        add(Registration.RATHIAN_PLATE_ITEM.get(), "Rathian Plate" );
+        add(Registration.RATHIAN_SCALE_ITEM.get(), "Rathian Scale" );
+        add(Registration.RATHIAN_TAIL_ITEM.get(), "Rathian Tail" );
+        add(Registration.RATHIAN_WEBBING_ITEM.get(), "Rathian Webbing" );
+        add(Registration.FREEZER_SACK_ITEM.get(), "Freezer Sack" );
+        add(Registration.FLAME_SACK_ITEM.get(), "Flame Sack" );
+        add(Registration.SCREAMER_SACK_ITEM.get(), "Screamer Sack" );
+        add(Registration.SLEEP_SACK_ITEM.get(), "Sleep Sack" );
         add(Registration.MONSTER_FECES_ITEM.get(), "Monster Feces" );
         add(Registration.BUCKET_SLEEPTOAD_ITEM.get(), "Sleeptoad Bucket" );
         add(Registration.BUCKET_PARATOAD_ITEM.get(), "Paratoad Bucket" );

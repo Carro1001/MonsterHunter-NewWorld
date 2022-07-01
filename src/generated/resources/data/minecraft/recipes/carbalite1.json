@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:smelting",
+  "ingredient": {
+    "item": "mhnw:raw_carbalite"
+  },
+  "result": "mhnw:carbalite",
+  "experience": 1.0,
+  "cookingtime": 100
+}

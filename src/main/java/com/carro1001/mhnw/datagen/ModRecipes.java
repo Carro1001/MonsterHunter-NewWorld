@@ -33,6 +33,18 @@ public class ModRecipes extends RecipeProvider {
                         Registration.MACHALITE_ITEM.get(),1f,100)
                 .unlockedBy("has_ore", has(Registration.MACHALITE_ORE_ITEM.get()))
                 .save(p_176532_, "machalite");
+        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Registration.RAW_CARBALITE_ITEM.get()),
+                        Registration.CARBALITE_ITEM.get(),1f,100)
+                .unlockedBy("has_raw", has(Registration.RAW_CARBALITE_ITEM.get()))
+                .save(p_176532_, "carbalite1");
+        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Registration.RAW_DRAGONITE_ITEM.get()),
+                        Registration.DRAGONITE_ITEM.get(),1f,100)
+                .unlockedBy("has_raw", has(Registration.RAW_DRAGONITE_ITEM.get()))
+                .save(p_176532_, "dragonite1");
+        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Registration.RAW_MACHALITE_ITEM.get()),
+                        Registration.MACHALITE_ITEM.get(),1f,100)
+                .unlockedBy("has_raw", has(Registration.RAW_MACHALITE_ITEM.get()))
+                .save(p_176532_, "machalite1");
         SimpleCookingRecipeBuilder.campfireCooking(Ingredient.of(Registration.RAW_MEAT_ITEM.get()),
                         Registration.RARE_MEAT_ITEM.get(),1f,100)
                 .unlockedBy("has_item", has(Registration.RAW_MEAT_ITEM.get()))

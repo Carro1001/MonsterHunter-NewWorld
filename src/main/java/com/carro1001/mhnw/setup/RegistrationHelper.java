@@ -1,16 +1,6 @@
 package com.carro1001.mhnw.setup;
 
-import com.carro1001.mhnw.entities.aptonoth.AptonothEntity;
-import com.carro1001.mhnw.entities.bitterbug.BitterbugEntity;
-import com.carro1001.mhnw.entities.blango.BlangoEntity;
-import com.carro1001.mhnw.entities.blangonga.BlangongaEntity;
-import com.carro1001.mhnw.entities.greatIzuchi.GreatIzuchiEntity;
-import com.carro1001.mhnw.entities.izuchi.IzuchiEntity;
-import com.carro1001.mhnw.entities.rathalos.RathalosEntity;
-import com.carro1001.mhnw.entities.rathian.RathianEntity;
-import com.carro1001.mhnw.entities.toad.ToadEntity;
-import com.carro1001.mhnw.entities.zamite.ZamiteEntity;
-import com.carro1001.mhnw.entities.zinogre.ZinogreEntity;
+import com.carro1001.mhnw.entities.*;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;

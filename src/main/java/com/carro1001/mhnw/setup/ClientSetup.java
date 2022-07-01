@@ -1,20 +1,10 @@
 package com.carro1001.mhnw.setup;
 
-import com.carro1001.mhnw.entities.aptonoth.AptonothRenderer;
-import com.carro1001.mhnw.entities.bitterbug.BitterbugModel;
-import com.carro1001.mhnw.entities.bitterbug.BitterbugRenderer;
-import com.carro1001.mhnw.entities.blango.BlangoRenderer;
-import com.carro1001.mhnw.entities.blangonga.BlangongaRenderer;
-import com.carro1001.mhnw.entities.greatIzuchi.GreatIzuchiRenderer;
-import com.carro1001.mhnw.entities.izuchi.IzuchiRenderer;
-import com.carro1001.mhnw.entities.rathalos.RathalasRenderer;
-import com.carro1001.mhnw.entities.rathian.RathianRenderer;
-import com.carro1001.mhnw.entities.toad.ToadModel;
-import com.carro1001.mhnw.entities.toad.ToadRenderer;
-import com.carro1001.mhnw.entities.zamite.ZamiteRenderer;
-import com.carro1001.mhnw.entities.zinogre.ZinogreRenderer;
-import com.carro1001.mhnw.items.bone_armor.BoneArmorItem;
-import com.carro1001.mhnw.items.bone_armor.BoneArmorRenderer;
+import com.carro1001.mhnw.client.models.entities.BitterbugModel;
+import com.carro1001.mhnw.client.models.entities.ToadModel;
+import com.carro1001.mhnw.client.renderers.entities.*;
+import com.carro1001.mhnw.client.renderers.items.BoneArmorRenderer;
+import com.carro1001.mhnw.items.BoneArmorItem;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraftforge.api.distmarker.Dist;

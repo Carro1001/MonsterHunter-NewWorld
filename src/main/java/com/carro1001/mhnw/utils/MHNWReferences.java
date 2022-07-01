@@ -21,9 +21,16 @@ public class MHNWReferences {
     public static final String RAW_MEAT_ITEM = "raw_monster_meat";
 
     public static final String RARE_MEAT_ITEM = "rare_monster_meat";
-    
+
     public static final String WELL_DONE_MEAT_ITEM = "well_done_monster_meat";
     public static final String MONSTER_FECES_ITEM = "monster_feces";
+
+    public static final String PLATE_ITEM = "plate";
+    public static final String SCALE_ITEM = "scale";
+    public static final String TAIL_ITEM = "tail";
+    public static final String WEBBING_ITEM = "webbing";
+    public static final String SACK = "sack";
+    public static final String[] SACKS = new String[]{"flame","freezer","screamer","sleep"};
 
     public static final String BUCKET_NITROTOAD_ITEM = "nitrotoad_bucket";
     public static final String BUCKET_POISONTOAD_ITEM = "poisontoad_bucket";

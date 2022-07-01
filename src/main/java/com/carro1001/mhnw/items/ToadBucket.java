@@ -1,6 +1,6 @@
 package com.carro1001.mhnw.items;
 
-import com.carro1001.mhnw.entities.toad.ToadEntity;
+import com.carro1001.mhnw.entities.ToadEntity;
 import com.carro1001.mhnw.setup.Registration;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;

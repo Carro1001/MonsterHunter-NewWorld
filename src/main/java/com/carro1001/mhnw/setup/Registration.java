@@ -4,19 +4,9 @@ import com.carro1001.mhnw.client.particles.iceParticle.IceParticleType;
 import com.carro1001.mhnw.client.particles.poisonParticle.PoisonParticleType;
 import com.carro1001.mhnw.client.particles.sleepParticle.SleepParticleType;
 import com.carro1001.mhnw.client.particles.thunderParticle.ThunderParticleType;
-import com.carro1001.mhnw.entities.aptonoth.AptonothEntity;
-import com.carro1001.mhnw.entities.bitterbug.BitterbugEntity;
-import com.carro1001.mhnw.entities.blango.BlangoEntity;
-import com.carro1001.mhnw.entities.blangonga.BlangongaEntity;
-import com.carro1001.mhnw.entities.greatIzuchi.GreatIzuchiEntity;
-import com.carro1001.mhnw.entities.izuchi.IzuchiEntity;
-import com.carro1001.mhnw.entities.rathalos.RathalosEntity;
-import com.carro1001.mhnw.entities.rathian.RathianEntity;
-import com.carro1001.mhnw.entities.toad.ToadEntity;
-import com.carro1001.mhnw.entities.zamite.ZamiteEntity;
-import com.carro1001.mhnw.entities.zinogre.ZinogreEntity;
+import com.carro1001.mhnw.entities.*;
+import com.carro1001.mhnw.items.BoneArmorItem;
 import com.carro1001.mhnw.items.ToadBucket;
-import com.carro1001.mhnw.items.bone_armor.BoneArmorItem;
 import com.carro1001.mhnw.utils.MHNWReferences;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -104,6 +94,21 @@ public class Registration {
     public static final RegistryObject<Item> RARE_MEAT_ITEM = ITEMS.register(MHNWReferences.RARE_MEAT_ITEM, () -> new Item(basicItem.food(RARE_MEAT)));
     public static final RegistryObject<Item> WELL_DONE_MEAT_ITEM = ITEMS.register(MHNWReferences.WELL_DONE_MEAT_ITEM, () -> new Item(basicItem.food(WELL_DONE_MEAT)));
     public static final RegistryObject<Item> MONSTER_FECES_ITEM = ITEMS.register(MHNWReferences.MONSTER_FECES_ITEM, () -> new Item(basicItem));
+
+    public static final RegistryObject<Item> RATHIAN_PLATE_ITEM = ITEMS.register(MHNWReferences.RATHIAN+"_"+ PLATE_ITEM, () -> new Item(basicItem));
+    public static final RegistryObject<Item> RATHIAN_SCALE_ITEM = ITEMS.register(MHNWReferences.RATHIAN+"_"+ SCALE_ITEM, () -> new Item(basicItem));
+    public static final RegistryObject<Item> RATHIAN_TAIL_ITEM = ITEMS.register(MHNWReferences.RATHIAN+"_"+ TAIL_ITEM, () -> new Item(basicItem));
+    public static final RegistryObject<Item> RATHIAN_WEBBING_ITEM = ITEMS.register(MHNWReferences.RATHIAN+"_"+ WEBBING_ITEM, () -> new Item(basicItem));
+
+    public static final RegistryObject<Item> RATHALOS_PLATE_ITEM = ITEMS.register(MHNWReferences.RATHALOS+"_"+ PLATE_ITEM, () -> new Item(basicItem));
+    public static final RegistryObject<Item> RATHALOS_SCALE_ITEM = ITEMS.register(MHNWReferences.RATHALOS+"_"+ SCALE_ITEM, () -> new Item(basicItem));
+    public static final RegistryObject<Item> RATHALOS_TAIL_ITEM = ITEMS.register(MHNWReferences.RATHALOS+"_"+ TAIL_ITEM, () -> new Item(basicItem));
+    public static final RegistryObject<Item> RATHALOS_WEBBING_ITEM = ITEMS.register(MHNWReferences.RATHALOS+"_"+ WEBBING_ITEM, () -> new Item(basicItem));
+
+    public static final RegistryObject<Item> FLAME_SACK_ITEM = ITEMS.register(SACKS[0]+"_"+ SACK, () -> new Item(basicItem));
+    public static final RegistryObject<Item> FREEZER_SACK_ITEM = ITEMS.register(SACKS[1]+"_"+ SACK, () -> new Item(basicItem));
+    public static final RegistryObject<Item> SCREAMER_SACK_ITEM = ITEMS.register(SACKS[2]+"_"+ SACK, () -> new Item(basicItem));
+    public static final RegistryObject<Item> SLEEP_SACK_ITEM = ITEMS.register(SACKS[3]+"_"+ SACK, () -> new Item(basicItem));
 
     public static final RegistryObject<Item> BUCKET_NITROTOAD_ITEM = ITEMS.register(MHNWReferences.BUCKET_NITROTOAD_ITEM, () ->new ToadBucket(Registration.TOAD,Fluids.WATER,basicItem));
     public static final RegistryObject<Item> BUCKET_POISONTOAD_ITEM = ITEMS.register(MHNWReferences.BUCKET_POISONTOAD_ITEM, () -> new ToadBucket(Registration.TOAD,Fluids.WATER,basicItem));

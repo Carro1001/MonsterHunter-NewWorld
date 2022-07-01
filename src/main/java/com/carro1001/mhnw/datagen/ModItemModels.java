@@ -61,6 +61,45 @@ public class ModItemModels extends ItemModelProvider {
                 mcLoc("item/handheld"),
                 "layer0",modLoc("item/"+ MHNWReferences.MONSTER_FECES_ITEM));
 
+        singleTexture(Registration.RATHALOS_PLATE_ITEM.get().getRegistryName().getPath(),
+                mcLoc("item/handheld"),
+                "layer0",modLoc("item/"+ RATHALOS+"_"+PLATE_ITEM));
+        singleTexture(Registration.RATHALOS_SCALE_ITEM.get().getRegistryName().getPath(),
+                mcLoc("item/handheld"),
+                "layer0",modLoc("item/"+ RATHALOS+"_"+SCALE_ITEM));
+        singleTexture(Registration.RATHALOS_TAIL_ITEM.get().getRegistryName().getPath(),
+                mcLoc("item/handheld"),
+                "layer0",modLoc("item/"+ RATHALOS+"_"+TAIL_ITEM));
+        singleTexture(Registration.RATHALOS_WEBBING_ITEM.get().getRegistryName().getPath(),
+                mcLoc("item/handheld"),
+                "layer0",modLoc("item/"+ RATHALOS+"_"+WEBBING_ITEM));
+
+        singleTexture(Registration.RATHIAN_PLATE_ITEM.get().getRegistryName().getPath(),
+                mcLoc("item/handheld"),
+                "layer0",modLoc("item/"+ RATHIAN+"_"+PLATE_ITEM));
+        singleTexture(Registration.RATHIAN_SCALE_ITEM.get().getRegistryName().getPath(),
+                mcLoc("item/handheld"),
+                "layer0",modLoc("item/"+ RATHIAN+"_"+SCALE_ITEM));
+        singleTexture(Registration.RATHIAN_TAIL_ITEM.get().getRegistryName().getPath(),
+                mcLoc("item/handheld"),
+                "layer0",modLoc("item/"+ RATHIAN+"_"+TAIL_ITEM));
+        singleTexture(Registration.RATHIAN_WEBBING_ITEM.get().getRegistryName().getPath(),
+                mcLoc("item/handheld"),
+                "layer0",modLoc("item/"+ RATHIAN+"_"+WEBBING_ITEM));
+
+        singleTexture(Registration.FLAME_SACK_ITEM.get().getRegistryName().getPath(),
+                mcLoc("item/handheld"),
+                "layer0",modLoc("item/"+ SACKS[0]+"_"+SACK));
+        singleTexture(Registration.FREEZER_SACK_ITEM.get().getRegistryName().getPath(),
+                mcLoc("item/handheld"),
+                "layer0",modLoc("item/"+ SACKS[1]+"_"+SACK));
+        singleTexture(Registration.SCREAMER_SACK_ITEM.get().getRegistryName().getPath(),
+                mcLoc("item/handheld"),
+                "layer0",modLoc("item/"+ SACKS[2]+"_"+SACK));
+        singleTexture(Registration.SLEEP_SACK_ITEM.get().getRegistryName().getPath(),
+                mcLoc("item/handheld"),
+                "layer0",modLoc("item/"+ SACKS[3]+"_"+SACK));
+
         singleTexture(Registration.BUCKET_SLEEPTOAD_ITEM.get().getRegistryName().getPath(),
                 mcLoc("item/handheld"),
                 "layer0",modLoc("item/"+ MHNWReferences.BUCKET_SLEEPTOAD_ITEM));
