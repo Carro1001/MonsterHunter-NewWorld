@@ -47,7 +47,6 @@ public class ClientSetup {
         event.registerEntityRenderer(Registration.BITTERBUG.get(), BitterbugRenderer::new);
         event.registerEntityRenderer(Registration.TOAD.get(), ToadRenderer::new);
         event.registerEntityRenderer(Registration.ZINOGRE.get(), ZinogreRenderer::new);
-        event.registerEntityRenderer(Registration.ZAMITE.get(), ZamiteRenderer::new);
         event.registerEntityRenderer(Registration.IZUCHI.get(), IzuchiRenderer::new);
         event.registerEntityRenderer(Registration.GIZUCHI.get(), GreatIzuchiRenderer::new);
         event.registerEntityRenderer(Registration.BLANGONGA.get(), BlangongaRenderer::new);

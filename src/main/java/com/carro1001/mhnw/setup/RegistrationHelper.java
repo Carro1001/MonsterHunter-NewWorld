@@ -20,7 +20,6 @@ public class RegistrationHelper {
         event.put(Registration.BLANGONGA.get(), BlangongaEntity.prepareAttributes().build());
         event.put(Registration.IZUCHI.get(), IzuchiEntity.prepareAttributes().build());
         event.put(Registration.GIZUCHI.get(), GreatIzuchiEntity.prepareAttributes().build());
-        event.put(Registration.ZAMITE.get(), ZamiteEntity.prepareAttributes().build());
         event.put(Registration.ZINOGRE.get(), ZinogreEntity.prepareAttributes().build());
 
     }

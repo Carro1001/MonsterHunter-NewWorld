@@ -176,13 +176,6 @@ public class Registration {
             .build(MHNWReferences.TOAD));
     public static final RegistryObject<Item> TOAD_EGG_ITEM = ITEMS.register(MHNWReferences.TOAD, () -> new ForgeSpawnEggItem(TOAD, 0x1E8262, 0xFFDE7D, new Item.Properties().tab(GROUP)));
 
-    public static final RegistryObject<EntityType<ZamiteEntity>> ZAMITE = ENTITIES.register(MHNWReferences.ZAMITE, () -> EntityType.Builder.of(ZamiteEntity::new, MobCategory.CREATURE)
-            .sized(0.4f, 0.2f)
-            .clientTrackingRange(8)
-            .setShouldReceiveVelocityUpdates(false)
-            .build(MHNWReferences.ZAMITE));
-    public static final RegistryObject<Item> ZAMITE_EGG_ITEM = ITEMS.register(MHNWReferences.ZAMITE, () -> new ForgeSpawnEggItem(ZAMITE, 0xA2D6EB, 0xDCD0A0, new Item.Properties().tab(GROUP)));
-
     public static final RegistryObject<EntityType<ZinogreEntity>> ZINOGRE = ENTITIES.register(MHNWReferences.ZINOGRE, () -> EntityType.Builder.of(ZinogreEntity::new, MobCategory.CREATURE)
             .sized(0.4f, 0.2f)
             .clientTrackingRange(8)

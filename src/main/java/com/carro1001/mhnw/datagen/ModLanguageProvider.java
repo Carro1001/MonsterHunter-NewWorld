@@ -73,8 +73,6 @@ public class ModLanguageProvider extends LanguageProvider {
         add(Registration.GIZUCHI.get(), "Great Izuchi");
         add(Registration.IZUCHI_EGG_ITEM.get(), "Izuchi Spawn Egg");
         add(Registration.IZUCHI.get(), "Izuchi");
-        add(Registration.ZAMITE_EGG_ITEM.get(), "Zamite Spawn Egg");
-        add(Registration.ZAMITE.get(), "Zamite");
         add(Registration.ZINOGRE_EGG_ITEM.get(), "Zinogre Spawn Egg");
         add(Registration.ZINOGRE.get(), "Zinogre");
     }
