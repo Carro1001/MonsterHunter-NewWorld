@@ -31,10 +31,10 @@ public class ModLanguageProvider extends LanguageProvider {
         add(Registration.ICE_CRYSTAL_ITEM.get(), "Ice Crystal" );
         add(Registration.WELL_DONE_MEAT_ITEM.get(), "Well Done Steak" );
         add(Registration.MONSTER_FECES_ITEM.get(), "Monster Feces" );
-        add(Registration.BUCKET_SLEEPTOAD_ITEM.get(), "Bucketed Sleeptoad" );
-        add(Registration.BUCKET_PARATOAD_ITEM.get(), "Bucketed Paratoad" );
-        add(Registration.BUCKET_POISONTOAD_ITEM.get(), "Bucketed Poisontoad" );
-        add(Registration.BUCKET_NITROTOAD_ITEM.get(), "Bucketed Nitrotoad" );
+        add(Registration.BUCKET_SLEEPTOAD_ITEM.get(), "Sleeptoad Bucket" );
+        add(Registration.BUCKET_PARATOAD_ITEM.get(), "Paratoad Bucket" );
+        add(Registration.BUCKET_POISONTOAD_ITEM.get(), "Poisontoad Bucket" );
+        add(Registration.BUCKET_NITROTOAD_ITEM.get(), "Nitrotoad Bucket" );
         add(Registration.BONE_HEAD.get(), "Bone Helmet" );
         add(Registration.BONE_CHEST.get(), "Bone Chestplate" );
         add(Registration.BONE_LEGGINGS.get(), "Bone Leggings" );

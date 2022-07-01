@@ -4,7 +4,7 @@ b5fe041c8160bedd69d5b18462cecbdad60a05d3 assets/mhnw/blockstates/earth_crystal_c
 20e1ac1e942a23aeac2452a2ba3dafa097adaeb2 assets/mhnw/blockstates/ice_crystal_cluster.json
 b7352b0dddc5b198e1008fcd13679a03afd54d20 assets/mhnw/blockstates/machalite_ore.json
 3e5f4ba7b7164c110cb8280a8db1f3f8d04b838c assets/mhnw/blockstates/particle_ore.json
-b179e46808cc7af92e5f9036ad4455ee56f13e0f assets/mhnw/lang/en_us.json
+e00e2a6f9b9febbc5f13d609fe69d4e9517acbf2 assets/mhnw/lang/en_us.json
 5ba6d0ad606f3344634842fb04b37ae38b783201 assets/mhnw/models/block/carbalite_ore.json
 29f6129f2b118691c5c4139468550077d0333d7d assets/mhnw/models/block/dragonite_ore.json
 82e648c3e0496d95398071d2180e32b395c996e6 assets/mhnw/models/block/earth_crystal_cluster.json
@@ -19,10 +19,6 @@ c92bcf6d4d7cbb06ef85501afd4108d65527f03b assets/mhnw/models/item/bitterbug_item.
 20c0a0c30eebb4635b96aeb550842d89a58626f4 assets/mhnw/models/item/bone_chestplate.json
 50c26f0100a5ea8369b9b920dc957e2c8324021a assets/mhnw/models/item/bone_head.json
 b5ad805dbbadd957374c1cf2186dc14e672d754b assets/mhnw/models/item/bone_legging.json
-e4b97a1a4fb4840a40a32c04b3ea8f8305caa560 assets/mhnw/models/item/bucketed_nitrotoad.json
-84c9df8577f86f404cc1583df26d57b33d215fe8 assets/mhnw/models/item/bucketed_paratoad.json
-beb881db9569df5ee793598ce73e1680cdaf0aa0 assets/mhnw/models/item/bucketed_poisontoad.json
-e97d4aed312534359c91b5ac3da5e3bdbd37d661 assets/mhnw/models/item/bucketed_sleeptoad.json
 640b8a6ff197d69d23b84031bd03573677a5d737 assets/mhnw/models/item/carbalite.json
 425e75817f3bb5d72ad0137b5088c97273719487 assets/mhnw/models/item/carbalite_ore.json
 bf0224102ea427ee1e04de0336a89d644e5d38e2 assets/mhnw/models/item/dragonite.json
@@ -36,12 +32,16 @@ d30fbc29b6be7e39af68963c26417b73c7ee2bbc assets/mhnw/models/item/earth_crystal.j
 3e539578e091a5e61443d105d795705bc3cf598b assets/mhnw/models/item/machalite.json
 a1608de2dad43aa4f980ddd03c81ff6ccac9c834 assets/mhnw/models/item/machalite_ore.json
 06c01be06f5478a9c571e986a31e7bc59cde68a6 assets/mhnw/models/item/monster_feces.json
+5ac46d8c319b43f56abc074d4b1094ad6dc26c97 assets/mhnw/models/item/nitrotoad_bucket.json
+6bea23fdeac5eff8b5206d38d2f93e22e34b06ac assets/mhnw/models/item/paratoad_bucket.json
 f2547631da5f17594de0b9ba00ea4e935b6d10cd assets/mhnw/models/item/particle_ore.json
+ee961b100536ade7acc47a7f3b5df462781f4c73 assets/mhnw/models/item/poisontoad_bucket.json
 98167609bf3898587f7565736a6fc24a7966cacd assets/mhnw/models/item/rathalos.json
 98167609bf3898587f7565736a6fc24a7966cacd assets/mhnw/models/item/rathian.json
 8b1a0a30c077c8bf453bf0620922b882a73dc38c assets/mhnw/models/item/raw_carbalite.json
 5a66748cce74d6495784073d3694cab9f6d52a3c assets/mhnw/models/item/raw_dragonite.json
 560e879d64cc7dcd46324b2e495e9ed2e2b10a78 assets/mhnw/models/item/raw_machalite.json
+86527e2232caa6b3dea67224bdf0e50cf2c3fb93 assets/mhnw/models/item/sleeptoad_bucket.json
 98167609bf3898587f7565736a6fc24a7966cacd assets/mhnw/models/item/toad.json
 ffb9677198949694a24ee1b7ed199063a2a58eab assets/mhnw/models/item/well_done_monster_meat.json
 98167609bf3898587f7565736a6fc24a7966cacd assets/mhnw/models/item/zamite.json

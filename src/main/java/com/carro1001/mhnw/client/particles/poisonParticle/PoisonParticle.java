@@ -1,4 +1,4 @@
-package com.carro1001.mhnw.client.particles.sleepParticle;
+package com.carro1001.mhnw.client.particles.poisonParticle;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.ParticleRenderType;
@@ -7,16 +7,14 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
-public class SleepParticle extends TextureSheetParticle {
-    public SleepParticle(ClientLevel worldIn, double xCoordIn, double yCoordIn, double zCoordIn, double xSpeedIn, double ySpeedIn, double speedIn) {
+public class PoisonParticle extends TextureSheetParticle {
+    public PoisonParticle(ClientLevel worldIn, double xCoordIn, double yCoordIn, double zCoordIn, double xSpeedIn, double ySpeedIn, double speedIn) {
         super(worldIn, xCoordIn, yCoordIn, zCoordIn, xSpeedIn, ySpeedIn, speedIn);
 
-
-        var r = 0.078431375f;
-        var g = 0.8666667f;
-        var b = this.random.nextFloat();
+        var r = 0.654902f;
+        var g = this.random.nextInt(115)/255f;
+        var b = this.random.nextInt(217,255)/255f;
         this.setColor(r, g, b);
-
         this.setSize(0.1F, 0.1F);
         this.quadSize *= this.random.nextFloat() * 0.8F + 0.5F;
         this.xd *= (double) 0.02F;

@@ -1,4 +1,4 @@
-package com.carro1001.mhnw.client.particles.sleepParticle;
+package com.carro1001.mhnw.client.particles.iceParticle;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.ParticleRenderType;
@@ -7,16 +7,14 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 @OnlyIn(Dist.CLIENT)
-public class SleepParticle extends TextureSheetParticle {
-    public SleepParticle(ClientLevel worldIn, double xCoordIn, double yCoordIn, double zCoordIn, double xSpeedIn, double ySpeedIn, double speedIn) {
+public class IceParticle extends TextureSheetParticle {
+    public IceParticle(ClientLevel worldIn, double xCoordIn, double yCoordIn, double zCoordIn, double xSpeedIn, double ySpeedIn, double speedIn) {
         super(worldIn, xCoordIn, yCoordIn, zCoordIn, xSpeedIn, ySpeedIn, speedIn);
 
-
-        var r = 0.078431375f;
-        var g = 0.8666667f;
-        var b = this.random.nextFloat();
+        var r = this.random.nextFloat();
+        var g = 0.9254902f;
+        var b = 1;
         this.setColor(r, g, b);
-
         this.setSize(0.1F, 0.1F);
         this.quadSize *= this.random.nextFloat() * 0.8F + 0.5F;
         this.xd *= (double) 0.02F;
@@ -45,5 +43,6 @@ public class SleepParticle extends TextureSheetParticle {
             this.move(this.xd, this.yd, this.zd);
         }
     }
+
 
 }

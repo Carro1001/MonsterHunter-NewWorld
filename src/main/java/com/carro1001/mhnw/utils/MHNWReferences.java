@@ -20,10 +20,10 @@ public class MHNWReferences {
     public static final String WELL_DONE_MEAT_ITEM = "well_done_monster_meat";
     public static final String MONSTER_FECES_ITEM = "monster_feces";
 
-    public static final String BUCKET_NITROTOAD_ITEM = "bucketed_nitrotoad";
-    public static final String BUCKET_POISONTOAD_ITEM = "bucketed_poisontoad";
-    public static final String BUCKET_PARATOAD_ITEM = "bucketed_paratoad";
-    public static final String BUCKET_SLEEPTOAD_ITEM = "bucketed_sleeptoad";
+    public static final String BUCKET_NITROTOAD_ITEM = "nitrotoad_bucket";
+    public static final String BUCKET_POISONTOAD_ITEM = "poisontoad_bucket";
+    public static final String BUCKET_PARATOAD_ITEM = "paratoad_bucket";
+    public static final String BUCKET_SLEEPTOAD_ITEM = "sleeptoad_bucket";
 
     public static final String BONE_ARMOR_ITEM = "bone_armor";
     public static final String BONE_ARMOR_HEAD_ITEM = "bone_head";
@@ -50,5 +50,8 @@ public class MHNWReferences {
     public static final String BITTERBUG_ITEM = "bitterbug_item";
 
     public static final String SLEEP_PARTICLE_REGNAME = "sleep_particle";
+    public static final String POISON_PARTICLE_REGNAME = "poison_particle";
+    public static final String THUNDER_PARTICLE_REGNAME = "thunder_particle";
+    public static final String ICE_PARTICLE_REGNAME = "ice_particle";
 
 }

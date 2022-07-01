@@ -4,12 +4,17 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.ServerLevelAccessor;
 
+import javax.annotation.Nullable;
 import java.util.Random;
 
 public class BitterbugEntity extends Mob {
@@ -67,6 +72,10 @@ public class BitterbugEntity extends Mob {
 
         }
 
+    }
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor p_149132_, DifficultyInstance p_149133_, MobSpawnType p_149134_, @Nullable SpawnGroupData p_149135_, @Nullable CompoundTag p_149136_) {
+        this.setType();
+        return super.finalizeSpawn(p_149132_, p_149133_, p_149134_, p_149135_, p_149136_);
     }
     public static AttributeSupplier.Builder prepareAttributes() {
         return Mob.createLivingAttributes()
