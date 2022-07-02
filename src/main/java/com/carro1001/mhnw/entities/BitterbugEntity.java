@@ -1,5 +1,6 @@
 package com.carro1001.mhnw.entities;
 
+import com.carro1001.mhnw.setup.ModConfig;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -66,11 +67,20 @@ public class BitterbugEntity extends Mob {
         }
     }
     public void setType() {
-        if (!getTypeAssignedDir()){
-            Random random = new Random();
-            setTypeDir(random.nextInt(2));
 
+        while (!getTypeAssignedDir()){
+            Random random = new Random();
+            float chance = random.nextFloat();
+            switch(random.nextInt(2)){
+                case 1:
+                    if(chance < ModConfig.GODBUG_CHANCE.get())setTypeDir(1);
+                    break;
+                case 0:
+                    if(chance < 1-ModConfig.GODBUG_CHANCE.get())setTypeDir(0);
+                    break;
+            }
         }
+
 
     }
     public SpawnGroupData finalizeSpawn(ServerLevelAccessor p_149132_, DifficultyInstance p_149133_, MobSpawnType p_149134_, @Nullable SpawnGroupData p_149135_, @Nullable CompoundTag p_149136_) {

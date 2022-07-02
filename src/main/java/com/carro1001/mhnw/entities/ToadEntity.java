@@ -1,5 +1,6 @@
 package com.carro1001.mhnw.entities;
 
+import com.carro1001.mhnw.setup.ModConfig;
 import com.carro1001.mhnw.setup.Registration;
 import com.carro1001.mhnw.utils.MHNWReferences;
 import net.minecraft.client.Minecraft;
@@ -99,11 +100,25 @@ public class ToadEntity extends Mob implements Bucketable{
         }
     }
     public void setType() {
-        if (!getTypeAssignedDir()){
-            Random random = new Random();
-            setTypeDir(random.nextInt(4));
-        }
 
+        while (!getTypeAssignedDir()){
+            Random random = new Random();
+            float chance = random.nextFloat();
+            switch(random.nextInt(4)){
+                case 0:
+                    if(chance < ModConfig.POISON_CHANCE.get())setTypeDir(0);
+                    break;
+                case 1:
+                    if(chance < ModConfig.SLEEP_CHANCE.get())setTypeDir(1);
+                    break;
+                case 2:
+                    if(chance < ModConfig.PARA_CHANCE.get())setTypeDir(2);
+                    break;
+                case 3:
+                    if(chance < ModConfig.BLAST_CHANCE.get())setTypeDir(3);
+                    break;
+            }
+        }
     }
 
     @Override
@@ -193,6 +208,9 @@ public class ToadEntity extends Mob implements Bucketable{
         if (p_149134_ == MobSpawnType.BUCKET) {
             return p_149135_;
         } else {
+            if(ModConfig.TOADS_WEIGHT.get() == 0){
+                this.dead = true;
+            }
             this.setType();
             return super.finalizeSpawn(p_149132_, p_149133_, p_149134_, p_149135_, p_149136_);
         }

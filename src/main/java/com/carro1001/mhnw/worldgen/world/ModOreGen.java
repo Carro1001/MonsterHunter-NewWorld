@@ -21,28 +21,11 @@ import net.minecraftforge.event.world.BiomeLoadingEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
+import static com.carro1001.mhnw.setup.ModConfig.*;
+
 public class ModOreGen {
 
-    private static final int OVERWORLD_CARBALITE_VEINSIZE = 3;
-    private static final int OVERWORLD_CARBALITE_AMOUNT = 2;
-    private static final int OVERWORLD_CARBALITE_MINY = -60;
-    private static final int OVERWORLD_CARBALITE_MAXY = 10;
-    private static final int OVERWORLD_MACHALITE_VEINSIZE = 3;
-    private static final int OVERWORLD_MACHALITE_AMOUNT = 2;
-    private static final int OVERWORLD_MACHALITE_MINY = -60;
-    private static final int OVERWORLD_MACHALITE_MAXY = 10;
-    private static final int OVERWORLD_DRAGONITE_VEINSIZE = 3;
-    private static final int OVERWORLD_DRAGONITE_AMOUNT = 2;
-    private static final int OVERWORLD_DRAGONITE_MINY = -60;
-    private static final int OVERWORLD_DRAGONITE_MAXY = 10;
-    private static final int OVERWORLD_ICE_CRYSTAL_VEINSIZE = 2;
-    private static final int OVERWORLD_ICE_CRYSTAL_AMOUNT = 50;
-    private static final int OVERWORLD_ICE_CRYSTAL_MINY = -60;
-    private static final int OVERWORLD_ICE_CRYSTAL_MAXY = 10;
-    private static final int OVERWORLD_EARTH_CRYSTAL_VEINSIZE = 2;
-    private static final int OVERWORLD_EARTH_CRYSTAL_AMOUNT = 50;
-    private static final int OVERWORLD_EARTH_CRYSTAL_MINY = -60;
-    private static final int OVERWORLD_EARTH_CRYSTAL_MAXY = 10;
+
 
     public static Holder<PlacedFeature> OVERWORLD_MACHALITE_ORE;
     public static Holder<PlacedFeature> OVERWORLD_CARBALITE_ORE;
@@ -58,44 +41,44 @@ public class ModOreGen {
 
     public static void registerConfiguredFeatures() {
         OreConfiguration overworldCarbaliteConfig = new OreConfiguration(OreFeatures.DEEPSLATE_ORE_REPLACEABLES, Registration.CARBALITE_ORE_BLOCK.get().defaultBlockState(),
-                OVERWORLD_CARBALITE_VEINSIZE);
+                CARBALITE_VEINSIZE.get());
         OVERWORLD_CARBALITE_ORE = registerPlacedFeature(MHNWReferences.CARBALITE_ORE, new ConfiguredFeature<>(Feature.ORE, overworldCarbaliteConfig),
-                CountPlacement.of(OVERWORLD_CARBALITE_AMOUNT),
+                CountPlacement.of(CARBALITE_AMOUNT.get()),
                 InSquarePlacement.spread(),
                 BiomeFilter.biome(),
-                HeightRangePlacement.uniform(VerticalAnchor.absolute(OVERWORLD_CARBALITE_MINY), VerticalAnchor.absolute(OVERWORLD_CARBALITE_MAXY)));
+                HeightRangePlacement.uniform(VerticalAnchor.bottom(), VerticalAnchor.absolute(CARBALITE_MAXY.get())));
 
         OreConfiguration overworldMachaliteConfig = new OreConfiguration(OreFeatures.DEEPSLATE_ORE_REPLACEABLES, Registration.MACHALITE_ORE_BLOCK.get().defaultBlockState(),
-                OVERWORLD_MACHALITE_VEINSIZE);
+                MACHALITE_VEINSIZE.get());
         OVERWORLD_MACHALITE_ORE = registerPlacedFeature(MHNWReferences.MACHALITE_ORE, new ConfiguredFeature<>(Feature.ORE, overworldMachaliteConfig),
-                CountPlacement.of(OVERWORLD_MACHALITE_AMOUNT),
+                CountPlacement.of(MACHALITE_AMOUNT.get()),
                 InSquarePlacement.spread(),
                 BiomeFilter.biome(),
-                HeightRangePlacement.uniform(VerticalAnchor.absolute(OVERWORLD_MACHALITE_MINY), VerticalAnchor.absolute(OVERWORLD_MACHALITE_MAXY)));
+                HeightRangePlacement.uniform(VerticalAnchor.bottom(), VerticalAnchor.absolute(MACHALITE_MAXY.get())));
 
         OreConfiguration overworldDragoniteConfig = new OreConfiguration(OreFeatures.DEEPSLATE_ORE_REPLACEABLES, Registration.DRAGONITE_ORE_BLOCK.get().defaultBlockState(),
-                OVERWORLD_DRAGONITE_VEINSIZE);
+                DRAGONITE_VEINSIZE.get());
         OVERWORLD_DRAGONITE_ORE = registerPlacedFeature(MHNWReferences.DRAGONITE_ORE, new ConfiguredFeature<>(Feature.ORE, overworldDragoniteConfig),
-                CountPlacement.of(OVERWORLD_DRAGONITE_AMOUNT),
+                CountPlacement.of(DRAGONITE_AMOUNT.get()),
                 InSquarePlacement.spread(),
                 BiomeFilter.biome(),
-                HeightRangePlacement.uniform(VerticalAnchor.absolute(OVERWORLD_DRAGONITE_MINY), VerticalAnchor.absolute(OVERWORLD_DRAGONITE_MAXY)));
+                HeightRangePlacement.uniform(VerticalAnchor.bottom(), VerticalAnchor.absolute(DRAGONITE_MAXY.get())));
 
         OreConfiguration overworldIceCrystalConfig = new OreConfiguration(AMETHYST_REPLACEABLES, Registration.ICE_CRYSTAL_CLUSTER_BLOCK.get().defaultBlockState(),
-                OVERWORLD_ICE_CRYSTAL_VEINSIZE);
+                ICE_CRYSTAL_VEINSIZE.get());
         OVERWORLD_ICE_CRYSTAL = registerPlacedFeature(MHNWReferences.ICE_CRYSTAL_CLUSTER, new ConfiguredFeature<>(Feature.ORE, overworldIceCrystalConfig),
-                CountPlacement.of(OVERWORLD_ICE_CRYSTAL_AMOUNT),
+                CountPlacement.of(ICE_CRYSTAL_AMOUNT.get()),
                 InSquarePlacement.spread(),
                 BiomeFilter.biome(),
-                HeightRangePlacement.uniform(VerticalAnchor.absolute(OVERWORLD_ICE_CRYSTAL_MINY), VerticalAnchor.absolute(OVERWORLD_ICE_CRYSTAL_MAXY)));
+                HeightRangePlacement.uniform(VerticalAnchor.bottom(), VerticalAnchor.top()));
 
         OreConfiguration overworldEarthCrystalConfig = new OreConfiguration(AMETHYST_REPLACEABLES, Registration.EARTH_CRYSTAL_CLUSTER_BLOCK.get().defaultBlockState(),
-                OVERWORLD_EARTH_CRYSTAL_VEINSIZE);
+                EARTH_CRYSTAL_VEINSIZE.get());
         OVERWORLD_EARTH_CRYSTAL = registerPlacedFeature(MHNWReferences.EARTH_CRYSTAL_CLUSTER, new ConfiguredFeature<>(Feature.ORE, overworldEarthCrystalConfig),
-                CountPlacement.of(OVERWORLD_EARTH_CRYSTAL_AMOUNT),
+                CountPlacement.of(EARTH_CRYSTAL_AMOUNT.get()),
                 InSquarePlacement.spread(),
                 BiomeFilter.biome(),
-                HeightRangePlacement.uniform(VerticalAnchor.absolute(OVERWORLD_EARTH_CRYSTAL_MINY), VerticalAnchor.absolute(OVERWORLD_EARTH_CRYSTAL_MAXY)));
+                HeightRangePlacement.uniform(VerticalAnchor.bottom(), VerticalAnchor.top()));
 
     }
 
