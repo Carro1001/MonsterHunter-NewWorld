@@ -24,15 +24,20 @@ public abstract class DragonEntity extends PathfinderMob implements IAnimatable,
     public int StateCounter = 0;
 
     public String name;
-
+    public int navigatorType;
+    /*
+        0 = ground/walking
+        1 = ai flight
+     */
     public DragonPart headPart;
     public DragonPart neckPart;
+
+    public DragonPart body;
     public DragonPart rightWingUpperPart;
     public DragonPart leftWingUpperPart;
     public DragonPart tail1Part;
     public DragonPart tail2Part;
     public DragonPart tail3Part;
-    public DragonPart body;
     public DragonPart[] dragonParts;
     public int posPointer = -1;
     public final double[][] positions = new double[64][3];
@@ -67,7 +72,7 @@ public abstract class DragonEntity extends PathfinderMob implements IAnimatable,
         tail1Part.copyPosition(this);
         tail2Part.copyPosition(this);
         tail3Part.copyPosition(this);
-         body.copyPosition(this);
+        body.copyPosition(this);
         dragonParts = new DragonPart[]{headPart,neckPart,body,rightWingUpperPart,leftWingUpperPart,tail1Part,tail2Part};
     }
 
@@ -158,7 +163,14 @@ public abstract class DragonEntity extends PathfinderMob implements IAnimatable,
                 this.dragonParts[j].collideWithNearbyEntities();
                 avector3d[j] = new Vec3(this.dragonParts[j].getX(), this.dragonParts[j].getY(), this.dragonParts[j].getZ());
             }
-
+            headPart.copyPosition(this);
+            neckPart.copyPosition(this);
+            rightWingUpperPart.copyPosition(this);
+            leftWingUpperPart.copyPosition(this);
+            tail1Part.copyPosition(this);
+            tail2Part.copyPosition(this);
+            tail3Part.copyPosition(this);
+            body.copyPosition(this);
             float f12 = (float)(this.getLatencyPos(5, 1.0F)[1] - this.getLatencyPos(10, 1.0F)[1]) * 10.0F * ((float)Math.PI / 180F);
             float f13 = Mth.cos(f12);
             float f1 = Mth.sin(f12);
