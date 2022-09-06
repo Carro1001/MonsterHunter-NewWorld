@@ -9,19 +9,19 @@ import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 
 public class IzuchiModel extends AnimatedGeoModel<IzuchiEntity> {
     @Override
-    public ResourceLocation getModelLocation(IzuchiEntity object)
+    public ResourceLocation getModelResource(IzuchiEntity object)
     {
         return new ResourceLocation(MODID, "geo/"+ IZUCHI +".geo.json");
     }
 
     @Override
-    public ResourceLocation getTextureLocation(IzuchiEntity object)
+    public ResourceLocation getTextureResource(IzuchiEntity object)
     {
         return new ResourceLocation(MODID, "textures/entity/"+ IZUCHI +".png");
     }
 
     @Override
-    public ResourceLocation getAnimationFileLocation(IzuchiEntity object)
+    public ResourceLocation getAnimationResource(IzuchiEntity object)
     {
         return new ResourceLocation(MODID, "animations/"+ IZUCHI +".animation.json");
     }

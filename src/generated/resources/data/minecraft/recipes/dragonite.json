@@ -1,9 +1,9 @@
 {
   "type": "minecraft:smelting",
+  "cookingtime": 100,
+  "experience": 1.0,
   "ingredient": {
     "item": "mhnw:dragonite_ore"
   },
-  "result": "mhnw:dragonite",
-  "experience": 1.0,
-  "cookingtime": 100
+  "result": "mhnw:dragonite"
 }

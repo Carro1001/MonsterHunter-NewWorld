@@ -1,6 +1,5 @@
 package com.carro1001.mhnw.items;
 
-import com.carro1001.mhnw.setup.Registration;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.decoration.ArmorStand;
@@ -21,6 +20,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static com.carro1001.mhnw.MHNW.GROUP;
+import static com.carro1001.mhnw.registration.ModArmor.*;
 
 public class BoneArmorItem extends GeoArmorItem implements IAnimatable {
     private AnimationFactory factory = new AnimationFactory(this);
@@ -49,8 +49,8 @@ public class BoneArmorItem extends GeoArmorItem implements IAnimatable {
             }
         }
 
-        boolean isWearingAll = armorList.containsAll(Arrays.asList(Registration.BONE_BOOTS.get(),
-                Registration.BONE_LEGGINGS.get(), Registration.BONE_CHEST.get(), Registration.BONE_HEAD.get()));
+        boolean isWearingAll = armorList.containsAll(Arrays.asList(BONE_BOOTS.get(),
+                BONE_LEGGINGS.get(), BONE_CHEST.get(), BONE_HEAD.get()));
         return isWearingAll ? PlayState.CONTINUE : PlayState.STOP;
     }
 

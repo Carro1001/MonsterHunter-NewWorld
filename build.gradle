@@ -3,7 +3,6 @@ buildscript {
         // These repositories are only for Gradle plugins, put any other repositories in the repository block further below
         maven { url = 'https://maven.minecraftforge.net' }
         maven { url = 'https://maven.parchmentmc.org' }
-
         mavenCentral()
     }
     dependencies {
@@ -14,12 +13,10 @@ buildscript {
     }
 }
 // Only edit below this line, the above code adds and enables the necessary things for Forge to be setup.
-plugins {
-    id 'eclipse'
-    id 'maven-publish'
-}
+
 apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'org.parchmentmc.librarian.forgegradle'
+apply plugin: 'maven-publish'
 
 var time = "${new Date().format("yyyy-MM-dd")}"
 int ver = 1
@@ -32,7 +29,7 @@ java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 println "Java: ${System.getProperty 'java.version'}, JVM: ${System.getProperty 'java.vm.version'} (${System.getProperty 'java.vendor'}), Arch: ${System.getProperty 'os.arch'}"
 minecraft {
 
-    mappings channel: 'parchment', version: '2022.08.02-1.18.2'
+    mappings channel: 'parchment', version: "${parchment_version}"
 
     runs {
         client {
@@ -105,16 +102,32 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 repositories {
     maven { url "https://minecraft.curseforge.com/api/maven/" }
-    maven { url 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/' }
-    maven { url "https://maven.blamejared.com" }
+    maven { url "https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/" }
+    maven { // JEI
+        name 'DVS1 Maven FS'
+        url 'https://dvs1.progwml6.com/files/maven'
+        content  {
+            includeGroup "mezz.jei"
+        }
+    }
+    maven { // location of a maven mirror for JEI files, as a fallback
+        name "ModMaven"
+        url "https://modmaven.dev"
+        content  {
+            includeGroup "mezz.jei"
+        }
+    }
 }
 
 dependencies {
 
-    minecraft 'net.minecraftforge:forge:1.18.2-40.1.68'
-
-    implementation fg.deobf('software.bernie.geckolib:geckolib-forge-1.18:3.0.26')
-
+    minecraft "net.minecraftforge:forge:${mc_version}-${forge_version}"
+    implementation fg.deobf('software.bernie.geckolib:geckolib-forge-1.19:3.1.10')
+    // compile against the JEI API but do not include it at runtime
+    compileOnly fg.deobf("mezz.jei:jei-${mc_version}-common-api:${jei_version}")
+    compileOnly fg.deobf("mezz.jei:jei-${mc_version}-forge-api:${jei_version}")
+    // at runtime, use the full JEI jar
+    runtimeOnly fg.deobf("mezz.jei:jei-${mc_version}-forge:${jei_version}")
 }
 
 // Example for how to get properties into the manifest for reading at runtime.

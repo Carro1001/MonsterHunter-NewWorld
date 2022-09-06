@@ -1,6 +1,5 @@
 package com.carro1001.mhnw.entities;
 
-import com.carro1001.mhnw.setup.Registration;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -22,6 +21,8 @@ import software.bernie.geckolib3.core.controller.AnimationController;
 import software.bernie.geckolib3.core.event.predicate.AnimationEvent;
 import software.bernie.geckolib3.core.manager.AnimationData;
 import software.bernie.geckolib3.core.manager.AnimationFactory;
+
+import static com.carro1001.mhnw.registration.ModEntities.APTONOTH;
 
 public class AptonothEntity  extends AbstractHorse implements IAnimatable, IAnimationTickable {
     private AnimationFactory factory = new AnimationFactory(this);
@@ -93,6 +94,6 @@ public class AptonothEntity  extends AbstractHorse implements IAnimatable, IAnim
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(ServerLevel p_146743_, AgeableMob p_146744_) {
-        return Registration.APTONOTH.get().create(p_146743_);
+        return APTONOTH.get().create(p_146743_);
     }
 }

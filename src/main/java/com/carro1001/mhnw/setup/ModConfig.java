@@ -23,17 +23,14 @@ public class ModConfig {
 
     public static ForgeConfigSpec.IntValue MACHALITE_VEINSIZE;
     public static ForgeConfigSpec.IntValue MACHALITE_AMOUNT;
+    public static ForgeConfigSpec.IntValue MACHALITE_MAXY;
+
     public static ForgeConfigSpec.IntValue CARBALITE_VEINSIZE;
     public static ForgeConfigSpec.IntValue CARBALITE_AMOUNT;
+    public static ForgeConfigSpec.IntValue CARBALITE_MAXY;
+
     public static ForgeConfigSpec.IntValue DRAGONITE_VEINSIZE;
     public static ForgeConfigSpec.IntValue DRAGONITE_AMOUNT;
-    public static ForgeConfigSpec.IntValue EARTH_CRYSTAL_VEINSIZE;
-    public static ForgeConfigSpec.IntValue EARTH_CRYSTAL_AMOUNT;
-
-    public static ForgeConfigSpec.IntValue ICE_CRYSTAL_VEINSIZE;
-    public static ForgeConfigSpec.IntValue ICE_CRYSTAL_AMOUNT;
-    public static ForgeConfigSpec.IntValue MACHALITE_MAXY;
-    public static ForgeConfigSpec.IntValue CARBALITE_MAXY;
     public static ForgeConfigSpec.IntValue DRAGONITE_MAXY;
 
 
@@ -134,30 +131,23 @@ public class ModConfig {
         SERVER_BUILDER.comment("World Gen settings").push(WORLD_GEN);
 
         MACHALITE_VEINSIZE = SERVER_BUILDER.comment("Machalite Ore Vein Size")
-                .defineInRange("mcore_size", 5, 0, 1000);
+                .defineInRange("mcore_size", 32, 0, 1000);
         MACHALITE_AMOUNT = SERVER_BUILDER.comment("Machalite Ore Spawn Amount")
-                .defineInRange("mcore_amount", 12, 0, 1000);
-        CARBALITE_VEINSIZE = SERVER_BUILDER.comment("Carbalite Ore Vein Size")
-                .defineInRange("cbore_size", 3, 0, 1000);
-        CARBALITE_AMOUNT = SERVER_BUILDER.comment("Carbalite Ore Spawn Amount")
-                .defineInRange("cbore_amount", 7, 0, 1000);
-        DRAGONITE_VEINSIZE = SERVER_BUILDER.comment("Dragonite Ore Vein Size")
-                .defineInRange("dgore_size", 3, 0, 1000);
-        DRAGONITE_AMOUNT = SERVER_BUILDER.comment("Dragonite Ore Spawn Amount")
-                .defineInRange("dgore_amount", 5, 0, 1000);
-        EARTH_CRYSTAL_VEINSIZE = SERVER_BUILDER.comment("Earth Crystal Vein Size")
-                .defineInRange("ecore_size", 3, 0, 1000);
-        EARTH_CRYSTAL_AMOUNT = SERVER_BUILDER.comment("Earth Crystal Spawn Amount")
-                .defineInRange("ecore_amount", 20, 0, 1000);
-        ICE_CRYSTAL_VEINSIZE = SERVER_BUILDER.comment("Ice Crystal Vein Size")
-                .defineInRange("icore_size", 3, 0, 1000);
-        ICE_CRYSTAL_AMOUNT = SERVER_BUILDER.comment("Ice Crystal Spawn Amount")
-                .defineInRange("icore_amount", 20, 0, 1000);
-
+                .defineInRange("mcore_amount", 32, 0, 1000);
         MACHALITE_MAXY = SERVER_BUILDER.comment("Machalite Ore Highest Y level to spawn")
                 .defineInRange("mcore_maxy", 64, 0, 255);
+
+        CARBALITE_VEINSIZE = SERVER_BUILDER.comment("Carbalite Ore Vein Size")
+                .defineInRange("cbore_size", 32, 0, 1000);
+        CARBALITE_AMOUNT = SERVER_BUILDER.comment("Carbalite Ore Spawn Amount")
+                .defineInRange("cbore_amount", 32, 0, 1000);
         CARBALITE_MAXY = SERVER_BUILDER.comment("Carbalite Ore Highest Y level to spawn")
                 .defineInRange("cbore_maxy", 64, 0, 255);
+
+        DRAGONITE_VEINSIZE = SERVER_BUILDER.comment("Dragonite Ore Vein Size")
+                .defineInRange("dgore_size", 32, 0, 1000);
+        DRAGONITE_AMOUNT = SERVER_BUILDER.comment("Dragonite Ore Spawn Amount")
+                .defineInRange("dgore_amount", 32, 0, 1000);
         DRAGONITE_MAXY = SERVER_BUILDER.comment("Dragonite Ore Highest Y level to spawn")
                 .defineInRange("dgore_maxy", 64, 0, 255);
 

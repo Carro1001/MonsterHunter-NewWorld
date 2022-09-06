@@ -2,5 +2,6 @@
   "parent": "minecraft:block/cross",
   "textures": {
     "cross": "mhnw:block/ice_crystal_cluster"
-  }
+  },
+  "render_type": "cutout"
 }

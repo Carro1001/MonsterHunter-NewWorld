@@ -1,11 +1,11 @@
 package com.carro1001.mhnw.datagen;
 
-import com.carro1001.mhnw.setup.Registration;
 import net.minecraft.data.DataGenerator;
 import net.minecraft.data.tags.ItemTagsProvider;
 import net.minecraftforge.common.Tags;
 import net.minecraftforge.common.data.ExistingFileHelper;
 
+import static com.carro1001.mhnw.registration.ModBlocks.*;
 import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 
 public class ModItemTags extends ItemTagsProvider {
@@ -16,11 +16,11 @@ public class ModItemTags extends ItemTagsProvider {
     @Override
     protected void addTags() {
         tag(Tags.Items.ORES)
-                .add(Registration.CARBALITE_ORE_ITEM.get())
-                .add(Registration.DRAGONITE_ORE_ITEM.get())
-                .add(Registration.MACHALITE_ORE_ITEM.get())
-                .add(Registration.ICE_CRYSTAL_CLUSTER_ITEM.get())
-                .add(Registration.EARTH_CRYSTAL_CLUSTER_ITEM.get());
+                .add(CARBALITE_ORE_ITEM.get())
+                .add(DRAGONITE_ORE_ITEM.get())
+                .add(MACHALITE_ORE_ITEM.get())
+                .add(ICE_CRYSTAL_CLUSTER_ITEM.get())
+                .add(EARTH_CRYSTAL_CLUSTER_ITEM.get());
     }
 
     @Override

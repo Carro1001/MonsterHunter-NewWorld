@@ -1,8 +1,8 @@
 package com.carro1001.mhnw.entities;
 
 import com.carro1001.mhnw.entities.ai.ToadSwellGoal;
+import com.carro1001.mhnw.registration.ModEntities;
 import com.carro1001.mhnw.setup.ModConfig;
-import com.carro1001.mhnw.setup.Registration;
 import com.carro1001.mhnw.utils.MHNWReferences;
 import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
@@ -40,6 +40,8 @@ import net.minecraft.world.phys.Vec3;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Random;
+
+import static com.carro1001.mhnw.registration.ModParticle.*;
 
 public class ToadEntity extends PathfinderMob implements Bucketable{
     private static final EntityDataAccessor<Integer> TYPE = SynchedEntityData.defineId(ToadEntity.class, EntityDataSerializers.INT);
@@ -201,16 +203,16 @@ public class ToadEntity extends PathfinderMob implements Bucketable{
     public ItemStack getBucketItemStack() {
         switch(getTypeDir()){
             case 0 -> {
-                return new ItemStack(Registration.BUCKET_POISONTOAD_ITEM.get());
+                return new ItemStack(ModEntities.BUCKET_POISONTOAD_ITEM.get());
             }
             case 1 -> {
-                return new ItemStack(Registration.BUCKET_SLEEPTOAD_ITEM.get());
+                return new ItemStack(ModEntities.BUCKET_SLEEPTOAD_ITEM.get());
             }
             case 2 -> {
-                return new ItemStack(Registration.BUCKET_PARATOAD_ITEM.get());
+                return new ItemStack(ModEntities.BUCKET_PARATOAD_ITEM.get());
             }
             default -> {
-                return new ItemStack(Registration.BUCKET_NITROTOAD_ITEM.get());
+                return new ItemStack(ModEntities.BUCKET_NITROTOAD_ITEM.get());
             }
         }
     }
@@ -240,21 +242,22 @@ public class ToadEntity extends PathfinderMob implements Bucketable{
         counterAnim++;
         if(counterAnim >= 20*5){
             counterAnim = 0;
-            float xSpeed = this.random.nextFloat(0.4f);
-            float zSpeed = this.random.nextFloat(0.4f);
-            float ySpeed = this.random.nextFloat(0.7f,1.4f);
-            double newXPos = (this.position().x +  this.random.nextFloat(-0.2f,0.3f));
-            double newYPos = (this.position().y + 0.35f +  this.random.nextFloat(-0.2f,0.3f));
-            double newZPos = (this.position().z +  this.random.nextFloat(-0.2f,0.3f));
+            Random random1 = new Random();
+            float xSpeed = (float) random1.nextDouble(0.4);
+            float zSpeed = (float) random1.nextDouble(0.4);
+            float ySpeed = (float) random1.nextDouble(0.7f,1.4f);
+            double newXPos = (this.position().x +  (float) random1.nextDouble(-0.2f,0.3f));
+            double newYPos = (this.position().y + 0.35f +  (float) random1.nextDouble(-0.2f,0.3f));
+            double newZPos = (this.position().z +  (float) random1.nextDouble(-0.2f,0.3f));
             switch (getTypeDir()) {
                 case 0 ->
-                        Minecraft.getInstance().levelRenderer.addParticle(Registration.POISON_PARTICLE_TYPE.get(), true, newXPos, newYPos, newZPos, xSpeed, ySpeed, zSpeed);
+                        Minecraft.getInstance().levelRenderer.addParticle(POISON_PARTICLE_TYPE.get(), true, newXPos, newYPos, newZPos, xSpeed, ySpeed, zSpeed);
                 case 1 ->
-                        Minecraft.getInstance().levelRenderer.addParticle(Registration.SLEEP_PARTICLE_TYPE.get(), true, newXPos, newYPos, newZPos, xSpeed, ySpeed, zSpeed);
+                        Minecraft.getInstance().levelRenderer.addParticle(SLEEP_PARTICLE_TYPE.get(), true, newXPos, newYPos, newZPos, xSpeed, ySpeed, zSpeed);
                 case 2 ->
-                        Minecraft.getInstance().levelRenderer.addParticle(Registration.THUNDER_PARTICLE_TYPE.get(), true, newXPos, newYPos, newZPos, xSpeed, ySpeed, zSpeed);
+                        Minecraft.getInstance().levelRenderer.addParticle(THUNDER_PARTICLE_TYPE.get(), true, newXPos, newYPos, newZPos, xSpeed, ySpeed, zSpeed);
                 case 3 ->
-                        Minecraft.getInstance().levelRenderer.addParticle(Registration.ICE_PARTICLE_TYPE.get(), true, newXPos, newYPos, newZPos, xSpeed, ySpeed, zSpeed);
+                        Minecraft.getInstance().levelRenderer.addParticle(ICE_PARTICLE_TYPE.get(), true, newXPos, newYPos, newZPos, xSpeed, ySpeed, zSpeed);
             }
         }
         if (this.isAlive()) {

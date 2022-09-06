@@ -9,19 +9,19 @@ import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 public class RathalosModel extends AnimatedGeoModel<RathalosEntity> {
 
     @Override
-    public ResourceLocation getModelLocation(RathalosEntity object)
+    public ResourceLocation getModelResource(RathalosEntity object)
     {
         return new ResourceLocation(MODID, "geo/rathalos.geo.json");
     }
 
     @Override
-    public ResourceLocation getTextureLocation(RathalosEntity object)
+    public ResourceLocation getTextureResource(RathalosEntity object)
     {
         return new ResourceLocation(MODID, "textures/entity/rathalos.png");
     }
 
     @Override
-    public ResourceLocation getAnimationFileLocation(RathalosEntity object)
+    public ResourceLocation getAnimationResource(RathalosEntity object)
     {
         return new ResourceLocation(MODID, "animations/rathalos.animation.json");
     }

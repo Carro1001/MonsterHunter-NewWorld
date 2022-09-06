@@ -1,6 +1,5 @@
 package com.carro1001.mhnw.datagen;
 
-import com.carro1001.mhnw.setup.Registration;
 import net.minecraft.core.Registry;
 import net.minecraft.data.DataGenerator;
 import net.minecraft.data.recipes.*;
@@ -12,6 +11,9 @@ import net.minecraft.world.level.block.Blocks;
 import javax.annotation.Nullable;
 import java.util.function.Consumer;
 
+import static com.carro1001.mhnw.registration.ModBlocks.*;
+import static com.carro1001.mhnw.registration.ModItems.*;
+
 public class ModRecipes extends RecipeProvider {
 
     public ModRecipes(DataGenerator generator) {
@@ -21,37 +23,37 @@ public class ModRecipes extends RecipeProvider {
     @Override
     protected void buildCraftingRecipes(Consumer<FinishedRecipe> p_176532_) {
 
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Registration.CARBALITE_ORE_ITEM.get()),
-                Registration.CARBALITE_ITEM.get(),1f,100)
-                .unlockedBy("has_ore", has(Registration.CARBALITE_ORE_ITEM.get()))
+        SimpleCookingRecipeBuilder.smelting(Ingredient.of(CARBALITE_ORE_ITEM.get()),
+                CARBALITE_ITEM.get(),1f,100)
+                .unlockedBy("has_ore", has(CARBALITE_ORE_ITEM.get()))
                 .save(p_176532_, "carbalite");
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Registration.DRAGONITE_ORE_ITEM.get()),
-                        Registration.DRAGONITE_ITEM.get(),1f,100)
-                .unlockedBy("has_ore", has(Registration.DRAGONITE_ORE_ITEM.get()))
+        SimpleCookingRecipeBuilder.smelting(Ingredient.of(DRAGONITE_ORE_ITEM.get()),
+                        DRAGONITE_ITEM.get(),1f,100)
+                .unlockedBy("has_ore", has(DRAGONITE_ORE_ITEM.get()))
                 .save(p_176532_, "dragonite");
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Registration.MACHALITE_ORE_ITEM.get()),
-                        Registration.MACHALITE_ITEM.get(),1f,100)
-                .unlockedBy("has_ore", has(Registration.MACHALITE_ORE_ITEM.get()))
+        SimpleCookingRecipeBuilder.smelting(Ingredient.of(MACHALITE_ORE_ITEM.get()),
+                        MACHALITE_ITEM.get(),1f,100)
+                .unlockedBy("has_ore", has(MACHALITE_ORE_ITEM.get()))
                 .save(p_176532_, "machalite");
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Registration.RAW_CARBALITE_ITEM.get()),
-                        Registration.CARBALITE_ITEM.get(),1f,100)
-                .unlockedBy("has_raw", has(Registration.RAW_CARBALITE_ITEM.get()))
+        SimpleCookingRecipeBuilder.smelting(Ingredient.of(RAW_CARBALITE_ITEM.get()),
+                        CARBALITE_ITEM.get(),1f,100)
+                .unlockedBy("has_raw", has(RAW_CARBALITE_ITEM.get()))
                 .save(p_176532_, "carbalite1");
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Registration.RAW_DRAGONITE_ITEM.get()),
-                        Registration.DRAGONITE_ITEM.get(),1f,100)
-                .unlockedBy("has_raw", has(Registration.RAW_DRAGONITE_ITEM.get()))
+        SimpleCookingRecipeBuilder.smelting(Ingredient.of(RAW_DRAGONITE_ITEM.get()),
+                        DRAGONITE_ITEM.get(),1f,100)
+                .unlockedBy("has_raw", has(RAW_DRAGONITE_ITEM.get()))
                 .save(p_176532_, "dragonite1");
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Registration.RAW_MACHALITE_ITEM.get()),
-                        Registration.MACHALITE_ITEM.get(),1f,100)
-                .unlockedBy("has_raw", has(Registration.RAW_MACHALITE_ITEM.get()))
+        SimpleCookingRecipeBuilder.smelting(Ingredient.of(RAW_MACHALITE_ITEM.get()),
+                        MACHALITE_ITEM.get(),1f,100)
+                .unlockedBy("has_raw", has(RAW_MACHALITE_ITEM.get()))
                 .save(p_176532_, "machalite1");
-        SimpleCookingRecipeBuilder.campfireCooking(Ingredient.of(Registration.RAW_MEAT_ITEM.get()),
-                        Registration.RARE_MEAT_ITEM.get(),1f,100)
-                .unlockedBy("has_item", has(Registration.RAW_MEAT_ITEM.get()))
+        SimpleCookingRecipeBuilder.campfireCooking(Ingredient.of(RAW_MEAT_ITEM.get()),
+                        RARE_MEAT_ITEM.get(),1f,100)
+                .unlockedBy("has_item", has(RAW_MEAT_ITEM.get()))
                 .save(p_176532_, "raw_monster_meat");
-        SimpleCookingRecipeBuilder.campfireCooking(Ingredient.of(Registration.RARE_MEAT_ITEM.get()),
-                        Registration.WELL_DONE_MEAT_ITEM.get(),1f,50)
-                .unlockedBy("has_item", has(Registration.RARE_MEAT_ITEM.get()))
+        SimpleCookingRecipeBuilder.campfireCooking(Ingredient.of(RARE_MEAT_ITEM.get()),
+                        WELL_DONE_MEAT_ITEM.get(),1f,50)
+                .unlockedBy("has_item", has(RARE_MEAT_ITEM.get()))
                 .save(p_176532_, "rare_monster_meat");
 
     }

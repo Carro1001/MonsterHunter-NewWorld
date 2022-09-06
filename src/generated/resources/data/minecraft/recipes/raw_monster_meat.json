@@ -1,9 +1,9 @@
 {
   "type": "minecraft:campfire_cooking",
+  "cookingtime": 100,
+  "experience": 1.0,
   "ingredient": {
     "item": "mhnw:raw_monster_meat"
   },
-  "result": "mhnw:rare_monster_meat",
-  "experience": 1.0,
-  "cookingtime": 100
+  "result": "mhnw:rare_monster_meat"
 }

@@ -13,19 +13,19 @@ public class RathianModel extends AnimatedGeoModel<RathianEntity> {
 
 
     @Override
-    public ResourceLocation getModelLocation(RathianEntity object)
+    public ResourceLocation getModelResource(RathianEntity object)
     {
         return new ResourceLocation(MODID, "geo/rathian.geo.json");
     }
 
     @Override
-    public ResourceLocation getTextureLocation(RathianEntity object)
+    public ResourceLocation getTextureResource(RathianEntity object)
     {
         return new ResourceLocation(MODID, "textures/entity/rathian.png");
     }
 
     @Override
-    public ResourceLocation getAnimationFileLocation(RathianEntity object)
+    public ResourceLocation getAnimationResource(RathianEntity object)
     {
         return new ResourceLocation(MODID, "animations/rathian.animation.json");
     }

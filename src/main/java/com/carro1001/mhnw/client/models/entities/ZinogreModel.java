@@ -9,19 +9,19 @@ import static com.carro1001.mhnw.utils.MHNWReferences.ZINOGRE;
 
 public class ZinogreModel extends AnimatedGeoModel<ZinogreEntity> {
     @Override
-    public ResourceLocation getModelLocation(ZinogreEntity object)
+    public ResourceLocation getModelResource(ZinogreEntity object)
     {
         return new ResourceLocation(MODID, "geo/"+ ZINOGRE +".geo.json");
     }
 
     @Override
-    public ResourceLocation getTextureLocation(ZinogreEntity object)
+    public ResourceLocation getTextureResource(ZinogreEntity object)
     {
         return new ResourceLocation(MODID, "textures/entity/"+ ZINOGRE +".png");
     }
 
     @Override
-    public ResourceLocation getAnimationFileLocation(ZinogreEntity object)
+    public ResourceLocation getAnimationResource(ZinogreEntity object)
     {
         return new ResourceLocation(MODID, "animations/"+ ZINOGRE +".animation.json");
     }

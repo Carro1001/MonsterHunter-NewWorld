@@ -9,6 +9,8 @@ public class MHNWReferences {
     public static final String EARTH_CRYSTAL_CLUSTER = "earth_crystal_cluster";
     public static final String ICE_CRYSTAL_CLUSTER = "ice_crystal_cluster";
 
+    public static final String CRYSTAL_CLUSTER_GEODES = "crystal_cluster_geode";
+
     public static final String CARBALITE_ITEM = "carbalite";
     public static final String DRAGONITE_ITEM = "dragonite";
     public static final String MACHALITE_ITEM = "machalite";

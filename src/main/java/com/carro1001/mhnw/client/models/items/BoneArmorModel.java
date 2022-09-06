@@ -9,17 +9,17 @@ import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 public class BoneArmorModel extends AnimatedGeoModel<BoneArmorItem> {
 
     @Override
-    public ResourceLocation getModelLocation(BoneArmorItem object) {
+    public ResourceLocation getModelResource(BoneArmorItem object) {
         return new ResourceLocation(MODID, "geo/bone_armor.geo.json");
     }
 
     @Override
-    public ResourceLocation getTextureLocation(BoneArmorItem object) {
+    public ResourceLocation getTextureResource(BoneArmorItem object) {
         return new ResourceLocation(MODID, "textures/item/bone_armor.png");
     }
 
     @Override
-    public ResourceLocation getAnimationFileLocation(BoneArmorItem animatable) {
+    public ResourceLocation getAnimationResource(BoneArmorItem animatable) {
         return new ResourceLocation(MODID, "animations/bone_armor.animation.json");
     }
 }

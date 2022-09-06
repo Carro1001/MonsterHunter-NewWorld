@@ -9,19 +9,19 @@ import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 
 public class BlangongaModel extends AnimatedGeoModel<BlangongaEntity> {
     @Override
-    public ResourceLocation getModelLocation(BlangongaEntity object)
+    public ResourceLocation getModelResource(BlangongaEntity object)
     {
         return new ResourceLocation(MODID, "geo/"+ BLANGONGA +".geo.json");
     }
 
     @Override
-    public ResourceLocation getTextureLocation(BlangongaEntity object)
+    public ResourceLocation getTextureResource(BlangongaEntity object)
     {
         return new ResourceLocation(MODID, "textures/entity/"+ BLANGONGA +".png");
     }
 
     @Override
-    public ResourceLocation getAnimationFileLocation(BlangongaEntity object)
+    public ResourceLocation getAnimationResource(BlangongaEntity object)
     {
         return new ResourceLocation(MODID, "animations/"+ BLANGONGA +".animation.json");
     }

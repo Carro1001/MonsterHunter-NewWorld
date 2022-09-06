@@ -1,12 +1,10 @@
 package com.carro1001.mhnw.items;
 
 import com.carro1001.mhnw.entities.ToadEntity;
-import com.carro1001.mhnw.setup.Registration;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.TextComponent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.entity.Entity;
@@ -28,6 +26,8 @@ import javax.annotation.Nullable;
 import java.util.List;
 import java.util.function.Supplier;
 
+import static com.carro1001.mhnw.registration.ModEntities.*;
+
 public class ToadBucket extends MobBucketItem {
 
     public ToadBucket(Supplier<? extends EntityType<?>> toadTypeIn, Fluid fluid, Item.Properties builder) {
@@ -37,12 +37,12 @@ public class ToadBucket extends MobBucketItem {
     @OnlyIn(Dist.CLIENT)
     public void appendHoverText(ItemStack stack, @Nullable Level worldIn, List<Component> tooltip, TooltipFlag flagIn) {
         EntityType toadType = getFishType();
-        if (toadType == Registration.TOAD.get()) {
+        if (toadType == TOAD.get()) {
             CompoundTag compoundnbt = stack.getTag();
             if (compoundnbt != null && compoundnbt.contains("BucketVariantTag", 3)) {
                 int i = compoundnbt.getInt("BucketVariantTag");
                 String s = "entity.carro101.toad.variant_" + ToadEntity.getVariantName(i);
-                tooltip.add((new TextComponent(s)).withStyle(ChatFormatting.GRAY).withStyle(ChatFormatting.ITALIC));
+                tooltip.add((Component.translatable(s)).withStyle(ChatFormatting.GRAY).withStyle(ChatFormatting.ITALIC));
             }
         }
     }
@@ -67,13 +67,13 @@ public class ToadBucket extends MobBucketItem {
 
     private void addExtraAttributes(Entity entity, ItemStack stack) {
         if (entity instanceof ToadEntity toad) {
-            if (stack.is(Registration.BUCKET_POISONTOAD_ITEM.get())) {
+            if (stack.is(BUCKET_POISONTOAD_ITEM.get())) {
                 toad.setTypeDir(0);
-            } else if (stack.is(Registration.BUCKET_SLEEPTOAD_ITEM.get())) {
+            } else if (stack.is(BUCKET_SLEEPTOAD_ITEM.get())) {
                 toad.setTypeDir(1);
-            } else if (stack.is(Registration.BUCKET_PARATOAD_ITEM.get())) {
+            } else if (stack.is(BUCKET_PARATOAD_ITEM.get())) {
                 toad.setTypeDir(2);
-            } else if (stack.is(Registration.BUCKET_NITROTOAD_ITEM.get())) {
+            } else if (stack.is(BUCKET_NITROTOAD_ITEM.get())) {
                 toad.setTypeDir(3);
             }
         }

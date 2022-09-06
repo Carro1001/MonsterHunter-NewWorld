@@ -1,6 +1,5 @@
 package com.carro1001.mhnw.datagen;
 
-import com.carro1001.mhnw.setup.Registration;
 import net.minecraft.core.Direction;
 import net.minecraft.data.DataGenerator;
 import net.minecraftforge.client.model.generators.BlockModelBuilder;
@@ -10,6 +9,7 @@ import net.minecraftforge.common.data.ExistingFileHelper;
 
 import java.util.function.BiConsumer;
 
+import static com.carro1001.mhnw.registration.ModBlocks.*;
 import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 
 public class ModBlockStates extends BlockStateProvider {
@@ -19,13 +19,14 @@ public class ModBlockStates extends BlockStateProvider {
 
     @Override
     protected void registerStatesAndModels() {
-        simpleBlock(Registration.MACHALITE_ORE_BLOCK.get());
-        simpleBlock(Registration.CARBALITE_ORE_BLOCK.get());
-        simpleBlock(Registration.DRAGONITE_ORE_BLOCK.get());
-        simpleBlock(Registration.EARTH_CRYSTAL_CLUSTER_BLOCK.get());
-        simpleBlock(Registration.ICE_CRYSTAL_CLUSTER_BLOCK.get());
+        simpleBlock(MACHALITE_ORE_BLOCK.get());
+        simpleBlock(CARBALITE_ORE_BLOCK.get());
+        simpleBlock(DRAGONITE_ORE_BLOCK.get());
+        simpleBlock(EARTH_CRYSTAL_CLUSTER_BLOCK.get(),models().cross(EARTH_CRYSTAL_CLUSTER_BLOCK.getId().getPath(), modLoc("block/" + EARTH_CRYSTAL_CLUSTER_BLOCK.getId().getPath())));
+        simpleBlock(ICE_CRYSTAL_CLUSTER_BLOCK.get(),models().cross(ICE_CRYSTAL_CLUSTER_BLOCK.getId().getPath(), modLoc("block/" + ICE_CRYSTAL_CLUSTER_BLOCK.getId().getPath())));
 
     }
+
     private BiConsumer<Direction, ModelBuilder<BlockModelBuilder>.ElementBuilder.FaceBuilder> addTexture(String texture) {
         return ($, f) -> f.texture(texture).uvs(0,0,16,16).tintindex(0);
     }
