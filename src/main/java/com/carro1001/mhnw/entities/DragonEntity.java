@@ -1,5 +1,7 @@
 package com.carro1001.mhnw.entities;
 
+import com.carro1001.mhnw.entities.ai.DragonWalkGoal;
+import com.carro1001.mhnw.entities.interfaces.IGrows;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -7,7 +9,8 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.EntityDamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
-import net.minecraft.world.entity.ai.goal.*;
+import net.minecraft.world.entity.ai.goal.FloatGoal;
+import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -15,10 +18,14 @@ import software.bernie.geckolib3.core.IAnimatable;
 import software.bernie.geckolib3.core.IAnimationTickable;
 import software.bernie.geckolib3.core.manager.AnimationFactory;
 
-public abstract class DragonEntity extends PathfinderMob implements IAnimatable, IAnimationTickable {
+import java.util.Random;
+
+public abstract class DragonEntity extends PathfinderMob implements IAnimatable, IAnimationTickable, IGrows {
     private AnimationFactory factory = new AnimationFactory(this);
 
     public boolean roaring = false;
+    public float scale = 1;
+    public boolean scaleSet = false;
 
     public int counter = 0;
     public int StateCounter = 0;
@@ -77,10 +84,8 @@ public abstract class DragonEntity extends PathfinderMob implements IAnimatable,
     }
 
     protected void registerGoals() {
-        this.goalSelector.addGoal(1, new PanicGoal(this, 1.2D));
-        this.goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 0.7D));
+        this.goalSelector.addGoal(6, new DragonWalkGoal(this, 0.7D,1.0000001E-5F));
         this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 6.0F));
-        this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
         this.addBehaviourGoals();
     }
     protected void addBehaviourGoals() {
@@ -178,8 +183,8 @@ public abstract class DragonEntity extends PathfinderMob implements IAnimatable,
             float f2 = Mth.sin(f14);
             float f15 = Mth.cos(f14);
             this.setPartPosition(this.body, (double)(f2 * 0.5F), 0.0D, (double)(-f15 * 0.5F));
-            this.setPartPosition(this.leftWingUpperPart, (double)(f15 * 4.5F), 2.0D, (double)(f2 * 4.5F));
-            this.setPartPosition(this.rightWingUpperPart, (double)(f15 * -4.5F), 2.0D, (double)(f2 * -4.5F));
+            this.setPartPosition(this.leftWingUpperPart, (double)(f15 * 4.5F), 2.6D, (double)(f2 * 4.5F));
+            this.setPartPosition(this.rightWingUpperPart, (double)(f15 * -4.5F), 2.6D, (double)(f2 * -4.5F));
 
             float f3 = Mth.sin(this.getYRot() * ((float)Math.PI / 180F) - 0.01F);
             float f16 = Mth.cos(this.getYRot() * ((float)Math.PI / 180F) - 0.01F);
@@ -275,5 +280,26 @@ public abstract class DragonEntity extends PathfinderMob implements IAnimatable,
     public int tickTimer() {
         return tickCount;
     }
+    @Override
+    public int getMaxHeadXRot() {
+        return 10;
+    }
+
+    @Override
+    public int getHeadRotSpeed() {
+        return 5;
+    }
+
+    protected void GenerateScale(){
+        if(!scaleSet){
+            scale = (float) new Random().nextDouble(0.5,1.5);
+            scaleSet = true;
+        }
+    }
+    @Override
+    public float getViewXRot(float pPartialTicks) {
+        return pPartialTicks == 1.0F ? this.getXRot()/2 : Mth.lerp(pPartialTicks, this.xRotO/2, this.getXRot()/2);
+    }
+
 
 }

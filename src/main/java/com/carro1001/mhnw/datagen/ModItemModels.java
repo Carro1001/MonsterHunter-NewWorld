@@ -5,7 +5,6 @@ import net.minecraft.data.DataGenerator;
 import net.minecraftforge.client.model.generators.ItemModelProvider;
 import net.minecraftforge.common.data.ExistingFileHelper;
 
-import static com.carro1001.mhnw.registration.ModArmor.*;
 import static com.carro1001.mhnw.registration.ModBlocks.*;
 import static com.carro1001.mhnw.registration.ModEntities.*;
 import static com.carro1001.mhnw.registration.ModItems.*;
@@ -66,29 +65,29 @@ public class ModItemModels extends ItemModelProvider {
 
         singleTexture(RATHALOS_PLATE_ITEM.getId().getPath(),
                 mcLoc("item/handheld"),
-                "layer0",modLoc("item/"+ RATHALOS+"_"+MHNWReferences.PLATE_ITEM));
+                "layer0",modLoc("item/"+ MHNWReferences.RATHALOS+"_"+MHNWReferences.PLATE_ITEM));
         singleTexture(RATHALOS_SCALE_ITEM.getId().getPath(),
                 mcLoc("item/handheld"),
-                "layer0",modLoc("item/"+ RATHALOS+"_"+MHNWReferences.SCALE_ITEM));
+                "layer0",modLoc("item/"+ MHNWReferences.RATHALOS+"_"+MHNWReferences.SCALE_ITEM));
         singleTexture(RATHALOS_TAIL_ITEM.getId().getPath(),
                 mcLoc("item/handheld"),
-                "layer0",modLoc("item/"+ RATHALOS+"_"+MHNWReferences.TAIL_ITEM));
+                "layer0",modLoc("item/"+ MHNWReferences.RATHALOS+"_"+MHNWReferences.TAIL_ITEM));
         singleTexture(RATHALOS_WEBBING_ITEM.getId().getPath(),
                 mcLoc("item/handheld"),
-                "layer0",modLoc("item/"+ RATHALOS+"_"+MHNWReferences.WEBBING_ITEM));
+                "layer0",modLoc("item/"+ MHNWReferences.RATHALOS+"_"+MHNWReferences.WEBBING_ITEM));
 
         singleTexture(RATHIAN_PLATE_ITEM.getId().getPath(),
                 mcLoc("item/handheld"),
-                "layer0",modLoc("item/"+ RATHIAN+"_"+MHNWReferences.PLATE_ITEM));
+                "layer0",modLoc("item/"+ MHNWReferences.RATHIAN+"_"+MHNWReferences.PLATE_ITEM));
         singleTexture(RATHIAN_SCALE_ITEM.getId().getPath(),
                 mcLoc("item/handheld"),
-                "layer0",modLoc("item/"+ RATHIAN+"_"+MHNWReferences.SCALE_ITEM));
+                "layer0",modLoc("item/"+ MHNWReferences.RATHIAN+"_"+MHNWReferences.SCALE_ITEM));
         singleTexture(RATHIAN_TAIL_ITEM.getId().getPath(),
                 mcLoc("item/handheld"),
-                "layer0",modLoc("item/"+ RATHIAN+"_"+MHNWReferences.TAIL_ITEM));
+                "layer0",modLoc("item/"+ MHNWReferences.RATHIAN+"_"+MHNWReferences.TAIL_ITEM));
         singleTexture(RATHIAN_WEBBING_ITEM.getId().getPath(),
                 mcLoc("item/handheld"),
-                "layer0",modLoc("item/"+ RATHIAN+"_"+MHNWReferences.WEBBING_ITEM));
+                "layer0",modLoc("item/"+ MHNWReferences.RATHIAN+"_"+MHNWReferences.WEBBING_ITEM));
 
         singleTexture(FLAME_SACK_ITEM.getId().getPath(),
                 mcLoc("item/handheld"),

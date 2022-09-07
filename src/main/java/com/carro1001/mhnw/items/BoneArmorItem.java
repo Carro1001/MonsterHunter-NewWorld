@@ -20,7 +20,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static com.carro1001.mhnw.MHNW.GROUP;
-import static com.carro1001.mhnw.registration.ModArmor.*;
+import static com.carro1001.mhnw.registration.ModItems.*;
 
 public class BoneArmorItem extends GeoArmorItem implements IAnimatable {
     private AnimationFactory factory = new AnimationFactory(this);

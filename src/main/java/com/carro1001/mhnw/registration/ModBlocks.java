@@ -32,10 +32,10 @@ public class ModBlocks {
     public static final RegistryObject<Block> MACHALITE_ORE_BLOCK = BLOCKS.register(MACHALITE_ORE , () -> new DropExperienceBlock(ORE_PROPERTIES));
     public static final RegistryObject<Item> MACHALITE_ORE_ITEM = fromBlock(MACHALITE_ORE_BLOCK);
 
-    public static final RegistryObject<CrystalCluster> EARTH_CRYSTAL_CLUSTER_BLOCK = BLOCKS.register(EARTH_CRYSTAL_CLUSTER , () -> new CrystalCluster(5, 3, CRYSTAL_PROPERTIES));
+    public static final RegistryObject<CrystalCluster> EARTH_CRYSTAL_CLUSTER_BLOCK = BLOCKS.register(EARTH_CRYSTAL_CLUSTER , () -> new CrystalCluster(CRYSTAL_PROPERTIES));
     public static final RegistryObject<Item> EARTH_CRYSTAL_CLUSTER_ITEM = fromBlock(EARTH_CRYSTAL_CLUSTER_BLOCK);
 
-    public static final RegistryObject<CrystalCluster> ICE_CRYSTAL_CLUSTER_BLOCK = BLOCKS.register(ICE_CRYSTAL_CLUSTER , () -> new CrystalCluster(5, 3, CRYSTAL_PROPERTIES));
+    public static final RegistryObject<CrystalCluster> ICE_CRYSTAL_CLUSTER_BLOCK = BLOCKS.register(ICE_CRYSTAL_CLUSTER , () -> new CrystalCluster(CRYSTAL_PROPERTIES));
     public static final RegistryObject<Item> ICE_CRYSTAL_CLUSTER_ITEM = fromBlock(ICE_CRYSTAL_CLUSTER_BLOCK);
 
     public static <B extends  Block>RegistryObject<Item> fromBlock(RegistryObject<B> block) {

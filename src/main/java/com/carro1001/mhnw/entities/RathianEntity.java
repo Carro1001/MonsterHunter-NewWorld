@@ -22,14 +22,13 @@ public class RathianEntity extends DragonEntity {
     public boolean agro = false;
     public boolean backflip = false;
     public boolean tailswipe = false;
-
     public RathianEntity(EntityType<? extends PathfinderMob > p_27557_, Level p_27558_) {
         super(p_27557_, p_27558_, MHNWReferences.RATHIAN);
     }
 
     private <E extends IAnimatable> PlayState predicate(AnimationEvent<E> event) {
-
-        if (!event.isMoving() && this.getSpeed() <= 0) {
+        GenerateScale();
+        if (!event.isMoving()) {
 
             if (roaring) {
                 roaring = false;
@@ -63,12 +62,11 @@ public class RathianEntity extends DragonEntity {
             return PlayState.CONTINUE;
         }
 
-        event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathian.idle_normal", true));
-        return PlayState.CONTINUE;
+        return PlayState.STOP;
     }
     @Override
     public void registerControllers(AnimationData data) {
-        data.addAnimationController(new AnimationController<>(this, "controller", 6, this::predicate));
+        data.addAnimationController(new AnimationController<>(this, "controller", 3, this::predicate));
     }
 
     public static AttributeSupplier.Builder prepareAttributes() {
@@ -83,33 +81,39 @@ public class RathianEntity extends DragonEntity {
 
     @Override
     public void tick() {
-        counter++;
-        if(counter >= 20*20){
-            counter = 0;
-            hover = false;
-            roaring = false;
-            agro = false;
-            backflip = false;
-            tailswipe = false;
-            switch(new Random().nextInt(8)){
-                case 0:
-                    hover = true;
-                    break;
-                case 1:
-                    roaring = true;
-                    break;
-                case 2:
-                    agro = true;
-                    break;
-                case 3:
-                    backflip = true;
-                    break;
-                case 4:
-                    tailswipe = true;
-                    break;
+        if (getSpeed() > 0) {
+            counter++;
+            if(counter >= 20*20){
+                counter = 0;
+                hover = false;
+                roaring = false;
+                agro = false;
+                backflip = false;
+                tailswipe = false;
+                switch(new Random().nextInt(8)){
+                    case 0:
+                        hover = true;
+                        break;
+                    case 1:
+                        roaring = true;
+                        break;
+                    case 2:
+                        agro = true;
+                        break;
+                    case 3:
+                        backflip = true;
+                        break;
+                    case 4:
+                        tailswipe = true;
+                        break;
+                }
             }
         }
         super.tick();
     }
 
+    @Override
+    public float getMonsterScale() {
+        return scale;
+    }
 }

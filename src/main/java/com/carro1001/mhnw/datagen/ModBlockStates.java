@@ -22,8 +22,8 @@ public class ModBlockStates extends BlockStateProvider {
         simpleBlock(MACHALITE_ORE_BLOCK.get());
         simpleBlock(CARBALITE_ORE_BLOCK.get());
         simpleBlock(DRAGONITE_ORE_BLOCK.get());
-        simpleBlock(EARTH_CRYSTAL_CLUSTER_BLOCK.get(),models().cross(EARTH_CRYSTAL_CLUSTER_BLOCK.getId().getPath(), modLoc("block/" + EARTH_CRYSTAL_CLUSTER_BLOCK.getId().getPath())));
-        simpleBlock(ICE_CRYSTAL_CLUSTER_BLOCK.get(),models().cross(ICE_CRYSTAL_CLUSTER_BLOCK.getId().getPath(), modLoc("block/" + ICE_CRYSTAL_CLUSTER_BLOCK.getId().getPath())));
+        simpleBlock(EARTH_CRYSTAL_CLUSTER_BLOCK.get(),models().cross(EARTH_CRYSTAL_CLUSTER_BLOCK.getId().getPath(), modLoc("block/" + EARTH_CRYSTAL_CLUSTER_BLOCK.getId().getPath())).renderType("cutout"));
+        simpleBlock(ICE_CRYSTAL_CLUSTER_BLOCK.get(),models().cross(ICE_CRYSTAL_CLUSTER_BLOCK.getId().getPath(), modLoc("block/" + ICE_CRYSTAL_CLUSTER_BLOCK.getId().getPath())).renderType("cutout"));
 
     }
 

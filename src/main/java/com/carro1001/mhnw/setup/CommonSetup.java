@@ -7,7 +7,7 @@ import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 
 @Mod.EventBusSubscriber(modid = MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
-public class ModSetup {
+public class CommonSetup {
 
     @SubscribeEvent
     public static void init(FMLCommonSetupEvent event) {

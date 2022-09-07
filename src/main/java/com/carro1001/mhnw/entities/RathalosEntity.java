@@ -28,8 +28,8 @@ public class RathalosEntity extends DragonEntity {
     }
 
     private <E extends IAnimatable> PlayState predicate(AnimationEvent<E> event) {
-
-        if (!event.isMoving() && this.getSpeed() <= 0) {
+        GenerateScale();
+        if (!event.isMoving()) {
             if (hover) {
                 event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.hover", true));
                 return PlayState.CONTINUE;
@@ -57,19 +57,17 @@ public class RathalosEntity extends DragonEntity {
         }
         if (event.isMoving()) {
             if (agro) {
-                event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.idle_aggro", true));
+                event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.walk_aggro", true));
                 return PlayState.CONTINUE;
             }
-            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.walk_aggro", true));
+            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.walk_normal", true));
             return PlayState.CONTINUE;
         }
-
-        event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.idle_normal", true));
-        return PlayState.CONTINUE;
+        return PlayState.STOP;
     }
     @Override
     public void registerControllers(AnimationData data) {
-        data.addAnimationController(new AnimationController<>(this, "controller", 6, this::predicate));
+        data.addAnimationController(new AnimationController<>(this, "controller", 3, this::predicate));
     }
 
     public static AttributeSupplier.Builder prepareAttributes() {
@@ -84,33 +82,39 @@ public class RathalosEntity extends DragonEntity {
 
     @Override
     public void tick() {
-        counter++;
-        if(counter >= 20*10){
-            counter = 0;
-            hover = false;
-            roaring = false;
-            agro = false;
-            fly = false;
-            tailswipe = false;
-            switch(new Random().nextInt(8)){
-                case 0:
-                    hover = true;
-                    break;
-                case 1:
-                    roaring = true;
-                    break;
-                case 2:
-                    agro = true;
-                    break;
-                case 3:
-                    fly = true;
-                    break;
-                case 4:
-                    tailswipe = true;
-                    break;
+        if (getSpeed() > 0) {
+            counter++;
+            if(counter >= 20*10){
+                counter = 0;
+                hover = false;
+                roaring = false;
+                agro = false;
+                fly = false;
+                tailswipe = false;
+                switch(new Random().nextInt(8)){
+                    case 0:
+                        hover = true;
+                        break;
+                    case 1:
+                        roaring = true;
+                        break;
+                    case 2:
+                        agro = true;
+                        break;
+                    case 3:
+                        fly = true;
+                        break;
+                    case 4:
+                        tailswipe = true;
+                        break;
+                }
             }
         }
         super.tick();
     }
 
+    @Override
+    public float getMonsterScale() {
+        return scale;
+    }
 }

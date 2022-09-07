@@ -38,7 +38,7 @@ public class ClientSetup {
 
         event.registerEntityRenderer(APTONOTH.get(), AptonothRenderer::new);
         event.registerEntityRenderer(RATHIAN.get(), RathianRenderer::new);
-        event.registerEntityRenderer(RATHALOS.get(), RathalasRenderer::new);
+        event.registerEntityRenderer(RATHALOS.get(), RathalosRenderer::new);
         event.registerEntityRenderer(BITTERBUG.get(), BitterbugRenderer::new);
         event.registerEntityRenderer(TOAD.get(), ToadRenderer::new);
         event.registerEntityRenderer(ZINOGRE.get(), ZinogreRenderer::new);

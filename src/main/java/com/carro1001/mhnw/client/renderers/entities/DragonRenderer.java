@@ -1,8 +1,7 @@
 package com.carro1001.mhnw.client.renderers.entities;
 
-import com.carro1001.mhnw.client.models.entities.RathalosModel;
+import com.carro1001.mhnw.entities.DragonEntity;
 import com.carro1001.mhnw.entities.DragonPart;
-import com.carro1001.mhnw.entities.RathalosEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -10,20 +9,22 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
+import software.bernie.geckolib3.model.AnimatedGeoModel;
 import software.bernie.geckolib3.renderers.geo.GeoEntityRenderer;
 
-public class RathalasRenderer extends GeoEntityRenderer<RathalosEntity> {
+public abstract class DragonRenderer extends GeoEntityRenderer<DragonEntity> {
 
-    public RathalasRenderer(EntityRendererProvider.Context context) {
-        super(context, new RathalosModel());
+    public DragonRenderer(EntityRendererProvider.Context renderManager, AnimatedGeoModel<DragonEntity> modelProvider) {
+        super(renderManager, modelProvider);
     }
-    @Override
-    public RenderType getRenderType(RathalosEntity animatable, float partialTicks, PoseStack stack,
+
+    public RenderType getRenderType(DragonEntity animatable, float partialTicks, PoseStack stack,
                                     MultiBufferSource renderTypeBuffer, VertexConsumer vertexBuilder, int packedLightIn,
                                     ResourceLocation textureLocation) {
         return RenderType.entityCutoutNoCull(getTextureLocation(animatable));
     }
-    public boolean shouldRender(RathalosEntity livingEntityIn, Frustum camera, double camX, double camY, double camZ) {
+
+    public boolean shouldRender(DragonEntity livingEntityIn, Frustum camera, double camX, double camY, double camZ) {
         if (super.shouldRender(livingEntityIn, camera, camX, camY, camZ)) {
             return true;
         } else {
@@ -34,5 +35,11 @@ public class RathalasRenderer extends GeoEntityRenderer<RathalosEntity> {
             }
             return false;
         }
+    }
+
+    @Override
+    public void renderEarly(DragonEntity animatable, PoseStack stackIn, float ticks, MultiBufferSource renderTypeBuffer, VertexConsumer vertexBuilder, int packedLightIn, int packedOverlayIn, float red, float green, float blue, float partialTicks) {
+        super.renderEarly(animatable, stackIn, ticks, renderTypeBuffer, vertexBuilder, packedLightIn, packedOverlayIn, red, green, blue, partialTicks);
+        stackIn.scale(animatable.getMonsterScale(),animatable.getMonsterScale(),animatable.getMonsterScale());
     }
 }

@@ -1,6 +1,11 @@
 package com.carro1001.mhnw.registration;
 
 import com.carro1001.mhnw.entities.*;
+import com.carro1001.mhnw.utils.MHNWReferences;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.level.block.Block;
 import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -23,5 +28,13 @@ public class RegistrationHelper {
         event.put(GIZUCHI.get(), GreatIzuchiEntity.prepareAttributes().build());
         event.put(ZINOGRE.get(), ZinogreEntity.prepareAttributes().build());
 
+    }
+
+    public static class Tags {
+//        public static final TagKey<Block> AMETHYST_REPLACE = create("amethyst_replaceables");
+
+        private static TagKey<Block> create(String location) {
+            return BlockTags.create(new ResourceLocation(MHNWReferences.MODID, location));
+        }
     }
 }

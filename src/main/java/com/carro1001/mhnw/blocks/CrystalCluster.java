@@ -34,15 +34,17 @@ public class CrystalCluster extends Block{
     protected final VoxelShape upAabb;
     protected final VoxelShape downAabb;
 
-    public CrystalCluster(int p_152015_, int p_152016_, BlockBehaviour.Properties p_152017_) {
+    public CrystalCluster(BlockBehaviour.Properties p_152017_) {
         super(p_152017_);
+        int size = 12;
+        int offset = 3;
         this.registerDefaultState(this.defaultBlockState().setValue(WATERLOGGED, Boolean.valueOf(false)).setValue(FACING, Direction.UP));
-        this.upAabb = Block.box((double)p_152016_, 0.0D, (double)p_152016_, (double)(16 - p_152016_), (double)p_152015_, (double)(16 - p_152016_));
-        this.downAabb = Block.box((double)p_152016_, (double)(16 - p_152015_), (double)p_152016_, (double)(16 - p_152016_), 16.0D, (double)(16 - p_152016_));
-        this.northAabb = Block.box((double)p_152016_, (double)p_152016_, (double)(16 - p_152015_), (double)(16 - p_152016_), (double)(16 - p_152016_), 16.0D);
-        this.southAabb = Block.box((double)p_152016_, (double)p_152016_, 0.0D, (double)(16 - p_152016_), (double)(16 - p_152016_), (double)p_152015_);
-        this.eastAabb = Block.box(0.0D, (double)p_152016_, (double)p_152016_, (double)p_152015_, (double)(16 - p_152016_), (double)(16 - p_152016_));
-        this.westAabb = Block.box((double)(16 - p_152015_), (double)p_152016_, (double)p_152016_, 16.0D, (double)(16 - p_152016_), (double)(16 - p_152016_));
+        this.upAabb = Block.box((double)offset, 0.0D, (double)offset, (double)(16 - offset), (double)size, (double)(16 - offset));
+        this.downAabb = Block.box((double)offset, (double)(16 - size), (double)offset, (double)(16 - offset), 16.0D, (double)(16 - offset));
+        this.northAabb = Block.box((double)offset, (double)offset, (double)(16 - size), (double)(16 - offset), (double)(16 - offset), 16.0D);
+        this.southAabb = Block.box((double)offset, (double)offset, 0.0D, (double)(16 - offset), (double)(16 - offset), (double)size);
+        this.eastAabb = Block.box(0.0D, (double)offset, (double)offset, (double)size, (double)(16 - offset), (double)(16 - offset));
+        this.westAabb = Block.box((double)(16 - size), (double)offset, (double)offset, 16.0D, (double)(16 - offset), (double)(16 - offset));
     }
     public VoxelShape getShape(BlockState p_152021_, BlockGetter p_152022_, BlockPos p_152023_, CollisionContext p_152024_) {
         Direction direction = p_152021_.getValue(FACING);
