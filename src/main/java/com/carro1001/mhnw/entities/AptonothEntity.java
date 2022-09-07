@@ -12,6 +12,7 @@ import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib3.core.IAnimatable;
 import software.bernie.geckolib3.core.IAnimationTickable;
@@ -31,7 +32,7 @@ public class AptonothEntity  extends AbstractHorse implements IAnimatable, IAnim
         this.noCulling = true;
     }
 
-    public InteractionResult mobInteract(Player pPlayer, InteractionHand pHand) {
+    public InteractionResult mobInteract(Player pPlayer, @NotNull InteractionHand pHand) {
         ItemStack itemstack = pPlayer.getItemInHand(pHand);
 
         if (!itemstack.isEmpty()) {
@@ -93,7 +94,7 @@ public class AptonothEntity  extends AbstractHorse implements IAnimatable, IAnim
 
     @Nullable
     @Override
-    public AgeableMob getBreedOffspring(ServerLevel p_146743_, AgeableMob p_146744_) {
+    public AgeableMob getBreedOffspring(@NotNull ServerLevel p_146743_, @NotNull AgeableMob p_146744_) {
         return APTONOTH.get().create(p_146743_);
     }
 }

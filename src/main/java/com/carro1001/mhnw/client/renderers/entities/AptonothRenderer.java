@@ -8,6 +8,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.NotNull;
 import software.bernie.geckolib3.renderers.geo.GeoEntityRenderer;
 
 import static com.carro1001.mhnw.utils.MHNWReferences.APTONOTH;
@@ -26,7 +27,7 @@ public class AptonothRenderer extends GeoEntityRenderer<AptonothEntity> {
         return RenderType.entityCutoutNoCull(getTextureLocation(animatable));
     }
     @Override
-    public ResourceLocation getTextureLocation(AptonothEntity pEntity) {
+    public @NotNull ResourceLocation getTextureLocation(@NotNull AptonothEntity pEntity) {
         return RESOURCE_LOCATION;
     }
 }

@@ -1,7 +1,5 @@
 package com.carro1001.mhnw.datagen;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import net.minecraft.advancements.critereon.EnchantmentPredicate;
 import net.minecraft.advancements.critereon.ItemPredicate;
 import net.minecraft.advancements.critereon.MinMaxBounds;
@@ -31,6 +29,7 @@ import net.minecraft.world.level.storage.loot.providers.number.UniformGenerator;
 import net.minecraftforge.common.Tags;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -41,7 +40,6 @@ public abstract class BaseLootTableProvider extends LootTableProvider {
 
 
     private static final Logger LOGGER = LogManager.getLogger();
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
     protected final Map<Block, LootTable.Builder> lootTables = new HashMap<>();
     protected final Map<ResourceLocation, LootTable.Builder> entityLootTables = new HashMap<>();
@@ -118,7 +116,7 @@ public abstract class BaseLootTableProvider extends LootTableProvider {
         return LootTable.lootTable().withPool(builder);
     }
     @Override
-    public void run(CachedOutput cache) {
+    public void run(@NotNull CachedOutput cache) {
         addTables();
 
         Map<ResourceLocation, LootTable> tables = new HashMap<>();
@@ -145,7 +143,7 @@ public abstract class BaseLootTableProvider extends LootTableProvider {
     }
 
     @Override
-    public String getName() {
+    public @NotNull String getName() {
         return "Monster Hunter: New World LootTables";
     }
 

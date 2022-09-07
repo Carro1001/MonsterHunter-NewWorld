@@ -14,6 +14,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.Random;
@@ -34,7 +35,7 @@ public class BitterbugEntity extends Mob {
 
         this.entityData.define(DATA_IS_POWERED, false);
     }
-    public void addAdditionalSaveData(CompoundTag pCompound) {
+    public void addAdditionalSaveData(@NotNull CompoundTag pCompound) {
         super.addAdditionalSaveData(pCompound);
         if (this.entityData.get(DATA_IS_POWERED)) {
             pCompound.putBoolean("powered", true);
@@ -52,7 +53,7 @@ public class BitterbugEntity extends Mob {
     public void setTypeAssignedDir(boolean pState) {
         this.entityData.set(TYPEASSIGNED, pState);
     }
-    public void readAdditionalSaveData(CompoundTag pCompound) {
+    public void readAdditionalSaveData(@NotNull CompoundTag pCompound) {
         super.readAdditionalSaveData(pCompound);
 
         this.entityData.set(DATA_IS_POWERED, pCompound.getBoolean("powered"));
@@ -83,7 +84,7 @@ public class BitterbugEntity extends Mob {
 
 
     }
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor p_149132_, DifficultyInstance p_149133_, MobSpawnType p_149134_, @Nullable SpawnGroupData p_149135_, @Nullable CompoundTag p_149136_) {
+    public SpawnGroupData finalizeSpawn(@NotNull ServerLevelAccessor p_149132_, @NotNull DifficultyInstance p_149133_, @NotNull MobSpawnType p_149134_, @Nullable SpawnGroupData p_149135_, @Nullable CompoundTag p_149136_) {
         this.setType();
         return super.finalizeSpawn(p_149132_, p_149133_, p_149134_, p_149135_, p_149136_);
     }

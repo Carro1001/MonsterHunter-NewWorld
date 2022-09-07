@@ -3,7 +3,6 @@ package com.carro1001.mhnw.datagen;
 import net.minecraft.data.DataGenerator;
 import net.minecraftforge.common.data.LanguageProvider;
 
-import static com.carro1001.mhnw.registration.ModArmor.*;
 import static com.carro1001.mhnw.registration.ModBlocks.*;
 import static com.carro1001.mhnw.registration.ModEntities.*;
 import static com.carro1001.mhnw.registration.ModItems.*;

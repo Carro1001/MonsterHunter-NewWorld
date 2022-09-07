@@ -2,31 +2,40 @@ package com.carro1001.mhnw.entities;
 
 import com.carro1001.mhnw.entities.ai.DragonWalkGoal;
 import com.carro1001.mhnw.entities.interfaces.IGrows;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.util.Mth;
+import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.EntityDamageSource;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.NotNull;
 import software.bernie.geckolib3.core.IAnimatable;
 import software.bernie.geckolib3.core.IAnimationTickable;
 import software.bernie.geckolib3.core.manager.AnimationFactory;
 
+import javax.annotation.Nullable;
 import java.util.Random;
 
 public abstract class DragonEntity extends PathfinderMob implements IAnimatable, IAnimationTickable, IGrows {
     private AnimationFactory factory = new AnimationFactory(this);
 
     public boolean roaring = false;
-    public float scale = 1;
-    public boolean scaleSet = false;
-
+    private static final EntityDataAccessor<Float> SCALE = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Boolean> SCALESSIGNED = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.BOOLEAN);
     public int counter = 0;
     public int StateCounter = 0;
 
@@ -82,6 +91,16 @@ public abstract class DragonEntity extends PathfinderMob implements IAnimatable,
         body.copyPosition(this);
         dragonParts = new DragonPart[]{headPart,neckPart,body,rightWingUpperPart,leftWingUpperPart,tail1Part,tail2Part};
     }
+    protected void defineSynchedData() {
+        super.defineSynchedData();
+        this.entityData.define(SCALESSIGNED, false);
+        this.entityData.define(SCALE, 1f);
+
+    }
+    public SpawnGroupData finalizeSpawn(@NotNull ServerLevelAccessor p_149132_, @NotNull DifficultyInstance p_149133_, @NotNull MobSpawnType p_149134_, @Nullable SpawnGroupData p_149135_, @Nullable CompoundTag p_149136_) {
+        GenerateScale();
+        return super.finalizeSpawn(p_149132_, p_149133_, p_149134_, p_149135_, p_149136_);
+    }
 
     protected void registerGoals() {
         this.goalSelector.addGoal(6, new DragonWalkGoal(this, 0.7D,1.0000001E-5F));
@@ -104,7 +123,7 @@ public abstract class DragonEntity extends PathfinderMob implements IAnimatable,
             this.dragonParts[i].setId(pId + i + 1);
     }
     @Override
-    public InteractionResult mobInteract(Player pPlayer, InteractionHand pHand) {
+    public InteractionResult mobInteract(@NotNull Player pPlayer, @NotNull InteractionHand pHand) {
         roaring = true;
         counter = 0;
         StateCounter = 0;
@@ -214,7 +233,7 @@ public abstract class DragonEntity extends PathfinderMob implements IAnimatable,
                 float f20 = Mth.cos(f17);
                 float f21 = 1.5F;
                 float f22 = (float)(k + 1) * 2.0F;
-                this.tickPart(enderdragonpart, (double)(-(f2 * 1.5F + f18 * f22) * f13), adouble1[1] - adouble[1] - (double)((f22 + 1.5F) * f1) + 1.5D, (double)((f15 * 1.5F + f20 * f22) * f13));
+                this.tickPart(enderdragonpart, (double)(-(f2 * 1.5F + f18 * f22) * f13), adouble1[1] - adouble[1] - (double)((f22 + 1.5F) * f1) + 1.5D, ((f15 * 1.5F + f20 * f22) * f13));
             }
             for (int l = 0; l < this.dragonParts.length; ++l) {
                 this.dragonParts[l].xo = avector3d[l].x;
@@ -226,6 +245,12 @@ public abstract class DragonEntity extends PathfinderMob implements IAnimatable,
             }
         }
     }
+
+    @Override
+    public float getMonsterScale() {
+        return getScaleDir();
+    }
+
     private float rotWrap(double pAngle) {
         return (float)Mth.wrapDegrees(pAngle);
     }
@@ -243,13 +268,14 @@ public abstract class DragonEntity extends PathfinderMob implements IAnimatable,
     }
 
     @Override
-    public boolean hurt(DamageSource pSource, float pAmount) {
+    public boolean hurt(@NotNull DamageSource pSource, float pAmount) {
         if (pSource instanceof EntityDamageSource && ((EntityDamageSource)pSource).isThorns() && !this.level.isClientSide) {
             this.hurt(this.body, pSource, pAmount);
         }
 
         return false;
     }
+
     public boolean hurt(DragonPart pPart, DamageSource pSource, float pDamage) {
 
         if (pPart != this.headPart) {
@@ -267,6 +293,7 @@ public abstract class DragonEntity extends PathfinderMob implements IAnimatable,
         }
 
     }
+
     protected boolean reallyHurt(DamageSource pDamageSource, float pAmount) {
         return super.hurt(pDamageSource, pAmount);
     }
@@ -291,15 +318,42 @@ public abstract class DragonEntity extends PathfinderMob implements IAnimatable,
     }
 
     protected void GenerateScale(){
-        if(!scaleSet){
-            scale = (float) new Random().nextDouble(0.5,1.5);
-            scaleSet = true;
+        if(!getScaleAssignedDir()){
+            setScaleDir((float) new Random().nextDouble(0.5,1.5));
+            setScaleAssignedDir(true);
         }
+    }
+    public void setScaleDir(float scale) {
+        if(!getScaleAssignedDir()){
+            this.entityData.set(SCALE, scale);
+            this.setScaleAssignedDir(true);
+        }
+    }
+    public void setScaleAssignedDir(boolean pState) {
+        this.entityData.set(SCALESSIGNED, pState);
+    }
+    public boolean getScaleAssignedDir() {
+        return this.entityData.get(SCALESSIGNED);
+    }
+    public float getScaleDir() {
+        return this.entityData.get(SCALE);
     }
     @Override
     public float getViewXRot(float pPartialTicks) {
         return pPartialTicks == 1.0F ? this.getXRot()/2 : Mth.lerp(pPartialTicks, this.xRotO/2, this.getXRot()/2);
     }
 
+    @Override
+    public void addAdditionalSaveData(@NotNull CompoundTag pCompound) {
+        super.addAdditionalSaveData(pCompound);
+        pCompound.putBoolean("type_assign", getScaleAssignedDir());
+        pCompound.putFloat("monster_scale", getScaleDir());
+    }
 
+    @Override
+    public void readAdditionalSaveData(@NotNull CompoundTag pCompound) {
+        super.readAdditionalSaveData(pCompound);
+        this.setScaleDir(pCompound.getInt("monster_scale"));
+
+    }
 }

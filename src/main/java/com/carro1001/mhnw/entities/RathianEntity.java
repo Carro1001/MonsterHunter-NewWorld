@@ -27,7 +27,6 @@ public class RathianEntity extends DragonEntity {
     }
 
     private <E extends IAnimatable> PlayState predicate(AnimationEvent<E> event) {
-        GenerateScale();
         if (!event.isMoving()) {
 
             if (roaring) {
@@ -112,8 +111,4 @@ public class RathianEntity extends DragonEntity {
         super.tick();
     }
 
-    @Override
-    public float getMonsterScale() {
-        return scale;
-    }
 }

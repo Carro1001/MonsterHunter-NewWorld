@@ -8,12 +8,7 @@ import net.minecraft.world.phys.Vec3;
 import javax.annotation.Nullable;
 
 public class DragonWalkGoal extends RandomStrollGoal {
-    public static final float PROBABILITY = 0.001F;
     protected final float probability;
-
-    public DragonWalkGoal(PathfinderMob pMob, double pSpeedModifier) {
-        this(pMob, pSpeedModifier, 0.001F);
-    }
 
     public DragonWalkGoal(PathfinderMob pMob, double pSpeedModifier, float pProbability) {
         super(pMob, pSpeedModifier);

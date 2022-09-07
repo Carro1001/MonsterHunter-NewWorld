@@ -9,6 +9,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
+import org.jetbrains.annotations.NotNull;
 import software.bernie.geckolib3.model.AnimatedGeoModel;
 import software.bernie.geckolib3.renderers.geo.GeoEntityRenderer;
 
@@ -24,7 +25,7 @@ public abstract class DragonRenderer extends GeoEntityRenderer<DragonEntity> {
         return RenderType.entityCutoutNoCull(getTextureLocation(animatable));
     }
 
-    public boolean shouldRender(DragonEntity livingEntityIn, Frustum camera, double camX, double camY, double camZ) {
+    public boolean shouldRender(@NotNull DragonEntity livingEntityIn, @NotNull Frustum camera, double camX, double camY, double camZ) {
         if (super.shouldRender(livingEntityIn, camera, camX, camY, camZ)) {
             return true;
         } else {

@@ -28,7 +28,6 @@ public class RathalosEntity extends DragonEntity {
     }
 
     private <E extends IAnimatable> PlayState predicate(AnimationEvent<E> event) {
-        GenerateScale();
         if (!event.isMoving()) {
             if (hover) {
                 event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.hover", true));
@@ -113,8 +112,4 @@ public class RathalosEntity extends DragonEntity {
         super.tick();
     }
 
-    @Override
-    public float getMonsterScale() {
-        return scale;
-    }
 }

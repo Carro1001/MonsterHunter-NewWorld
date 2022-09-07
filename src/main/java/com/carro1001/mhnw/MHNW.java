@@ -11,6 +11,7 @@ import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLPaths;
+import org.jetbrains.annotations.NotNull;
 
 import static com.carro1001.mhnw.registration.ModBlocks.BLOCKS;
 import static com.carro1001.mhnw.registration.ModBlocks.BLOCK_ENTITIES;
@@ -48,7 +49,7 @@ public class MHNW {
 
     public static final CreativeModeTab GROUP = new CreativeModeTab(MODID) {
         @Override
-        public ItemStack makeIcon() {
+        public @NotNull ItemStack makeIcon() {
             return new ItemStack(WELL_DONE_MEAT_ITEM.get());
         }
     };

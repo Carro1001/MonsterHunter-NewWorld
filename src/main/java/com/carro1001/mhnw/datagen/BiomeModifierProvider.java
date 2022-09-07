@@ -29,11 +29,9 @@ import java.util.Map;
 import java.util.function.BiConsumer;
 
 public class BiomeModifierProvider implements DataProvider {
-    private final String        modid;
     private final DataGenerator gen;
     private static final Logger LOGGER = LogManager.getLogger();
     public BiomeModifierProvider(DataGenerator gen) {
-        this.modid = MHNWReferences.MODID;
         this.gen   = gen;
     }
 
@@ -90,7 +88,7 @@ public class BiomeModifierProvider implements DataProvider {
     }
 
     @Override
-    public String getName() {
+    public @NotNull String getName() {
         return "Monster Hunter: New World Biome Modifiers";
     }
 }

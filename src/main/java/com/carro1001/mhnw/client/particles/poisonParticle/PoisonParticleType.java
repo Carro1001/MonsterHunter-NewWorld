@@ -7,6 +7,7 @@ import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
+import org.jetbrains.annotations.NotNull;
 
 public class PoisonParticleType extends SimpleParticleType {
     public PoisonParticleType() {
@@ -22,7 +23,7 @@ public class PoisonParticleType extends SimpleParticleType {
         }
 
 
-        public Particle createParticle(SimpleParticleType typeIn, ClientLevel worldIn, double x, double y, double z, double xSpeed, double ySpeed, double zSpeed) {
+        public Particle createParticle(@NotNull SimpleParticleType typeIn,@NotNull ClientLevel worldIn, double x, double y, double z, double xSpeed, double ySpeed, double zSpeed) {
             PoisonParticle particle = new PoisonParticle(worldIn, x, y, z, xSpeed, ySpeed, zSpeed);
             particle.pickSprite(this.spriteSet);
             return particle;

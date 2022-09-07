@@ -8,8 +8,7 @@ public class BoneArmorRenderer extends GeoArmorRenderer<BoneArmorItem> {
     public BoneArmorRenderer() {
         super(new BoneArmorModel());
 
-        // These values are what each bone name is in blockbench. So if your head bone
-        // is named "bone545", make sure to do this.headBone = "bone545";
+        // These values are what each bone name is in blockbench.
         // The default values are the ones that come with the default armor template in
         // the geckolib blockbench plugin.
         this.headBone = "Head";

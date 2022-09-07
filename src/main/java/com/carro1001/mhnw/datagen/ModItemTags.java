@@ -4,6 +4,7 @@ import net.minecraft.data.DataGenerator;
 import net.minecraft.data.tags.ItemTagsProvider;
 import net.minecraftforge.common.Tags;
 import net.minecraftforge.common.data.ExistingFileHelper;
+import org.jetbrains.annotations.NotNull;
 
 import static com.carro1001.mhnw.registration.ModBlocks.*;
 import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
@@ -24,7 +25,7 @@ public class ModItemTags extends ItemTagsProvider {
     }
 
     @Override
-    public String getName() {
+    public @NotNull String getName() {
         return "Monster Hunter: New World  Tags";
     }
 }

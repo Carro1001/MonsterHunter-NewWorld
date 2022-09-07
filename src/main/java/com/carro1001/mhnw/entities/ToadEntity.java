@@ -36,6 +36,7 @@ import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -104,7 +105,7 @@ public class ToadEntity extends PathfinderMob implements Bucketable{
         this.entityData.define(DATA_IS_IGNITED, false);
 
     }
-    public void addAdditionalSaveData(CompoundTag pCompound) {
+    public void addAdditionalSaveData(@NotNull CompoundTag pCompound) {
         super.addAdditionalSaveData(pCompound);
 
         pCompound.putShort("Fuse", (short)this.maxSwell);
@@ -128,7 +129,7 @@ public class ToadEntity extends PathfinderMob implements Bucketable{
     public void setTypeAssignedDir(boolean pState) {
         this.entityData.set(TYPEASSIGNED, pState);
     }
-    public void readAdditionalSaveData(CompoundTag pCompound) {
+    public void readAdditionalSaveData(@NotNull CompoundTag pCompound) {
         super.readAdditionalSaveData(pCompound);
         if (pCompound.contains("Fuse", 99)) {
             this.maxSwell = pCompound.getShort("Fuse");
@@ -182,7 +183,7 @@ public class ToadEntity extends PathfinderMob implements Bucketable{
     }
 
     @Override
-    public void saveToBucketTag(ItemStack p_148833_) {
+    public void saveToBucketTag(@NotNull ItemStack p_148833_) {
         if (this.hasCustomName()) {
             p_148833_.setHoverName(this.getCustomName());
         }
@@ -192,7 +193,7 @@ public class ToadEntity extends PathfinderMob implements Bucketable{
     }
 
     @Override
-    public void loadFromBucketTag(CompoundTag p_148832_) {
+    public void loadFromBucketTag(@NotNull CompoundTag p_148832_) {
         Bucketable.loadDefaultDataFromBucketTag(this, p_148832_);
         if (p_148832_.contains("BucketVariantTag", 3)) {
             this.setTypeDir(p_148832_.getInt("BucketVariantTag"));
@@ -218,11 +219,11 @@ public class ToadEntity extends PathfinderMob implements Bucketable{
     }
 
     @Override
-    public SoundEvent getPickupSound() {
-        return null;
+    public @NotNull SoundEvent getPickupSound() {
+        return SoundEvents.BUCKET_FILL_FISH;
     }
 
-    public InteractionResult mobInteract(Player p_149155_, InteractionHand p_149156_) {
+    public @NotNull InteractionResult mobInteract(Player p_149155_, @NotNull InteractionHand p_149156_) {
         ItemStack itemstack = p_149155_.getItemInHand(p_149156_);
         if (itemstack.is(Items.FLINT_AND_STEEL)) {
             this.level.playSound(p_149155_, this.getX(), this.getY(), this.getZ(), SoundEvents.FLINTANDSTEEL_USE, this.getSoundSource(), 1.0F, this.random.nextFloat() * 0.4F + 0.8F);
@@ -284,7 +285,7 @@ public class ToadEntity extends PathfinderMob implements Bucketable{
         }
     }
 
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor p_149132_, DifficultyInstance p_149133_, MobSpawnType p_149134_, @Nullable SpawnGroupData p_149135_, @Nullable CompoundTag p_149136_) {
+    public SpawnGroupData finalizeSpawn(@NotNull ServerLevelAccessor p_149132_, @NotNull DifficultyInstance p_149133_, @NotNull MobSpawnType p_149134_, @Nullable SpawnGroupData p_149135_, @Nullable CompoundTag p_149136_) {
         if (p_149134_ == MobSpawnType.BUCKET) {
             return p_149135_;
         } else {
@@ -479,9 +480,6 @@ public class ToadEntity extends PathfinderMob implements Bucketable{
             this.level.broadcastEntityEvent(this, (byte)1);
         }
 
-    }
-    public float getJumpCompletion(float pPartialTick) {
-        return this.jumpDuration == 0 ? 0.0F : ((float)this.jumpTicks + pPartialTick) / (float)this.jumpDuration;
     }
     public void setSpeedModifier(double pSpeedModifier) {
         this.getNavigation().setSpeedModifier(pSpeedModifier);

@@ -22,11 +22,6 @@ public class DragonPart extends PartEntity<DragonEntity> {
         this.refreshDimensions();
     }
 
-    public DragonPart(DragonEntity parent, EntityDimensions size) {
-        super(parent);
-        this.size = size;
-    }
-
     public void collideWithNearbyEntities() {
         List<Entity> entities = this.level.getEntities(this, this.getBoundingBox().expandTowards(0.20000000298023224D, 0.0D, 0.20000000298023224D));
         Entity parent = this.getParent();

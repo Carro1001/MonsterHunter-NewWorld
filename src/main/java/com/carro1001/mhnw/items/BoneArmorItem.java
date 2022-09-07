@@ -6,6 +6,7 @@ import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.item.ArmorMaterial;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import org.jetbrains.annotations.NotNull;
 import software.bernie.geckolib3.core.IAnimatable;
 import software.bernie.geckolib3.core.PlayState;
 import software.bernie.geckolib3.core.builder.AnimationBuilder;
@@ -17,6 +18,7 @@ import software.bernie.geckolib3.item.GeoArmorItem;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 
 import static com.carro1001.mhnw.MHNW.GROUP;
@@ -25,11 +27,11 @@ import static com.carro1001.mhnw.registration.ModItems.*;
 public class BoneArmorItem extends GeoArmorItem implements IAnimatable {
     private AnimationFactory factory = new AnimationFactory(this);
 
-    public BoneArmorItem(ArmorMaterial materialIn, EquipmentSlot slot, Properties builder) {
+    public BoneArmorItem(ArmorMaterial materialIn, EquipmentSlot slot, @NotNull Properties builder) {
         super(materialIn, slot, builder.tab(GROUP));
     }
 
-    @SuppressWarnings("unused")
+
     private <P extends IAnimatable> PlayState predicate(AnimationEvent<P> event) {
         List<EquipmentSlot> slotData = event.getExtraDataOfType(EquipmentSlot.class);
         List<ItemStack> stackData = event.getExtraDataOfType(ItemStack.class);
@@ -43,18 +45,16 @@ public class BoneArmorItem extends GeoArmorItem implements IAnimatable {
         List<Item> armorList = new ArrayList<>(4);
         for (EquipmentSlot slot : EquipmentSlot.values()) {
             if (slot.getType() == EquipmentSlot.Type.ARMOR) {
-                if (livingEntity.getItemBySlot(slot) != null) {
-                    armorList.add(livingEntity.getItemBySlot(slot).getItem());
-                }
+                livingEntity.getItemBySlot(slot);
+                armorList.add(livingEntity.getItemBySlot(slot).getItem());
             }
         }
 
-        boolean isWearingAll = armorList.containsAll(Arrays.asList(BONE_BOOTS.get(),
+        boolean isWearingAll = new HashSet<>(armorList).containsAll(Arrays.asList(BONE_BOOTS.get(),
                 BONE_LEGGINGS.get(), BONE_CHEST.get(), BONE_HEAD.get()));
         return isWearingAll ? PlayState.CONTINUE : PlayState.STOP;
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Override
     public void registerControllers(AnimationData data) {
         data.addAnimationController(new AnimationController(this, "controller", 20, this::predicate));

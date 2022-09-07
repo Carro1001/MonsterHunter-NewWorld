@@ -6,9 +6,7 @@ import com.carro1001.mhnw.client.renderers.entities.*;
 import com.carro1001.mhnw.client.renderers.items.BoneArmorRenderer;
 import com.carro1001.mhnw.items.BoneArmorItem;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.ForgeHooksClient;
 import net.minecraftforge.client.event.EntityRenderersEvent;
-import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
@@ -21,7 +19,8 @@ import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 public class ClientSetup {
 
     public static void init(FMLClientSetupEvent event) {
-        MinecraftForge.EVENT_BUS.register(ForgeHooksClient.ClientEvents.class);
+
+        //MinecraftForge.EVENT_BUS.register(ForgeHooksClient.ClientEvents.class);
     }
 
     @SubscribeEvent
