@@ -103,7 +103,7 @@ public abstract class DragonEntity extends PathfinderMob implements IAnimatable,
     }
 
     protected void registerGoals() {
-        this.goalSelector.addGoal(6, new DragonWalkGoal(this, 0.7D,1.0000001E-5F));
+        this.goalSelector.addGoal(6, new DragonWalkGoal(this, 1.0D,1.0000001E-5F));
         this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 6.0F));
         this.addBehaviourGoals();
     }
@@ -353,7 +353,12 @@ public abstract class DragonEntity extends PathfinderMob implements IAnimatable,
     @Override
     public void readAdditionalSaveData(@NotNull CompoundTag pCompound) {
         super.readAdditionalSaveData(pCompound);
-        this.setScaleDir(pCompound.getInt("monster_scale"));
+        this.setScaleDir(pCompound.getFloat("monster_scale"));
 
+    }
+
+    @Override
+    public float getScale() {
+        return getMonsterScale();
     }
 }

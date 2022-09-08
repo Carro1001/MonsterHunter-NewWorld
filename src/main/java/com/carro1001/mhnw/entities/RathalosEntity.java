@@ -28,6 +28,15 @@ public class RathalosEntity extends DragonEntity {
     }
 
     private <E extends IAnimatable> PlayState predicate(AnimationEvent<E> event) {
+
+        if (event.isMoving() || getSpeed() > 0) {
+            if (agro) {
+                event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.walk_aggro", true));
+                return PlayState.CONTINUE;
+            }
+            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.walk_normal", true));
+            return PlayState.CONTINUE;
+        }
         if (!event.isMoving()) {
             if (hover) {
                 event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.hover", true));
@@ -36,10 +45,6 @@ public class RathalosEntity extends DragonEntity {
             if (roaring) {
                 roaring = false;
                 event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.roar", false));
-                return PlayState.CONTINUE;
-            }
-            if (agro) {
-                event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.idle_aggro", true));
                 return PlayState.CONTINUE;
             }
             if (fly) {
@@ -51,15 +56,11 @@ public class RathalosEntity extends DragonEntity {
                 event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.tailswipe", false));
                 return PlayState.CONTINUE;
             }
-            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.idle_normal", true));
-            return PlayState.CONTINUE;
-        }
-        if (event.isMoving()) {
             if (agro) {
-                event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.walk_aggro", true));
+                event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.idle_aggro", true));
                 return PlayState.CONTINUE;
             }
-            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.walk_normal", true));
+            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.idle_normal", true));
             return PlayState.CONTINUE;
         }
         return PlayState.STOP;

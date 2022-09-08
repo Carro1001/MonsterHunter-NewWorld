@@ -6,9 +6,9 @@
 				"identifier": "geometry.rathalos",
 				"texture_width": 1024,
 				"texture_height": 1024,
-				"visible_bounds_width": 22,
-				"visible_bounds_height": 8.5,
-				"visible_bounds_offset": [0, 3.75, 0]
+				"visible_bounds_width": 35,
+				"visible_bounds_height": 9,
+				"visible_bounds_offset": [0, 3.5, 0]
 			},
 			"bones": [
 				{
