@@ -1,6 +1,7 @@
 package com.carro1001.mhnw.entities;
 
 import com.carro1001.mhnw.entities.ai.ToadSwellGoal;
+import com.carro1001.mhnw.entities.ai.ToadWalkGoal;
 import com.carro1001.mhnw.registration.ModEntities;
 import com.carro1001.mhnw.setup.ModConfig;
 import com.carro1001.mhnw.utils.MHNWReferences;
@@ -11,7 +12,6 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.util.Mth;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -20,12 +20,9 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.ai.control.JumpControl;
-import net.minecraft.world.entity.ai.control.MoveControl;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
-import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.animal.Bucketable;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -34,9 +31,15 @@ import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.gameevent.GameEvent;
-import net.minecraft.world.level.pathfinder.Path;
-import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
+import software.bernie.geckolib3.core.IAnimatable;
+import software.bernie.geckolib3.core.IAnimationTickable;
+import software.bernie.geckolib3.core.PlayState;
+import software.bernie.geckolib3.core.builder.AnimationBuilder;
+import software.bernie.geckolib3.core.controller.AnimationController;
+import software.bernie.geckolib3.core.event.predicate.AnimationEvent;
+import software.bernie.geckolib3.core.manager.AnimationData;
+import software.bernie.geckolib3.core.manager.AnimationFactory;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -44,28 +47,23 @@ import java.util.Random;
 
 import static com.carro1001.mhnw.registration.ModParticle.*;
 
-public class ToadEntity extends PathfinderMob implements Bucketable{
+public class ToadEntity extends PathfinderMob implements Bucketable, IAnimatable, IAnimationTickable {
     private static final EntityDataAccessor<Integer> TYPE = SynchedEntityData.defineId(ToadEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> TYPEASSIGNED = SynchedEntityData.defineId(ToadEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> FROM_BUCKET = SynchedEntityData.defineId(ToadEntity.class, EntityDataSerializers.BOOLEAN);
 
     private static final EntityDataAccessor<Integer> DATA_SWELL_DIR = SynchedEntityData.defineId(ToadEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> DATA_IS_IGNITED = SynchedEntityData.defineId(ToadEntity.class, EntityDataSerializers.BOOLEAN);
+    public boolean walking = false;
+    private AnimationFactory factory = new AnimationFactory(this);
+
     private int oldSwell;
     private int swell;
-    private int maxSwell = 30;
+    private int maxSwell = 34;
     private int explosionRadius = 3;
     public int counterAnim = 0;
-    private int jumpTicks;
-    private int jumpDuration;
-    private boolean wasOnGround;
-    private int jumpDelayTicks;
     public ToadEntity(EntityType<? extends PathfinderMob> p_27557_, Level p_27558_) {
         super(p_27557_, p_27558_);
-        this.jumpControl = new ToadJumpControl(this);
-        this.moveControl = new ToadMoveControl(this);
-        this.setSpeedModifier(0.0D);
-
     }
 
     public static String getVariantName(int i) {
@@ -89,9 +87,9 @@ public class ToadEntity extends PathfinderMob implements Bucketable{
     protected void registerGoals() {
         this.goalSelector.addGoal(1, new FloatGoal(this));
         this.goalSelector.addGoal(2, new ToadSwellGoal(this));
-        this.goalSelector.addGoal(4, new LookAtPlayerGoal(this, Player.class, 8.0F));
+        this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 2.0F));
         this.goalSelector.addGoal(4, new RandomLookAroundGoal(this));
-        this.goalSelector.addGoal(3, new WaterAvoidingRandomStrollGoal(this, 0.6D));
+        this.goalSelector.addGoal(3, new ToadWalkGoal(this,0.5f));
 
         super.registerGoals();
     }
@@ -280,9 +278,14 @@ public class ToadEntity extends PathfinderMob implements Bucketable{
 
             if (this.swell >= this.maxSwell) {
                 this.swell = this.maxSwell;
-                this.explodeCreeper();
+                this.explode();
             }
         }
+    }
+
+    @Override
+    public int tickTimer() {
+        return tickCount;
     }
 
     public SpawnGroupData finalizeSpawn(@NotNull ServerLevelAccessor p_149132_, @NotNull DifficultyInstance p_149133_, @NotNull MobSpawnType p_149134_, @Nullable SpawnGroupData p_149135_, @Nullable CompoundTag p_149136_) {
@@ -296,7 +299,7 @@ public class ToadEntity extends PathfinderMob implements Bucketable{
             return super.finalizeSpawn(p_149132_, p_149133_, p_149134_, p_149135_, p_149136_);
         }
     }
-    private void explodeCreeper() {
+    private void explode() {
         if (!this.level.isClientSide) {
             this.dead = true;
             this.discard();
@@ -345,68 +348,7 @@ public class ToadEntity extends PathfinderMob implements Bucketable{
 
         }
     }
-    private void setLandingDelay() {
-        if (this.moveControl.getSpeedModifier() < 2.2D) {
-            this.jumpDelayTicks = 10;
-        } else {
-            this.jumpDelayTicks = 1;
-        }
-    }
 
-    private void disableJumpControl() {
-        ((ToadJumpControl)this.jumpControl).setCanJump(false);
-    }
-    private void enableJumpControl() {
-        ((ToadJumpControl)this.jumpControl).setCanJump(true);
-    }
-
-    private void checkLandingDelay() {
-        this.setLandingDelay();
-        this.disableJumpControl();
-    }
-    public void customServerAiStep() {
-        if (this.jumpDelayTicks > 0) {
-            --this.jumpDelayTicks;
-        }
-
-        if (this.onGround) {
-            if (!this.wasOnGround) {
-                this.setJumping(false);
-                this.checkLandingDelay();
-            }
-
-            ToadJumpControl toad$toadjumpcontrol = (ToadJumpControl)this.jumpControl;
-            if (!toad$toadjumpcontrol.wantJump()) {
-                if (this.moveControl.hasWanted() && this.jumpDelayTicks == 0) {
-                    Path path = this.navigation.getPath();
-                    Vec3 vec3 = new Vec3(this.moveControl.getWantedX(), this.moveControl.getWantedY(), this.moveControl.getWantedZ());
-                    if (path != null && !path.isDone()) {
-                        vec3 = path.getNextEntityPos(this);
-                    }
-
-                    this.facePoint(vec3.x, vec3.z);
-                    this.startJumping();
-                }
-            } else if (!toad$toadjumpcontrol.canJump()) {
-                this.enableJumpControl();
-            }
-        }
-
-        this.wasOnGround = this.onGround;
-    }
-    public void handleEntityEvent(byte pId) {
-        if (pId == 1) {
-            this.spawnSprintParticle();
-            this.jumpDuration = 10;
-            this.jumpTicks = 0;
-        } else {
-            super.handleEntityEvent(pId);
-        }
-
-    }
-    private void facePoint(double pX, double pZ) {
-        this.setYRot((float)(Mth.atan2(pZ - this.getZ(), pX - this.getX()) * (double)(180F / (float)Math.PI)) - 90.0F);
-    }
     public static AttributeSupplier.Builder prepareAttributes() {
         return Mob.createLivingAttributes()
                 .add(Attributes.ATTACK_DAMAGE, 3.0)
@@ -432,125 +374,31 @@ public class ToadEntity extends PathfinderMob implements Bucketable{
     public void setSwellDir(int pState) {
         this.entityData.set(DATA_SWELL_DIR, pState);
     }
-    public float getSwelling(float pPartialTicks) {
-        return Mth.lerp(pPartialTicks, (float)this.oldSwell, (float)this.swell) / (float)(this.maxSwell - 2);
-    }
-    public void setJumping(boolean pJumping) {
-        super.setJumping(pJumping);
-        if (pJumping) {
-            this.playSound(this.getJumpSound(), this.getSoundVolume(), ((this.random.nextFloat() - this.random.nextFloat()) * 0.2F + 1.0F) * 0.8F);
-        }
-    }
-    protected SoundEvent getJumpSound() {
-        return SoundEvents.RABBIT_JUMP;
-    }
 
-    public void startJumping() {
-        this.setJumping(true);
-        this.jumpDuration = 10;
-        this.jumpTicks = 0;
-    }
-    protected float getJumpPower() {
-        if (!this.horizontalCollision && (!this.moveControl.hasWanted() || !(this.moveControl.getWantedY() > this.getY() + 0.5D))) {
-            Path path = this.navigation.getPath();
-            if (path != null && !path.isDone()) {
-                Vec3 vec3 = path.getNextEntityPos(this);
-                if (vec3.y > this.getY() + 0.5D) {
-                    return 0.5F;
-                }
-            }
-
-            return this.moveControl.getSpeedModifier() <= 0.6D ? 0.2F : 0.3F;
-        } else {
-            return 0.5F;
+    private <E extends IAnimatable> PlayState predicate(AnimationEvent<E> event) {
+        if(this.isIgnited()){
+            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.toad.fuse", false));
+            return PlayState.CONTINUE;
         }
-    }
-
-    protected void jumpFromGround() {
-        super.jumpFromGround();
-        double d0 = this.moveControl.getSpeedModifier();
-        if (d0 > 0.0D) {
-            double d1 = this.getDeltaMovement().horizontalDistanceSqr();
-            if (d1 < 0.01D) {
-                this.moveRelative(0.1F, new Vec3(0.0D, 0.0D, 1.0D));
-            }
+        if(event.isMoving() || getSpeed() > 0.1){
+            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.toad.walk", true));
+            return PlayState.CONTINUE;
         }
-
-        if (!this.level.isClientSide) {
-            this.level.broadcastEntityEvent(this, (byte)1);
+        else  if(event.isMoving()){
+            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.toad.idle", true));
+            return PlayState.CONTINUE;
         }
+        return PlayState.STOP;
 
     }
-    public void setSpeedModifier(double pSpeedModifier) {
-        this.getNavigation().setSpeedModifier(pSpeedModifier);
-        this.moveControl.setWantedPosition(this.moveControl.getWantedX(), this.moveControl.getWantedY(), this.moveControl.getWantedZ(), pSpeedModifier);
+    @Override
+    public void registerControllers(AnimationData data) {
+        data.addAnimationController(new AnimationController<>(this, "controller", 0, this::predicate));
     }
 
-    public static class ToadJumpControl extends JumpControl {
-        private final ToadEntity toad;
-        private boolean canJump;
-
-        public ToadJumpControl(ToadEntity p_186229_) {
-            super(p_186229_);
-            this.toad = p_186229_;
-        }
-
-        public boolean wantJump() {
-            return this.jump;
-        }
-
-        public boolean canJump() {
-            return this.canJump;
-        }
-
-        public void setCanJump(boolean pCanJump) {
-            this.canJump = pCanJump;
-        }
-
-        /**
-         * Called to actually make the entity jump if isJumping is true.
-         */
-        public void tick() {
-            if (this.jump) {
-                this.toad.startJumping();
-                this.jump = false;
-            }
-
-        }
-    }
-    static class ToadMoveControl extends MoveControl {
-        private final ToadEntity toad;
-        private double nextJumpSpeed;
-
-        public ToadMoveControl(ToadEntity toad) {
-            super(toad);
-            this.toad = toad;
-        }
-
-        public void tick() {
-            if (this.toad.onGround && !this.toad.jumping && !((ToadJumpControl)this.toad.jumpControl).wantJump()) {
-                this.toad.setSpeedModifier(0.0D);
-            } else if (this.hasWanted()) {
-                this.toad.setSpeedModifier(this.nextJumpSpeed);
-            }
-
-            super.tick();
-        }
-
-        /**
-         * Sets the speed and location to move to
-         */
-        public void setWantedPosition(double pX, double pY, double pZ, double pSpeed) {
-            if (this.toad.isInWater()) {
-                pSpeed = 1.5D;
-            }
-
-            super.setWantedPosition(pX, pY, pZ, pSpeed);
-            if (pSpeed > 0.0D) {
-                this.nextJumpSpeed = pSpeed;
-            }
-
-        }
+    @Override
+    public AnimationFactory getFactory() {
+        return this.factory;
     }
 
 }

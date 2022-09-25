@@ -1,6 +1,6 @@
 package com.carro1001.mhnw.entities.ai;
 
-import net.minecraft.world.entity.PathfinderMob;
+import com.carro1001.mhnw.entities.DragonEntity;
 import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
 import net.minecraft.world.entity.ai.util.LandRandomPos;
 import net.minecraft.world.phys.Vec3;
@@ -9,10 +9,12 @@ import javax.annotation.Nullable;
 
 public class DragonWalkGoal extends RandomStrollGoal {
     protected final float probability;
+    public DragonEntity entity;
 
-    public DragonWalkGoal(PathfinderMob pMob, double pSpeedModifier, float pProbability) {
+    public DragonWalkGoal(DragonEntity pMob, double pSpeedModifier, float pProbability) {
         super(pMob, pSpeedModifier);
         this.probability = pProbability;
+        this.entity = pMob;
     }
 
     @Nullable

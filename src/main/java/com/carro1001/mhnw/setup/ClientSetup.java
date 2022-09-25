@@ -1,23 +1,27 @@
 package com.carro1001.mhnw.setup;
 
 import com.carro1001.mhnw.client.models.entities.BitterbugModel;
-import com.carro1001.mhnw.client.models.entities.ToadModel;
 import com.carro1001.mhnw.client.renderers.entities.*;
 import com.carro1001.mhnw.client.renderers.items.BoneArmorRenderer;
 import com.carro1001.mhnw.items.BoneArmorItem;
+import net.minecraft.client.model.geom.ModelLayerLocation;
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
+import net.minecraftforge.client.event.TextureStitchEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import software.bernie.geckolib3.renderers.geo.GeoArmorRenderer;
 
+import static com.carro1001.mhnw.client.renderers.entities.SpitFireballRenderer.CUBE_FIREBALL_SPRITE;
 import static com.carro1001.mhnw.registration.ModEntities.*;
+import static com.carro1001.mhnw.registration.RegistrationHelper.register;
 import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 
 @Mod.EventBusSubscriber(modid = MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class ClientSetup {
-
+    public static ModelLayerLocation CUBE_MODEL = register("cube_fireball");;
     public static void init(FMLClientSetupEvent event) {
 
         //MinecraftForge.EVENT_BUS.register(ForgeHooksClient.ClientEvents.class);
@@ -26,12 +30,15 @@ public class ClientSetup {
     @SubscribeEvent
     public static void onRegisterLayers(EntityRenderersEvent.RegisterLayerDefinitions event) {
         event.registerLayerDefinition(BitterbugModel.LAYER_LOCATION, BitterbugModel::createBodyLayer);
-        event.registerLayerDefinition(ToadModel.LAYER_LOCATION, ToadModel::createBodyLayer);
-   }
+        //event.registerLayerDefinition(CubeFireballModel.LAYER_LOCATION, CubeFireballModel::createMobHeadLayer);
+        //event.registerLayerDefinition(CUBE_MODEL, CubeFireballRenderer::createSkullLayer);
+    }
     @SubscribeEvent
     public static void registerRenderers(final EntityRenderersEvent.AddLayers event) {
         GeoArmorRenderer.registerArmorRenderer(BoneArmorItem.class, new BoneArmorRenderer());
+
     }
+
     @SubscribeEvent
     public static void onRegisterRenderer(EntityRenderersEvent.RegisterRenderers event) {
 
@@ -45,6 +52,15 @@ public class ClientSetup {
         event.registerEntityRenderer(GIZUCHI.get(), GreatIzuchiRenderer::new);
         event.registerEntityRenderer(BLANGONGA.get(), BlangongaRenderer::new);
         event.registerEntityRenderer(BLANGO.get(), BlangoRenderer::new);
+        event.registerEntityRenderer(SPIT_FIREBALL.get(), SpitFireballRenderer::new);
+        event.registerEntityRenderer(FLASHBUG.get(), FlashBugRenderer::new);
 
+    }
+    @SubscribeEvent
+    public static void onTextureStitch(TextureStitchEvent.Pre event) {
+        if (!event.getAtlas().location().equals(TextureAtlas.LOCATION_BLOCKS)) {
+            return;
+        }
+        event.addSprite(CUBE_FIREBALL_SPRITE);
     }
 }

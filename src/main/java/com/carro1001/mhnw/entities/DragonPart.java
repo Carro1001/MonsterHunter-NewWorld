@@ -1,13 +1,10 @@
 package com.carro1001.mhnw.entities;
 
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.Pose;
-import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.entity.PartEntity;
 
 import java.util.List;
@@ -29,14 +26,6 @@ public class DragonPart extends PartEntity<DragonEntity> {
             entities.stream().filter(entity -> entity != parent && !(entity instanceof DragonPart && ((DragonPart) entity).getParent() == parent) && entity.isPushable()).forEach(entity -> entity.push(parent));
 
         }
-    }
-
-    @Override
-    public InteractionResult interact(Player player, InteractionHand hand) {
-        if(level.isClientSide && this.getParent() != null){
-            //LOG
-        }
-        return this.getParent() == null ? InteractionResult.PASS : this.getParent().mobInteract(player, hand);
     }
 
 

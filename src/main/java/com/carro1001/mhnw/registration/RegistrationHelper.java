@@ -2,6 +2,7 @@ package com.carro1001.mhnw.registration;
 
 import com.carro1001.mhnw.entities.*;
 import com.carro1001.mhnw.utils.MHNWReferences;
+import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.TagKey;
@@ -27,9 +28,21 @@ public class RegistrationHelper {
         event.put(IZUCHI.get(), IzuchiEntity.prepareAttributes().build());
         event.put(GIZUCHI.get(), GreatIzuchiEntity.prepareAttributes().build());
         event.put(ZINOGRE.get(), ZinogreEntity.prepareAttributes().build());
+        event.put(FLASHBUG.get(), FlashBugEntity.prepareAttributes().build());
 
     }
+    public static ModelLayerLocation register(String pPath) {
+        return register(pPath, "main");
+    }
 
+    public static ModelLayerLocation register(String pPath, String pModel) {
+        ModelLayerLocation modellayerlocation = createLocation(pPath, pModel);
+        return modellayerlocation;
+    }
+
+    public static ModelLayerLocation createLocation(String pPath, String pModel) {
+        return new ModelLayerLocation(new ResourceLocation("minecraft", pPath), pModel);
+    }
     public static class Tags {
 //        public static final TagKey<Block> AMETHYST_REPLACE = create("amethyst_replaceables");
 

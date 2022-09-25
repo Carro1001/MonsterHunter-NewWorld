@@ -1,5 +1,6 @@
 package com.carro1001.mhnw.entities;
 
+import com.carro1001.mhnw.entities.ai.DragonFireball;
 import com.carro1001.mhnw.entities.ai.DragonWalkGoal;
 import com.carro1001.mhnw.entities.interfaces.IGrows;
 import net.minecraft.nbt.CompoundTag;
@@ -8,8 +9,6 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.util.Mth;
 import net.minecraft.world.DifficultyInstance;
-import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.EntityDamageSource;
 import net.minecraft.world.entity.EntityType;
@@ -18,6 +17,8 @@ import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.animal.Cow;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
@@ -32,9 +33,11 @@ import java.util.Random;
 
 public abstract class DragonEntity extends PathfinderMob implements IAnimatable, IAnimationTickable, IGrows {
     private AnimationFactory factory = new AnimationFactory(this);
-
-    public boolean roaring = false;
+    public static final EntityDataAccessor<Integer> STATE = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.INT);
+    // 0 is IDLE, 1 is Fireball, 2 is moving
     private static final EntityDataAccessor<Float> SCALE = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Boolean> DATA_IS_CHARGING = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.BOOLEAN);
+
     private static final EntityDataAccessor<Boolean> SCALESSIGNED = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.BOOLEAN);
     public int counter = 0;
     public int StateCounter = 0;
@@ -72,14 +75,15 @@ public abstract class DragonEntity extends PathfinderMob implements IAnimatable,
     }
 
     public void resetParts() {
-        this.headPart = new DragonPart(this, 2.1F, 2.0F);
-        this.neckPart = new DragonPart(this, 2.1F, 2.1F);
-        this.body = new DragonPart(this, 4.0F, 2.5F);
-        this.rightWingUpperPart = new DragonPart(this, 5.3F, 1.3F);
-        this.leftWingUpperPart = new DragonPart(this, 5.3F, 0.7F);
-        this.tail1Part = new DragonPart(this, 2.2F, 2.2F);
-        this.tail2Part = new DragonPart(this, 2.2F, 2.2F);
-        this.tail3Part = new DragonPart(this, 2.2F, 2.2F);
+        removeParts();
+        this.headPart = new DragonPart(this, 2.1F*getScale(), 2.0F*getScale());
+        this.neckPart = new DragonPart(this, 2.1F*getScale(), 2.1F*getScale());
+        this.body = new DragonPart(this, 4.0F*getScale(), 2.5F*getScale());
+        this.rightWingUpperPart = new DragonPart(this, 4.0F*getScale(), 0.7F*getScale());
+        this.leftWingUpperPart = new DragonPart(this, 4.0F*getScale(), 0.7F*getScale());
+        this.tail1Part = new DragonPart(this, 2.2F*getScale(), 2.2F*getScale());
+        this.tail2Part = new DragonPart(this, 2.2F*getScale(), 2.2F*getScale());
+        this.tail3Part = new DragonPart(this, 2.2F*getScale(), 2.2F*getScale());
 
         headPart.copyPosition(this);
         neckPart.copyPosition(this);
@@ -91,20 +95,68 @@ public abstract class DragonEntity extends PathfinderMob implements IAnimatable,
         body.copyPosition(this);
         dragonParts = new DragonPart[]{headPart,neckPart,body,rightWingUpperPart,leftWingUpperPart,tail1Part,tail2Part};
     }
+
+    private void removeParts() {
+        if (headPart != null) {
+            headPart.remove(RemovalReason.CHANGED_DIMENSION);
+            headPart = null;
+        }
+        if (neckPart != null) {
+            neckPart.remove(RemovalReason.CHANGED_DIMENSION);
+            neckPart = null;
+        }
+
+        if (body != null) {
+            body.remove(RemovalReason.CHANGED_DIMENSION);
+            body = null;
+        }
+        if (leftWingUpperPart != null) {
+            leftWingUpperPart.remove(RemovalReason.CHANGED_DIMENSION);
+            leftWingUpperPart = null;
+        }
+        if (rightWingUpperPart != null) {
+            rightWingUpperPart.remove(RemovalReason.CHANGED_DIMENSION);
+            rightWingUpperPart = null;
+        }
+        if (tail1Part != null) {
+            tail1Part.remove(RemovalReason.CHANGED_DIMENSION);
+            tail1Part = null;
+        }
+        if (tail2Part != null) {
+            tail2Part.remove(RemovalReason.CHANGED_DIMENSION);
+            tail2Part = null;
+        }
+        if (tail3Part != null) {
+            tail3Part.remove(RemovalReason.CHANGED_DIMENSION);
+            tail3Part = null;
+        }
+
+    }
+
+    @Override
+    public boolean isInvulnerableTo(DamageSource pSource) {
+        return super.isInvulnerableTo(pSource) || pSource.isExplosion();
+    }
+
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(SCALESSIGNED, false);
         this.entityData.define(SCALE, 1f);
+        this.entityData.define(STATE, 0);
+        this.entityData.define(DATA_IS_CHARGING, false);
 
     }
     public SpawnGroupData finalizeSpawn(@NotNull ServerLevelAccessor p_149132_, @NotNull DifficultyInstance p_149133_, @NotNull MobSpawnType p_149134_, @Nullable SpawnGroupData p_149135_, @Nullable CompoundTag p_149136_) {
         GenerateScale();
+        resetParts();
         return super.finalizeSpawn(p_149132_, p_149133_, p_149134_, p_149135_, p_149136_);
     }
 
     protected void registerGoals() {
-        this.goalSelector.addGoal(6, new DragonWalkGoal(this, 1.0D,1.0000001E-5F));
-        this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 6.0F));
+        this.goalSelector.addGoal(3, new DragonFireball(this));
+        this.goalSelector.addGoal(4, new DragonWalkGoal(this, 1.0D,1.0000001E-5F));
+        this.goalSelector.addGoal(2, new LookAtPlayerGoal(this, Cow.class, 16.0F));
+        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Cow.class, 10, false, false, (p_32755_) -> true));
         this.addBehaviourGoals();
     }
     protected void addBehaviourGoals() {
@@ -121,13 +173,6 @@ public abstract class DragonEntity extends PathfinderMob implements IAnimatable,
         super.setId(pId);
         for (int i = 0; i < this.dragonParts.length; i++) // Forge: Fix MC-158205: Set part ids to successors of parent mob id
             this.dragonParts[i].setId(pId + i + 1);
-    }
-    @Override
-    public InteractionResult mobInteract(@NotNull Player pPlayer, @NotNull InteractionHand pHand) {
-        roaring = true;
-        counter = 0;
-        StateCounter = 0;
-        return super.mobInteract(pPlayer, pHand);
     }
 
     public double[] getLatencyPos(int pBufferIndexOffset, float pPartialTicks) {
@@ -316,7 +361,13 @@ public abstract class DragonEntity extends PathfinderMob implements IAnimatable,
     public int getHeadRotSpeed() {
         return 5;
     }
+    public boolean isCharging() {
+        return this.entityData.get(DATA_IS_CHARGING);
+    }
 
+    public void setCharging(boolean pCharging) {
+        this.entityData.set(DATA_IS_CHARGING, pCharging);
+    }
     protected void GenerateScale(){
         if(!getScaleAssignedDir()){
             setScaleDir((float) new Random().nextDouble(0.5,1.5));
@@ -329,6 +380,10 @@ public abstract class DragonEntity extends PathfinderMob implements IAnimatable,
             this.setScaleAssignedDir(true);
         }
     }
+
+    public void setStateDir(int state) {
+        this.entityData.set(STATE, state);
+    }
     public void setScaleAssignedDir(boolean pState) {
         this.entityData.set(SCALESSIGNED, pState);
     }
@@ -338,6 +393,9 @@ public abstract class DragonEntity extends PathfinderMob implements IAnimatable,
     public float getScaleDir() {
         return this.entityData.get(SCALE);
     }
+    public int getStateDir() {
+        return this.entityData.get(STATE);
+    }
     @Override
     public float getViewXRot(float pPartialTicks) {
         return pPartialTicks == 1.0F ? this.getXRot()/2 : Mth.lerp(pPartialTicks, this.xRotO/2, this.getXRot()/2);
@@ -346,14 +404,18 @@ public abstract class DragonEntity extends PathfinderMob implements IAnimatable,
     @Override
     public void addAdditionalSaveData(@NotNull CompoundTag pCompound) {
         super.addAdditionalSaveData(pCompound);
-        pCompound.putBoolean("type_assign", getScaleAssignedDir());
+        pCompound.putBoolean("scale_assign", getScaleAssignedDir());
         pCompound.putFloat("monster_scale", getScaleDir());
+        pCompound.putInt("mon_state", getStateDir());
+        pCompound.putBoolean("mon_charging", isCharging());
     }
 
     @Override
     public void readAdditionalSaveData(@NotNull CompoundTag pCompound) {
         super.readAdditionalSaveData(pCompound);
         this.setScaleDir(pCompound.getFloat("monster_scale"));
+        this.setStateDir(pCompound.getInt("mon_state"));
+        this.setCharging(pCompound.getBoolean("mon_charging"));
 
     }
 
@@ -361,4 +423,5 @@ public abstract class DragonEntity extends PathfinderMob implements IAnimatable,
     public float getScale() {
         return getMonsterScale();
     }
+
 }

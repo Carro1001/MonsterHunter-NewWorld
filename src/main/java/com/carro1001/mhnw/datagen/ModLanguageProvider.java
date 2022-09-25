@@ -65,6 +65,8 @@ public class ModLanguageProvider extends LanguageProvider {
         add(RATHALOS_EGG_ITEM.get(), "Rathalos Spawn Egg");
         add(RATHALOS.get(), "Rathalos");
 
+        add(FLASHBUG.get(), "Flash Bug");
+        add(FLASHFLY_EGG_ITEM.get(), "Flash Bug Spawn Egg");
         add(TOAD_EGG_ITEM.get(), "Toads Spawn Egg");
         add(TOAD.get(), "Toad");
         add(BLANGO_EGG_ITEM.get(), "Blango Spawn Egg");

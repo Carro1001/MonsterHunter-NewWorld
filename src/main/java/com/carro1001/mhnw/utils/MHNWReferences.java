@@ -44,6 +44,7 @@ public class MHNWReferences {
     public static final String BONE_ARMOR_CHESTPLATE_ITEM = "bone_chestplate";
     public static final String BONE_ARMOR_LEGGING_ITEM = "bone_legging";
     public static final String BONE_ARMOR_BOOT_ITEM = "bone_boots";
+    public static final String FLASHBUG = "flashbug";
     public static final String APTONOTH = "aptonoth";
     public static final String BLANGO = "blango";
     public static final String BLANGONGA = "blangonga";
@@ -57,6 +58,7 @@ public class MHNWReferences {
     public static final String POISON = "poison";
     public static final String SLEEP = "sleep";
     public static final String GODBUG = "godbug";
+    public static final String SPIT_FIREBALL = "spit_fireball";
 
     public static final String RATHIAN = "rathian";
     public static final String RATHALOS = "rathalos";

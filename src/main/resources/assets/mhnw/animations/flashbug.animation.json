@@ -1,0 +1,29 @@
+{
+	"format_version": "1.8.0",
+	"animations": {
+		"animation.flashfly.fly": {
+			"animation_length": 0.54167,
+			"bones": {
+				"leftwing": {
+					"rotation": {
+						"0.0": [0, 0, 0],
+						"0.125": [0, 0, 15],
+						"0.25": [0, 0, 0],
+						"0.375": [0, 0, -15],
+						"0.5": [0, 0, 0]
+					}
+				},
+				"rightwing": {
+					"rotation": {
+						"0.0": [0, 0, 0],
+						"0.125": [0, 0, -15],
+						"0.25": [0, 0, 0],
+						"0.375": [0, 0, 15],
+						"0.5": [0, 0, 0]
+					}
+				}
+			}
+		}
+	},
+	"geckolib_format_version": 2
+}

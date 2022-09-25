@@ -140,6 +140,7 @@ public class ModItemModels extends ItemModelProvider {
         withExistingParent(GIZUCHI_EGG_ITEM.getId().getPath(), mcLoc("item/template_spawn_egg"));
         withExistingParent(IZUCHI_EGG_ITEM.getId().getPath(), mcLoc("item/template_spawn_egg"));
         withExistingParent(ZINOGRE_EGG_ITEM.getId().getPath(), mcLoc("item/template_spawn_egg"));
+        withExistingParent(FLASHFLY_EGG_ITEM.getId().getPath(), mcLoc("item/template_spawn_egg"));
 
     }
 }

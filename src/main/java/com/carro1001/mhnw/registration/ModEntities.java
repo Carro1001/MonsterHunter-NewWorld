@@ -93,5 +93,17 @@ public class ModEntities {
             .build(MHNWReferences.ZINOGRE));
     public static final RegistryObject<Item> ZINOGRE_EGG_ITEM = ITEMS.register(MHNWReferences.ZINOGRE, () -> new ForgeSpawnEggItem(ZINOGRE, 0x207A8E, 0xD9B367, new Item.Properties().tab(GROUP)));
 
+    public static final RegistryObject<EntityType<FlashBugEntity>> FLASHBUG = ENTITIES.register(MHNWReferences.FLASHBUG, () -> EntityType.Builder.of(FlashBugEntity::new, MobCategory.AMBIENT)
+            .sized(0.4f, 0.2f)
+            .clientTrackingRange(8)
+            .setShouldReceiveVelocityUpdates(false)
+            .build(MHNWReferences.FLASHBUG));
+    public static final RegistryObject<Item> FLASHFLY_EGG_ITEM = ITEMS.register(MHNWReferences.FLASHBUG, () -> new ForgeSpawnEggItem(FLASHBUG, 0x636526, 0xFBEB1C, new Item.Properties().tab(GROUP)));
+
+    public static final RegistryObject<EntityType<SpitFireball>> SPIT_FIREBALL = ENTITIES.register(MHNWReferences.SPIT_FIREBALL, () -> EntityType.Builder.<SpitFireball>of(SpitFireball::new, MobCategory.MISC)
+            .sized(0.4F, 0.4f)
+            .clientTrackingRange(4)
+            .updateInterval(10)
+            .build(MHNWReferences.SPIT_FIREBALL));
 
 }

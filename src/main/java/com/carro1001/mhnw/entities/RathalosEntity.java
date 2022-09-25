@@ -14,22 +14,27 @@ import software.bernie.geckolib3.core.controller.AnimationController;
 import software.bernie.geckolib3.core.event.predicate.AnimationEvent;
 import software.bernie.geckolib3.core.manager.AnimationData;
 
-import java.util.Random;
-
 public class RathalosEntity extends DragonEntity {
     public boolean hover = false;
     public boolean roaring = false;
     public boolean agro = false;
     public boolean fly = false;
     public boolean tailswipe = false;
-
+    public int state = 0;
     public RathalosEntity(EntityType<? extends PathfinderMob > p_27557_, Level p_27558_) {
         super(p_27557_, p_27558_, MHNWReferences.RATHALOS);
     }
 
     private <E extends IAnimatable> PlayState predicate(AnimationEvent<E> event) {
-
-        if (event.isMoving() || getSpeed() > 0) {
+        if (fly) {
+            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.fly", true));
+            return PlayState.CONTINUE;
+        }
+        if (hover) {
+            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.hover", true));
+            return PlayState.CONTINUE;
+        }
+        if (event.isMoving() || getSpeed() > 0.55f ) {
             if (agro) {
                 event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.walk_aggro", true));
                 return PlayState.CONTINUE;
@@ -37,37 +42,43 @@ public class RathalosEntity extends DragonEntity {
             event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.walk_normal", true));
             return PlayState.CONTINUE;
         }
-        if (!event.isMoving()) {
-            if (hover) {
-                event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.hover", true));
-                return PlayState.CONTINUE;
-            }
-            if (roaring) {
-                roaring = false;
-                event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.roar", false));
-                return PlayState.CONTINUE;
-            }
-            if (fly) {
-                event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.fly", false));
-                return PlayState.CONTINUE;
-            }
-            if (tailswipe) {
-                tailswipe = false;
-                event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.tailswipe", false));
-                return PlayState.CONTINUE;
-            }
+        if(!event.isMoving() ){
             if (agro) {
                 event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.idle_aggro", true));
-                return PlayState.CONTINUE;
+            }else{
+                event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.idle_normal", true));
             }
-            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.idle_normal", true));
             return PlayState.CONTINUE;
         }
-        return PlayState.STOP;
+
+        event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.idle_normal", true));
+        return PlayState.CONTINUE;
     }
+
+    private <E extends IAnimatable> PlayState predicate1(AnimationEvent<E> event) {
+        if (getStateDir() == 1) {
+            setStateDir(0);
+            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.ground_fireball", false));
+            return PlayState.CONTINUE;
+        }
+        if (roaring) {
+            roaring = false;
+            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.roar", false));
+            return PlayState.CONTINUE;
+        }
+        if (tailswipe) {
+            tailswipe=false;
+            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.tailswipe", false));
+            return PlayState.CONTINUE;
+        }
+
+        return PlayState.CONTINUE;
+    }
+
     @Override
     public void registerControllers(AnimationData data) {
-        data.addAnimationController(new AnimationController<>(this, "controller", 3, this::predicate));
+        data.addAnimationController(new AnimationController<>(this, "controller", 5, this::predicate));
+        data.addAnimationController(new AnimationController<>(this, "controller1", 1, this::predicate1));
     }
 
     public static AttributeSupplier.Builder prepareAttributes() {
@@ -80,37 +91,28 @@ public class RathalosEntity extends DragonEntity {
                 .add(Attributes.ARMOR_TOUGHNESS,1.0D);
     }
 
-    @Override
-    public void tick() {
-        if (getSpeed() > 0) {
-            counter++;
-            if(counter >= 20*10){
-                counter = 0;
-                hover = false;
-                roaring = false;
-                agro = false;
-                fly = false;
-                tailswipe = false;
-                switch(new Random().nextInt(8)){
-                    case 0:
-                        hover = true;
-                        break;
-                    case 1:
-                        roaring = true;
-                        break;
-                    case 2:
-                        agro = true;
-                        break;
-                    case 3:
-                        fly = true;
-                        break;
-                    case 4:
-                        tailswipe = true;
-                        break;
-                }
-            }
-        }
-        super.tick();
-    }
+//    @Override
+//    public void tick() {
+//        if (getSpeed() <= 0.1f) {
+//            counter++;
+//            if(counter >= 20*3){
+//                counter = 0;
+//                hover = false;
+//                roaring = false;
+//                agro = true;
+//                fly = false;
+//                tailswipe = false;
+//                switch (new Random().nextInt(8)) {
+//                    case 0 -> fireball = true;
+//                    case 1 -> tailswipe = true;
+//                    case 2, 6 -> fireball = true;
+//                    case 3 -> roaring = true;
+//                    case 4 -> tailswipe = true;
+//                    case 5 -> fireball = true;
+//                }
+//            }
+//        }
+//        super.tick();
+//    }
 
 }

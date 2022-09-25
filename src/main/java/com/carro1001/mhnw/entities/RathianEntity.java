@@ -27,8 +27,12 @@ public class RathianEntity extends DragonEntity {
     }
 
     private <E extends IAnimatable> PlayState predicate(AnimationEvent<E> event) {
-        if (!event.isMoving()) {
 
+        if (event.isMoving() || getSpeed() > 0.25f) {
+            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathian.walk", true));
+            return PlayState.CONTINUE;
+        }
+        if (!event.isMoving()) {
             if (roaring) {
                 roaring = false;
                 event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathian.roar_normal", false));
@@ -56,16 +60,12 @@ public class RathianEntity extends DragonEntity {
             event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathian.idle_normal", true));
             return PlayState.CONTINUE;
         }
-        if (event.isMoving()) {
-            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathian.walk", true));
-            return PlayState.CONTINUE;
-        }
 
         return PlayState.STOP;
     }
     @Override
     public void registerControllers(AnimationData data) {
-        data.addAnimationController(new AnimationController<>(this, "controller", 3, this::predicate));
+        data.addAnimationController(new AnimationController<>(this, "controller", 10, this::predicate));
     }
 
     public static AttributeSupplier.Builder prepareAttributes() {
