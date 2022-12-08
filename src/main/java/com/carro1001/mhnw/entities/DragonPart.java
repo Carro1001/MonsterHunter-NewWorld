@@ -1,7 +1,6 @@
 package com.carro1001.mhnw.entities;
 
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.Pose;
@@ -56,9 +55,9 @@ public class DragonPart extends PartEntity<DragonEntity> {
         return this.size.scale(scale);
     }
 
-    public boolean hurt(DamageSource pSource, float pAmount) {
-        return !this.isInvulnerableTo(pSource) && this.getParent().hurt(this, pSource, pAmount);
-    }
+//    public boolean hurt(DamageSource pSource, float pAmount) {
+//        return !this.isInvulnerableTo(pSource) && this.getParent().hurt(this, pSource, pAmount);
+//    }
     @Override
     protected void defineSynchedData() {
 

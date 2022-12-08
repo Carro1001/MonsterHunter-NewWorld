@@ -2,12 +2,12 @@ package com.carro1001.mhnw.client.models.entities;
 
 import com.carro1001.mhnw.entities.BlangoEntity;
 import net.minecraft.resources.ResourceLocation;
-import software.bernie.geckolib3.model.AnimatedGeoModel;
+import software.bernie.geckolib3.model.AnimatedTickingGeoModel;
 
 import static com.carro1001.mhnw.utils.MHNWReferences.BLANGO;
 import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 
-public class BlangoModel extends AnimatedGeoModel<BlangoEntity> {
+public class BlangoModel extends AnimatedTickingGeoModel<BlangoEntity> {
     @Override
     public ResourceLocation getModelResource(BlangoEntity object)
     {

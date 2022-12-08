@@ -10,18 +10,13 @@ import net.minecraft.world.level.Level;
 import software.bernie.geckolib3.core.IAnimatable;
 import software.bernie.geckolib3.core.PlayState;
 import software.bernie.geckolib3.core.builder.AnimationBuilder;
+import software.bernie.geckolib3.core.builder.ILoopType;
 import software.bernie.geckolib3.core.controller.AnimationController;
 import software.bernie.geckolib3.core.event.predicate.AnimationEvent;
 import software.bernie.geckolib3.core.manager.AnimationData;
 
-import java.util.Random;
-
 public class RathianEntity extends DragonEntity {
-    public boolean hover = false;
-    public boolean roaring = false;
     public boolean agro = false;
-    public boolean backflip = false;
-    public boolean tailswipe = false;
     public RathianEntity(EntityType<? extends PathfinderMob > p_27557_, Level p_27558_) {
         super(p_27557_, p_27558_, MHNWReferences.RATHIAN);
     }
@@ -29,35 +24,15 @@ public class RathianEntity extends DragonEntity {
     private <E extends IAnimatable> PlayState predicate(AnimationEvent<E> event) {
 
         if (event.isMoving() || getSpeed() > 0.25f) {
-            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathian.walk", true));
+            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathian.walk", ILoopType.EDefaultLoopTypes.LOOP));
             return PlayState.CONTINUE;
         }
         if (!event.isMoving()) {
-            if (roaring) {
-                roaring = false;
-                event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathian.roar_normal", false));
-                return PlayState.CONTINUE;
-            }
-
-            if (backflip) {
-                backflip = false;
-                event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathian.backflip", false));
-                return PlayState.CONTINUE;
-            }
-            if (tailswipe) {
-                tailswipe = false;
-                event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathian.tailswipe", false));
-                return PlayState.CONTINUE;
-            }
-            if (hover) {
-                event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathian.hover", true));
-                return PlayState.CONTINUE;
-            }
             if (agro) {
-                event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathian.idle_aggro", true));
+                event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathian.idle_aggro", ILoopType.EDefaultLoopTypes.LOOP));
                 return PlayState.CONTINUE;
             }
-            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathian.idle_normal", true));
+            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathian.idle_normal", ILoopType.EDefaultLoopTypes.LOOP));
             return PlayState.CONTINUE;
         }
 
@@ -65,7 +40,7 @@ public class RathianEntity extends DragonEntity {
     }
     @Override
     public void registerControllers(AnimationData data) {
-        data.addAnimationController(new AnimationController<>(this, "controller", 10, this::predicate));
+        data.addAnimationController(new AnimationController<>(this, "controller", 5, this::predicate));
     }
 
     public static AttributeSupplier.Builder prepareAttributes() {
@@ -76,39 +51,6 @@ public class RathianEntity extends DragonEntity {
                 .add(Attributes.MOVEMENT_SPEED, 0.3)
                 .add(Attributes.ARMOR, 1.0D)
                 .add(Attributes.ARMOR_TOUGHNESS,1.0D);
-    }
-
-    @Override
-    public void tick() {
-        if (getSpeed() > 0) {
-            counter++;
-            if(counter >= 20*20){
-                counter = 0;
-                hover = false;
-                roaring = false;
-                agro = false;
-                backflip = false;
-                tailswipe = false;
-                switch(new Random().nextInt(8)){
-                    case 0:
-                        hover = true;
-                        break;
-                    case 1:
-                        roaring = true;
-                        break;
-                    case 2:
-                        agro = true;
-                        break;
-                    case 3:
-                        backflip = true;
-                        break;
-                    case 4:
-                        tailswipe = true;
-                        break;
-                }
-            }
-        }
-        super.tick();
     }
 
 }

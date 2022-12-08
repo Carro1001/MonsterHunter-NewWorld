@@ -2,12 +2,12 @@ package com.carro1001.mhnw.client.models.entities;
 
 import com.carro1001.mhnw.entities.ZinogreEntity;
 import net.minecraft.resources.ResourceLocation;
-import software.bernie.geckolib3.model.AnimatedGeoModel;
+import software.bernie.geckolib3.model.AnimatedTickingGeoModel;
 
 import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 import static com.carro1001.mhnw.utils.MHNWReferences.ZINOGRE;
 
-public class ZinogreModel extends AnimatedGeoModel<ZinogreEntity> {
+public class ZinogreModel extends AnimatedTickingGeoModel<ZinogreEntity> {
     @Override
     public ResourceLocation getModelResource(ZinogreEntity object)
     {

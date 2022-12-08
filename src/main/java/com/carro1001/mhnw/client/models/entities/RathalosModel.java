@@ -2,11 +2,11 @@ package com.carro1001.mhnw.client.models.entities;
 
 import com.carro1001.mhnw.entities.DragonEntity;
 import net.minecraft.resources.ResourceLocation;
-import software.bernie.geckolib3.model.AnimatedGeoModel;
+import software.bernie.geckolib3.model.AnimatedTickingGeoModel;
 
 import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 
-public class RathalosModel extends AnimatedGeoModel<DragonEntity> {
+public class RathalosModel extends AnimatedTickingGeoModel<DragonEntity> {
 
     @Override
     public ResourceLocation getModelResource(DragonEntity object)

@@ -2,11 +2,11 @@ package com.carro1001.mhnw.client.models.entities;
 
 import com.carro1001.mhnw.entities.ToadEntity;
 import net.minecraft.resources.ResourceLocation;
-import software.bernie.geckolib3.model.AnimatedGeoModel;
+import software.bernie.geckolib3.model.AnimatedTickingGeoModel;
 
 import static com.carro1001.mhnw.utils.MHNWReferences.*;
 
-public class ToadModel extends AnimatedGeoModel<ToadEntity> {
+public class ToadModel extends AnimatedTickingGeoModel<ToadEntity> {
 
     public static final ResourceLocation RESOURCE_LOCATION_POISON =  new ResourceLocation(MODID, "textures/entity/"+ POISON+TOAD +".png");
     public static final ResourceLocation RESOURCE_LOCATION_SLEEP =  new ResourceLocation(MODID, "textures/entity/"+ SLEEP+TOAD +".png");

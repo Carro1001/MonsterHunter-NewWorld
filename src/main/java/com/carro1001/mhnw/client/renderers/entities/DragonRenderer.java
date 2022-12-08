@@ -10,12 +10,12 @@ import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
-import software.bernie.geckolib3.model.AnimatedGeoModel;
+import software.bernie.geckolib3.model.AnimatedTickingGeoModel;
 import software.bernie.geckolib3.renderers.geo.GeoEntityRenderer;
 
 public abstract class DragonRenderer extends GeoEntityRenderer<DragonEntity> {
 
-    public DragonRenderer(EntityRendererProvider.Context renderManager, AnimatedGeoModel<DragonEntity> modelProvider) {
+    public DragonRenderer(EntityRendererProvider.Context renderManager, AnimatedTickingGeoModel<DragonEntity> modelProvider) {
         super(renderManager, modelProvider);
     }
 

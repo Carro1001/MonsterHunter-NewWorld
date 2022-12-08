@@ -10,11 +10,13 @@ import org.jetbrains.annotations.NotNull;
 import software.bernie.geckolib3.core.IAnimatable;
 import software.bernie.geckolib3.core.PlayState;
 import software.bernie.geckolib3.core.builder.AnimationBuilder;
+import software.bernie.geckolib3.core.builder.ILoopType;
 import software.bernie.geckolib3.core.controller.AnimationController;
 import software.bernie.geckolib3.core.event.predicate.AnimationEvent;
 import software.bernie.geckolib3.core.manager.AnimationData;
 import software.bernie.geckolib3.core.manager.AnimationFactory;
 import software.bernie.geckolib3.item.GeoArmorItem;
+import software.bernie.geckolib3.util.GeckoLibUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,7 +27,7 @@ import static com.carro1001.mhnw.MHNW.GROUP;
 import static com.carro1001.mhnw.registration.ModItems.*;
 
 public class BoneArmorItem extends GeoArmorItem implements IAnimatable {
-    private AnimationFactory factory = new AnimationFactory(this);
+    private AnimationFactory factory = GeckoLibUtil.createFactory(this);
 
     public BoneArmorItem(ArmorMaterial materialIn, EquipmentSlot slot, @NotNull Properties builder) {
         super(materialIn, slot, builder.tab(GROUP));
@@ -37,7 +39,7 @@ public class BoneArmorItem extends GeoArmorItem implements IAnimatable {
         List<ItemStack> stackData = event.getExtraDataOfType(ItemStack.class);
         LivingEntity livingEntity = event.getExtraDataOfType(LivingEntity.class).get(0);
 
-        event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.bone_armor.new", true));
+        event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.bone_armor.new", ILoopType.EDefaultLoopTypes.HOLD_ON_LAST_FRAME));
         if (livingEntity instanceof ArmorStand) {
             return PlayState.CONTINUE;
         }
@@ -64,4 +66,5 @@ public class BoneArmorItem extends GeoArmorItem implements IAnimatable {
     public AnimationFactory getFactory() {
         return this.factory;
     }
+
 }

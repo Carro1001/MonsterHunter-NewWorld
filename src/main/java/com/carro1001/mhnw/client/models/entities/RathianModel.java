@@ -2,11 +2,11 @@ package com.carro1001.mhnw.client.models.entities;
 
 import com.carro1001.mhnw.entities.DragonEntity;
 import net.minecraft.resources.ResourceLocation;
-import software.bernie.geckolib3.model.AnimatedGeoModel;
+import software.bernie.geckolib3.model.AnimatedTickingGeoModel;
 
 import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 
-public class RathianModel extends AnimatedGeoModel<DragonEntity> {
+public class RathianModel extends AnimatedTickingGeoModel<DragonEntity> {
     public RathianModel() {
 
     }

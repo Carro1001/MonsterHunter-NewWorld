@@ -18,15 +18,17 @@ import software.bernie.geckolib3.core.IAnimatable;
 import software.bernie.geckolib3.core.IAnimationTickable;
 import software.bernie.geckolib3.core.PlayState;
 import software.bernie.geckolib3.core.builder.AnimationBuilder;
+import software.bernie.geckolib3.core.builder.ILoopType;
 import software.bernie.geckolib3.core.controller.AnimationController;
 import software.bernie.geckolib3.core.event.predicate.AnimationEvent;
 import software.bernie.geckolib3.core.manager.AnimationData;
 import software.bernie.geckolib3.core.manager.AnimationFactory;
+import software.bernie.geckolib3.util.GeckoLibUtil;
 
 import static com.carro1001.mhnw.registration.ModEntities.APTONOTH;
 
 public class AptonothEntity  extends AbstractHorse implements IAnimatable, IAnimationTickable {
-    private AnimationFactory factory = new AnimationFactory(this);
+    private AnimationFactory factory = GeckoLibUtil.createFactory(this);
     public AptonothEntity(EntityType<? extends AbstractHorse> p_27557_, Level p_27558_) {
         super(p_27557_, p_27558_);
         this.noCulling = true;
@@ -54,18 +56,18 @@ public class AptonothEntity  extends AbstractHorse implements IAnimatable, IAnim
 
     private <E extends IAnimatable> PlayState predicate(AnimationEvent<E> event) {
         if (event.isMoving()) {
-            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.aptonoth.walk", true));
+            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.aptonoth.walk", ILoopType.EDefaultLoopTypes.LOOP));
             return PlayState.CONTINUE;
         }
         if (!event.isMoving() && this.getSpeed() <= 0) {
-            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.aptonoth.idle", true));
+            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.aptonoth.idle", ILoopType.EDefaultLoopTypes.LOOP));
             return PlayState.CONTINUE;
         }
         if (this.isEating()) {
-            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.aptonoth.eat", true));
+            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.aptonoth.eat", ILoopType.EDefaultLoopTypes.LOOP));
             return PlayState.CONTINUE;
         }
-        event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.aptonoth.idle", true));
+        event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.aptonoth.idle", ILoopType.EDefaultLoopTypes.LOOP));
         return PlayState.CONTINUE;
     }
     @Override

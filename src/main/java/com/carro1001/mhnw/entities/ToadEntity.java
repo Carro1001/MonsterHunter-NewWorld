@@ -36,10 +36,12 @@ import software.bernie.geckolib3.core.IAnimatable;
 import software.bernie.geckolib3.core.IAnimationTickable;
 import software.bernie.geckolib3.core.PlayState;
 import software.bernie.geckolib3.core.builder.AnimationBuilder;
+import software.bernie.geckolib3.core.builder.ILoopType;
 import software.bernie.geckolib3.core.controller.AnimationController;
 import software.bernie.geckolib3.core.event.predicate.AnimationEvent;
 import software.bernie.geckolib3.core.manager.AnimationData;
 import software.bernie.geckolib3.core.manager.AnimationFactory;
+import software.bernie.geckolib3.util.GeckoLibUtil;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -55,7 +57,7 @@ public class ToadEntity extends PathfinderMob implements Bucketable, IAnimatable
     private static final EntityDataAccessor<Integer> DATA_SWELL_DIR = SynchedEntityData.defineId(ToadEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> DATA_IS_IGNITED = SynchedEntityData.defineId(ToadEntity.class, EntityDataSerializers.BOOLEAN);
     public boolean walking = false;
-    private AnimationFactory factory = new AnimationFactory(this);
+    private AnimationFactory factory =  GeckoLibUtil.createFactory(this);
 
     private int oldSwell;
     private int swell;
@@ -377,15 +379,15 @@ public class ToadEntity extends PathfinderMob implements Bucketable, IAnimatable
 
     private <E extends IAnimatable> PlayState predicate(AnimationEvent<E> event) {
         if(this.isIgnited()){
-            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.toad.fuse", false));
+            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.toad.fuse", ILoopType.EDefaultLoopTypes.PLAY_ONCE));
             return PlayState.CONTINUE;
         }
         if(event.isMoving() || getSpeed() > 0.1){
-            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.toad.walk", true));
+            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.toad.walk", ILoopType.EDefaultLoopTypes.LOOP));
             return PlayState.CONTINUE;
         }
         else  if(event.isMoving()){
-            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.toad.idle", true));
+            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.toad.idle", ILoopType.EDefaultLoopTypes.LOOP));
             return PlayState.CONTINUE;
         }
         return PlayState.STOP;
@@ -395,6 +397,7 @@ public class ToadEntity extends PathfinderMob implements Bucketable, IAnimatable
     public void registerControllers(AnimationData data) {
         data.addAnimationController(new AnimationController<>(this, "controller", 0, this::predicate));
     }
+
 
     @Override
     public AnimationFactory getFactory() {
