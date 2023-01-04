@@ -10,24 +10,14 @@ import javax.annotation.Nullable;
 import java.util.EnumSet;
 
 public class DragonWalkGoal extends RandomStrollGoal {
-    protected final double probability;
+    protected final float probability;
     public DragonEntity entity;
 
-    public DragonWalkGoal(DragonEntity pMob, double pSpeedModifier, double pProbability) {
+    public DragonWalkGoal(DragonEntity pMob, double pSpeedModifier, float pProbability) {
         super(pMob, pSpeedModifier);
         this.probability = pProbability;
         this.entity = pMob;
         this.setFlags(EnumSet.of(Goal.Flag.MOVE));
-    }
-
-    @Override
-    public boolean canUse() {
-        return entity.getStateDir() == 0 || entity.getStateDir() == 2;
-    }
-
-    @Override
-    public boolean canContinueToUse() {
-        return entity.getStateDir() == 2;
     }
 
     @Override
@@ -48,7 +38,7 @@ public class DragonWalkGoal extends RandomStrollGoal {
             Vec3 vec3 = LandRandomPos.getPos(this.mob, 50, 17);
             return vec3 == null ? super.getPosition() : vec3;
         } else {
-            return this.mob.getRandom().nextDouble() >= this.probability ? LandRandomPos.getPos(this.mob, 150, 25) : super.getPosition();
+            return this.mob.getRandom().nextFloat() >= this.probability ? LandRandomPos.getPos(this.mob, 50, 17) : super.getPosition();
         }
     }
 }

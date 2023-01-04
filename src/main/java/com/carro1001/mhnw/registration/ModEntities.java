@@ -37,8 +37,8 @@ public class ModEntities {
 
     public static final RegistryObject<EntityType<RathalosEntity>> RATHALOS = ENTITIES.register(MHNWReferences.RATHALOS, () -> EntityType.Builder.of(RathalosEntity::new, MobCategory.CREATURE)
             .sized(2.5f, 2.5f)
-            .clientTrackingRange(16)
-            .setShouldReceiveVelocityUpdates(false)
+            .clientTrackingRange(128)
+            .setShouldReceiveVelocityUpdates(true)
             .build(MHNWReferences.RATHALOS));
     public static final RegistryObject<Item> RATHALOS_EGG_ITEM = ITEMS.register(MHNWReferences.RATHALOS, () -> new ForgeSpawnEggItem(RATHALOS, 0x642628, 0x000000, new Item.Properties().tab(GROUP)));
 

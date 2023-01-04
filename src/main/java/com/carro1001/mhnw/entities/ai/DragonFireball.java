@@ -6,7 +6,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.Vec3;
 
 import java.util.EnumSet;
 
@@ -33,6 +32,8 @@ public class DragonFireball extends Goal{
     public void start() {
         super.start();
         this.chargeTime = 0;
+        System.out.println("fireball start");
+
         dragonEntity.setAggressive(true);
     }
 
@@ -41,6 +42,11 @@ public class DragonFireball extends Goal{
      */
     public void stop() {
         this.chargeTime = -1;
+
+        dragonEntity.setAggressive(false);
+        dragonEntity.setStateDir(0);
+        System.out.println("fireball done");
+
     }
 
 
@@ -54,29 +60,26 @@ public class DragonFireball extends Goal{
     public void tick() {
         LivingEntity livingentity = this.dragonEntity.getTarget();
         if (livingentity != null) {
-            if(this.dragonEntity.hasLineOfSight(livingentity) || this.chargeTime > 0){
+            if(this.dragonEntity.hasLineOfSight(livingentity)){
                 Level level = this.dragonEntity.level;
                 ++this.chargeTime;
                 this.dragonEntity.lookAt(livingentity, 30.0F, 30.0F);
-                if (this.chargeTime == 5 && !this.dragonEntity.isSilent()) {
-                    level.levelEvent((Player)null, 1015, this.dragonEntity.blockPosition(), 0);
-                }
                 if (this.chargeTime == 10) {
                     dragonEntity.setStateDir(1);
-                    Vec3 vec3 = this.dragonEntity.getViewVector(1.0F);
-                    double d2 = livingentity.getX() - (this.dragonEntity.getX() + vec3.x * 12.0D);
-                    double d3 = livingentity.getY(0.5D) - (0.5D + this.dragonEntity.getY(0.5D));
-                    double d4 = livingentity.getZ() - (this.dragonEntity.getZ() + vec3.z * 12.0D);
+                    double x = this.dragonEntity.position().x + this.dragonEntity.getRandom().nextGaussian() * 5.0;
+                    double y = this.dragonEntity.position().y + this.dragonEntity.getRandom().nextGaussian() * 5.0;
+                    double z = this.dragonEntity.position().z + this.dragonEntity.getRandom().nextGaussian() * 5.0;
                     if (!this.dragonEntity.isSilent()) {
                         level.levelEvent((Player)null, 1016, this.dragonEntity.blockPosition(), 0);
                     }
 
-                    SpitFireball largefireball = new SpitFireball(level, this.dragonEntity, d2, d3, d4);
-                    largefireball.setPos(this.dragonEntity.getX() + vec3.x * 4.0D, this.dragonEntity.getY(0.5D) + 0.5D, largefireball.getZ() + vec3.z * 4.0D);
+                    SpitFireball largefireball = new SpitFireball(level, this.dragonEntity, x, y, z);
+                    largefireball.setPos(this.dragonEntity.getX(), this.dragonEntity.getY() + this.dragonEntity.getEyeHeight(), largefireball.getZ());
+                    largefireball.setDeltaMovement(this.dragonEntity.getLookAngle().x * 2.0, this.dragonEntity.getLookAngle().y * 2.0, this.dragonEntity.getLookAngle().z * 2.0);
                     level.addFreshEntity(largefireball);
                     this.chargeTime = -40;
+                    this.stop();
                 }
-                this.dragonEntity.setCharging(this.chargeTime > 10);
             }
 
         }

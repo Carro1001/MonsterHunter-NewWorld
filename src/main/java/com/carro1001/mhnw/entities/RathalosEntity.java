@@ -26,14 +26,14 @@ public class RathalosEntity extends DragonEntity {
         //event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.hover", true));
         //event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.tailswipe", false));
         //event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.ground_fireball", false));
-        if (event.isMoving() && getStateDir() == 2 ) {
+        if (event.isMoving() || getStateDir() == 2 ) {
             if (getTarget() != null) {
                 event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.walk_aggro", ILoopType.EDefaultLoopTypes.LOOP));
             }else{
                 event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.walk_normal", ILoopType.EDefaultLoopTypes.LOOP));
             }
         }else if(getStateDir() == 3){
-            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.roar",  ILoopType.EDefaultLoopTypes.LOOP));
+            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.rathalos.roar",  ILoopType.EDefaultLoopTypes.PLAY_ONCE));
 
         }else{
             if (getTarget() != null) {
@@ -54,7 +54,7 @@ public class RathalosEntity extends DragonEntity {
         return Mob.createLivingAttributes()
                 .add(Attributes.ATTACK_DAMAGE, 3.0)
                 .add(Attributes.MAX_HEALTH, 10)
-                .add(Attributes.FOLLOW_RANGE, 15.0)
+                .add(Attributes.FOLLOW_RANGE, 128)
                 .add(Attributes.MOVEMENT_SPEED, 0.3)
                 .add(Attributes.ARMOR, 1.0D)
                 .add(Attributes.ARMOR_TOUGHNESS,1.0D);
