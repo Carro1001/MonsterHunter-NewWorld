@@ -26,7 +26,7 @@ import static com.carro1001.mhnw.setup.ModConfig.*;
 
 public class ModConfiguredFeature {
 
-    public static final DeferredRegister<ConfiguredFeature<?, ?>> CONFIGURED_FEATURES = DeferredRegister.create(Registry.CONFIGURED_FEATURE_REGISTRY, MHNWReferences.MODID);
+    /*public static final DeferredRegister<ConfiguredFeature<?, ?>> CONFIGURED_FEATURES = DeferredRegister.create(Registry.CONFIGURED_FEATURE_REGISTRY, MHNWReferences.MODID);
 
     private static final Supplier<List<OreConfiguration.TargetBlockState>> CARBALITE_REPLACEMENT = Suppliers.memoize(() ->
             List.of(
@@ -58,5 +58,5 @@ public class ModConfiguredFeature {
 
     public static final RegistryObject<ConfiguredFeature<?, ?>> CRYSTAL_CLUSTER_GEODE = CONFIGURED_FEATURES.register(MHNWReferences.CRYSTAL_CLUSTER_GEODES,
             () -> new ConfiguredFeature<>(Feature.GEODE, new GeodeConfiguration(new GeodeBlockSettings(BlockStateProvider.simple(Blocks.AIR), BlockStateProvider.simple(Blocks.AMETHYST_BLOCK), BlockStateProvider.simple(Blocks.BUDDING_AMETHYST), BlockStateProvider.simple(Blocks.CALCITE), BlockStateProvider.simple(Blocks.SMOOTH_BASALT), List.of(EARTH_CRYSTAL_CLUSTER_BLOCK.get().defaultBlockState(), ICE_CRYSTAL_CLUSTER_BLOCK.get().defaultBlockState(), Blocks.LARGE_AMETHYST_BUD.defaultBlockState(), Blocks.MEDIUM_AMETHYST_BUD.defaultBlockState(), Blocks.SMALL_AMETHYST_BUD.defaultBlockState(), Blocks.AMETHYST_CLUSTER.defaultBlockState()), BlockTags.FEATURES_CANNOT_REPLACE, BlockTags.GEODE_INVALID_BLOCKS), new GeodeLayerSettings(1.7D, 2.2D, 3.2D, 4.2D), new GeodeCrackSettings(0.95D, 2.0D, 2), 0.35D, 0.083D, true, UniformInt.of(4, 6), UniformInt.of(3, 4), UniformInt.of(1, 2), -16, 16, 0.05D, 1)));
-
+*/
 }

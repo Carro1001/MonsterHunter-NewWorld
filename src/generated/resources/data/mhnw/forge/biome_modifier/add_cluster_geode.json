@@ -1,6 +1,0 @@
-{
-  "type": "forge:add_features",
-  "biomes": "#minecraft:is_overworld",
-  "features": "mhnw:crystal_cluster_geode",
-  "step": "underground_decoration"
-}

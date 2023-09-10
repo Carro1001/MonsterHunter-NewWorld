@@ -16,16 +16,15 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import org.jetbrains.annotations.NotNull;
-import software.bernie.geckolib3.core.IAnimatable;
-import software.bernie.geckolib3.core.IAnimationTickable;
-import software.bernie.geckolib3.core.manager.AnimationFactory;
-import software.bernie.geckolib3.util.GeckoLibUtil;
+import software.bernie.geckolib.animatable.GeoEntity;
+import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.util.GeckoLibUtil;
 
 import javax.annotation.Nullable;
 import java.util.Random;
 
-public abstract class DragonEntity extends PathfinderMob implements IAnimatable, IAnimationTickable, IGrows {
-    private AnimationFactory factory = GeckoLibUtil.createFactory(this);
+public abstract class DragonEntity extends PathfinderMob implements GeoEntity, IGrows {
+    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
     public int prevAnimation = 0;
     public float animationProgress = 0;
@@ -157,15 +156,12 @@ public abstract class DragonEntity extends PathfinderMob implements IAnimatable,
     //endregion
 
     //region Animation
-    @Override
-    public AnimationFactory getFactory() {
-        return this.factory;
-    }
 
     @Override
-    public int tickTimer() {
-        return tickCount;
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return this.cache;
     }
+
     //endregion
 
     //region Roar

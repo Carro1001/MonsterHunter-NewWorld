@@ -25,12 +25,12 @@ public final class ModParticle {
     public static final RegistryObject<PoisonParticleType> POISON_PARTICLE_TYPE = PARTICLES.register(POISON_PARTICLE_REGNAME, PoisonParticleType::new);
     public static final RegistryObject<IceParticleType> ICE_PARTICLE_TYPE = PARTICLES.register(ICE_PARTICLE_REGNAME, IceParticleType::new);
 
-    @SubscribeEvent
+/*    @SubscribeEvent
     public static void registerFactories(RegisterParticleProvidersEvent evt) {
         evt.register(SLEEP_PARTICLE_TYPE.get(), SleepParticleType.SleepParticleFactory::new);
         evt.register(THUNDER_PARTICLE_TYPE.get(), ThunderParticleType.ThunderParticleFactory::new);
         evt.register(ICE_PARTICLE_TYPE.get(), IceParticleType.IceParticleFactory::new);
         evt.register(POISON_PARTICLE_TYPE.get(), PoisonParticleType.PoisonParticleFactory::new);
-    }
+    }*/
 
 }

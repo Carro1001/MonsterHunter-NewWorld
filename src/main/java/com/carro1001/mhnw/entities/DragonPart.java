@@ -19,7 +19,7 @@ public class DragonPart extends PartEntity<DragonEntity> {
     }
 
     public void collideWithNearbyEntities() {
-        List<Entity> entities = this.level.getEntities(this, this.getBoundingBox().expandTowards(0.20000000298023224D, 0.0D, 0.20000000298023224D));
+        List<Entity> entities = this.level().getEntities(this, this.getBoundingBox().expandTowards(0.20000000298023224D, 0.0D, 0.20000000298023224D));
         Entity parent = this.getParent();
         if (parent != null) {
             entities.stream().filter(entity -> entity != parent && !(entity instanceof DragonPart && ((DragonPart) entity).getParent() == parent) && entity.isPushable()).forEach(entity -> entity.push(parent));

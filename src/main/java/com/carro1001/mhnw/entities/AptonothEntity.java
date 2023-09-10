@@ -14,21 +14,22 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import software.bernie.geckolib3.core.IAnimatable;
-import software.bernie.geckolib3.core.IAnimationTickable;
-import software.bernie.geckolib3.core.PlayState;
-import software.bernie.geckolib3.core.builder.AnimationBuilder;
-import software.bernie.geckolib3.core.builder.ILoopType;
-import software.bernie.geckolib3.core.controller.AnimationController;
-import software.bernie.geckolib3.core.event.predicate.AnimationEvent;
-import software.bernie.geckolib3.core.manager.AnimationData;
-import software.bernie.geckolib3.core.manager.AnimationFactory;
-import software.bernie.geckolib3.util.GeckoLibUtil;
+import software.bernie.geckolib.animatable.GeoEntity;
+import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.core.animation.AnimatableManager;
+import software.bernie.geckolib.core.animation.AnimationController;
+import software.bernie.geckolib.core.animation.AnimationState;
+import software.bernie.geckolib.core.animation.RawAnimation;
+import software.bernie.geckolib.core.object.PlayState;
+import software.bernie.geckolib.util.GeckoLibUtil;
 
 import static com.carro1001.mhnw.registration.ModEntities.APTONOTH;
 
-public class AptonothEntity  extends AbstractHorse implements IAnimatable, IAnimationTickable {
-    private AnimationFactory factory = GeckoLibUtil.createFactory(this);
+public class AptonothEntity  extends AbstractHorse implements GeoEntity {
+    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+    private static final RawAnimation WALK = RawAnimation.begin().thenPlay("animation.aptonoth.walk");
+    private static final RawAnimation IDLE = RawAnimation.begin().thenPlay("animation.aptonoth.idle");
+    private static final RawAnimation EAT = RawAnimation.begin().thenPlay("animation.aptonoth.eat");
     public AptonothEntity(EntityType<? extends AbstractHorse> p_27557_, Level p_27558_) {
         super(p_27557_, p_27558_);
         this.noCulling = true;
@@ -50,35 +51,39 @@ public class AptonothEntity  extends AbstractHorse implements IAnimatable, IAnim
         if (this.isBaby()) {
             return super.mobInteract(pPlayer, pHand);
         } else {
-            return InteractionResult.sidedSuccess(this.level.isClientSide);
+            return InteractionResult.sidedSuccess(this.level().isClientSide);
         }
     }
 
-    private <E extends IAnimatable> PlayState predicate(AnimationEvent<E> event) {
-        if (event.isMoving()) {
-            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.aptonoth.walk", ILoopType.EDefaultLoopTypes.LOOP));
-            return PlayState.CONTINUE;
+
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+        controllers.add(
+                new AnimationController<>(this, "Body", 1, this::poseBody)
+        );
+    }
+
+    // Create the animation handler for the body segment
+    protected PlayState poseBody(AnimationState<AptonothEntity> state) {
+        if (this.isEating()){
+            state.setAnimation(EAT);
         }
-        if (!event.isMoving() && this.getSpeed() <= 0) {
-            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.aptonoth.idle", ILoopType.EDefaultLoopTypes.LOOP));
-            return PlayState.CONTINUE;
+        else if (state.isMoving() || this.getSpeed() > 0.05) {
+            state.setAnimation(WALK);
         }
-        if (this.isEating()) {
-            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.aptonoth.eat", ILoopType.EDefaultLoopTypes.LOOP));
-            return PlayState.CONTINUE;
+        else if(!state.isMoving() && this.getSpeed() <= 0){
+            state.setAnimation(IDLE);
         }
-        event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.aptonoth.idle", ILoopType.EDefaultLoopTypes.LOOP));
+        state.setAnimation(IDLE);
         return PlayState.CONTINUE;
     }
-    @Override
-    public void registerControllers(AnimationData data) {
-        data.addAnimationController(new AnimationController<>(this, "controller", 5, this::predicate));
-    }
+
 
     @Override
-    public AnimationFactory getFactory() {
-        return this.factory;
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return this.cache;
     }
+
     public static AttributeSupplier.Builder prepareAttributes() {
         return Mob.createLivingAttributes()
                 .add(Attributes.ATTACK_DAMAGE, 3.0)
@@ -87,11 +92,6 @@ public class AptonothEntity  extends AbstractHorse implements IAnimatable, IAnim
                 .add(Attributes.MOVEMENT_SPEED, 0.3)
                 .add(Attributes.ARMOR, 1.0D)
                 .add(Attributes.ARMOR_TOUGHNESS,1.0D);
-    }
-
-    @Override
-    public int tickTimer() {
-        return age;
     }
 
     @Nullable

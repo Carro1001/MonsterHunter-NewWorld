@@ -9,8 +9,8 @@ import org.jetbrains.annotations.NotNull;
 import static com.carro1001.mhnw.registration.ModBlocks.*;
 import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 
-public class ModItemTags extends ItemTagsProvider {
-    public ModItemTags(DataGenerator generator, ModBlockTags blocktags, ExistingFileHelper existingFileHelper) {
+public class ModItemTags {
+   /* public ModItemTags(DataGenerator generator, ModBlockTags blocktags, ExistingFileHelper existingFileHelper) {
         super(generator,blocktags, MODID,existingFileHelper);
     }
 
@@ -27,5 +27,5 @@ public class ModItemTags extends ItemTagsProvider {
     @Override
     public @NotNull String getName() {
         return "Monster Hunter: New World  Tags";
-    }
+    }*/
 }

@@ -61,7 +61,7 @@ public class DragonFireball extends Goal{
         LivingEntity livingentity = this.dragonEntity.getTarget();
         if (livingentity != null) {
             if(this.dragonEntity.hasLineOfSight(livingentity)){
-                Level level = this.dragonEntity.level;
+                Level level = this.dragonEntity.level();
                 ++this.chargeTime;
                 this.dragonEntity.lookAt(livingentity, 30.0F, 30.0F);
                 if (this.chargeTime == 10) {

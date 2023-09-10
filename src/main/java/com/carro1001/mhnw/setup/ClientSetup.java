@@ -12,7 +12,7 @@ import net.minecraftforge.client.event.TextureStitchEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
-import software.bernie.geckolib3.renderers.geo.GeoArmorRenderer;
+import software.bernie.geckolib.renderer.GeoArmorRenderer;
 
 import static com.carro1001.mhnw.client.renderers.entities.SpitFireballRenderer.CUBE_FIREBALL_SPRITE;
 import static com.carro1001.mhnw.registration.ModEntities.*;
@@ -35,7 +35,7 @@ public class ClientSetup {
     }
     @SubscribeEvent
     public static void registerRenderers(final EntityRenderersEvent.AddLayers event) {
-        GeoArmorRenderer.registerArmorRenderer(BoneArmorItem.class, new BoneArmorRenderer());
+        //GeoArmorRenderer.(BoneArmorItem.class, new BoneArmorRenderer());
 
     }
 
@@ -57,10 +57,10 @@ public class ClientSetup {
 
     }
     @SubscribeEvent
-    public static void onTextureStitch(TextureStitchEvent.Pre event) {
+    public static void onTextureStitch(TextureStitchEvent.Post event) {
         if (!event.getAtlas().location().equals(TextureAtlas.LOCATION_BLOCKS)) {
             return;
         }
-        event.addSprite(CUBE_FIREBALL_SPRITE);
+        //event.getAtlas().(CUBE_FIREBALL_SPRITE);
     }
 }

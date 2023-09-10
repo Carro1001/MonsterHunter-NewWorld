@@ -32,16 +32,14 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.gameevent.GameEvent;
 import org.jetbrains.annotations.NotNull;
-import software.bernie.geckolib3.core.IAnimatable;
-import software.bernie.geckolib3.core.IAnimationTickable;
-import software.bernie.geckolib3.core.PlayState;
-import software.bernie.geckolib3.core.builder.AnimationBuilder;
-import software.bernie.geckolib3.core.builder.ILoopType;
-import software.bernie.geckolib3.core.controller.AnimationController;
-import software.bernie.geckolib3.core.event.predicate.AnimationEvent;
-import software.bernie.geckolib3.core.manager.AnimationData;
-import software.bernie.geckolib3.core.manager.AnimationFactory;
-import software.bernie.geckolib3.util.GeckoLibUtil;
+import software.bernie.geckolib.animatable.GeoEntity;
+import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.core.animation.AnimatableManager;
+import software.bernie.geckolib.core.animation.AnimationController;
+import software.bernie.geckolib.core.animation.AnimationState;
+import software.bernie.geckolib.core.animation.RawAnimation;
+import software.bernie.geckolib.core.object.PlayState;
+import software.bernie.geckolib.util.GeckoLibUtil;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -49,7 +47,7 @@ import java.util.Random;
 
 import static com.carro1001.mhnw.registration.ModParticle.*;
 
-public class ToadEntity extends PathfinderMob implements Bucketable, IAnimatable, IAnimationTickable {
+public class ToadEntity extends PathfinderMob implements Bucketable, GeoEntity {
     private static final EntityDataAccessor<Integer> TYPE = SynchedEntityData.defineId(ToadEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> TYPEASSIGNED = SynchedEntityData.defineId(ToadEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> FROM_BUCKET = SynchedEntityData.defineId(ToadEntity.class, EntityDataSerializers.BOOLEAN);
@@ -57,7 +55,8 @@ public class ToadEntity extends PathfinderMob implements Bucketable, IAnimatable
     private static final EntityDataAccessor<Integer> DATA_SWELL_DIR = SynchedEntityData.defineId(ToadEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> DATA_IS_IGNITED = SynchedEntityData.defineId(ToadEntity.class, EntityDataSerializers.BOOLEAN);
     public boolean walking = false;
-    private AnimationFactory factory =  GeckoLibUtil.createFactory(this);
+
+    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
     private int oldSwell;
     private int swell;
@@ -226,14 +225,14 @@ public class ToadEntity extends PathfinderMob implements Bucketable, IAnimatable
     public @NotNull InteractionResult mobInteract(Player p_149155_, @NotNull InteractionHand p_149156_) {
         ItemStack itemstack = p_149155_.getItemInHand(p_149156_);
         if (itemstack.is(Items.FLINT_AND_STEEL)) {
-            this.level.playSound(p_149155_, this.getX(), this.getY(), this.getZ(), SoundEvents.FLINTANDSTEEL_USE, this.getSoundSource(), 1.0F, this.random.nextFloat() * 0.4F + 0.8F);
-            if (!this.level.isClientSide) {
+            this.level().playSound(p_149155_, this.getX(), this.getY(), this.getZ(), SoundEvents.FLINTANDSTEEL_USE, this.getSoundSource(), 1.0F, this.random.nextFloat() * 0.4F + 0.8F);
+            if (!this.level().isClientSide) {
                 this.ignite();
                 itemstack.hurtAndBreak(1, p_149155_, (p_32290_) -> {
                     p_32290_.broadcastBreakEvent(p_149156_);
                 });
             }
-            return InteractionResult.sidedSuccess(this.level.isClientSide);
+            return InteractionResult.sidedSuccess(this.level().isClientSide);
         }
         return Bucketable.bucketMobPickup(p_149155_, p_149156_, this).orElse(super.mobInteract(p_149155_, p_149156_));
     }
@@ -285,10 +284,7 @@ public class ToadEntity extends PathfinderMob implements Bucketable, IAnimatable
         }
     }
 
-    @Override
-    public int tickTimer() {
-        return tickCount;
-    }
+
 
     public SpawnGroupData finalizeSpawn(@NotNull ServerLevelAccessor p_149132_, @NotNull DifficultyInstance p_149133_, @NotNull MobSpawnType p_149134_, @Nullable SpawnGroupData p_149135_, @Nullable CompoundTag p_149136_) {
         if (p_149134_ == MobSpawnType.BUCKET) {
@@ -302,7 +298,7 @@ public class ToadEntity extends PathfinderMob implements Bucketable, IAnimatable
         }
     }
     private void explode() {
-        if (!this.level.isClientSide) {
+        if (!this.level().isClientSide) {
             this.dead = true;
             this.discard();
             this.spawnLingeringCloud();
@@ -332,7 +328,7 @@ public class ToadEntity extends PathfinderMob implements Bucketable, IAnimatable
     private void spawnLingeringCloud() {
         ArrayList<MobEffectInstance> effects = getToadEffects();
         if(!effects.isEmpty()){
-            AreaEffectCloud areaeffectcloud = new AreaEffectCloud(this.level, this.getX(), this.getY(), this.getZ());
+            AreaEffectCloud areaeffectcloud = new AreaEffectCloud(this.level(), this.getX(), this.getY(), this.getZ());
             areaeffectcloud.setRadius(2.5F);
             areaeffectcloud.setRadiusOnUse(-0.5F);
             areaeffectcloud.setWaitTime(10);
@@ -341,13 +337,11 @@ public class ToadEntity extends PathfinderMob implements Bucketable, IAnimatable
             for(MobEffectInstance mobeffectinstance : getToadEffects()) {
                 areaeffectcloud.addEffect(new MobEffectInstance(mobeffectinstance));
             }
-            this.level.addFreshEntity(areaeffectcloud);
+            this.level().addFreshEntity(areaeffectcloud);
 
         }
         if(getTypeDir()==3){
-            Explosion.BlockInteraction explosion$blockinteraction = Explosion.BlockInteraction.NONE;
-            this.level.explode(this, this.getX(), this.getY(), this.getZ(), (float)this.explosionRadius/2, explosion$blockinteraction);
-
+            this.level().explode(this, this.getX(), this.getY(), this.getZ(), (float)this.explosionRadius/2, Level.ExplosionInteraction.MOB);
         }
     }
 
@@ -377,31 +371,34 @@ public class ToadEntity extends PathfinderMob implements Bucketable, IAnimatable
         this.entityData.set(DATA_SWELL_DIR, pState);
     }
 
-    private <E extends IAnimatable> PlayState predicate(AnimationEvent<E> event) {
-        if(this.isIgnited()){
-            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.toad.fuse", ILoopType.EDefaultLoopTypes.PLAY_ONCE));
-            return PlayState.CONTINUE;
-        }
-        if(event.isMoving() || getSpeed() > 0.1){
-            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.toad.walk", ILoopType.EDefaultLoopTypes.LOOP));
-            return PlayState.CONTINUE;
-        }
-        else  if(event.isMoving()){
-            event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.toad.idle", ILoopType.EDefaultLoopTypes.LOOP));
-            return PlayState.CONTINUE;
-        }
-        return PlayState.STOP;
-
-    }
-    @Override
-    public void registerControllers(AnimationData data) {
-        data.addAnimationController(new AnimationController<>(this, "controller", 0, this::predicate));
-    }
-
+    private static final RawAnimation FUSE = RawAnimation.begin().thenPlay("animation.toad.fuse");
+    private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.toad.walk");
+    private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.toad.idle");
 
     @Override
-    public AnimationFactory getFactory() {
-        return this.factory;
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+        controllers.add(
+                new AnimationController<>(this, "Body", 1, this::poseBody)
+        );
+    }
+
+    // Create the animation handler for the body segment
+    protected PlayState poseBody(AnimationState<ToadEntity> state) {
+        if (this.isIgnited()){
+            state.setAnimation(FUSE);
+        }
+        else if (state.isMoving()) {
+            state.setAnimation(WALK);
+        }
+        else {
+            state.setAnimation(IDLE);
+        }
+
+        return PlayState.CONTINUE;
+    }
+    @Override
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return this.cache;
     }
 
 }

@@ -2,23 +2,22 @@ package com.carro1001.mhnw.registration;
 
 import com.carro1001.mhnw.items.BoneArmorItem;
 import com.carro1001.mhnw.utils.MHNWReferences;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.food.FoodProperties;
-import net.minecraft.world.item.ArmorMaterials;
-import net.minecraft.world.item.Item;
+import net.minecraft.world.item.*;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
+import net.minecraft.core.registries.Registries;
 
-import static com.carro1001.mhnw.MHNW.GROUP;
 import static com.carro1001.mhnw.utils.MHNWReferences.*;
 
 public class ModItems {
     public static final DeferredRegister<Item> ITEMS = DeferredRegister.create(ForgeRegistries.ITEMS, MODID);
-
-    public static final Item.Properties basicItem = (new Item.Properties()).tab(GROUP);
+    public static final Item.Properties basicItem = (new Item.Properties());
     public static final RegistryObject<Item> CARBALITE_ITEM = ITEMS.register(MHNWReferences.CARBALITE_ITEM, () -> new Item(basicItem));
     public static final RegistryObject<Item> DRAGONITE_ITEM = ITEMS.register(MHNWReferences.DRAGONITE_ITEM, () -> new Item(basicItem));
     public static final RegistryObject<Item> MACHALITE_ITEM = ITEMS.register(MHNWReferences.MACHALITE_ITEM, () -> new Item(basicItem));
@@ -54,12 +53,37 @@ public class ModItems {
 
 ///////////////////ARMORS/////////////////////////////
     public static final RegistryObject<BoneArmorItem> BONE_HEAD = ITEMS.register(BONE_ARMOR_HEAD_ITEM,
-            () -> new BoneArmorItem(ArmorMaterials.CHAIN, EquipmentSlot.HEAD, new Item.Properties()));
+            () -> new BoneArmorItem(ArmorMaterials.CHAIN, ArmorItem.Type.HELMET, new Item.Properties()));
     public static final RegistryObject<BoneArmorItem> BONE_CHEST = ITEMS.register(BONE_ARMOR_CHESTPLATE_ITEM,
-            () -> new BoneArmorItem(ArmorMaterials.CHAIN, EquipmentSlot.CHEST, new Item.Properties()));
+            () -> new BoneArmorItem(ArmorMaterials.CHAIN, ArmorItem.Type.CHESTPLATE, new Item.Properties()));
     public static final RegistryObject<BoneArmorItem> BONE_LEGGINGS = ITEMS.register(BONE_ARMOR_LEGGING_ITEM,
-            () -> new BoneArmorItem(ArmorMaterials.CHAIN, EquipmentSlot.LEGS, new Item.Properties()));
+            () -> new BoneArmorItem(ArmorMaterials.CHAIN, ArmorItem.Type.LEGGINGS, new Item.Properties()));
     public static final RegistryObject<BoneArmorItem> BONE_BOOTS = ITEMS.register(BONE_ARMOR_BOOT_ITEM,
-            () -> new BoneArmorItem(ArmorMaterials.CHAIN, EquipmentSlot.FEET, new Item.Properties()));
+            () -> new BoneArmorItem(ArmorMaterials.CHAIN, ArmorItem.Type.BOOTS, new Item.Properties()));
+
+/*    public static final RegistryObject<CreativeModeTab> MHNW_TAB = TABS.register("mhnw_items", () -> CreativeModeTab.builder()
+            .m_257941_(Component.translatable("itemGroup." + MODID + ".mhnw_items"))
+            .icon(() -> new ItemStack(BONE_HEAD.get()))
+            .displayItems((enabledFeatures, entries) -> {
+                entries.accept(BONE_HEAD.get());
+                entries.accept(ItemRegistry.GECKO_ARMOR_CHESTPLATE.get());
+                entries.accept(ItemRegistry.GECKO_ARMOR_LEGGINGS.get());
+                entries.accept(ItemRegistry.GECKO_ARMOR_BOOTS.get());
+                entries.accept(ItemRegistry.WOLF_ARMOR_HELMET.get());
+                entries.accept(ItemRegistry.WOLF_ARMOR_CHESTPLATE.get());
+                entries.accept(ItemRegistry.WOLF_ARMOR_LEGGINGS.get());
+                entries.accept(ItemRegistry.WOLF_ARMOR_BOOTS.get());
+                entries.accept(ItemRegistry.GECKO_HABITAT.get());
+                entries.accept(ItemRegistry.FERTILIZER.get());
+                entries.accept(ItemRegistry.BAT_SPAWN_EGG.get());
+                entries.accept(ItemRegistry.BIKE_SPAWN_EGG.get());
+                entries.accept(ItemRegistry.RACE_CAR_SPAWN_EGG.get());
+                entries.accept(ItemRegistry.PARASITE_SPAWN_EGG.get());
+                entries.accept(ItemRegistry.MUTANT_ZOMBIE_SPAWN_EGG.get());
+                entries.accept(ItemRegistry.GREMLIN_SPAWN_EGG.get());
+                entries.accept(ItemRegistry.FAKE_GLASS_SPAWN_EGG.get());
+                entries.accept(ItemRegistry.COOL_KID_SPAWN_EGG.get());
+            })
+            .build());*/
 
 }

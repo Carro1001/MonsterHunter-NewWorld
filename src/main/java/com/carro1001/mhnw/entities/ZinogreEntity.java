@@ -5,33 +5,38 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.Level;
-import software.bernie.geckolib3.core.IAnimatable;
-import software.bernie.geckolib3.core.IAnimationTickable;
-import software.bernie.geckolib3.core.PlayState;
-import software.bernie.geckolib3.core.controller.AnimationController;
-import software.bernie.geckolib3.core.event.predicate.AnimationEvent;
-import software.bernie.geckolib3.core.manager.AnimationData;
-import software.bernie.geckolib3.core.manager.AnimationFactory;
-import software.bernie.geckolib3.util.GeckoLibUtil;
+import software.bernie.geckolib.animatable.GeoEntity;
+import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.core.animation.AnimatableManager;
+import software.bernie.geckolib.core.animation.AnimationController;
+import software.bernie.geckolib.core.animation.AnimationState;
+import software.bernie.geckolib.core.animation.RawAnimation;
+import software.bernie.geckolib.core.object.PlayState;
+import software.bernie.geckolib.util.GeckoLibUtil;
 
-public class ZinogreEntity extends Mob implements IAnimatable, IAnimationTickable {
-    private AnimationFactory factory = GeckoLibUtil.createFactory(this);
+public class ZinogreEntity extends Mob implements GeoEntity {
+    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
     public ZinogreEntity(EntityType<? extends Mob> p_27557_, Level p_27558_) {
         super(p_27557_, p_27558_);
         this.noCulling = true;
     }
 
-    private <E extends IAnimatable> PlayState predicate(AnimationEvent<E> event) {
-        return PlayState.CONTINUE;
-    }
-    @Override
-    public void registerControllers(AnimationData data) {
-        data.addAnimationController(new AnimationController<>(this, "controller", 5, this::predicate));
+       @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+        controllers.add(
+                new AnimationController<>(this, "Body", 20, this::poseBody)
+        );
     }
 
+    // Create the animation handler for the body segment
+    protected PlayState poseBody(AnimationState<ZinogreEntity> state) {
+        return PlayState.CONTINUE;
+    }
+
+
     @Override
-    public AnimationFactory getFactory() {
-        return this.factory;
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return this.cache;
     }
     public static AttributeSupplier.Builder prepareAttributes() {
         return Mob.createLivingAttributes()
@@ -43,8 +48,5 @@ public class ZinogreEntity extends Mob implements IAnimatable, IAnimationTickabl
                 .add(Attributes.ARMOR_TOUGHNESS,1.0D);
     }
 
-    @Override
-    public int tickTimer() {
-        return tickCount;
-    }
+
 }

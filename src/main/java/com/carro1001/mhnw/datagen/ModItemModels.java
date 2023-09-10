@@ -10,8 +10,8 @@ import static com.carro1001.mhnw.registration.ModEntities.*;
 import static com.carro1001.mhnw.registration.ModItems.*;
 import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 
-public class ModItemModels extends ItemModelProvider {
-    public ModItemModels(DataGenerator generator, ExistingFileHelper existingFileHelper) {
+public class ModItemModels {
+    /*public ModItemModels(DataGenerator generator, ExistingFileHelper existingFileHelper) {
         super(generator, MODID,existingFileHelper);
 
     }
@@ -142,5 +142,5 @@ public class ModItemModels extends ItemModelProvider {
         withExistingParent(ZINOGRE_EGG_ITEM.getId().getPath(), mcLoc("item/template_spawn_egg"));
         withExistingParent(FLASHFLY_EGG_ITEM.getId().getPath(), mcLoc("item/template_spawn_egg"));
 
-    }
+    }*/
 }

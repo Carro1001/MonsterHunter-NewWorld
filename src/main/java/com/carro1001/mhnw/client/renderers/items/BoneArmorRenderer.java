@@ -1,23 +1,14 @@
 package com.carro1001.mhnw.client.renderers.items;
 
-import com.carro1001.mhnw.client.models.items.BoneArmorModel;
 import com.carro1001.mhnw.items.BoneArmorItem;
-import software.bernie.geckolib3.renderers.geo.GeoArmorRenderer;
+import net.minecraft.resources.ResourceLocation;
+import software.bernie.geckolib.model.DefaultedItemGeoModel;
+import software.bernie.geckolib.renderer.GeoArmorRenderer;
+
+import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 
 public class BoneArmorRenderer extends GeoArmorRenderer<BoneArmorItem> {
     public BoneArmorRenderer() {
-        super(new BoneArmorModel());
-
-        // These values are what each bone name is in blockbench.
-        // The default values are the ones that come with the default armor template in
-        // the geckolib blockbench plugin.
-        this.headBone = "Head";
-        this.bodyBone = "Body";
-        this.rightArmBone = "RightArm";
-        this.leftArmBone = "LeftArm";
-        this.rightLegBone = "RightLeg";
-        this.leftLegBone = "LeftLeg";
-        this.rightBootBone = "RightBoot";
-        this.leftBootBone = "LeftBoot";
+        super(new DefaultedItemGeoModel<>(new ResourceLocation(MODID, "armor/bone_armor")));
     }
 }

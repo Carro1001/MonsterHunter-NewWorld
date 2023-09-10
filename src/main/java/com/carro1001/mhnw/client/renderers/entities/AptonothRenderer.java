@@ -9,7 +9,8 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
-import software.bernie.geckolib3.renderers.geo.GeoEntityRenderer;
+import org.jetbrains.annotations.Nullable;
+import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
 import static com.carro1001.mhnw.utils.MHNWReferences.APTONOTH;
 import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
@@ -20,12 +21,12 @@ public class AptonothRenderer extends GeoEntityRenderer<AptonothEntity> {
     public AptonothRenderer(EntityRendererProvider.Context context) {
         super(context, new AptonothModel());
     }
+
     @Override
-    public RenderType getRenderType(AptonothEntity animatable, float partialTicks, PoseStack stack,
-                                    MultiBufferSource renderTypeBuffer, VertexConsumer vertexBuilder, int packedLightIn,
-                                    ResourceLocation textureLocation) {
+    public RenderType getRenderType(AptonothEntity animatable, ResourceLocation texture, @Nullable MultiBufferSource bufferSource, float partialTick) {
         return RenderType.entityCutoutNoCull(getTextureLocation(animatable));
     }
+
     @Override
     public @NotNull ResourceLocation getTextureLocation(@NotNull AptonothEntity pEntity) {
         return RESOURCE_LOCATION;

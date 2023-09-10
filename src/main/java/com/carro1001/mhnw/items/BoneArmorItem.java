@@ -1,70 +1,72 @@
 package com.carro1001.mhnw.items;
 
+import com.carro1001.mhnw.client.renderers.items.BoneArmorRenderer;
+import com.carro1001.mhnw.registration.ModItems;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
+import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ArmorMaterial;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.client.extensions.common.IClientItemExtensions;
 import org.jetbrains.annotations.NotNull;
-import software.bernie.geckolib3.core.IAnimatable;
-import software.bernie.geckolib3.core.PlayState;
-import software.bernie.geckolib3.core.builder.AnimationBuilder;
-import software.bernie.geckolib3.core.builder.ILoopType;
-import software.bernie.geckolib3.core.controller.AnimationController;
-import software.bernie.geckolib3.core.event.predicate.AnimationEvent;
-import software.bernie.geckolib3.core.manager.AnimationData;
-import software.bernie.geckolib3.core.manager.AnimationFactory;
-import software.bernie.geckolib3.item.GeoArmorItem;
-import software.bernie.geckolib3.util.GeckoLibUtil;
+import software.bernie.geckolib.animatable.GeoItem;
+import software.bernie.geckolib.constant.DataTickets;
+import software.bernie.geckolib.constant.DefaultAnimations;
+import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.core.animation.AnimatableManager;
+import software.bernie.geckolib.core.animation.AnimationController;
+import software.bernie.geckolib.core.object.PlayState;
+import software.bernie.geckolib.renderer.GeoArmorRenderer;
+import software.bernie.geckolib.util.GeckoLibUtil;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
+import java.util.Set;
+import java.util.function.Consumer;
 
-import static com.carro1001.mhnw.MHNW.GROUP;
-import static com.carro1001.mhnw.registration.ModItems.*;
 
-public class BoneArmorItem extends GeoArmorItem implements IAnimatable {
-    private AnimationFactory factory = GeckoLibUtil.createFactory(this);
+public class BoneArmorItem extends ArmorItem implements GeoItem {
 
-    public BoneArmorItem(ArmorMaterial materialIn, EquipmentSlot slot, @NotNull Properties builder) {
-        super(materialIn, slot, builder.tab(GROUP));
+    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+
+    public BoneArmorItem(ArmorMaterial materialIn, Type type, @NotNull Properties builder) {
+        super(materialIn, type, builder);
     }
 
 
-    private <P extends IAnimatable> PlayState predicate(AnimationEvent<P> event) {
-        List<EquipmentSlot> slotData = event.getExtraDataOfType(EquipmentSlot.class);
-        List<ItemStack> stackData = event.getExtraDataOfType(ItemStack.class);
-        LivingEntity livingEntity = event.getExtraDataOfType(LivingEntity.class).get(0);
+    // Create our armor model/renderer for forge and return it
+    @Override
+    public void initializeClient(Consumer<IClientItemExtensions> consumer) {
+        consumer.accept(new IClientItemExtensions() {
+            private GeoArmorRenderer<?> renderer;
 
-        event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.bone_armor.new", ILoopType.EDefaultLoopTypes.HOLD_ON_LAST_FRAME));
-        if (livingEntity instanceof ArmorStand) {
-            return PlayState.CONTINUE;
-        }
+            @Override
+            public @NotNull HumanoidModel<?> getHumanoidArmorModel(LivingEntity livingEntity, ItemStack itemStack, EquipmentSlot equipmentSlot, HumanoidModel<?> original) {
+                if (this.renderer == null)
+                    this.renderer = new BoneArmorRenderer();
 
-        List<Item> armorList = new ArrayList<>(4);
-        for (EquipmentSlot slot : EquipmentSlot.values()) {
-            if (slot.getType() == EquipmentSlot.Type.ARMOR) {
-                livingEntity.getItemBySlot(slot);
-                armorList.add(livingEntity.getItemBySlot(slot).getItem());
+                // This prepares our GeoArmorRenderer for the current render frame.
+                // These parameters may be null however, so we don't do anything further with them
+                this.renderer.prepForRender(livingEntity, itemStack, equipmentSlot, original);
+
+                return this.renderer;
             }
-        }
+        });
+    }
 
-        boolean isWearingAll = new HashSet<>(armorList).containsAll(Arrays.asList(BONE_BOOTS.get(),
-                BONE_LEGGINGS.get(), BONE_CHEST.get(), BONE_HEAD.get()));
-        return isWearingAll ? PlayState.CONTINUE : PlayState.STOP;
+    // Let's add our animation controller
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+
     }
 
     @Override
-    public void registerControllers(AnimationData data) {
-        data.addAnimationController(new AnimationController(this, "controller", 20, this::predicate));
-    }
-
-    @Override
-    public AnimationFactory getFactory() {
-        return this.factory;
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return this.cache;
     }
 
 }

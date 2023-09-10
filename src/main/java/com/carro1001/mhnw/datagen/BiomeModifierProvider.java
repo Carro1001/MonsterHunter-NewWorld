@@ -28,10 +28,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
-public class BiomeModifierProvider implements DataProvider {
-    private final DataGenerator gen;
-    private static final Logger LOGGER = LogManager.getLogger();
-    public BiomeModifierProvider(DataGenerator gen) {
+public class BiomeModifierProvider {
+    /*private final DataGenerator gen;
+    private static final Logger LOGGER = LogManager.getLogger();*/
+   /* public BiomeModifierProvider(DataGenerator gen) {
         this.gen   = gen;
     }
 
@@ -90,5 +90,5 @@ public class BiomeModifierProvider implements DataProvider {
     @Override
     public @NotNull String getName() {
         return "Monster Hunter: New World Biome Modifiers";
-    }
+    }*/
 }

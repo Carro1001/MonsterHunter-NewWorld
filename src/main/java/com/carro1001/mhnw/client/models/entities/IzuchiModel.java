@@ -2,12 +2,16 @@ package com.carro1001.mhnw.client.models.entities;
 
 import com.carro1001.mhnw.entities.IzuchiEntity;
 import net.minecraft.resources.ResourceLocation;
-import software.bernie.geckolib3.model.AnimatedTickingGeoModel;
+import software.bernie.geckolib.model.DefaultedEntityGeoModel;
 
-import static com.carro1001.mhnw.utils.MHNWReferences.IZUCHI;
-import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
+import static com.carro1001.mhnw.utils.MHNWReferences.*;
 
-public class IzuchiModel extends AnimatedTickingGeoModel<IzuchiEntity> {
+public class IzuchiModel extends DefaultedEntityGeoModel<IzuchiEntity> {
+
+    public IzuchiModel() {
+        super(new ResourceLocation(MODID, IZUCHI), true);
+    }
+
     @Override
     public ResourceLocation getModelResource(IzuchiEntity object)
     {

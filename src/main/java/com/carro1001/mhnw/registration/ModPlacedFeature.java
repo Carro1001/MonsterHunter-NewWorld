@@ -12,7 +12,7 @@ import java.util.List;
 import static com.carro1001.mhnw.setup.ModConfig.*;
 
 public class ModPlacedFeature {
-    public static final DeferredRegister<PlacedFeature> PLACED_FEATURES = DeferredRegister.create(Registry.PLACED_FEATURE_REGISTRY, MHNWReferences.MODID);
+    /*public static final DeferredRegister<PlacedFeature> PLACED_FEATURES = DeferredRegister.create(Registry.PLACED_FEATURE_REGISTRY, MHNWReferences.MODID);
 
 
     public static final RegistryObject<PlacedFeature> MACHALITE_ORE = PLACED_FEATURES.register(MHNWReferences.MACHALITE_ORE,
@@ -45,5 +45,5 @@ public class ModPlacedFeature {
 
     private static List<PlacementModifier> orePlacement(PlacementModifier count, PlacementModifier height) {
         return List.of(count, InSquarePlacement.spread(), height, BiomeFilter.biome());
-    }
+    }*/
 }

@@ -17,19 +17,17 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import software.bernie.geckolib3.core.IAnimatable;
-import software.bernie.geckolib3.core.IAnimationTickable;
-import software.bernie.geckolib3.core.PlayState;
-import software.bernie.geckolib3.core.builder.AnimationBuilder;
-import software.bernie.geckolib3.core.builder.ILoopType;
-import software.bernie.geckolib3.core.controller.AnimationController;
-import software.bernie.geckolib3.core.event.predicate.AnimationEvent;
-import software.bernie.geckolib3.core.manager.AnimationData;
-import software.bernie.geckolib3.core.manager.AnimationFactory;
-import software.bernie.geckolib3.util.GeckoLibUtil;
+import software.bernie.geckolib.animatable.GeoEntity;
+import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.core.animation.AnimatableManager;
+import software.bernie.geckolib.core.animation.AnimationController;
+import software.bernie.geckolib.core.animation.AnimationState;
+import software.bernie.geckolib.core.animation.RawAnimation;
+import software.bernie.geckolib.core.object.PlayState;
+import software.bernie.geckolib.util.GeckoLibUtil;
 
-public class FlashBugEntity extends FlyingMob implements IAnimatable, IAnimationTickable {
-    private AnimationFactory factory = GeckoLibUtil.createFactory(this);
+public class FlashBugEntity extends FlyingMob implements GeoEntity {
+    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
     public FlashBugEntity(EntityType<? extends FlashBugEntity> p_27557_, Level p_27558_) {
         super(p_27557_, p_27558_);
@@ -45,20 +43,19 @@ public class FlashBugEntity extends FlyingMob implements IAnimatable, IAnimation
         super.registerGoals();
     }
 
-    private <E extends IAnimatable> PlayState predicate(AnimationEvent<E> event) {
-        event.getController().setAnimation(new AnimationBuilder().addAnimation("animation.flashbug.fly", ILoopType.EDefaultLoopTypes.LOOP));
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+        controllers.add(
+                new AnimationController<>(this, "Body", 20, this::poseBody)
+        );
+    }
+    protected PlayState poseBody(AnimationState<FlashBugEntity> state) {
         return PlayState.CONTINUE;
     }
     @Override
-    public void registerControllers(AnimationData data) {
-        data.addAnimationController(new AnimationController<>(this, "controller", 0, this::predicate));
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return this.cache;
     }
-
-    @Override
-    public AnimationFactory getFactory() {
-        return this.factory;
-    }
-
     public static AttributeSupplier.Builder prepareAttributes() {
         return Mob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, 10.0D)
@@ -69,10 +66,7 @@ public class FlashBugEntity extends FlyingMob implements IAnimatable, IAnimation
 
     }
 
-    @Override
-    public int tickTimer() {
-        return tickCount;
-    }
+
     public boolean causeFallDamage(float pFallDistance, float pMultiplier, DamageSource pSource) {
         return false;
     }
@@ -127,7 +121,7 @@ public class FlashBugEntity extends FlyingMob implements IAnimatable, IAnimation
 
             for(int i = 1; i < pLength; ++i) {
                 aabb = aabb.move(pPos);
-                if (!this.flashBugEntity.level.noCollision(this.flashBugEntity, aabb)) {
+                if (!this.flashBugEntity.level().noCollision(this.flashBugEntity, aabb)) {
                     return false;
                 }
             }

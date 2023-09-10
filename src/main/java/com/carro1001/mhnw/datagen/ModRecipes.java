@@ -12,9 +12,9 @@ import java.util.function.Consumer;
 import static com.carro1001.mhnw.registration.ModBlocks.*;
 import static com.carro1001.mhnw.registration.ModItems.*;
 
-public class ModRecipes extends RecipeProvider {
+public class ModRecipes {
 
-    public ModRecipes(DataGenerator generator) {
+    /*public ModRecipes(DataGenerator generator) {
         super(generator);
     }
 
@@ -54,5 +54,5 @@ public class ModRecipes extends RecipeProvider {
                 .unlockedBy("has_item", has(RARE_MEAT_ITEM.get()))
                 .save(p_176532_, "rare_monster_meat");
 
-    }
+    }*/
 }

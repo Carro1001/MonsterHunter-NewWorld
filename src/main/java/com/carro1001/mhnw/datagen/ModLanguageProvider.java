@@ -8,9 +8,9 @@ import static com.carro1001.mhnw.registration.ModEntities.*;
 import static com.carro1001.mhnw.registration.ModItems.*;
 import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 
-public class ModLanguageProvider extends LanguageProvider {
+public class ModLanguageProvider {
 
-    public ModLanguageProvider(DataGenerator generator, String language) {
+    /*public ModLanguageProvider(DataGenerator generator, String language) {
         super(generator, MODID,language);
 
     }
@@ -80,6 +80,6 @@ public class ModLanguageProvider extends LanguageProvider {
         add(ZINOGRE_EGG_ITEM.get(), "Zinogre Spawn Egg");
         add(ZINOGRE.get(), "Zinogre");
     }
-
+*/
 
 }

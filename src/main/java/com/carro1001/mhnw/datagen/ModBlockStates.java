@@ -12,8 +12,8 @@ import java.util.function.BiConsumer;
 import static com.carro1001.mhnw.registration.ModBlocks.*;
 import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 
-public class ModBlockStates extends BlockStateProvider {
-    public ModBlockStates(DataGenerator generator, ExistingFileHelper existingFileHelper) {
+public class ModBlockStates {
+    /*public ModBlockStates(DataGenerator generator, ExistingFileHelper existingFileHelper) {
         super(generator, MODID,existingFileHelper);
     }
 
@@ -29,5 +29,5 @@ public class ModBlockStates extends BlockStateProvider {
 
     private BiConsumer<Direction, ModelBuilder<BlockModelBuilder>.ElementBuilder.FaceBuilder> addTexture(String texture) {
         return ($, f) -> f.texture(texture).uvs(0,0,16,16).tintindex(0);
-    }
+    }*/
 }

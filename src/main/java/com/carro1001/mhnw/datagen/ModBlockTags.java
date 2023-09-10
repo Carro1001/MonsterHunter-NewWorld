@@ -1,22 +1,22 @@
 package com.carro1001.mhnw.datagen;
 
 import net.minecraft.data.DataGenerator;
-import net.minecraft.data.tags.BlockTagsProvider;
 import net.minecraft.tags.BlockTags;
 import net.minecraftforge.common.Tags;
+import net.minecraftforge.common.data.BlockTagsProvider;
 import net.minecraftforge.common.data.ExistingFileHelper;
 import org.jetbrains.annotations.NotNull;
 
 import static com.carro1001.mhnw.registration.ModBlocks.*;
 import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 
-public class ModBlockTags extends BlockTagsProvider {
+public class ModBlockTags {
 
-    public ModBlockTags(DataGenerator generator, ExistingFileHelper existingFileHelper) {
+    /*public ModBlockTags(DataGenerator generator, ExistingFileHelper existingFileHelper) {
         super(generator, MODID,existingFileHelper);
-    }
+    }*/
 
-    @Override
+    /*@Override
     protected void addTags() {
         tag(BlockTags.MINEABLE_WITH_PICKAXE)
                 .add(CARBALITE_ORE_BLOCK.get())
@@ -45,5 +45,5 @@ public class ModBlockTags extends BlockTagsProvider {
     @Override
     public @NotNull String getName() {
         return "Monster Hunter: New World Tags";
-    }
+    }*/
 }
