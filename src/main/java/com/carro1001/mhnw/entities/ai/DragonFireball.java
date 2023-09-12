@@ -4,7 +4,6 @@ import com.carro1001.mhnw.entities.DragonEntity;
 import com.carro1001.mhnw.entities.SpitFireball;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 
 import java.util.EnumSet;
@@ -70,7 +69,7 @@ public class DragonFireball extends Goal{
                     double y = this.dragonEntity.position().y + this.dragonEntity.getRandom().nextGaussian() * 5.0;
                     double z = this.dragonEntity.position().z + this.dragonEntity.getRandom().nextGaussian() * 5.0;
                     if (!this.dragonEntity.isSilent()) {
-                        level.levelEvent((Player)null, 1016, this.dragonEntity.blockPosition(), 0);
+                        level.levelEvent(null, 1016, this.dragonEntity.blockPosition(), 0);
                     }
 
                     SpitFireball largefireball = new SpitFireball(level, this.dragonEntity, x, y, z);

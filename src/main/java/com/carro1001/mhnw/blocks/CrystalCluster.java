@@ -40,12 +40,12 @@ public class CrystalCluster extends Block{
         int size = 12;
         int offset = 3;
         this.registerDefaultState(this.defaultBlockState().setValue(WATERLOGGED, Boolean.FALSE).setValue(FACING, Direction.UP));
-        this.upAabb = Block.box((double)offset, 0.0D, (double)offset, (double)(16 - offset), (double)size, (double)(16 - offset));
-        this.downAabb = Block.box((double)offset, (double)(16 - size), (double)offset, (double)(16 - offset), 16.0D, (double)(16 - offset));
-        this.northAabb = Block.box((double)offset, (double)offset, (double)(16 - size), (double)(16 - offset), (double)(16 - offset), 16.0D);
-        this.southAabb = Block.box((double)offset, (double)offset, 0.0D, (double)(16 - offset), (double)(16 - offset), (double)size);
-        this.eastAabb = Block.box(0.0D, (double)offset, (double)offset, (double)size, (double)(16 - offset), (double)(16 - offset));
-        this.westAabb = Block.box((double)(16 - size), (double)offset, (double)offset, 16.0D, (double)(16 - offset), (double)(16 - offset));
+        this.upAabb = Block.box(offset, 0.0D, offset, 16 - offset, size, 16 - offset);
+        this.downAabb = Block.box(offset, 16 - size, offset, 16 - offset, 16.0D, 16 - offset);
+        this.northAabb = Block.box(offset, offset, 16 - size, 16 - offset, 16 - offset, 16.0D);
+        this.southAabb = Block.box(offset, offset, 0.0D, 16 - offset, 16 - offset, size);
+        this.eastAabb = Block.box(0.0D, offset, offset, size, 16 - offset, 16 - offset);
+        this.westAabb = Block.box(16 - size, offset, offset, 16.0D, 16 - offset, 16 - offset);
     }
     public VoxelShape getShape(BlockState p_152021_, @NotNull BlockGetter p_152022_, @NotNull BlockPos p_152023_, @NotNull CollisionContext p_152024_) {
         Direction direction = p_152021_.getValue(FACING);

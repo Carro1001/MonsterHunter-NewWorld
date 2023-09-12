@@ -1,15 +1,9 @@
 package com.carro1001.mhnw.datagen;
 
-import com.carro1001.mhnw.registration.ModBlocks;
-import com.carro1001.mhnw.registration.ModItems;
 import com.carro1001.mhnw.utils.MHNWReferences;
 import net.minecraft.data.PackOutput;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.item.Item;
-import net.minecraftforge.client.model.generators.ItemModelBuilder;
 import net.minecraftforge.client.model.generators.ItemModelProvider;
 import net.minecraftforge.common.data.ExistingFileHelper;
-import net.minecraftforge.registries.RegistryObject;
 
 import static com.carro1001.mhnw.registration.ModBlocks.*;
 import static com.carro1001.mhnw.registration.ModEntities.*;

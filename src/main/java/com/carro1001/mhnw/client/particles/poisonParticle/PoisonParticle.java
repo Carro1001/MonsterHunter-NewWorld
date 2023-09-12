@@ -18,9 +18,9 @@ public class PoisonParticle extends TextureSheetParticle {
         this.setColor(r, g, b);
         this.setSize(0.1F, 0.1F);
         this.quadSize *= this.random.nextFloat() * 0.8F + 0.5F;
-        this.xd *= (double) 0.02F;
-        this.yd *= (double) 0.02F;
-        this.zd *= (double) 0.02F;
+        this.xd *= 0.02F;
+        this.yd *= 0.02F;
+        this.zd *= 0.02F;
         this.lifetime = 120;
         this.alpha = 1f;
     }

@@ -2,8 +2,6 @@ package com.carro1001.mhnw.setup;
 
 import com.carro1001.mhnw.client.models.entities.BitterbugModel;
 import com.carro1001.mhnw.client.renderers.entities.*;
-import com.carro1001.mhnw.client.renderers.items.BoneArmorRenderer;
-import com.carro1001.mhnw.items.BoneArmorItem;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraftforge.api.distmarker.Dist;
@@ -12,16 +10,15 @@ import net.minecraftforge.client.event.TextureStitchEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
-import software.bernie.geckolib.renderer.GeoArmorRenderer;
 
-import static com.carro1001.mhnw.client.renderers.entities.SpitFireballRenderer.CUBE_FIREBALL_SPRITE;
 import static com.carro1001.mhnw.registration.ModEntities.*;
 import static com.carro1001.mhnw.registration.RegistrationHelper.register;
 import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 
 @Mod.EventBusSubscriber(modid = MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class ClientSetup {
-    public static ModelLayerLocation CUBE_MODEL = register("cube_fireball");;
+    public static ModelLayerLocation CUBE_MODEL = register("cube_fireball");
+
     public static void init(FMLClientSetupEvent event) {
 
         //MinecraftForge.EVENT_BUS.register(ForgeHooksClient.ClientEvents.class);
@@ -54,7 +51,6 @@ public class ClientSetup {
     @SubscribeEvent
     public static void onTextureStitch(TextureStitchEvent.Post event) {
         if (!event.getAtlas().location().equals(TextureAtlas.LOCATION_BLOCKS)) {
-            return;
         }
         //event.getAtlas().(CUBE_FIREBALL_SPRITE);
     }

@@ -9,7 +9,7 @@ import javax.annotation.Nullable;
 
 public class ToadWalkGoal extends RandomStrollGoal{
         protected final float probability = 0.001F;
-        private ToadEntity toadEntity;
+        private final ToadEntity toadEntity;
         public ToadWalkGoal(ToadEntity pMob, double pSpeedModifier) {
             super(pMob, pSpeedModifier);
             this.toadEntity = pMob;
