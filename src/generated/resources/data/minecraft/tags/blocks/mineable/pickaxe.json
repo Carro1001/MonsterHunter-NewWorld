@@ -1,9 +1,9 @@
 {
   "values": [
     "mhnw:carbalite_ore",
-    "mhnw:dragonite_ore",
     "mhnw:machalite_ore",
-    "mhnw:ice_crystal_cluster",
-    "mhnw:earth_crystal_cluster"
+    "mhnw:dragonite_ore",
+    "mhnw:earth_crystal_cluster",
+    "mhnw:ice_crystal_cluster"
   ]
 }

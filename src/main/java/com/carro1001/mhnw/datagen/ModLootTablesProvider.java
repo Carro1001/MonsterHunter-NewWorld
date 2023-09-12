@@ -1,17 +1,16 @@
 package com.carro1001.mhnw.datagen;
 
+import net.minecraft.data.PackOutput;
+import net.minecraft.data.loot.LootTableProvider;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
+import com.carro1001.mhnw.datagen.loot.ModLootTables;
+import java.util.List;
+import java.util.Set;
 
-import com.carro1001.mhnw.utils.MHNWReferences;
-import net.minecraft.data.DataGenerator;
-
-import static com.carro1001.mhnw.registration.ModBlocks.*;
-import static com.carro1001.mhnw.registration.ModItems.*;
-
-public class ModLootTablesProvider  {
-    //public ModLootTablesProvider(DataGenerator generator) {
-        //super(generator);
-   // }
-
-
-
+public class ModLootTablesProvider {
+    public static LootTableProvider create(PackOutput output) {
+        return new LootTableProvider(output, Set.of(), List.of(
+                new LootTableProvider.SubProviderEntry(ModLootTables::new, LootContextParamSets.BLOCK)
+        ));
+    }
 }

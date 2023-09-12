@@ -1,7 +1,6 @@
 {
-  "parent": "minecraft:block/cross",
-  "render_type": "minecraft:cutout",
+  "parent": "minecraft:block/cube_all",
   "textures": {
-    "cross": "mhnw:block/earth_crystal_cluster"
+    "all": "mhnw:block/earth_crystal_cluster"
   }
 }

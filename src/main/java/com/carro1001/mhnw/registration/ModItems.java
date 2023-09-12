@@ -61,29 +61,4 @@ public class ModItems {
     public static final RegistryObject<BoneArmorItem> BONE_BOOTS = ITEMS.register(BONE_ARMOR_BOOT_ITEM,
             () -> new BoneArmorItem(ArmorMaterials.CHAIN, ArmorItem.Type.BOOTS, new Item.Properties()));
 
-/*    public static final RegistryObject<CreativeModeTab> MHNW_TAB = TABS.register("mhnw_items", () -> CreativeModeTab.builder()
-            .m_257941_(Component.translatable("itemGroup." + MODID + ".mhnw_items"))
-            .icon(() -> new ItemStack(BONE_HEAD.get()))
-            .displayItems((enabledFeatures, entries) -> {
-                entries.accept(BONE_HEAD.get());
-                entries.accept(ItemRegistry.GECKO_ARMOR_CHESTPLATE.get());
-                entries.accept(ItemRegistry.GECKO_ARMOR_LEGGINGS.get());
-                entries.accept(ItemRegistry.GECKO_ARMOR_BOOTS.get());
-                entries.accept(ItemRegistry.WOLF_ARMOR_HELMET.get());
-                entries.accept(ItemRegistry.WOLF_ARMOR_CHESTPLATE.get());
-                entries.accept(ItemRegistry.WOLF_ARMOR_LEGGINGS.get());
-                entries.accept(ItemRegistry.WOLF_ARMOR_BOOTS.get());
-                entries.accept(ItemRegistry.GECKO_HABITAT.get());
-                entries.accept(ItemRegistry.FERTILIZER.get());
-                entries.accept(ItemRegistry.BAT_SPAWN_EGG.get());
-                entries.accept(ItemRegistry.BIKE_SPAWN_EGG.get());
-                entries.accept(ItemRegistry.RACE_CAR_SPAWN_EGG.get());
-                entries.accept(ItemRegistry.PARASITE_SPAWN_EGG.get());
-                entries.accept(ItemRegistry.MUTANT_ZOMBIE_SPAWN_EGG.get());
-                entries.accept(ItemRegistry.GREMLIN_SPAWN_EGG.get());
-                entries.accept(ItemRegistry.FAKE_GLASS_SPAWN_EGG.get());
-                entries.accept(ItemRegistry.COOL_KID_SPAWN_EGG.get());
-            })
-            .build());*/
-
 }

@@ -1,31 +1,24 @@
 package com.carro1001.mhnw.datagen;
 
-import net.minecraft.data.DataGenerator;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.data.PackOutput;
 import net.minecraft.data.tags.ItemTagsProvider;
-import net.minecraftforge.common.Tags;
+import net.minecraft.world.level.block.Block;
 import net.minecraftforge.common.data.ExistingFileHelper;
-import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import static com.carro1001.mhnw.registration.ModBlocks.*;
+import java.util.concurrent.CompletableFuture;
+
 import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 
-public class ModItemTags {
-   /* public ModItemTags(DataGenerator generator, ModBlockTags blocktags, ExistingFileHelper existingFileHelper) {
-        super(generator,blocktags, MODID,existingFileHelper);
+public class ModItemTags extends ItemTagsProvider {
+    public ModItemTags(PackOutput p_275343_, CompletableFuture<HolderLookup.Provider> p_275729_,
+                               CompletableFuture<TagLookup<Block>> p_275322_, @Nullable ExistingFileHelper existingFileHelper) {
+        super(p_275343_, p_275729_, p_275322_, MODID, existingFileHelper);
     }
 
     @Override
-    protected void addTags() {
-        tag(Tags.Items.ORES)
-                .add(CARBALITE_ORE_ITEM.get())
-                .add(DRAGONITE_ORE_ITEM.get())
-                .add(MACHALITE_ORE_ITEM.get())
-                .add(ICE_CRYSTAL_CLUSTER_ITEM.get())
-                .add(EARTH_CRYSTAL_CLUSTER_ITEM.get());
-    }
+    protected void addTags(HolderLookup.Provider pProvider) {
 
-    @Override
-    public @NotNull String getName() {
-        return "Monster Hunter: New World  Tags";
-    }*/
+    }
 }

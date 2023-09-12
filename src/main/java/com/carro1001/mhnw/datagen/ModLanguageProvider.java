@@ -1,6 +1,8 @@
 package com.carro1001.mhnw.datagen;
 
 import net.minecraft.data.DataGenerator;
+import net.minecraft.data.PackOutput;
+import net.minecraft.data.tags.ItemTagsProvider;
 import net.minecraftforge.common.data.LanguageProvider;
 
 import static com.carro1001.mhnw.registration.ModBlocks.*;
@@ -8,10 +10,10 @@ import static com.carro1001.mhnw.registration.ModEntities.*;
 import static com.carro1001.mhnw.registration.ModItems.*;
 import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 
-public class ModLanguageProvider {
+public class ModLanguageProvider extends LanguageProvider {
 
-    /*public ModLanguageProvider(DataGenerator generator, String language) {
-        super(generator, MODID,language);
+    public ModLanguageProvider(PackOutput output, String language) {
+        super(output, MODID,language);
 
     }
 
@@ -80,6 +82,5 @@ public class ModLanguageProvider {
         add(ZINOGRE_EGG_ITEM.get(), "Zinogre Spawn Egg");
         add(ZINOGRE.get(), "Zinogre");
     }
-*/
 
 }

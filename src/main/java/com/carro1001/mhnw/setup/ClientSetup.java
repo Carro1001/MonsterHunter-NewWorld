@@ -33,11 +33,6 @@ public class ClientSetup {
         //event.registerLayerDefinition(CubeFireballModel.LAYER_LOCATION, CubeFireballModel::createMobHeadLayer);
         //event.registerLayerDefinition(CUBE_MODEL, CubeFireballRenderer::createSkullLayer);
     }
-    @SubscribeEvent
-    public static void registerRenderers(final EntityRenderersEvent.AddLayers event) {
-        //GeoArmorRenderer.(BoneArmorItem.class, new BoneArmorRenderer());
-
-    }
 
     @SubscribeEvent
     public static void onRegisterRenderer(EntityRenderersEvent.RegisterRenderers event) {

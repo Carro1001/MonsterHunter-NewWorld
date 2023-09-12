@@ -1,19 +1,24 @@
 package com.carro1001.mhnw.datagen;
 
+import com.carro1001.mhnw.registration.ModBlocks;
+import com.carro1001.mhnw.registration.ModItems;
 import com.carro1001.mhnw.utils.MHNWReferences;
-import net.minecraft.data.DataGenerator;
+import net.minecraft.data.PackOutput;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
+import net.minecraftforge.client.model.generators.ItemModelBuilder;
 import net.minecraftforge.client.model.generators.ItemModelProvider;
 import net.minecraftforge.common.data.ExistingFileHelper;
+import net.minecraftforge.registries.RegistryObject;
 
 import static com.carro1001.mhnw.registration.ModBlocks.*;
 import static com.carro1001.mhnw.registration.ModEntities.*;
 import static com.carro1001.mhnw.registration.ModItems.*;
 import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 
-public class ModItemModels {
-    /*public ModItemModels(DataGenerator generator, ExistingFileHelper existingFileHelper) {
-        super(generator, MODID,existingFileHelper);
-
+public class ModItemModels extends ItemModelProvider {
+    public ModItemModels(PackOutput output, ExistingFileHelper existingFileHelper) {
+        super(output, MODID, existingFileHelper);
     }
 
     @Override
@@ -142,5 +147,5 @@ public class ModItemModels {
         withExistingParent(ZINOGRE_EGG_ITEM.getId().getPath(), mcLoc("item/template_spawn_egg"));
         withExistingParent(FLASHFLY_EGG_ITEM.getId().getPath(), mcLoc("item/template_spawn_egg"));
 
-    }*/
+    }
 }
