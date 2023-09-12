@@ -4,7 +4,8 @@ import com.carro1001.mhnw.entities.ZinogreEntity;
 import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.model.DefaultedEntityGeoModel;
 
-import static com.carro1001.mhnw.utils.MHNWReferences.*;
+import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
+import static com.carro1001.mhnw.utils.MHNWReferences.ZINOGRE;
 
 public class ZinogreModel extends DefaultedEntityGeoModel<ZinogreEntity> {
 

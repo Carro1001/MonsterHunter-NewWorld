@@ -1,7 +1,6 @@
 package com.carro1001.mhnw.client.models.entities;
 
 import com.carro1001.mhnw.entities.BlangoEntity;
-import com.carro1001.mhnw.utils.MHNWReferences;
 import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.model.DefaultedEntityGeoModel;
 

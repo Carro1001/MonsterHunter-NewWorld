@@ -1,9 +1,10 @@
 package com.carro1001.mhnw.datagen;
 
+import com.carro1001.mhnw.datagen.loot.ModLootTables;
 import net.minecraft.data.PackOutput;
 import net.minecraft.data.loot.LootTableProvider;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
-import com.carro1001.mhnw.datagen.loot.ModLootTables;
+
 import java.util.List;
 import java.util.Set;
 

@@ -1,6 +1,5 @@
 package com.carro1001.mhnw.utils;
 
-import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
 import static com.carro1001.mhnw.utils.MHNWReferences.MODID;

@@ -4,7 +4,8 @@ import com.carro1001.mhnw.entities.BlangongaEntity;
 import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.model.DefaultedEntityGeoModel;
 
-import static com.carro1001.mhnw.utils.MHNWReferences.*;
+import static com.carro1001.mhnw.utils.MHNWReferences.BLANGONGA;
+import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 
 public class BlangongaModel extends DefaultedEntityGeoModel<BlangongaEntity> {
 

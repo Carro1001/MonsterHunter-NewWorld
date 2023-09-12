@@ -1,29 +1,5 @@
 package com.carro1001.mhnw.registration;
 
-import com.carro1001.mhnw.utils.MHNWReferences;
-import com.google.common.base.Suppliers;
-import net.minecraft.core.Registry;
-import net.minecraft.data.worldgen.features.OreFeatures;
-import net.minecraft.tags.BlockTags;
-import net.minecraft.util.valueproviders.UniformInt;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.levelgen.GeodeBlockSettings;
-import net.minecraft.world.level.levelgen.GeodeCrackSettings;
-import net.minecraft.world.level.levelgen.GeodeLayerSettings;
-import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
-import net.minecraft.world.level.levelgen.feature.Feature;
-import net.minecraft.world.level.levelgen.feature.configurations.GeodeConfiguration;
-import net.minecraft.world.level.levelgen.feature.configurations.OreConfiguration;
-import net.minecraft.world.level.levelgen.feature.stateproviders.BlockStateProvider;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.RegistryObject;
-
-import java.util.List;
-import java.util.function.Supplier;
-
-import static com.carro1001.mhnw.registration.ModBlocks.*;
-import static com.carro1001.mhnw.setup.ModConfig.*;
-
 public class ModConfiguredFeature {
 
     /*public static final DeferredRegister<ConfiguredFeature<?, ?>> CONFIGURED_FEATURES = DeferredRegister.create(Registry.CONFIGURED_FEATURE_REGISTRY, MHNWReferences.MODID);

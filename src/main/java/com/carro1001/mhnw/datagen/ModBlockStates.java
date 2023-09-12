@@ -6,7 +6,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraftforge.client.model.generators.BlockStateProvider;
 import net.minecraftforge.common.data.ExistingFileHelper;
 import net.minecraftforge.registries.RegistryObject;
-import net.minecraftforge.common.data.ExistingFileHelper;
 
 import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 

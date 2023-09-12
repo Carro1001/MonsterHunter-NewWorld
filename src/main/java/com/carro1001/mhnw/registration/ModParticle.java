@@ -7,8 +7,6 @@ import com.carro1001.mhnw.client.particles.thunderParticle.ThunderParticleType;
 import com.carro1001.mhnw.utils.MHNWReferences;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RegisterParticleProvidersEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;

@@ -2,8 +2,6 @@ package com.carro1001.mhnw.client.renderers.entities;
 
 import com.carro1001.mhnw.client.models.entities.GreatIzuchiModel;
 import com.carro1001.mhnw.entities.GreatIzuchiEntity;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;

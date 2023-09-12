@@ -2,16 +2,15 @@ package com.carro1001.mhnw.registration;
 
 import com.carro1001.mhnw.items.BoneArmorItem;
 import com.carro1001.mhnw.utils.MHNWReferences;
-import net.minecraft.network.chat.Component;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.food.FoodProperties;
-import net.minecraft.world.item.*;
+import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.item.ArmorMaterials;
+import net.minecraft.world.item.Item;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
-import net.minecraft.core.registries.Registries;
 
 import static com.carro1001.mhnw.utils.MHNWReferences.*;
 

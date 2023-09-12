@@ -1,16 +1,5 @@
 package com.carro1001.mhnw.registration;
 
-import com.carro1001.mhnw.utils.MHNWReferences;
-import net.minecraft.core.Registry;
-import net.minecraft.world.level.levelgen.VerticalAnchor;
-import net.minecraft.world.level.levelgen.placement.*;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.RegistryObject;
-
-import java.util.List;
-
-import static com.carro1001.mhnw.setup.ModConfig.*;
-
 public class ModPlacedFeature {
     /*public static final DeferredRegister<PlacedFeature> PLACED_FEATURES = DeferredRegister.create(Registry.PLACED_FEATURE_REGISTRY, MHNWReferences.MODID);
 
