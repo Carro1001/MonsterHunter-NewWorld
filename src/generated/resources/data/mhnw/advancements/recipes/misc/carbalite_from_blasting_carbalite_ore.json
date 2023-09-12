@@ -1,12 +1,12 @@
 {
   "parent": "minecraft:recipes/root",
   "criteria": {
-    "has_raw": {
+    "has_carbalite_ore": {
       "conditions": {
         "items": [
           {
             "items": [
-              "mhnw:raw_machalite"
+              "mhnw:carbalite_ore"
             ]
           }
         ]
@@ -15,20 +15,21 @@
     },
     "has_the_recipe": {
       "conditions": {
-        "recipe": "minecraft:machalite1"
+        "recipe": "mhnw:carbalite_from_blasting_carbalite_ore"
       },
       "trigger": "minecraft:recipe_unlocked"
     }
   },
   "requirements": [
     [
-      "has_raw",
+      "has_carbalite_ore",
       "has_the_recipe"
     ]
   ],
   "rewards": {
     "recipes": [
-      "minecraft:machalite1"
+      "mhnw:carbalite_from_blasting_carbalite_ore"
     ]
-  }
+  },
+  "sends_telemetry_event": false
 }

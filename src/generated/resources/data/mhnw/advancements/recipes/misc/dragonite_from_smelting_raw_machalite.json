@@ -1,12 +1,12 @@
 {
   "parent": "minecraft:recipes/root",
   "criteria": {
-    "has_raw": {
+    "has_raw_machalite": {
       "conditions": {
         "items": [
           {
             "items": [
-              "mhnw:raw_carbalite"
+              "mhnw:raw_machalite"
             ]
           }
         ]
@@ -15,20 +15,21 @@
     },
     "has_the_recipe": {
       "conditions": {
-        "recipe": "minecraft:carbalite1"
+        "recipe": "mhnw:dragonite_from_smelting_raw_machalite"
       },
       "trigger": "minecraft:recipe_unlocked"
     }
   },
   "requirements": [
     [
-      "has_raw",
+      "has_raw_machalite",
       "has_the_recipe"
     ]
   ],
   "rewards": {
     "recipes": [
-      "minecraft:carbalite1"
+      "mhnw:dragonite_from_smelting_raw_machalite"
     ]
-  }
+  },
+  "sends_telemetry_event": false
 }

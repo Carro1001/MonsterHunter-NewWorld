@@ -1,12 +1,12 @@
 {
   "parent": "minecraft:recipes/root",
   "criteria": {
-    "has_ore": {
+    "has_raw_dragonite": {
       "conditions": {
         "items": [
           {
             "items": [
-              "mhnw:carbalite_ore"
+              "mhnw:raw_dragonite"
             ]
           }
         ]
@@ -15,20 +15,21 @@
     },
     "has_the_recipe": {
       "conditions": {
-        "recipe": "minecraft:carbalite"
+        "recipe": "mhnw:dragonite_from_smelting_raw_dragonite"
       },
       "trigger": "minecraft:recipe_unlocked"
     }
   },
   "requirements": [
     [
-      "has_ore",
+      "has_raw_dragonite",
       "has_the_recipe"
     ]
   ],
   "rewards": {
     "recipes": [
-      "minecraft:carbalite"
+      "mhnw:dragonite_from_smelting_raw_dragonite"
     ]
-  }
+  },
+  "sends_telemetry_event": false
 }
