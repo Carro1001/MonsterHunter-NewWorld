@@ -100,7 +100,7 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
         super.tick();
 
         if (random.nextInt(500) == 0 && !level().isClientSide) {
-//            this.setState(State.values()[(getState().ordinal() + 1) % State.values().length]);
+            this.setState(State.values()[(getState().ordinal() + 1) % State.values().length]);
         }
 
         if (!level().isClientSide) {
@@ -164,7 +164,7 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
         super.readAdditionalSaveData(pCompound);
 
         if (pCompound.contains("mon_scale", Tag.TAG_FLOAT)) {
-            this.setState(State.values()[pCompound.getInt("mon_scale")]);
+            this.setMonsterScale(pCompound.getFloat("mon_scale"));
         }
 
         if (pCompound.contains("mon_state", Tag.TAG_INT)) {
