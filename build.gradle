@@ -11,6 +11,7 @@ buildscript {
     dependencies {
         classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+', changing: true
         classpath group: 'org.spongepowered', name: 'mixingradle', version: '0.7.+'
+        classpath 'com.guardsquare:proguard-gradle:7.3.2'
     }
 }
 // Only edit below this line, the above code adds and enables the necessary things for Forge to be setup.
@@ -190,4 +191,41 @@ publishing {
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
+}
+
+tasks.register('proguard', proguard.gradle.ProGuardTask) {
+    dependsOn tasks.jar
+
+    keep(["allowobfuscation": true], "public class ${project.group}.** { *; }")
+    keep(["allowobfuscation": false], "public class ${project.group}.mixin.** { *; }") //TODO: Update mixin config in jar
+
+    optimizationpasses(10)
+    keepattributes("*Annotation*")
+    verbose()
+
+    printmapping(project.layout.buildDirectory.file("proguard/mappings.map"))
+
+    configurations.runtimeClasspath.getResolvedConfiguration().getFiles().each { File file ->
+        if (file.isFile() && file.getName().endsWith('.jar')) {
+            libraryjars(file.getPath())
+        }
+    }
+
+
+    // Automatically handle the Java version of this build.
+    if (System.getProperty('java.version').startsWith('1.')) {
+        // Before Java 9, the runtime classes were packaged in a single jar file.
+        libraryjars "${System.getProperty('java.home')}/lib/rt.jar"
+    } else {
+        // As of Java 9, the runtime classes are packaged in modular jmod files.
+        libraryjars "${System.getProperty('java.home')}/jmods/java.base.jmod", jarfilter: '!**.jar', filter: '!module-info.class'
+        //libraryjars "${System.getProperty('java.home')}/jmods/....."
+    }
+
+    injars tasks.jar.outputs.files.singleFile
+    outjars(layout.buildDirectory.file("libs/${archivesBaseName}-minified.jar"))
+
+    reobfJar.input.fileValue(layout.buildDirectory.file("libs/${archivesBaseName}-minified.jar").get().asFile);
+
+    finalizedBy('reobfJar')
 }
