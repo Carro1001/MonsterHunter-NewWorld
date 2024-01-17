@@ -60,9 +60,9 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
     @Override
     protected void registerGoals() {
         super.registerGoals();
-        this.goalSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, true)); // This finds the closest player
-        this.goalSelector.addGoal(1, new NewRathalosAggressionStateGoal(this)); // This handles the aggression state
-        this.goalSelector.addGoal(2, new NewRathalosMeleeAttackGoal(this, 1, false)); // This handles the chase and hit state
+        this.goalSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, true)); // This finds the closest player to target
+        this.goalSelector.addGoal(1, new NewRathalosAggressionStateGoal(this)); // This handles the aggression state between passive, roar, and aggressive
+        this.goalSelector.addGoal(2, new NewRathalosMeleeAttackGoal(this, 1, false)); // This handles the chase and melee hit state
         this.goalSelector.addGoal(2, new NewRathalosShootFireballGoal(this)); // This handles the fireball attack state
         this.goalSelector.addGoal(3, new NewRathalosWaterAvoidingStrollGoal(this, 1, 0.05F)); // This handles on the ground random walk around
         this.goalSelector.addGoal(3, new NewRathalosFlyingWaterAvoidingStrollGoal(this, 1)); // This handles random flying around
@@ -76,7 +76,7 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
                 .add(Attributes.MAX_HEALTH, 10)
                 .add(Attributes.FOLLOW_RANGE, 128)
                 .add(Attributes.MOVEMENT_SPEED, 0.5)
-                .add(Attributes.FLYING_SPEED, 10)
+                .add(Attributes.FLYING_SPEED, 25)
                 .add(Attributes.ARMOR, 1.0D)
                 .add(Attributes.ARMOR_TOUGHNESS, 1.0D);
     }
@@ -157,6 +157,8 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
         pCompound.putFloat("mon_scale", getMonsterScale());
         pCompound.putInt("mon_state", getState().ordinal());
         pCompound.putInt("mon_aggro_state", getAggressionState().ordinal());
+        pCompound.putInt("mon_fireball_state", getFireballChargeState().ordinal());
+        pCompound.putInt("mon_fireball_cooldown", this.fireballCooldownTime);
     }
 
     @Override
@@ -173,6 +175,14 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
 
         if (pCompound.contains("mon_aggro_state", Tag.TAG_INT)) {
             this.setAggressionState(AggressionState.values()[pCompound.getInt("mon_aggro_state")]);
+        }
+
+        if (pCompound.contains("mon_fireball_state", Tag.TAG_INT)) {
+            this.setFireBallChargeState(FireballState.values()[pCompound.getInt("mon_fireball_state")]);
+        }
+
+        if (pCompound.contains("mon_fireball_cooldown", Tag.TAG_INT)) {
+            this.fireballCooldownTime = pCompound.getInt("mon_fireball_cooldown");
         }
     }
 
