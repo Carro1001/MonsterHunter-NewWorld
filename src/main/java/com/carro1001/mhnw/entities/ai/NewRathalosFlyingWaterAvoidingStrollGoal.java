@@ -29,6 +29,6 @@ public class NewRathalosFlyingWaterAvoidingStrollGoal extends WaterAvoidingRando
     @Override
     protected Vec3 getPosition() { // TODO: Something smarter
         int range = 32;
-        return this.rathalosEntity.position().add(Mth.randomBetween(this.rathalosEntity.getRandom(), -range, range), 50, Mth.randomBetween(this.rathalosEntity.getRandom(), -range, range));
+        return this.rathalosEntity.position().add(Mth.randomBetween(this.rathalosEntity.getRandom(), -range, range), Mth.randomBetween(this.rathalosEntity.getRandom(), -range, range), Mth.randomBetween(this.rathalosEntity.getRandom(), -range, range));
     }
 }
