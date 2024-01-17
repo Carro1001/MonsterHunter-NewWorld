@@ -12,3 +12,24 @@ displayName="Monster Hunter: New World" #mandatory
 description='''
 A Monster Hunter themed mod for Minecraft
 '''
+
+[[dependencies.mhnw]] #optional
+modId = "forge" #mandatory
+mandatory = true #mandatory
+versionRange = "[46,)" #mandatory
+ordering = "NONE" # The order that this dependency should load in relation to your mod, required to be either 'BEFORE' or 'AFTER' if the dependency is not mandatory
+side = "BOTH" # Side this dependency is applied on - 'BOTH', 'CLIENT' or 'SERVER'
+
+[[dependencies.mhnw]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[1.20.1,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.mhnw]]
+modId = "geckolib"
+mandatory = true
+versionRange = "[4.2,)"
+ordering = "BEFORE"
+side = "BOTH"
