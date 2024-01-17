@@ -39,6 +39,12 @@ public class ModEntities {
             .clientTrackingRange(128)
             .setShouldReceiveVelocityUpdates(true)
             .build(MHNWReferences.RATHALOS));
+
+    public static final RegistryObject<EntityType<NewRathalosEntity>> NEW_RATHALOS = ENTITIES.register(MHNWReferences.NEW_RATHALOS, () -> EntityType.Builder.of(NewRathalosEntity::new, MobCategory.CREATURE)
+            .sized(2.5f, 2.5f)
+            .clientTrackingRange(128)
+            .setShouldReceiveVelocityUpdates(true)
+            .build(MHNWReferences.NEW_RATHALOS));
     public static final RegistryObject<Item> RATHALOS_EGG_ITEM = ITEMS.register(MHNWReferences.RATHALOS, () -> new ForgeSpawnEggItem(RATHALOS, 0x642628, 0x000000, new Item.Properties()));
 
     public static final RegistryObject<EntityType<BitterbugEntity>> BITTERBUG = ENTITIES.register(MHNWReferences.BITTERBUG, () -> EntityType.Builder.of(BitterbugEntity::new, MobCategory.CREATURE)
