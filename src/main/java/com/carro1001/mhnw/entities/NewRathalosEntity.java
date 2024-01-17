@@ -16,7 +16,6 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.control.FlyingMoveControl;
 import net.minecraft.world.entity.ai.control.MoveControl;
-import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
@@ -48,6 +47,7 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
 
     public NewRathalosEntity(EntityType<? extends PathfinderMob> pEntityType, Level pLevel) {
         super(pEntityType, pLevel);
+        setMovement();
     }
 
     @Override
@@ -62,7 +62,7 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
         super.registerGoals();
         this.goalSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, true)); // This finds the closest player
         this.goalSelector.addGoal(1, new NewRathalosAggressionStateGoal(this)); // This handles the aggression state
-        this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1, false)); // This handles the attack state
+        this.goalSelector.addGoal(2, new NewRathalosMeleeAttackGoal(this, 1, false)); // This handles the chase and hit state
         this.goalSelector.addGoal(2, new NewRathalosShootFireballGoal(this)); // This handles the fireball attack state
         this.goalSelector.addGoal(3, new NewRathalosWaterAvoidingStrollGoal(this, 1, 0.05F)); // This handles on the ground random walk around
         this.goalSelector.addGoal(3, new NewRathalosFlyingWaterAvoidingStrollGoal(this, 1)); // This handles random flying around
@@ -75,8 +75,8 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
                 .add(Attributes.FOLLOW_RANGE, 64) // This is the target finding range
                 .add(Attributes.MAX_HEALTH, 10)
                 .add(Attributes.FOLLOW_RANGE, 128)
-                .add(Attributes.MOVEMENT_SPEED, 0.3)
-                .add(Attributes.FLYING_SPEED, 0.4)
+                .add(Attributes.MOVEMENT_SPEED, 0.5)
+                .add(Attributes.FLYING_SPEED, 10)
                 .add(Attributes.ARMOR, 1.0D)
                 .add(Attributes.ARMOR_TOUGHNESS, 1.0D);
     }
@@ -85,16 +85,22 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(MONSTER_SCALE, 1F);
-        this.entityData.define(STATE, State.WALKING.ordinal());
+        this.entityData.define(STATE, State.FLYING.ordinal());
         this.entityData.define(AGGRESSION_STATE, AggressionState.PASSIVE.ordinal());
         this.entityData.define(FIRE_BALL_CHARGE_STATE, FireballState.READY.ordinal());
     }
 
     @Override
+    public boolean fireImmune() {
+        return true;
+    }
+
+    @Override
     public void tick() {
         super.tick();
-        if (random.nextInt(1500) == 0 && !level().isClientSide) {
-            this.setState(State.values()[(getState().ordinal() + 1) % State.values().length]);
+
+        if (random.nextInt(500) == 0 && !level().isClientSide) {
+//            this.setState(State.values()[(getState().ordinal() + 1) % State.values().length]);
         }
 
         if (!level().isClientSide) {
@@ -193,18 +199,22 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
         }
 
         if (STATE.equals(pKey)) {
-            if (getState() != State.FLYING) {
-                this.moveControl = new MoveControl(this);
-                this.navigation = this.createNavigation(level());
-                this.setNoGravity(false);
-            } else {
-                this.moveControl = new FlyingMoveControl(this, 1, true);
-                this.navigation = createFlyingPathNavigation(level());
-                this.setNoGravity(true);
-            }
+            setMovement();
         }
 
         super.onSyncedDataUpdated(pKey);
+    }
+
+    private void setMovement() {
+        if (getState() == State.WALKING) {
+            this.moveControl = new MoveControl(this);
+            this.navigation = this.createNavigation(level());
+            this.setNoGravity(false);
+        } else {
+            this.moveControl = new FlyingMoveControl(this, 1, true);
+            this.navigation = createFlyingPathNavigation(level());
+            this.setNoGravity(true);
+        }
     }
 
     public EntityDimensions getDimensions(Pose pPose) {
@@ -271,7 +281,6 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
     public FireballState getFireballChargeState() {
         return FireballState.values()[this.entityData.get(FIRE_BALL_CHARGE_STATE)];
     }
-
 
 
     public enum State {

@@ -34,8 +34,9 @@ public class NewRathalosAggressionStateGoal extends Goal {
             NewRathalosEntity.AggressionState aggressionState = this.rathalosEntity.getAggressionState();
             if (aggressionState == NewRathalosEntity.AggressionState.PASSIVE) {
                 this.rathalosEntity.setAggressionState(NewRathalosEntity.AggressionState.ROAR);
-                this.roarTime = 100;
+                this.roarTime = 60;
             } else if (aggressionState == NewRathalosEntity.AggressionState.ROAR) {
+                this.rathalosEntity.getLookControl().setLookAt(this.rathalosEntity.getTarget());
                 if (this.roarTime < 0) {
                     this.rathalosEntity.setAggressionState(NewRathalosEntity.AggressionState.AGGRESSIVE); // We're done roaring
                 } else {

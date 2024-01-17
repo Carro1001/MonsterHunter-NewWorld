@@ -21,11 +21,11 @@ public class NewRathalosWaterAvoidingStrollGoal extends WaterAvoidingRandomStrol
 
     @Override
     public boolean canUse() {
-        return this.rathalosEntity.getState() == NewRathalosEntity.State.WALKING && super.canUse();
+        return this.rathalosEntity.getState() == NewRathalosEntity.State.WALKING && this.rathalosEntity.getAggressionState() == NewRathalosEntity.AggressionState.PASSIVE && super.canUse();
     }
 
     @Override
     public boolean canContinueToUse() {
-        return this.rathalosEntity.getState() == NewRathalosEntity.State.WALKING && super.canContinueToUse();
+        return this.rathalosEntity.getState() == NewRathalosEntity.State.WALKING && this.rathalosEntity.getAggressionState() == NewRathalosEntity.AggressionState.PASSIVE && super.canContinueToUse();
     }
 }

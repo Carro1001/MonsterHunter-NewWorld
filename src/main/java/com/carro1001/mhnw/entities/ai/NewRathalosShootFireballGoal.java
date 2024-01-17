@@ -16,13 +16,13 @@ public class NewRathalosShootFireballGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        return check();
+        return true;
     }
 
 
     @Override
     public boolean canContinueToUse() {
-        return check();
+        return true;
     }
 
     private boolean check() {
@@ -40,7 +40,7 @@ public class NewRathalosShootFireballGoal extends Goal {
         super.tick();
         NewRathalosEntity.FireballState fireballChargeState = this.rathalosEntity.getFireballChargeState();
 
-        if (this.rathalosEntity.getTarget() != null) {
+        if (this.rathalosEntity.getTarget() != null && this.rathalosEntity.getAggressionState() == NewRathalosEntity.AggressionState.AGGRESSIVE) {
             if (!this.rathalosEntity.hasLineOfSight(this.rathalosEntity.getTarget()) && fireballChargeState == NewRathalosEntity.FireballState.CHARGING) {
                 this.fireballChargeTime = 0;
                 this.rathalosEntity.setFireBallChargeState(NewRathalosEntity.FireballState.READY);
@@ -59,7 +59,9 @@ public class NewRathalosShootFireballGoal extends Goal {
                 }
             }
         } else {
-            this.rathalosEntity.setAggressionState(NewRathalosEntity.AggressionState.PASSIVE);
+            if (fireballChargeState == NewRathalosEntity.FireballState.CHARGING) {
+                this.rathalosEntity.setFireBallChargeState(NewRathalosEntity.FireballState.READY);
+            }
         }
     }
 }

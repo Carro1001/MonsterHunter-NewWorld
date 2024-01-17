@@ -17,18 +17,18 @@ public class NewRathalosFlyingWaterAvoidingStrollGoal extends WaterAvoidingRando
 
     @Override
     public boolean canUse() {
-        return this.rathalosEntity.getState() == NewRathalosEntity.State.FLYING && super.canUse();
+        return this.rathalosEntity.getState() == NewRathalosEntity.State.FLYING && this.rathalosEntity.getAggressionState() == NewRathalosEntity.AggressionState.PASSIVE && super.canUse();
     }
 
     @Override
     public boolean canContinueToUse() {
-        return this.rathalosEntity.getState() == NewRathalosEntity.State.FLYING && super.canContinueToUse();
+        return this.rathalosEntity.getState() == NewRathalosEntity.State.FLYING && this.rathalosEntity.getAggressionState() == NewRathalosEntity.AggressionState.PASSIVE && super.canContinueToUse();
     }
 
     @Nullable
     @Override
     protected Vec3 getPosition() { // TODO: Something smarter
         int range = 32;
-        return this.rathalosEntity.position().add(Mth.randomBetween(this.rathalosEntity.getRandom(), -range, range), 5, Mth.randomBetween(this.rathalosEntity.getRandom(), -range, range));
+        return this.rathalosEntity.position().add(Mth.randomBetween(this.rathalosEntity.getRandom(), -range, range), 50, Mth.randomBetween(this.rathalosEntity.getRandom(), -range, range));
     }
 }
