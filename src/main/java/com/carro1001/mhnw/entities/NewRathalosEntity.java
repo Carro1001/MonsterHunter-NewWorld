@@ -51,6 +51,9 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
     public NewRathalosEntity(EntityType<? extends PathfinderMob> pEntityType, Level pLevel) {
         super(pEntityType, pLevel);
         setMovement();
+        if (!pLevel.isClientSide) {
+            fireballCooldownTime = this.random.nextInt(500, 2000);
+        }
     }
 
     @Override
@@ -121,7 +124,7 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
         if (level().isClientSide) {
             return;
         }
-        this.fireballCooldownTime = 500;
+        this.fireballCooldownTime = this.random.nextInt(500, 2000);
         Vec3 spawnPos = this.position().add(0, 10, 0);
 
         Vec3 velocity = this.getTarget().position().subtract(spawnPos).normalize().scale(6);
