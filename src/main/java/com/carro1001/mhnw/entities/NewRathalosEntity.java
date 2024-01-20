@@ -4,6 +4,8 @@ import com.carro1001.mhnw.entities.ai.NewRathalosAggressionStateGoal;
 import com.carro1001.mhnw.entities.ai.NewRathalosFlyingWaterAvoidingStrollGoal;
 import com.carro1001.mhnw.entities.ai.NewRathalosShootFireballGoal;
 import com.carro1001.mhnw.entities.ai.NewRathalosWaterAvoidingStrollGoal;
+import com.carro1001.mhnw.entities.ai.util.MMPathNavigatorGround;
+import com.carro1001.mhnw.entities.ai.util.SmartBodyHelper;
 import com.carro1001.mhnw.entities.interfaces.IGrows;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -14,6 +16,7 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.control.BodyRotationControl;
 import net.minecraft.world.entity.ai.control.FlyingMoveControl;
 import net.minecraft.world.entity.ai.control.MoveControl;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
@@ -85,7 +88,7 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(MONSTER_SCALE, 1F);
-        this.entityData.define(STATE, State.FLYING.ordinal());
+        this.entityData.define(STATE, State.WALKING.ordinal());
         this.entityData.define(AGGRESSION_STATE, AggressionState.PASSIVE.ordinal());
         this.entityData.define(FIRE_BALL_CHARGE_STATE, FireballState.READY.ordinal());
     }
@@ -126,7 +129,7 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
         LargeFireball largefireball = new LargeFireball(EntityType.FIREBALL, level());
         largefireball.setPos(spawnPos);
         largefireball.setDeltaMovement(velocity);
-        largefireball.explosionPower = 10;
+        largefireball.explosionPower = 1;
 
 
         level().addFreshEntity(largefireball);
@@ -148,6 +151,11 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
         flyingpathnavigation.setCanFloat(true);
         flyingpathnavigation.setCanPassDoors(true);
         return flyingpathnavigation;
+    }
+
+    @Override
+    protected PathNavigation createNavigation(Level pLevel) {
+        return new MMPathNavigatorGround(this, level());
     }
 
     @Override
@@ -231,6 +239,10 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
         return super.getDimensions(pPose).scale(0.255F * this.getMonsterScale());
     }
 
+    @Override
+    protected BodyRotationControl createBodyControl() {
+        return new SmartBodyHelper(this);
+    }
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
