@@ -3,6 +3,7 @@ package com.carro1001.mhnw.setup;
 import com.carro1001.mhnw.client.models.entities.BitterbugModel;
 import com.carro1001.mhnw.client.renderers.entities.*;
 import net.minecraft.client.model.geom.ModelLayerLocation;
+import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
@@ -38,6 +39,7 @@ public class ClientSetup {
         event.registerEntityRenderer(RATHIAN.get(), RathianRenderer::new);
         event.registerEntityRenderer(RATHALOS.get(), RathalosRenderer::new);
         event.registerEntityRenderer(NEW_RATHALOS.get(), NewRathalosRenderer::new);
+        event.registerEntityRenderer(NEW_RATHALOS_FIREBALL.get(), pContext ->  new ThrownItemRenderer<>(pContext, 3.0F, true));
         event.registerEntityRenderer(BITTERBUG.get(), BitterbugRenderer::new);
         event.registerEntityRenderer(TOAD.get(), ToadRenderer::new);
         event.registerEntityRenderer(ZINOGRE.get(), ZinogreRenderer::new);

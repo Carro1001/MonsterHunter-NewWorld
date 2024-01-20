@@ -5,6 +5,7 @@ import com.carro1001.mhnw.items.ToadBucket;
 import com.carro1001.mhnw.utils.MHNWReferences;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.entity.projectile.LargeFireball;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraftforge.common.ForgeSpawnEggItem;
@@ -46,6 +47,8 @@ public class ModEntities {
             .setShouldReceiveVelocityUpdates(true)
             .build(MHNWReferences.NEW_RATHALOS));
     public static final RegistryObject<Item> RATHALOS_EGG_ITEM = ITEMS.register(MHNWReferences.RATHALOS, () -> new ForgeSpawnEggItem(RATHALOS, 0x642628, 0x000000, new Item.Properties()));
+
+    public static final RegistryObject<EntityType<NewRathalosLargeFireballEntity>> NEW_RATHALOS_FIREBALL = ENTITIES.register(MHNWReferences.NEW_RATHALOS_FIREBALL, () -> EntityType.Builder.<NewRathalosLargeFireballEntity>of(NewRathalosLargeFireballEntity::new, MobCategory.MISC).sized(1.0F, 1.0F).clientTrackingRange(4).updateInterval(10).build(MHNWReferences.NEW_RATHALOS_FIREBALL));
 
     public static final RegistryObject<EntityType<BitterbugEntity>> BITTERBUG = ENTITIES.register(MHNWReferences.BITTERBUG, () -> EntityType.Builder.of(BitterbugEntity::new, MobCategory.CREATURE)
             .sized(0.4f, 0.2f)
