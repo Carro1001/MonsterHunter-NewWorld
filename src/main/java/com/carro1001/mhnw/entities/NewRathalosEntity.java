@@ -121,7 +121,7 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
     }
 
     public void shootFireball() {
-        if (level().isClientSide) {
+        if (level().isClientSide || this.fireballCooldownTime > 0) {
             return;
         }
         this.fireballCooldownTime = this.random.nextInt(500, 2000);
