@@ -1,10 +1,6 @@
 package com.carro1001.mhnw.entities;
 
-import com.carro1001.mhnw.entities.ai.NewRathalosAggressionStateGoal;
-import com.carro1001.mhnw.entities.ai.NewRathalosFlyingWaterAvoidingStrollGoal;
-import com.carro1001.mhnw.entities.ai.NewRathalosShootFireballGoal;
-import com.carro1001.mhnw.entities.ai.NewRathalosWaterAvoidingStrollGoal;
-import com.carro1001.mhnw.entities.ai.util.MMPathNavigatorGround;
+import com.carro1001.mhnw.entities.ai.*;
 import com.carro1001.mhnw.entities.ai.util.SmartBodyHelper;
 import com.carro1001.mhnw.entities.interfaces.IGrows;
 import net.minecraft.core.BlockPos;
@@ -21,7 +17,6 @@ import net.minecraft.world.entity.ai.control.FlyingMoveControl;
 import net.minecraft.world.entity.ai.control.MoveControl;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
-import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.LargeFireball;
 import net.minecraft.world.level.Level;
@@ -53,6 +48,7 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
         setMovement();
         if (!pLevel.isClientSide) {
             fireballCooldownTime = this.random.nextInt(500, 2000);
+            this.setFireBallChargeState(FireballState.COOL_DOWN);
         }
     }
 
@@ -105,7 +101,7 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
     public void tick() {
         super.tick();
 
-        if (random.nextInt(500) == 0 && !level().isClientSide) {
+        if (random.nextInt(250) == 0 && !level().isClientSide) {
             this.setState(State.values()[(getState().ordinal() + 1) % State.values().length]);
         }
 
@@ -144,7 +140,7 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
         return super.getFlyingSpeed();
     }
 
-    protected PathNavigation createFlyingPathNavigation(Level pLevel) {
+    protected FlyingPathNavigation createFlyingPathNavigation(Level pLevel) {
         FlyingPathNavigation flyingpathnavigation = new FlyingPathNavigation(this, pLevel) {
             public boolean isStableDestination(BlockPos p_27947_) {
                 return !this.level.getBlockState(p_27947_.below()).isAir();
@@ -154,11 +150,6 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
         flyingpathnavigation.setCanFloat(true);
         flyingpathnavigation.setCanPassDoors(true);
         return flyingpathnavigation;
-    }
-
-    @Override
-    protected PathNavigation createNavigation(Level pLevel) {
-        return new MMPathNavigatorGround(this, level());
     }
 
     @Override
@@ -227,6 +218,8 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
     }
 
     private void setMovement() {
+        this.navigation.stop();
+
         if (getState() == State.WALKING) {
             this.moveControl = new MoveControl(this);
             this.navigation = this.createNavigation(level());
@@ -307,6 +300,13 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
         return FireballState.values()[this.entityData.get(FIRE_BALL_CHARGE_STATE)];
     }
 
+    public void setFireballCooldownTime(int fireballCooldownTime) {
+        this.fireballCooldownTime = fireballCooldownTime;
+    }
+
+    public int getFireballCooldownTime() {
+        return fireballCooldownTime;
+    }
 
     public enum State {
         FLYING(RawAnimation.begin().thenLoop("animation.rathalos.hover"), RawAnimation.begin().thenLoop("animation.rathalos.fly"), RawAnimation.begin().thenPlayAndHold("animation.rathalos.aerial_roar"), RawAnimation.begin().thenPlayAndHold("animation.rathalos.air_fireball")),

@@ -1,6 +1,6 @@
-package com.carro1001.mhnw.entities;
+package com.carro1001.mhnw.entities.ai;
 
-import net.minecraft.world.entity.PathfinderMob;
+import com.carro1001.mhnw.entities.NewRathalosEntity;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 
 public class NewRathalosMeleeAttackGoal extends MeleeAttackGoal {

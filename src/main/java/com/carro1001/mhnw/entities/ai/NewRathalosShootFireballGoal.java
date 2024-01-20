@@ -41,6 +41,11 @@ public class NewRathalosShootFireballGoal extends Goal {
         NewRathalosEntity.FireballState fireballChargeState = this.rathalosEntity.getFireballChargeState();
 
         if (this.rathalosEntity.getTarget() != null && this.rathalosEntity.getAggressionState() == NewRathalosEntity.AggressionState.AGGRESSIVE) {
+            if (this.rathalosEntity.getFireballCooldownTime() > 0) {
+                this.rathalosEntity.setFireBallChargeState(NewRathalosEntity.FireballState.COOL_DOWN);
+                return;
+            }
+
             if (!this.rathalosEntity.hasLineOfSight(this.rathalosEntity.getTarget()) && fireballChargeState == NewRathalosEntity.FireballState.CHARGING) {
                 this.fireballChargeTime = 0;
                 this.rathalosEntity.setFireBallChargeState(NewRathalosEntity.FireballState.READY);
