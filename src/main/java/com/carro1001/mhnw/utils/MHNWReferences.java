@@ -62,6 +62,8 @@ public class MHNWReferences {
 
     public static final String RATHIAN = "rathian";
     public static final String RATHALOS = "rathalos";
+    public static final String NEW_RATHALOS = "new_rathalos";
+    public static final String NEW_RATHALOS_FIREBALL = "new_rathalos_fireball";
     public static final String BITTERBUG_ITEM = "bitterbug_item";
 
     public static final String SLEEP_PARTICLE_REGNAME = "sleep_particle";

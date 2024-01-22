@@ -3,6 +3,7 @@ package com.carro1001.mhnw.entities;
 import com.carro1001.mhnw.entities.ai.DragonWalkGoal;
 import com.carro1001.mhnw.entities.interfaces.IGrows;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -126,10 +127,15 @@ public abstract class DragonEntity extends PathfinderMob implements GeoEntity, I
     @Override
     public void readAdditionalSaveData(@NotNull CompoundTag pCompound) {
         super.readAdditionalSaveData(pCompound);
-        this.setScaleDir(pCompound.getFloat("monster_scale"));
-        this.setStateDir(pCompound.getInt("mon_state"));
-        this.setHasRoared(pCompound.getBoolean("mon_roared"));
-
+        if (pCompound.contains("monster_scale", Tag.TAG_FLOAT)) {
+            this.setScaleDir(pCompound.getFloat("monster_scale"));
+        }
+        if (pCompound.contains("mon_state", Tag.TAG_INT)) {
+            this.setStateDir(pCompound.getInt("mon_state"));
+        }
+        if (pCompound.contains("mon_roared", Tag.TAG_BYTE)) {
+            this.setHasRoared(pCompound.getBoolean("mon_roared"));
+        }
     }
     //endregion
 
@@ -222,6 +228,12 @@ public abstract class DragonEntity extends PathfinderMob implements GeoEntity, I
     public float getMonsterScale() {
         return getScaleDir();
     }
+
+    @Override
+    public void setMonsterScale(float scale) {
+
+    }
+
     //endregion
 
     //region MultiPart code temp removed until animations are sorted
