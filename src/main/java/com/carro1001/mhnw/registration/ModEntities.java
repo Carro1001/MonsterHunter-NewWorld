@@ -46,7 +46,7 @@ public class ModEntities {
             .clientTrackingRange(128)
             .setShouldReceiveVelocityUpdates(true)
             .build(MHNWReferences.NEW_RATHALOS));
-    public static final RegistryObject<Item> RATHALOS_EGG_ITEM = ITEMS.register(MHNWReferences.RATHALOS, () -> new ForgeSpawnEggItem(RATHALOS, 0x642628, 0x000000, new Item.Properties()));
+    public static final RegistryObject<Item> RATHALOS_EGG_ITEM = ITEMS.register(MHNWReferences.NEW_RATHALOS, () -> new ForgeSpawnEggItem(NEW_RATHALOS, 0x642628, 0x000000, new Item.Properties()));
 
     public static final RegistryObject<EntityType<NewRathalosLargeFireballEntity>> NEW_RATHALOS_FIREBALL = ENTITIES.register(MHNWReferences.NEW_RATHALOS_FIREBALL, () -> EntityType.Builder.<NewRathalosLargeFireballEntity>of(NewRathalosLargeFireballEntity::new, MobCategory.MISC).sized(1.0F, 1.0F).clientTrackingRange(4).updateInterval(10).build(MHNWReferences.NEW_RATHALOS_FIREBALL));
 

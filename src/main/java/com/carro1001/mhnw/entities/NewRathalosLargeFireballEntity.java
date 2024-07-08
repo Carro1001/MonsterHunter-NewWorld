@@ -34,7 +34,7 @@ public class NewRathalosLargeFireballEntity extends LargeFireball {
         if (!this.level().isClientSide) {
             // FORGE TODO 1.19.3: The creation of Level.ExplosionInteraction means this code path will fire EntityMobGriefingEvent twice. Should we try and fix it? -SS
             boolean flag = net.minecraftforge.event.ForgeEventFactory.getMobGriefingEvent(this.level(), this.getOwner());
-            this.level().explode(this, this.getX(), this.getY(), this.getZ(), (float)this.explosionPower, true, Level.ExplosionInteraction.NONE);
+            this.level().explode(this, this.getX(), this.getY(), this.getZ(), 1, true, Level.ExplosionInteraction.NONE);
             this.discard();
         }
     }

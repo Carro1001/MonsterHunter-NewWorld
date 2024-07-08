@@ -128,7 +128,7 @@ public class NewRathalosEntity extends PathfinderMob implements GeoEntity, IGrow
         LargeFireball largefireball = new LargeFireball(EntityType.FIREBALL, level());
         largefireball.setPos(spawnPos);
         largefireball.setDeltaMovement(velocity);
-        largefireball.explosionPower = 1;
+        //largefireball.explosionPower = 1;
 
 
         level().addFreshEntity(largefireball);

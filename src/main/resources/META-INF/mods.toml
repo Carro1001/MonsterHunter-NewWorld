@@ -30,6 +30,6 @@ side = "BOTH"
 [[dependencies.mhnw]]
 modId = "geckolib"
 mandatory = true
-versionRange = "[4.2,)"
+versionRange = "[4.4,)"
 ordering = "BEFORE"
 side = "BOTH"

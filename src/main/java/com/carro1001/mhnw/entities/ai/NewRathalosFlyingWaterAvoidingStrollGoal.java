@@ -12,7 +12,7 @@ public class NewRathalosFlyingWaterAvoidingStrollGoal extends WaterAvoidingRando
     public NewRathalosFlyingWaterAvoidingStrollGoal(NewRathalosEntity rathalosEntity, double speedModifier) {
         super(rathalosEntity, speedModifier);
         this.rathalosEntity = rathalosEntity;
-        this.probability = 0.05F;
+        //this.probability = 0.05F;
     }
 
     @Override

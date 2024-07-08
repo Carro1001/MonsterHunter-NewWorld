@@ -52,6 +52,7 @@ public class ModTabs {
                         pOutput.accept(ModItems.SLEEP_SACK_ITEM.get());
                         pOutput.accept(ModEntities.APTONOTH_EGG_ITEM.get());
                         pOutput.accept(ModEntities.RATHIAN_EGG_ITEM.get());
+                        pOutput.accept(ModEntities.RATHALOS_EGG_ITEM.get());
                         pOutput.accept(ModEntities.BITTERBUG_ITEM.get());
                         pOutput.accept(ModEntities.BLANGO_EGG_ITEM.get());
                         pOutput.accept(ModEntities.BLANGONGA_EGG_ITEM.get());
