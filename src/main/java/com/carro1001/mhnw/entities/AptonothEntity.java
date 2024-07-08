@@ -59,25 +59,21 @@ public class AptonothEntity  extends AbstractHorse implements GeoEntity {
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
         controllers.add(
-                new AnimationController<>(this, "Body", 1, this::poseBody)
+                new AnimationController<>(this, "main_controller", 16, this::poseBody)
         );
     }
 
     // Create the animation handler for the body segment
     protected PlayState poseBody(AnimationState<AptonothEntity> state) {
         if (this.isEating()){
-            state.setAnimation(EAT);
+            return state.setAndContinue(EAT);
         }
-        else if (state.isMoving() || this.getSpeed() > 0.05) {
-            state.setAnimation(WALK);
+        if (state.isMoving()) {
+            return state.setAndContinue(WALK);
         }
-        else if(!state.isMoving() && this.getSpeed() <= 0){
-            state.setAnimation(IDLE);
-        }
-        state.setAnimation(IDLE);
-        return PlayState.CONTINUE;
-    }
 
+        return state.setAndContinue(IDLE);
+    }
 
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
