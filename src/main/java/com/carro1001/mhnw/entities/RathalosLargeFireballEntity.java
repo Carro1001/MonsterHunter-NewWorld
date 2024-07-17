@@ -11,8 +11,8 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 
 // TODO: Probably remove and actually create our own fireball entity for Rathalos. *Temporary Use*
-public class NewRathalosLargeFireballEntity extends LargeFireball {
-    public NewRathalosLargeFireballEntity(EntityType<? extends LargeFireball> pEntityType, Level pLevel) {
+public class RathalosLargeFireballEntity extends LargeFireball {
+    public RathalosLargeFireballEntity(EntityType<? extends LargeFireball> pEntityType, Level pLevel) {
         super(pEntityType, pLevel);
     }
 

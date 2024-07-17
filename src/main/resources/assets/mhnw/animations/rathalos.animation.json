@@ -1,7 +1,7 @@
 {
 	"format_version": "1.8.0",
 	"animations": {
-		"animation.rathalos.pose": {
+		"pose": {
 			"loop": true,
 			"animation_length": 2,
 			"bones": {
@@ -146,7 +146,7 @@
 				}
 			}
 		},
-		"animation.rathalos.idle_normal": {
+		"idle_normal": {
 			"loop": true,
 			"animation_length": 4,
 			"bones": {
@@ -277,7 +277,7 @@
 				}
 			}
 		},
-		"animation.rathalos.sleep": {
+		"sleep": {
 			"loop": true,
 			"animation_length": 4,
 			"bones": {
@@ -430,7 +430,7 @@
 				}
 			}
 		},
-		"animation.rathalos.idle_aggro": {
+		"idle_aggro": {
 			"loop": true,
 			"animation_length": 4,
 			"bones": {
@@ -564,7 +564,7 @@
 				}
 			}
 		},
-		"animation.rathalos.hover": {
+		"hover": {
 			"loop": true,
 			"animation_length": 1.5,
 			"bones": {
@@ -818,7 +818,7 @@
 				}
 			}
 		},
-		"animation.rathalos.walk_normal": {
+		"walk_normal": {
 			"loop": true,
 			"animation_length": 2,
 			"bones": {
@@ -1087,7 +1087,7 @@
 				}
 			}
 		},
-		"animation.rathalos.walk_aggro": {
+		"walk_aggro": {
 			"loop": true,
 			"animation_length": 0.75,
 			"bones": {
@@ -1359,7 +1359,7 @@
 				}
 			}
 		},
-		"animation.rathalos.fly": {
+		"fly": {
 			"loop": true,
 			"animation_length": 2.33333,
 			"bones": {
@@ -1552,7 +1552,7 @@
 				}
 			}
 		},
-		"animation.rathalos.death": {
+		"death": {
 			"loop": true,
 			"animation_length": 2.5,
 			"bones": {
@@ -1995,7 +1995,7 @@
 				}
 			}
 		},
-		"animation.rathalos.roar": {
+		"roar": {
 			"loop": true,
 			"animation_length": 4.95833,
 			"bones": {
@@ -2551,7 +2551,7 @@
 				}
 			}
 		},
-		"animation.rathalos.aerial_roar": {
+		"aerial_roar": {
 			"loop": true,
 			"animation_length": 3.5,
 			"bones": {
@@ -3018,7 +3018,7 @@
 				}
 			}
 		},
-		"animation.rathalos.bite": {
+		"bite": {
 			"loop": true,
 			"animation_length": 2.25,
 			"bones": {
@@ -3499,7 +3499,7 @@
 				}
 			}
 		},
-		"animation.rathalos.tailswipe": {
+		"tailswipe": {
 			"loop": true,
 			"animation_length": 3,
 			"bones": {
@@ -3900,7 +3900,7 @@
 				}
 			}
 		},
-		"animation.rathalos.ground_fireball": {
+		"ground_fireball": {
 			"loop": true,
 			"animation_length": 3.75,
 			"bones": {
@@ -4328,7 +4328,7 @@
 				}
 			}
 		},
-		"animation.rathalos.backhop_fireball": {
+		"backhop_fireball": {
 			"loop": true,
 			"animation_length": 1.54167,
 			"bones": {
@@ -4766,7 +4766,7 @@
 			},
 			"particle_effects": {}
 		},
-		"animation.rathalos.air_tailswipe": {
+		"air_tailswipe": {
 			"loop": true,
 			"animation_length": 3,
 			"bones": {
@@ -5291,7 +5291,7 @@
 				}
 			}
 		},
-		"animation.rathalos.glide": {
+		"glide": {
 			"loop": true,
 			"animation_length": 0.5,
 			"bones": {
@@ -5417,7 +5417,7 @@
 				}
 			}
 		},
-		"animation.rathalos.claw_strike": {
+		"claw_strike": {
 			"loop": true,
 			"animation_length": 3.75,
 			"bones": {
@@ -6101,7 +6101,7 @@
 				}
 			}
 		},
-		"animation.rathalos.claw_scratch": {
+		"claw_scratch": {
 			"loop": true,
 			"animation_length": 3.75,
 			"bones": {
@@ -6774,7 +6774,7 @@
 				}
 			}
 		},
-		"animation.rathalos.air_fireball": {
+		"air_fireball": {
 			"loop": true,
 			"animation_length": 2.08333,
 			"bones": {
@@ -7159,7 +7159,7 @@
 				}
 			}
 		},
-		"animation.rathalos.flyball": {
+		"flyball": {
 			"loop": true,
 			"animation_length": 2.08333,
 			"bones": {

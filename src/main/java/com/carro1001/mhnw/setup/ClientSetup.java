@@ -38,8 +38,7 @@ public class ClientSetup {
         event.registerEntityRenderer(APTONOTH.get(), AptonothRenderer::new);
         event.registerEntityRenderer(RATHIAN.get(), RathianRenderer::new);
         event.registerEntityRenderer(RATHALOS.get(), RathalosRenderer::new);
-        event.registerEntityRenderer(NEW_RATHALOS.get(), NewRathalosRenderer::new);
-        event.registerEntityRenderer(NEW_RATHALOS_FIREBALL.get(), pContext ->  new ThrownItemRenderer<>(pContext, 3.0F, true));
+        event.registerEntityRenderer(RATHALOS_FIREBALL.get(), pContext ->  new ThrownItemRenderer<>(pContext, 3.0F, true));
         event.registerEntityRenderer(BITTERBUG.get(), BitterbugRenderer::new);
         event.registerEntityRenderer(TOAD.get(), ToadRenderer::new);
         event.registerEntityRenderer(ZINOGRE.get(), ZinogreRenderer::new);
@@ -47,7 +46,6 @@ public class ClientSetup {
         event.registerEntityRenderer(GIZUCHI.get(), GreatIzuchiRenderer::new);
         event.registerEntityRenderer(BLANGONGA.get(), BlangongaRenderer::new);
         event.registerEntityRenderer(BLANGO.get(), BlangoRenderer::new);
-        event.registerEntityRenderer(SPIT_FIREBALL.get(), SpitFireballRenderer::new);
         event.registerEntityRenderer(FLASHBUG.get(), FlashBugRenderer::new);
 
     }

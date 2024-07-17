@@ -1,7 +1,7 @@
 {
 	"format_version": "1.8.0",
 	"animations": {
-		"animation.rathian.idle_normal": {
+		"idle_normal": {
 			"loop": true,
 			"animation_length": 4,
 			"bones": {
@@ -208,7 +208,7 @@
 				}
 			}
 		},
-		"animation.rathian.idle_aggro": {
+		"idle_aggro": {
 			"loop": true,
 			"animation_length": 4,
 			"bones": {
@@ -420,7 +420,7 @@
 				}
 			}
 		},
-		"animation.rathian.walk": {
+		"walk_normal": {
 			"loop": true,
 			"bones": {
 				"root": {
@@ -871,7 +871,7 @@
 				}
 			}
 		},
-		"animation.rathian.hover": {
+		"hover": {
 			"loop": true,
 			"bones": {
 				"tail2": {
@@ -1380,7 +1380,7 @@
 				}
 			}
 		},
-		"animation.rathian.roar_normal": {
+		"roar": {
 			"loop": true,
 			"animation_length": 5,
 			"bones": {
@@ -2574,7 +2574,7 @@
 				}
 			}
 		},
-		"animation.rathian.roar_aggro": {
+		"roar_aggro": {
 			"loop": true,
 			"animation_length": 4.58333,
 			"bones": {
@@ -3726,7 +3726,7 @@
 				}
 			}
 		},
-		"animation.rathian.tailswipe": {
+		"tailswipe": {
 			"loop": true,
 			"animation_length": 3,
 			"bones": {
@@ -4573,7 +4573,7 @@
 				}
 			}
 		},
-		"animation.rathian.ground_fireball": {
+		"ground_fireball": {
 			"loop": true,
 			"animation_length": 3.75,
 			"bones": {
@@ -5264,7 +5264,7 @@
 				}
 			}
 		},
-		"animation.rathian.backflip": {
+		"backflip": {
 			"loop": true,
 			"animation_length": 2.6,
 			"bones": {
