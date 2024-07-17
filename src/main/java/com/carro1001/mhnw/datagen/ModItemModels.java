@@ -132,6 +132,8 @@ public class ModItemModels extends ItemModelProvider {
         withExistingParent(APTONOTH_EGG_ITEM.getId().getPath(), mcLoc("item/template_spawn_egg"));
         withExistingParent(RATHIAN_EGG_ITEM.getId().getPath(), mcLoc("item/template_spawn_egg"));
         withExistingParent(RATHALOS_EGG_ITEM.getId().getPath(), mcLoc("item/template_spawn_egg"));
+        withExistingParent(DEVILJOE_EGG_ITEM.getId().getPath(), mcLoc("item/template_spawn_egg"));
+        withExistingParent(LAGIACRUS_EGG_ITEM.getId().getPath(), mcLoc("item/template_spawn_egg"));
 
         withExistingParent(TOAD_EGG_ITEM.getId().getPath(), mcLoc("item/template_spawn_egg"));
         withExistingParent(BLANGONGA_EGG_ITEM.getId().getPath(), mcLoc("item/template_spawn_egg"));

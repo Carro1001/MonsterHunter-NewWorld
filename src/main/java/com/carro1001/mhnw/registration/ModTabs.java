@@ -58,6 +58,8 @@ public class ModTabs {
                         pOutput.accept(ModEntities.BLANGONGA_EGG_ITEM.get());
                         pOutput.accept(ModEntities.IZUCHI_EGG_ITEM.get());
                         pOutput.accept(ModEntities.GIZUCHI_EGG_ITEM.get());
+                        pOutput.accept(ModEntities.DEVILJOE_EGG_ITEM.get());
+                        pOutput.accept(ModEntities.LAGIACRUS_EGG_ITEM.get());
                         pOutput.accept(ModEntities.TOAD_EGG_ITEM.get());
                         pOutput.accept(ModEntities.BUCKET_NITROTOAD_ITEM.get());
                         pOutput.accept(ModEntities.BUCKET_POISONTOAD_ITEM.get());

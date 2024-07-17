@@ -1,37 +1,12 @@
 package com.carro1001.mhnw.client.renderers.entities;
 
-import com.carro1001.mhnw.entities.DragonEntity;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import com.carro1001.mhnw.entities.Monster;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
-import net.minecraft.resources.ResourceLocation;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.model.DefaultedEntityGeoModel;
-import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
-public abstract class DragonRenderer extends GeoEntityRenderer<DragonEntity> {
+public abstract class DragonRenderer extends MonsterRenderer {
 
-    public DragonRenderer(EntityRendererProvider.Context renderManager, DefaultedEntityGeoModel<DragonEntity> modelProvider) {
-        super(renderManager, modelProvider);
-    }
-
-    public RenderType getRenderType(DragonEntity animatable, ResourceLocation texture, @Nullable MultiBufferSource bufferSource, float partialTick) {
-        return RenderType.entityCutoutNoCull(getTextureLocation(animatable));
-    }
-
-    @Override
-    public void preRender(PoseStack poseStack, DragonEntity animatable, BakedGeoModel model, MultiBufferSource bufferSource, VertexConsumer buffer, boolean isReRender, float partialTick, int packedLight, int packedOverlay, float red, float green, float blue, float alpha) {
-        super.preRender(poseStack, animatable, model, bufferSource, buffer, isReRender, partialTick, packedLight, packedOverlay, red, green, blue, alpha);
-        poseStack.scale(animatable.getMonsterScale(),animatable.getMonsterScale(),animatable.getMonsterScale());
-    }
-
-
-    @Override
-    public @NotNull ResourceLocation getTextureLocation(@NotNull DragonEntity pEntity) {
-        return super.getTextureLocation(pEntity);
+    public DragonRenderer(EntityRendererProvider.Context renderManager, DefaultedEntityGeoModel<Monster> modelProvider, String name) {
+        super(renderManager, modelProvider, name);
     }
 }

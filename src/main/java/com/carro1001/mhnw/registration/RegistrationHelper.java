@@ -29,6 +29,8 @@ public class RegistrationHelper {
         event.put(GIZUCHI.get(), GreatIzuchiEntity.prepareAttributes().build());
         event.put(ZINOGRE.get(), ZinogreEntity.prepareAttributes().build());
         event.put(FLASHBUG.get(), FlashBugEntity.prepareAttributes().build());
+        event.put(DEVILJHO.get(), DeviljhoEntity.prepareAttributes().build());
+        event.put(LAGIACRUS.get(), LagiacrusEntity.prepareAttributes().build());
 
     }
     public static ModelLayerLocation register(String pPath) {

@@ -59,6 +59,8 @@ public class MHNWReferences {
     public static final String SLEEP = "sleep";
     public static final String GODBUG = "godbug";
 
+    public static final String DEVILJHO = "deviljho";
+    public static final String LAGIACRUZ = "lagiacrus";
     public static final String RATHIAN = "rathian";
     public static final String RATHALOS = "rathalos";
     public static final String RATHALOS_FIREBALL = "rathalos_fireball";

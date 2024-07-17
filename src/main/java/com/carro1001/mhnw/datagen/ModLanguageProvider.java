@@ -79,6 +79,10 @@ public class ModLanguageProvider extends LanguageProvider {
         add(IZUCHI.get(), "Izuchi");
         add(ZINOGRE_EGG_ITEM.get(), "Zinogre Spawn Egg");
         add(ZINOGRE.get(), "Zinogre");
+        add(LAGIACRUS_EGG_ITEM.get(), "Lagiacrus Spawn Egg");
+        add(LAGIACRUS.get(), "Lagiacrus");
+        add(DEVILJOE_EGG_ITEM.get(), "Deviljho Spawn Egg");
+        add(DEVILJHO.get(), "Deviljho");
     }
 
 }

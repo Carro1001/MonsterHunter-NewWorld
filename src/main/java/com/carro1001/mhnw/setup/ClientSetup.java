@@ -47,6 +47,8 @@ public class ClientSetup {
         event.registerEntityRenderer(BLANGONGA.get(), BlangongaRenderer::new);
         event.registerEntityRenderer(BLANGO.get(), BlangoRenderer::new);
         event.registerEntityRenderer(FLASHBUG.get(), FlashBugRenderer::new);
+        event.registerEntityRenderer(DEVILJHO.get(), DeviljhoRenderer::new);
+        event.registerEntityRenderer(LAGIACRUS.get(), LagiacrusRenderer::new);
 
     }
     @SubscribeEvent

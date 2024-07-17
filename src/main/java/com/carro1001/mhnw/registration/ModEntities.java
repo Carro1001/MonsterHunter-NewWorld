@@ -28,14 +28,14 @@ public class ModEntities {
     public static final RegistryObject<Item> APTONOTH_EGG_ITEM = ITEMS.register(MHNWReferences.APTONOTH, () -> new ForgeSpawnEggItem(APTONOTH, 0xB8B584, 0x664D29, new Item.Properties()));
 
     public static final RegistryObject<EntityType<RathianEntity>> RATHIAN = ENTITIES.register(MHNWReferences.RATHIAN, () -> EntityType.Builder.of(RathianEntity::new, MobCategory.CREATURE)
-            .sized(2.5f, 2.5f)
+            .sized(1.4f, 3.2f)
             .clientTrackingRange(16)
             .setShouldReceiveVelocityUpdates(false)
             .build(MHNWReferences.RATHIAN));
     public static final RegistryObject<Item> RATHIAN_EGG_ITEM = ITEMS.register(MHNWReferences.RATHIAN, () -> new ForgeSpawnEggItem(RATHIAN, 0x263920, 0x000000, new Item.Properties()));
 
     public static final RegistryObject<EntityType<RathalosEntity>> RATHALOS = ENTITIES.register(MHNWReferences.RATHALOS, () -> EntityType.Builder.of(RathalosEntity::new, MobCategory.CREATURE)
-            .sized(2.5f, 2.5f)
+            .sized(6.4f, 3.2f)
             .clientTrackingRange(128)
             .setShouldReceiveVelocityUpdates(true)
             .build(MHNWReferences.RATHALOS));
@@ -51,26 +51,26 @@ public class ModEntities {
     public static final RegistryObject<Item> BITTERBUG_ITEM = ITEMS.register(MHNWReferences.BITTERBUG_ITEM, () -> new ForgeSpawnEggItem(BITTERBUG, 0x351c75, 0x5b5b5b, new Item.Properties()));
 
     public static final RegistryObject<EntityType<BlangoEntity>> BLANGO = ENTITIES.register(MHNWReferences.BLANGO, () -> EntityType.Builder.of(BlangoEntity::new, MobCategory.CREATURE)
-            .sized(0.4f, 0.2f)
+            .sized(1.4f, 3.2f)
             .clientTrackingRange(8)
             .setShouldReceiveVelocityUpdates(false)
             .build(MHNWReferences.BLANGO));
     public static final RegistryObject<Item> BLANGO_EGG_ITEM = ITEMS.register(MHNWReferences.BLANGO, () -> new ForgeSpawnEggItem(BLANGO, 0xA6423E, 0x7C89BA, new Item.Properties()));
     public static final RegistryObject<EntityType<BlangongaEntity>> BLANGONGA = ENTITIES.register(MHNWReferences.BLANGONGA, () -> EntityType.Builder.of(BlangongaEntity::new, MobCategory.CREATURE)
-            .sized(0.4f, 0.2f)
+            .sized(1.4f, 3.2f)
             .clientTrackingRange(8)
             .setShouldReceiveVelocityUpdates(false)
             .build(MHNWReferences.BLANGONGA));
     public static final RegistryObject<Item> BLANGONGA_EGG_ITEM = ITEMS.register(MHNWReferences.BLANGONGA, () -> new ForgeSpawnEggItem(BLANGONGA, 0x7D94C9, 0x4CD7B8, new Item.Properties()));
 
     public static final RegistryObject<EntityType<IzuchiEntity>> IZUCHI = ENTITIES.register(MHNWReferences.IZUCHI, () -> EntityType.Builder.of(IzuchiEntity::new, MobCategory.CREATURE)
-            .sized(0.4f, 0.2f)
+            .sized(1.4f, 3.2f)
             .clientTrackingRange(8)
             .setShouldReceiveVelocityUpdates(false)
             .build(MHNWReferences.IZUCHI));
     public static final RegistryObject<Item> IZUCHI_EGG_ITEM = ITEMS.register(MHNWReferences.IZUCHI, () -> new ForgeSpawnEggItem(IZUCHI, 0xCC6D5A, 0xD4D7D9, new Item.Properties()));
     public static final RegistryObject<EntityType<GreatIzuchiEntity>> GIZUCHI = ENTITIES.register(GREAT+MHNWReferences.IZUCHI, () -> EntityType.Builder.of(GreatIzuchiEntity::new, MobCategory.CREATURE)
-            .sized(0.4f, 0.2f)
+            .sized(1.4f, 3.2f)
             .clientTrackingRange(8)
             .setShouldReceiveVelocityUpdates(false)
             .build(GREAT+MHNWReferences.IZUCHI));
@@ -88,11 +88,25 @@ public class ModEntities {
     public static final RegistryObject<Item> BUCKET_SLEEPTOAD_ITEM = ITEMS.register(MHNWReferences.BUCKET_SLEEPTOAD_ITEM, () ->new ToadBucket(TOAD,Fluids.WATER,basicItem));
 
     public static final RegistryObject<EntityType<ZinogreEntity>> ZINOGRE = ENTITIES.register(MHNWReferences.ZINOGRE, () -> EntityType.Builder.of(ZinogreEntity::new, MobCategory.CREATURE)
-            .sized(0.4f, 0.2f)
+            .sized(4.4f, 4.2f)
             .clientTrackingRange(8)
             .setShouldReceiveVelocityUpdates(false)
             .build(MHNWReferences.ZINOGRE));
     public static final RegistryObject<Item> ZINOGRE_EGG_ITEM = ITEMS.register(MHNWReferences.ZINOGRE, () -> new ForgeSpawnEggItem(ZINOGRE, 0x207A8E, 0xD9B367, new Item.Properties()));
+
+    public static final RegistryObject<EntityType<LagiacrusEntity>> LAGIACRUS = ENTITIES.register(MHNWReferences.LAGIACRUZ, () -> EntityType.Builder.of(LagiacrusEntity::new, MobCategory.CREATURE)
+            .sized(1.4f, 3.2f)
+            .clientTrackingRange(8)
+            .setShouldReceiveVelocityUpdates(false)
+            .build(MHNWReferences.LAGIACRUZ));
+    public static final RegistryObject<Item> LAGIACRUS_EGG_ITEM = ITEMS.register(MHNWReferences.LAGIACRUZ, () -> new ForgeSpawnEggItem(LAGIACRUS, 0x2A6A7D, 0xB35D47, new Item.Properties()));
+
+    public static final RegistryObject<EntityType<DeviljhoEntity>> DEVILJHO = ENTITIES.register(MHNWReferences.DEVILJHO, () -> EntityType.Builder.of(DeviljhoEntity::new, MobCategory.CREATURE)
+            .sized(1.4f, 3.2f)
+            .clientTrackingRange(8)
+            .setShouldReceiveVelocityUpdates(false)
+            .build(MHNWReferences.DEVILJHO));
+    public static final RegistryObject<Item> DEVILJOE_EGG_ITEM = ITEMS.register(MHNWReferences.DEVILJHO, () -> new ForgeSpawnEggItem(DEVILJHO, 0x575528, 0xD7CF70, new Item.Properties()));
 
     public static final RegistryObject<EntityType<FlashBugEntity>> FLASHBUG = ENTITIES.register(MHNWReferences.FLASHBUG, () -> EntityType.Builder.of(FlashBugEntity::new, MobCategory.AMBIENT)
             .sized(0.4f, 0.2f)

@@ -1,15 +1,16 @@
 package com.carro1001.mhnw.entities.ai;
 
 import com.carro1001.mhnw.entities.DragonEntity;
+import com.carro1001.mhnw.entities.Monster;
 import net.minecraft.world.entity.ai.goal.Goal;
 
-public class DragonAggressionStateGoal extends Goal {
+public class MonsterAggressionStateGoal extends Goal {
 
-    private final DragonEntity dragonEntity;
+    private final Monster dragonEntity;
 
     int roarTime = -1;
 
-    public DragonAggressionStateGoal(DragonEntity dragonEntity) {
+    public MonsterAggressionStateGoal(Monster dragonEntity) {
         this.dragonEntity = dragonEntity;
     }
 
@@ -31,14 +32,14 @@ public class DragonAggressionStateGoal extends Goal {
     @Override
     public void tick() {
         if (this.dragonEntity.getTarget() != null) {
-            DragonEntity.AggressionState aggressionState = this.dragonEntity.getAggressionState();
-            if (aggressionState == DragonEntity.AggressionState.PASSIVE) {
-                this.dragonEntity.setAggressionState(DragonEntity.AggressionState.ROAR);
+            Monster.AggressionState aggressionState = this.dragonEntity.getAggressionState();
+            if (aggressionState == Monster.AggressionState.PASSIVE) {
+                this.dragonEntity.setAggressionState(Monster.AggressionState.ROAR);
                 this.roarTime = 60;
-            } else if (aggressionState == DragonEntity.AggressionState.ROAR) {
+            } else if (aggressionState == Monster.AggressionState.ROAR) {
                 this.dragonEntity.getLookControl().setLookAt(this.dragonEntity.getTarget());
                 if (this.roarTime < 0) {
-                    this.dragonEntity.setAggressionState(DragonEntity.AggressionState.AGGRESSIVE); // We're done roaring
+                    this.dragonEntity.setAggressionState(Monster.AggressionState.AGGRESSIVE); // We're done roaring
                 } else {
                     this.roarTime--;
                 }

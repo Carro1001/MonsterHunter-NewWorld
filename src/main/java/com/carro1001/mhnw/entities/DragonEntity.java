@@ -1,8 +1,10 @@
 package com.carro1001.mhnw.entities;
 
-import com.carro1001.mhnw.entities.ai.*;
+import com.carro1001.mhnw.entities.ai.DragonFlyingWaterAvoidingStrollGoal;
+import com.carro1001.mhnw.entities.ai.DragonMeleeAttackGoal;
+import com.carro1001.mhnw.entities.ai.DragonShootFireballGoal;
+import com.carro1001.mhnw.entities.ai.DragonWaterAvoidingStrollGoal;
 import com.carro1001.mhnw.entities.ai.util.SmartBodyHelper;
-import com.carro1001.mhnw.entities.interfaces.IGrows;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
@@ -25,35 +27,22 @@ import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
-import software.bernie.geckolib.animatable.GeoEntity;
-import software.bernie.geckolib.core.animatable.GeoAnimatable;
-import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.core.animation.AnimatableManager;
-import software.bernie.geckolib.core.animation.AnimationController;
 import software.bernie.geckolib.core.animation.AnimationState;
 import software.bernie.geckolib.core.animation.RawAnimation;
 import software.bernie.geckolib.core.object.PlayState;
-import software.bernie.geckolib.util.GeckoLibUtil;
 
 import javax.annotation.Nullable;
-import java.util.Random;
 
-public abstract class DragonEntity extends PathfinderMob implements GeoEntity, IGrows {
-    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+public abstract class DragonEntity extends Monster {
 
-    public String name;
     protected int fireballCooldownTime = 0;
 
-    protected static final EntityDataAccessor<Boolean> SCALESSIGNED = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.BOOLEAN);
-    protected static final EntityDataAccessor<Float> MONSTER_SCALE = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.FLOAT);
     protected static final EntityDataAccessor<Integer> STATE = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.INT);
-    protected static final EntityDataAccessor<Integer> AGGRESSION_STATE = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.INT);
     protected static final EntityDataAccessor<Integer> FIRE_BALL_CHARGE_STATE = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.INT);
 
     public DragonEntity(EntityType<? extends PathfinderMob > pEntityType, Level pLevel, String name) {
         super(pEntityType, pLevel);
         this.name = name;
-        //this.noCulling = true;
         setMovement();
         if (!pLevel.isClientSide) {
             fireballCooldownTime = this.random.nextInt(500, 2000);
@@ -99,7 +88,6 @@ public abstract class DragonEntity extends PathfinderMob implements GeoEntity, I
     protected void registerGoals() {
         super.registerGoals();
         this.goalSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, true)); // This finds the closest player to target
-        this.goalSelector.addGoal(1, new DragonAggressionStateGoal(this)); // This handles the aggression state between passive, roar, and aggressive
         this.goalSelector.addGoal(2, new DragonMeleeAttackGoal(this, 1, false)); // This handles the chase and melee hit state
         this.goalSelector.addGoal(2, new DragonShootFireballGoal(this)); // This handles the fireball attack state
         this.goalSelector.addGoal(3, new DragonWaterAvoidingStrollGoal(this, 1, 0.05F)); // This handles on the ground random walk around
@@ -107,7 +95,6 @@ public abstract class DragonEntity extends PathfinderMob implements GeoEntity, I
     }
 
     public SpawnGroupData finalizeSpawn(@NotNull ServerLevelAccessor p_149132_, @NotNull DifficultyInstance p_149133_, @NotNull MobSpawnType p_149134_, @Nullable SpawnGroupData p_149135_, @Nullable CompoundTag p_149136_) {
-        GenerateScale();
         setState(State.WALKING);
         return super.finalizeSpawn(p_149132_, p_149133_, p_149134_, p_149135_, p_149136_);
     }
@@ -115,10 +102,7 @@ public abstract class DragonEntity extends PathfinderMob implements GeoEntity, I
     //region Entity Data
     protected void defineSynchedData() {
         super.defineSynchedData();
-        this.entityData.define(MONSTER_SCALE, 1F);
-        this.entityData.define(SCALESSIGNED, false);
         this.entityData.define(STATE, State.WALKING.ordinal());
-        this.entityData.define(AGGRESSION_STATE, AggressionState.PASSIVE.ordinal());
         this.entityData.define(FIRE_BALL_CHARGE_STATE, FireballState.READY.ordinal());
     }
 
@@ -183,38 +167,41 @@ public abstract class DragonEntity extends PathfinderMob implements GeoEntity, I
         return true;
     }
 
-    @Override
-    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<GeoAnimatable>(this, "main_controller", 16, this::mainAnimationStateHandler));
-    }
 
-    protected <E extends GeoAnimatable> PlayState mainAnimationStateHandler(AnimationState<E> animationState) {
+    protected PlayState poseBody(AnimationState<Monster> animationState) {
         if (this.getAggressionState() == DragonEntity.AggressionState.ROAR) {
-            return animationState.setAndContinue(getState().roarAnimation);
+            return animationState.setAndContinue(getState().getRoarAnimation(name));
         }
         if (this.getFireballChargeState() == DragonEntity.FireballState.CHARGING) {
-            return animationState.setAndContinue(getState().fireballAnimation);
+            return animationState.setAndContinue(getState().getFireballAnimation(name));
         }
 
         if (animationState.isMoving()) {
-            return animationState.setAndContinue(getState().movementAnimation);
+            return animationState.setAndContinue(getState().getMovementAnimation(name));
         }
 
-        return animationState.setAndContinue(getState().idleAnimation);
+        return animationState.setAndContinue(getState().getIdleAnimation(name));
     }
 
     @Override
-    public AnimatableInstanceCache getAnimatableInstanceCache() {
-        return this.cache;
+    protected RawAnimation getIdleAnimation(String name){
+        return getState().getIdleAnimation(name);
     }
 
+    @Override
+    protected RawAnimation getMovementAnimation(String name) {
+        return getState().getMovementAnimation(name);
+    }
+
+    @Override
+    protected RawAnimation getRoarAnimation(String name) {
+        return getState().getRoarAnimation(name);
+    }
 
     @Override
     public void addAdditionalSaveData(@NotNull CompoundTag pCompound) {
         super.addAdditionalSaveData(pCompound);
-        pCompound.putFloat("mon_scale", getMonsterScale());
         pCompound.putInt("mon_state", getState().ordinal());
-        pCompound.putInt("mon_aggro_state", getAggressionState().ordinal());
         pCompound.putInt("mon_fireball_state", getFireballChargeState().ordinal());
         pCompound.putInt("mon_fireball_cooldown", this.fireballCooldownTime);
     }
@@ -222,16 +209,9 @@ public abstract class DragonEntity extends PathfinderMob implements GeoEntity, I
     @Override
     public void readAdditionalSaveData(@NotNull CompoundTag pCompound) {
         super.readAdditionalSaveData(pCompound);
-        if (pCompound.contains("mon_scale", Tag.TAG_FLOAT)) {
-            this.setMonsterScale(pCompound.getFloat("mon_scale"));
-        }
 
         if (pCompound.contains("mon_state", Tag.TAG_INT)) {
             this.setState(DragonEntity.State.values()[pCompound.getInt("mon_state")]);
-        }
-
-        if (pCompound.contains("mon_aggro_state", Tag.TAG_INT)) {
-            this.setAggressionState(DragonEntity.AggressionState.values()[pCompound.getInt("mon_aggro_state")]);
         }
 
         if (pCompound.contains("mon_fireball_state", Tag.TAG_INT)) {
@@ -268,16 +248,9 @@ public abstract class DragonEntity extends PathfinderMob implements GeoEntity, I
     public DragonEntity.State getState() {
         return DragonEntity.State.values()[this.entityData.get(STATE)];
     }
-    public void setAggressionState(DragonEntity.AggressionState aggressionState) {
-        this.entityData.set(AGGRESSION_STATE, aggressionState.ordinal());
-    }
 
-    public DragonEntity.AggressionState getAggressionState() {
-        return DragonEntity.AggressionState.values()[this.entityData.get(AGGRESSION_STATE)];
-    }
-
-    public void setFireBallChargeState(DragonEntity.FireballState aggressionState) {
-        this.entityData.set(FIRE_BALL_CHARGE_STATE, aggressionState.ordinal());
+    public void setFireBallChargeState(DragonEntity.FireballState fireBallChargeState) {
+        this.entityData.set(FIRE_BALL_CHARGE_STATE, fireBallChargeState.ordinal());
     }
 
     public DragonEntity.FireballState getFireballChargeState() {
@@ -290,34 +263,6 @@ public abstract class DragonEntity extends PathfinderMob implements GeoEntity, I
 
     public int getFireballCooldownTime() {
         return fireballCooldownTime;
-    }
-
-    public void GenerateScale(){
-        if(!getScaleAssigned()){
-            setMonsterScale((float) new Random().nextDouble(0.5,1.5));
-        }
-    }
-    public void setScaleAssigned(boolean pState) {
-        this.entityData.set(SCALESSIGNED, pState);
-    }
-    public boolean getScaleAssigned() {
-        return this.entityData.get(SCALESSIGNED);
-    }
-
-    @Override
-    public float getScale() {
-        return getMonsterScale();
-    }
-
-    @Override
-    public float getMonsterScale() {
-        return this.entityData.get(MONSTER_SCALE);
-    }
-
-    @Override
-    public void setMonsterScale(float scale) {
-        this.entityData.set(MONSTER_SCALE, scale);
-        setScaleAssigned(true);
     }
 
     public EntityDimensions getDimensions(Pose pPose) {
@@ -335,27 +280,36 @@ public abstract class DragonEntity extends PathfinderMob implements GeoEntity, I
     }
 
     public enum State {
-        FLYING(RawAnimation.begin().thenLoop("hover"), RawAnimation.begin().thenLoop("fly"), RawAnimation.begin().thenPlayAndHold("aerial_roar"), RawAnimation.begin().thenPlayAndHold("air_fireball")),
-        WALKING(RawAnimation.begin().thenLoop("idle_normal"), RawAnimation.begin().thenLoop("walk_normal"), RawAnimation.begin().thenPlayAndHold("roar"), RawAnimation.begin().thenPlayAndHold("ground_fireball"));
+        FLYING("hover", "fly", "aerial_roar", "air_fireball"),
+        WALKING("idle_normal", "walk_normal", "roar","ground_fireball");
 
 
-        private final RawAnimation idleAnimation;
-        private final RawAnimation movementAnimation;
-        private final RawAnimation roarAnimation;
-        private final RawAnimation fireballAnimation;
+        private final String idleAnimation;
+        private final String movementAnimation;
+        private final String roarAnimation;
+        private final String fireballAnimation;
 
-        State(RawAnimation idleAnimation, RawAnimation movementAnimation, RawAnimation roarAnimation, RawAnimation fireballAnimation) {
+        State(String idleAnimation, String movementAnimation, String roarAnimation, String fireballAnimation) {
             this.idleAnimation = idleAnimation;
             this.movementAnimation = movementAnimation;
             this.roarAnimation = roarAnimation;
             this.fireballAnimation = fireballAnimation;
         }
-    }
+        RawAnimation getIdleAnimation(String name){
+            return RawAnimation.begin().thenLoop("animation."+name+"."+idleAnimation);
+        }
 
-    public enum AggressionState {
-        PASSIVE,
-        ROAR,
-        AGGRESSIVE
+        public RawAnimation getMovementAnimation(String name) {
+            return RawAnimation.begin().thenLoop("animation."+name+"."+movementAnimation);
+        }
+
+        public RawAnimation getRoarAnimation(String name) {
+            return RawAnimation.begin().thenLoop("animation."+name+"."+roarAnimation);
+        }
+
+        public RawAnimation getFireballAnimation(String name) {
+            return RawAnimation.begin().thenLoop("animation."+name+"."+fireballAnimation);
+        }
     }
 
     public enum FireballState {
