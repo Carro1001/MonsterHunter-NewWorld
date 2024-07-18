@@ -6,122 +6,64 @@
 			"animation_length": 2,
 			"bones": {
 				"body": {
-					"rotation": {
-						"vector": ["Math.sin(query.anim_time * 360) * 0.4", 0, "Math.sin(query.anim_time * 180) * 1"]
-					}
+					"rotation": ["Math.sin(query.anim_time * 360) * 1.4", 0, "Math.sin(query.anim_time * 180) * 2"]
 				},
 				"neck": {
-					"rotation": {
-						"vector": ["Math.sin((query.anim_time + 4.5) * 180) * 2.5", "Math.sin(query.anim_time * 180) * -0.5", "Math.sin(query.anim_time * 180) * 0.2"]
-					}
+					"rotation": ["Math.sin((query.anim_time + 4.5) * 360) * 2.5", "Math.sin(query.anim_time * 180) * -2", "Math.sin(query.anim_time * 180) * 0.2"]
 				},
 				"head": {
-					"rotation": {
-						"vector": ["Math.sin((query.anim_time + 2.5) * 180) * -4.5", "Math.sin(query.anim_time * 180) * -0.5", "Math.sin(query.anim_time * 360) * 0.1"]
-					},
-					"position": {
-						"vector": [0, "Math.sin(query.anim_time * 180) * 0.2", "1+Math.sin(query.anim_time * 180) * 0.2"]
-					}
+					"rotation": ["Math.sin((query.anim_time + 2.5) * 180) * -4.5", "Math.sin(query.anim_time * 180) * -0.5", "Math.sin(query.anim_time * 360) * 0.1"],
+					"position": [0, "Math.sin(query.anim_time * 180) * 0.2", "1+Math.sin(query.anim_time * 180) * 0.2"]
 				},
 				"tail1": {
-					"rotation": {
-						"vector": [0, "Math.sin(query.anim_time * 180) * 6", 0]
-					},
-					"position": {
-						"vector": [0, "Math.sin(query.anim_time * 180) * 0.2", 0]
-					}
+					"rotation": [0, "Math.sin(query.anim_time * 180) * 6", 0],
+					"position": [0, "Math.sin(query.anim_time * 180) * 0.2", 0]
 				},
 				"tail2": {
-					"rotation": {
-						"vector": [0, "Math.sin(query.anim_time * 180 - 60) * 10", 0]
-					}
+					"rotation": [0, "Math.sin(query.anim_time * 180 - 60) * 10", 0]
 				},
 				"leg_right": {
-					"rotation": {
-						"vector": ["Math.sin(query.anim_time * 180) * -8", 0, 0]
-					},
+					"rotation": ["Math.sin(query.anim_time * 180) * -8", 0, 0],
 					"position": {
-						"0.0": {
-							"vector": [0, 2, 0]
-						},
-						"0.5": {
-							"vector": [0, 0, 0]
-						},
-						"1.5": {
-							"vector": [0, 0, 0]
-						},
-						"2.0": {
-							"vector": [0, 2, 0]
-						}
+						"0.0": [0, 3, 0],
+						"0.5": [0, 0, 0],
+						"1.5": [0, 0, 0],
+						"2.0": [0, 3, 0]
 					}
 				},
 				"leg_left": {
-					"rotation": {
-						"vector": ["Math.sin(query.anim_time * 180) * 8", 0, 0]
-					},
+					"rotation": ["Math.sin(query.anim_time * 180) * 8", 0, 0],
 					"position": {
-						"0.5": {
-							"vector": [0, 0, 0]
-						},
-						"1.0": {
-							"vector": [0, 2, 0]
-						},
-						"1.5": {
-							"vector": [0, 0, 0]
-						}
+						"0.5": [0, 0, 0],
+						"1.0": [0, 3, 0],
+						"1.5": [0, 0, 0]
 					}
 				},
 				"left_arm": {
-					"rotation": {
-						"vector": ["Math.sin(query.anim_time * 180 + 90) * -8", 0, 0]
-					},
+					"rotation": ["Math.sin(query.anim_time * 180 + 90) * -8", 0, 0],
 					"position": {
-						"1.0": {
-							"vector": [0, 0, 0]
-						},
-						"1.5": {
-							"vector": [0, 3, 0]
-						},
-						"2.0": {
-							"vector": [0, 0, 0]
-						}
+						"1.0": [0, 0, 0],
+						"1.5": [0, 4, 0],
+						"2.0": [0, 0, 0]
 					}
 				},
 				"right_arm": {
-					"rotation": {
-						"vector": ["Math.sin(query.anim_time * 180 + 90) * 8", 0, 0]
-					},
+					"rotation": ["Math.sin(query.anim_time * 180 + 90) * 8", 0, 0],
 					"position": {
-						"0.0": {
-							"vector": [0, 0, 0]
-						},
-						"0.5": {
-							"vector": [0, 3, 0]
-						},
-						"1.0": {
-							"vector": [0, 0, 0]
-						}
+						"0.0": [0, 0, 0],
+						"0.5": [0, 4, 0],
+						"1.0": [0, 0, 0]
 					}
 				},
 				"knee_right": {
-					"rotation": {
-						"vector": ["Math.sin((query.anim_time + 2.4) * 180) * -7", 0, 0]
-					}
+					"rotation": ["Math.sin((query.anim_time + 2.4) * 180) * -7", 0, 0]
 				},
 				"knee_left": {
-					"rotation": {
-						"vector": ["Math.sin((query.anim_time + 2.4) * 180) * 7", 0, 0]
-					},
+					"rotation": ["Math.sin((query.anim_time + 2.4) * 180) * 7", 0, 0],
 					"position": {
-						"0.5": {
-							"vector": [0, 0, 0]
-						},
-						"1.0": {
-							"vector": [0, 2, 0]
-						},
-						"1.5": {
-							"vector": [0, 0, 0]
-						}
+						"0.5": [0, 0, 0],
+						"1.0": [0, 2, 0],
+						"1.5": [0, 0, 0]
 					}
 				}
 			}

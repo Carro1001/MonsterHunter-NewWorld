@@ -36,6 +36,7 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
+    private static final EntityDataAccessor<Boolean> WALKING = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.BOOLEAN);
     protected static final EntityDataAccessor<Boolean> SCALESSIGNED = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.BOOLEAN);
     protected static final EntityDataAccessor<Float> MONSTER_SCALE = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.FLOAT);
     protected static final EntityDataAccessor<Integer> AGGRESSION_STATE = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.INT);
@@ -50,7 +51,19 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
     protected void registerGoals() {
         this.goalSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, true)); // This finds the closest player to target
         this.goalSelector.addGoal(1, new MonsterAggressionStateGoal(this)); // This handles the aggression state between passive, roar, and aggressive
-        this.goalSelector.addGoal(4, new WaterAvoidingRandomStrollGoal(this, 0.7D));
+        this.goalSelector.addGoal(4, new WaterAvoidingRandomStrollGoal(this, 0.7D){
+            @Override
+            public void start() {
+                super.start();
+                setWalking(true);
+            }
+
+            @Override
+            public void stop() {
+                super.stop();
+                setWalking(false);
+            }
+        });
         this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 6.0F));
         this.goalSelector.addGoal(6, new RandomLookAroundGoal(this));
 
@@ -71,7 +84,7 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
             return animationState.setAndContinue(getRoarAnimation(name));
         }
 
-        if (animationState.isMoving()) {
+        if (animationState.isMoving() || IsWalking()) {
             return animationState.setAndContinue(getMovementAnimation(name));
         }
 
@@ -88,13 +101,14 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
                 .add(Attributes.ATTACK_DAMAGE, 3.0)
                 .add(Attributes.MAX_HEALTH, 10)
                 .add(Attributes.FOLLOW_RANGE, 15.0)
-                .add(Attributes.MOVEMENT_SPEED, 0.5)
+                .add(Attributes.MOVEMENT_SPEED, 0.45)
                 .add(Attributes.ARMOR, 1.0D)
                 .add(Attributes.ARMOR_TOUGHNESS,1.0D);
     }
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
+        this.entityData.define(WALKING, false);
         this.entityData.define(SCALESSIGNED, false);
         this.entityData.define(MONSTER_SCALE, 1F);
         this.entityData.define(AGGRESSION_STATE, AggressionState.PASSIVE.ordinal());
@@ -170,6 +184,14 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
     @Override
     public float getScale() {
         return getMonsterScale();
+    }
+
+    public void setWalking(boolean walking){
+        this.entityData.set(WALKING, walking);
+    }
+
+    public boolean IsWalking(){
+        return this.entityData.get(WALKING);
     }
 
     @Nullable

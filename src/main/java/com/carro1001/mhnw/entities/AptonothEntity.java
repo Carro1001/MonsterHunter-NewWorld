@@ -11,7 +11,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.ai.goal.AvoidEntityGoal;
+import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -39,6 +39,7 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
     private static final RawAnimation IDLE = RawAnimation.begin().thenPlay("animation.aptonoth.idle");
     private static final RawAnimation EAT = RawAnimation.begin().thenPlay("animation.aptonoth.eat");
 
+    private static final EntityDataAccessor<Boolean> WALKING = SynchedEntityData.defineId(AptonothEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> SCALESSIGNED = SynchedEntityData.defineId(AptonothEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Float> MONSTER_SCALE = SynchedEntityData.defineId(AptonothEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Boolean> PANIC = SynchedEntityData.defineId(AptonothEntity.class, EntityDataSerializers.BOOLEAN);
@@ -86,20 +87,44 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
         }
     }
 
+    protected void registerGoals() {
+        this.goalSelector.addGoal(1, new PanicGoal(this, 1.2D));
+        this.goalSelector.addGoal(1, new RunAroundLikeCrazyGoal(this, 1.2D));
+        this.goalSelector.addGoal(2, new BreedGoal(this, 1.0D, AbstractHorse.class));
+        this.goalSelector.addGoal(4, new FollowParentGoal(this, 1.0D));
+        this.goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 1.0D){
+            @Override
+            public void start() {
+                super.start();
+                setWalking(true);
+            }
+
+            @Override
+            public void stop() {
+                super.stop();
+                setWalking(false);
+            }
+        });
+        this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 6.0F));
+        this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
+        if (this.canPerformRearing()) {
+            this.goalSelector.addGoal(9, new RandomStandGoal(this));
+        }
+
+        this.addBehaviourGoals();
+    }
+
 //Animation Controller
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "main_controller", 16, this::poseBody));
+        controllers.add(new AnimationController<>(this, "main_controller", 5, this::poseBody).setAnimationSpeed(1.3));
     }
 
     protected PlayState poseBody(AnimationState<AptonothEntity> state) {
         if (this.isEating()){
             return state.setAndContinue(EAT);
         }
-        if (state.isMoving()) {
-            return state.setAndContinue(WALK);
-        }
-        return state.setAndContinue(IDLE);
+        return state.setAndContinue(state.isMoving() || IsWalking() ? WALK : IDLE);
     }
 
     @Override
@@ -111,6 +136,7 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
+        this.entityData.define(WALKING, false);
         this.entityData.define(SCALESSIGNED, false);
         this.entityData.define(MONSTER_SCALE, 1F);
         this.entityData.define(PANIC, false);
@@ -123,6 +149,7 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
         pCompound.putFloat("Scale", this.getMonsterScale());
         pCompound.putBoolean("Panic", this.isPanic());
         pCompound.putInt("PanicCooldown", this.PanicTimer());
+        pCompound.putInt("Walking", this.PanicTimer());
     }
 
     @Override
@@ -165,6 +192,13 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
         }
     }
 
+    public void setWalking(boolean walking){
+        this.entityData.set(WALKING, walking);
+    }
+
+    public boolean IsWalking(){
+        return this.entityData.get(WALKING);
+    }
 //region Scale
     @Override
     public float getScale() {
@@ -212,7 +246,7 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
                 .add(Attributes.ATTACK_DAMAGE, 3.0)
                 .add(Attributes.MAX_HEALTH, 10)
                 .add(Attributes.FOLLOW_RANGE, 15.0)
-                .add(Attributes.MOVEMENT_SPEED, 0.3)
+                .add(Attributes.MOVEMENT_SPEED, (double)0.22F)
                 .add(Attributes.ARMOR, 1.0D)
                 .add(Attributes.JUMP_STRENGTH, 0.5)
                 .add(Attributes.ARMOR_TOUGHNESS,1.0D);
