@@ -169,6 +169,9 @@ public abstract class DragonEntity extends Monster {
 
 
     protected PlayState poseBody(AnimationState<Monster> animationState) {
+        if(getDeathState() >= 1){
+            return animationState.setAndContinue(getDeathAnimation(name));
+        }
         if (this.getAggressionState() == DragonEntity.AggressionState.ROAR) {
             return animationState.setAndContinue(getState().getRoarAnimation(name));
         }

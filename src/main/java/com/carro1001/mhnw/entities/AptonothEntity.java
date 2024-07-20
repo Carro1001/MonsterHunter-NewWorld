@@ -1,5 +1,6 @@
 package com.carro1001.mhnw.entities;
 
+import com.carro1001.mhnw.entities.ai.AptonothPanicOrAttack;
 import com.carro1001.mhnw.entities.interfaces.IGrows;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -12,6 +13,8 @@ import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.*;
+import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
+import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -38,8 +41,13 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
     private static final RawAnimation WALK = RawAnimation.begin().thenPlay("animation.aptonoth.walk");
     private static final RawAnimation IDLE = RawAnimation.begin().thenPlay("animation.aptonoth.idle");
     private static final RawAnimation EAT = RawAnimation.begin().thenPlay("animation.aptonoth.eat");
+    private static final RawAnimation DEATH = RawAnimation.begin().thenPlayAndHold("animation.aptonoth.death");
+    private static final RawAnimation ATTACK = RawAnimation.begin().thenPlay("animation.aptonoth.attack");
 
+    //0 is normal, 1 is dying to trigger animation and 2 is dead animation is done
+    private static final EntityDataAccessor<Integer> DEATH_STATE = SynchedEntityData.defineId(AptonothEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> WALKING = SynchedEntityData.defineId(AptonothEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(AptonothEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> SCALESSIGNED = SynchedEntityData.defineId(AptonothEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Float> MONSTER_SCALE = SynchedEntityData.defineId(AptonothEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Boolean> PANIC = SynchedEntityData.defineId(AptonothEntity.class, EntityDataSerializers.BOOLEAN);
@@ -88,7 +96,9 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
     }
 
     protected void registerGoals() {
-        this.goalSelector.addGoal(1, new PanicGoal(this, 1.2D));
+        this.goalSelector.addGoal(1, new AptonothPanicOrAttack(this, 1.2D));
+        this.targetSelector.addGoal(1, (new HurtByTargetGoal(this)).setAlertOthers(AptonothEntity.class));
+        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
         this.goalSelector.addGoal(1, new RunAroundLikeCrazyGoal(this, 1.2D));
         this.goalSelector.addGoal(2, new BreedGoal(this, 1.0D, AbstractHorse.class));
         this.goalSelector.addGoal(4, new FollowParentGoal(this, 1.0D));
@@ -121,10 +131,27 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
     }
 
     protected PlayState poseBody(AnimationState<AptonothEntity> state) {
-        if (this.isEating()){
+        if(getDeathState() == 1 && onGround()){
+            return state.setAndContinue(DEATH);
+        }
+        if (this.Attacking() || isAggressive()){
+            return state.setAndContinue(ATTACK);
+        }
+        if (this.isEating() && !(this.Attacking() || isAggressive())){
             return state.setAndContinue(EAT);
         }
+
         return state.setAndContinue(state.isMoving() || IsWalking() ? WALK : IDLE);
+    }
+
+    @Override
+    public void die(DamageSource pDamageSource) {
+        this.setHealth(1);
+        int state = getDeathState();
+        if(state == 0){
+            setDeathState(1);
+            setNoAi(true);
+        }
     }
 
     @Override
@@ -136,7 +163,9 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
+        this.entityData.define(DEATH_STATE, 0);
         this.entityData.define(WALKING, false);
+        this.entityData.define(ATTACKING, false);
         this.entityData.define(SCALESSIGNED, false);
         this.entityData.define(MONSTER_SCALE, 1F);
         this.entityData.define(PANIC, false);
@@ -149,7 +178,8 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
         pCompound.putFloat("Scale", this.getMonsterScale());
         pCompound.putBoolean("Panic", this.isPanic());
         pCompound.putInt("PanicCooldown", this.PanicTimer());
-        pCompound.putInt("Walking", this.PanicTimer());
+        pCompound.putBoolean("Walking", this.IsWalking());
+        pCompound.putInt("DeathState", this.getDeathState());
     }
 
     @Override
@@ -160,6 +190,8 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
             this.setPanicTimer(pCompound.getInt("PanicCooldown"));
         }
         this.setMonsterScale(pCompound.getFloat("Scale"));
+        setWalking(pCompound.getBoolean("Walking"));
+        setDeathState(pCompound.getInt("DeathState"));
     }
 
     public void panic(){
@@ -199,6 +231,22 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
     public boolean IsWalking(){
         return this.entityData.get(WALKING);
     }
+    public void setAttacking(boolean attacking){
+        this.entityData.set(ATTACKING, attacking);
+    }
+
+    public boolean Attacking(){
+        return this.entityData.get(ATTACKING);
+    }
+
+    public void setDeathState(int state){
+        this.entityData.set(DEATH_STATE, state);
+    }
+
+    public int getDeathState(){
+        return this.entityData.get(DEATH_STATE);
+    }
+
 //region Scale
     @Override
     public float getScale() {
@@ -244,6 +292,7 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
     public static AttributeSupplier.Builder prepareAttributes() {
         return Mob.createLivingAttributes()
                 .add(Attributes.ATTACK_DAMAGE, 3.0)
+                .add(Attributes.ATTACK_KNOCKBACK, 3.0)
                 .add(Attributes.MAX_HEALTH, 10)
                 .add(Attributes.FOLLOW_RANGE, 15.0)
                 .add(Attributes.MOVEMENT_SPEED, (double)0.22F)

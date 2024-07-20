@@ -8,6 +8,7 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.DifficultyInstance;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -40,12 +41,23 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
     protected static final EntityDataAccessor<Boolean> SCALESSIGNED = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.BOOLEAN);
     protected static final EntityDataAccessor<Float> MONSTER_SCALE = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.FLOAT);
     protected static final EntityDataAccessor<Integer> AGGRESSION_STATE = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DEATH_STATE = SynchedEntityData.defineId(AptonothEntity.class, EntityDataSerializers.INT);
 
     protected String name;
 
     public Monster(EntityType<? extends PathfinderMob> p_27557_, Level p_27558_) {
         super(p_27557_, p_27558_);
         this.noCulling = true;
+    }
+
+    @Override
+    public void die(DamageSource pDamageSource) {
+        this.setHealth(1);
+        int state = getDeathState();
+        if(state == 0){
+            setDeathState(1);
+            setNoAi(true);
+        }
     }
 
     protected void registerGoals() {
@@ -80,6 +92,9 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
     }
 
     protected PlayState poseBody(AnimationState<Monster> animationState) {
+        if(getDeathState() >= 1){
+            return animationState.setAndContinue(getDeathAnimation(name));
+        }
         if (this.getAggressionState() == AggressionState.ROAR) {
             return animationState.setAndContinue(getRoarAnimation(name));
         }
@@ -108,6 +123,7 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
+        this.entityData.define(DEATH_STATE, 0);
         this.entityData.define(WALKING, false);
         this.entityData.define(SCALESSIGNED, false);
         this.entityData.define(MONSTER_SCALE, 1F);
@@ -120,6 +136,8 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
         super.addAdditionalSaveData(pCompound);
         pCompound.putFloat("Scale", this.getMonsterScale());
         pCompound.putInt("mon_aggro_state", getAggressionState().ordinal());
+        pCompound.putBoolean("Walking", IsWalking());
+        pCompound.putInt("DeathState", this.getDeathState());
 
     }
 
@@ -133,6 +151,8 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
         if (pCompound.contains("mon_aggro_state", Tag.TAG_INT)) {
             this.setAggressionState(DragonEntity.AggressionState.values()[pCompound.getInt("mon_aggro_state")]);
         }
+        setDeathState(pCompound.getInt("DeathState"));
+        setWalking(pCompound.getBoolean("Walking"));
     }
 
     public void GenerateScale(){
@@ -181,6 +201,10 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
     protected RawAnimation getRoarAnimation(String name) {
         return RawAnimation.begin().thenLoop("animation."+name+".roar");
     }
+
+    protected RawAnimation getDeathAnimation(String name) {
+        return RawAnimation.begin().thenPlayAndHold("animation."+name+".death");
+    }
     @Override
     public float getScale() {
         return getMonsterScale();
@@ -192,6 +216,14 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
 
     public boolean IsWalking(){
         return this.entityData.get(WALKING);
+    }
+
+    public void setDeathState(int state){
+        this.entityData.set(DEATH_STATE, state);
+    }
+
+    public int getDeathState(){
+        return this.entityData.get(DEATH_STATE);
     }
 
     @Nullable

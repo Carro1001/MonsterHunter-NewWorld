@@ -53,11 +53,9 @@ public class ToadEntity extends PathfinderMob implements Bucketable, GeoEntity {
 
     private static final EntityDataAccessor<Integer> DATA_SWELL_DIR = SynchedEntityData.defineId(ToadEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> DATA_IS_IGNITED = SynchedEntityData.defineId(ToadEntity.class, EntityDataSerializers.BOOLEAN);
-    public boolean walking = false;
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
-    private int oldSwell;
     private int swell;
     private int maxSwell = 34;
     private int explosionRadius = 3;
@@ -260,7 +258,6 @@ public class ToadEntity extends PathfinderMob implements Bucketable, GeoEntity {
             }
         }
         if (this.isAlive()) {
-            this.oldSwell = this.swell;
             if (this.isIgnited()) {
                 this.setSwellDir(1);
             }
