@@ -6,9 +6,9 @@
 				"identifier": "geometry.rathian",
 				"texture_width": 1024,
 				"texture_height": 1024,
-				"visible_bounds_width": 19,
-				"visible_bounds_height": 15.5,
-				"visible_bounds_offset": [0, 7.25, 0]
+				"visible_bounds_width": 35,
+				"visible_bounds_height": 6.5,
+				"visible_bounds_offset": [0, 2.75, 0]
 			},
 			"bones": [
 				{
