@@ -20,7 +20,7 @@ public class ModBlocks {
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITIES = DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, MODID);
 
     private static final BlockBehaviour.Properties ORE_PROPERTIES = BlockBehaviour.Properties.copy(Blocks.STONE).strength(2f);
-    private static final BlockBehaviour.Properties CRYSTAL_PROPERTIES = BlockBehaviour.Properties.copy(Blocks.AMETHYST_BLOCK).noOcclusion().strength(2f).dynamicShape();
+    private static final BlockBehaviour.Properties CRYSTAL_PROPERTIES = BlockBehaviour.Properties.copy(Blocks.AMETHYST_BLOCK).noOcclusion().forceSolidOn().strength(2f).dynamicShape();
 
     public static final RegistryObject<Block> CARBALITE_ORE_BLOCK = BLOCKS.register(CARBALITE_ORE , () -> new DropExperienceBlock(ORE_PROPERTIES));
     public static final RegistryObject<Item> CARBALITE_ORE_ITEM = fromBlock(CARBALITE_ORE_BLOCK);

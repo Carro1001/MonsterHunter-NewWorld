@@ -1,5 +1,7 @@
 package com.carro1001.mhnw.entities;
 
+import com.carro1001.mhnw.entities.ai.RallyGoal;
+import com.carro1001.mhnw.entities.ai.SleepGoal;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 
@@ -12,7 +14,10 @@ public class GreatIzuchiEntity extends Monster {
         super(p_27557_, p_27558_);
         this.name = GREAT + "_" + IZUCHI;
     }
-
-
+    protected void registerGoals() {
+        this.goalSelector.addGoal(8, new RallyGoal(this));
+        this.goalSelector.addGoal(10, new SleepGoal(this));
+        this.addBehaviourGoals();
+    }
 
 }

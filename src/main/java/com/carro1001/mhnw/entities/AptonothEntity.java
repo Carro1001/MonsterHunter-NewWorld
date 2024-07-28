@@ -15,10 +15,12 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.GeoEntity;
@@ -38,6 +40,7 @@ import static com.carro1001.mhnw.registration.ModEntities.APTONOTH;
 
 public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+    private static final RawAnimation RUNNING = RawAnimation.begin().thenPlay("animation.aptonoth.run");
     private static final RawAnimation WALK = RawAnimation.begin().thenPlay("animation.aptonoth.walk");
     private static final RawAnimation IDLE = RawAnimation.begin().thenPlay("animation.aptonoth.idle");
     private static final RawAnimation EAT = RawAnimation.begin().thenPlay("animation.aptonoth.eat");
@@ -46,7 +49,7 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
 
     //0 is normal, 1 is dying to trigger animation and 2 is dead animation is done
     private static final EntityDataAccessor<Integer> DEATH_STATE = SynchedEntityData.defineId(AptonothEntity.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Boolean> WALKING = SynchedEntityData.defineId(AptonothEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Integer> WALKING = SynchedEntityData.defineId(AptonothEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(AptonothEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> SCALESSIGNED = SynchedEntityData.defineId(AptonothEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Float> MONSTER_SCALE = SynchedEntityData.defineId(AptonothEntity.class, EntityDataSerializers.FLOAT);
@@ -96,23 +99,23 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
     }
 
     protected void registerGoals() {
-        this.goalSelector.addGoal(1, new AptonothPanicOrAttack(this, 1.2D));
         this.targetSelector.addGoal(1, (new HurtByTargetGoal(this)).setAlertOthers(AptonothEntity.class));
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
+        this.goalSelector.addGoal(1, new AptonothPanicOrAttack(this, 1.4D));
         this.goalSelector.addGoal(1, new RunAroundLikeCrazyGoal(this, 1.2D));
         this.goalSelector.addGoal(2, new BreedGoal(this, 1.0D, AbstractHorse.class));
         this.goalSelector.addGoal(4, new FollowParentGoal(this, 1.0D));
-        this.goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 1.0D){
+        this.goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 0.65D){
             @Override
             public void start() {
                 super.start();
-                setWalking(true);
+                setWalking(1);
             }
 
             @Override
             public void stop() {
                 super.stop();
-                setWalking(false);
+                setWalking(0);
             }
         });
         this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 6.0F));
@@ -127,21 +130,35 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
 //Animation Controller
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "main_controller", 5, this::poseBody).setAnimationSpeed(1.3));
+        controllers.add(new AnimationController<>(this, "main_controller", 5, this::poseBody).setAnimationSpeed(0.65),
+                new AnimationController<>(this, "run_controller", 5, this::runBody).setAnimationSpeed(1.75),
+                new AnimationController<>(this, "attack_die_controller", 5, this::fightBody));
+    }
+    protected PlayState fightBody(AnimationState<AptonothEntity> state) {
+        if(getDeathState() >= 1 && onGround()){
+            setDeathState(2);
+            return state.setAndContinue(DEATH);
+        }
+        if(getDeathState() >= 1) return PlayState.STOP;
+        if (isAggressive() || this.Attacking()){
+            return state.setAndContinue(ATTACK);
+        }
+        return PlayState.STOP;
+    }
+    protected PlayState runBody(AnimationState<AptonothEntity> state) {
+        if(getDeathState() >= 1) return PlayState.STOP;
+        if ((this.IsRunning() || isPanic())){
+            return state.setAndContinue(RUNNING);
+        }
+        return state.setAndContinue(state.isMoving() || IsWalking() ? WALK : IDLE);
     }
 
     protected PlayState poseBody(AnimationState<AptonothEntity> state) {
-        if(getDeathState() == 1 && onGround()){
-            return state.setAndContinue(DEATH);
-        }
-        if (this.Attacking() || isAggressive()){
-            return state.setAndContinue(ATTACK);
-        }
+        if(getDeathState() >= 1) return PlayState.STOP;
         if (this.isEating() && !(this.Attacking() || isAggressive())){
             return state.setAndContinue(EAT);
         }
-
-        return state.setAndContinue(state.isMoving() || IsWalking() ? WALK : IDLE);
+        return PlayState.STOP;
     }
 
     @Override
@@ -164,7 +181,7 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(DEATH_STATE, 0);
-        this.entityData.define(WALKING, false);
+        this.entityData.define(WALKING, 0);
         this.entityData.define(ATTACKING, false);
         this.entityData.define(SCALESSIGNED, false);
         this.entityData.define(MONSTER_SCALE, 1F);
@@ -178,7 +195,7 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
         pCompound.putFloat("Scale", this.getMonsterScale());
         pCompound.putBoolean("Panic", this.isPanic());
         pCompound.putInt("PanicCooldown", this.PanicTimer());
-        pCompound.putBoolean("Walking", this.IsWalking());
+        pCompound.putInt("Walking", this.getWalkingState());
         pCompound.putInt("DeathState", this.getDeathState());
     }
 
@@ -190,7 +207,7 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
             this.setPanicTimer(pCompound.getInt("PanicCooldown"));
         }
         this.setMonsterScale(pCompound.getFloat("Scale"));
-        setWalking(pCompound.getBoolean("Walking"));
+        setWalking(pCompound.getInt("Walking"));
         setDeathState(pCompound.getInt("DeathState"));
     }
 
@@ -224,13 +241,22 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
         }
     }
 
-    public void setWalking(boolean walking){
-        this.entityData.set(WALKING, walking);
+    public void setWalking(int state){
+        this.entityData.set(WALKING, state);
     }
 
     public boolean IsWalking(){
+        return getWalkingState() == 1;
+    }
+
+    public boolean IsRunning(){
+        return getWalkingState() == 2;
+    }
+
+    public int getWalkingState(){
         return this.entityData.get(WALKING);
     }
+
     public void setAttacking(boolean attacking){
         this.entityData.set(ATTACKING, attacking);
     }
@@ -269,6 +295,7 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
 
     @Override
     public float getMonsterScale() {
+        GenerateScale();
         return this.entityData.get(MONSTER_SCALE);
     }
 
@@ -279,8 +306,24 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
             this.setScaleAssignedDir(true);
         }
     }
+    protected float getStandingEyeHeight(Pose pPose, EntityDimensions pSize) {
+        float height = (2.2f)*getScale();
+        return this.isBaby() ? height * 0.95F : 1.5F;
+    }
+    @Override
+    protected AABB makeBoundingBox() {
+        GenerateScale();
+        float f = (1.25f)*getScale();
+        float f1 = (2.2f)*getScale();
+        return new AABB(position().x - (double)f, position().y, position().z - (double)f, position().x + (double)f, position().y + (double)f1, position().z + (double)f);
+    }
 //
 //
+
+    @Override
+    public boolean canMate(Animal pOtherAnimal) {
+        return pOtherAnimal instanceof AptonothEntity;
+    }
 
     @Nullable
     @Override
@@ -293,11 +336,12 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
         return Mob.createLivingAttributes()
                 .add(Attributes.ATTACK_DAMAGE, 3.0)
                 .add(Attributes.ATTACK_KNOCKBACK, 3.0)
-                .add(Attributes.MAX_HEALTH, 10)
+                .add(Attributes.MAX_HEALTH, 100)
                 .add(Attributes.FOLLOW_RANGE, 15.0)
                 .add(Attributes.MOVEMENT_SPEED, (double)0.22F)
                 .add(Attributes.ARMOR, 1.0D)
                 .add(Attributes.JUMP_STRENGTH, 0.5)
+                .add(Attributes.KNOCKBACK_RESISTANCE, (double)0.6F)
                 .add(Attributes.ARMOR_TOUGHNESS,1.0D);
     }
 

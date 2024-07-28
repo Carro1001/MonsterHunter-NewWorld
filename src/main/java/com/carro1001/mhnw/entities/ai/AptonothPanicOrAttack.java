@@ -62,7 +62,6 @@ public class AptonothPanicOrAttack extends MeleeAttackGoal {
         Vec3 vec3 = DefaultRandomPos.getPos(this.mob, 5, 4);
         isAttacking = mob.getRandom().nextFloat() > 0.75f && !aptonoth.isBaby();
         if(isAttacking){
-            System.out.println("Valhala");
             return true;
         }
         if (vec3 == null) {
@@ -79,12 +78,12 @@ public class AptonothPanicOrAttack extends MeleeAttackGoal {
      * Execute a one shot task or start executing a continuous task
      */
     public void start() {
+        aptonoth.setWalking(2);
+        aptonoth.setAttacking(false);
         if (!isAttacking) {
             this.mob.getNavigation().moveTo(this.posX, this.posY, this.posZ, this.speedModifier);
             this.isRunning = true;
         }else{
-
-            aptonoth.setAttacking(true);
             super.start();
         }
     }
@@ -93,10 +92,11 @@ public class AptonothPanicOrAttack extends MeleeAttackGoal {
      * Reset the task's internal state. Called when this task is interrupted by another one
      */
     public void stop() {
+        aptonoth.setWalking(0);
         if (isAttacking) {
-            this.mob.setAggressive(false);
             aptonoth.setAttacking(false);
             super.stop();
+            this.aptonoth.setAggressive(false);
 
         }else{
             this.isRunning = false;
@@ -107,16 +107,21 @@ public class AptonothPanicOrAttack extends MeleeAttackGoal {
      * Returns whether an in-progress EntityAIBase should continue executing
      */
     public boolean canContinueToUse() {
-        return isAttacking ? super.canContinueToUse(): !this.mob.getNavigation().isDone();
+        return isAttacking ? super.canContinueToUse(): !this.mob.getNavigation().isDone() && aptonoth.isPanic();
     }
 
     public void tick() {
-        super.tick();
-        ++this.attackTicks;
-        if (this.attackTicks >= 5 && this.getTicksUntilNextAttack() < this.getAttackInterval() / 2) {
-            this.aptonoth.setAggressive(true);
-        } else {
-            this.aptonoth.setAggressive(false);
+        if(isAttacking){
+            ++this.attackTicks;
+            if((this.attackTicks >= 5 && this.getTicksUntilNextAttack() < this.getAttackInterval() / 2)){
+                this.aptonoth.setAggressive(true);
+                aptonoth.setAttacking(true);
+            }else{
+                this.aptonoth.setAggressive(false);
+                aptonoth.setAttacking(false);
+            }
+            super.tick();
+
         }
     }
 

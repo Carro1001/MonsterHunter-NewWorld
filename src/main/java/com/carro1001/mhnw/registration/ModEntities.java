@@ -21,7 +21,7 @@ public class ModEntities {
     public static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(ForgeRegistries.ENTITY_TYPES, MODID);
 
     public static final RegistryObject<EntityType<AptonothEntity>> APTONOTH = ENTITIES.register(MHNWReferences.APTONOTH, () -> EntityType.Builder.of(AptonothEntity::new, MobCategory.CREATURE)
-            .sized(1.4f, 3.2f)
+            .sized(1.32F, 2.7F)
             .clientTrackingRange(8)
             .setShouldReceiveVelocityUpdates(false)
             .build(MHNWReferences.APTONOTH));

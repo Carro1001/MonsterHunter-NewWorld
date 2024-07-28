@@ -170,7 +170,7 @@ public abstract class DragonEntity extends Monster {
 
     protected PlayState poseBody(AnimationState<Monster> animationState) {
         if(getDeathState() >= 1){
-            return animationState.setAndContinue(getDeathAnimation(name));
+            return animationState.setAndContinue(getDeathAnimation());
         }
         if (this.getAggressionState() == DragonEntity.AggressionState.ROAR) {
             return animationState.setAndContinue(getState().getRoarAnimation(name));
@@ -187,17 +187,17 @@ public abstract class DragonEntity extends Monster {
     }
 
     @Override
-    protected RawAnimation getIdleAnimation(String name){
+    protected RawAnimation getIdleAnimation(){
         return getState().getIdleAnimation(name);
     }
 
     @Override
-    protected RawAnimation getMovementAnimation(String name) {
+    protected RawAnimation getMovementAnimation() {
         return getState().getMovementAnimation(name);
     }
 
     @Override
-    protected RawAnimation getRoarAnimation(String name) {
+    protected RawAnimation getRoarAnimation() {
         return getState().getRoarAnimation(name);
     }
 
@@ -229,14 +229,14 @@ public abstract class DragonEntity extends Monster {
     // Mimic Slime scaling
     @Override
     public void onSyncedDataUpdated(EntityDataAccessor<?> pKey) {
-        if (MONSTER_SCALE.equals(pKey)) {
+/*        if (MONSTER_SCALE.equals(pKey)) {
             this.refreshDimensions();
             this.setYRot(this.yHeadRot);
             this.yBodyRot = this.yHeadRot;
             if (this.isInWater() && this.random.nextInt(20) == 0) {
                 this.doWaterSplashEffect();
             }
-        }
+        }*/
 
         if (STATE.equals(pKey)) {
             setMovement();
@@ -272,7 +272,7 @@ public abstract class DragonEntity extends Monster {
         return super.getDimensions(pPose).scale(0.255F * this.getMonsterScale());
     }
 
-    // Mimic Slime scaling
+/*    // Mimic Slime scaling
     @Override
     public void refreshDimensions() {
         double d0 = this.getX();
@@ -280,7 +280,7 @@ public abstract class DragonEntity extends Monster {
         double d2 = this.getZ();
         super.refreshDimensions();
         this.setPos(d0, d1, d2);
-    }
+    }*/
 
     public enum State {
         FLYING("hover", "fly", "aerial_roar", "air_fireball"),

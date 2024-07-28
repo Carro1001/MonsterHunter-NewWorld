@@ -4,6 +4,7 @@
   "block.mhnw.earth_crystal_cluster": "Earth Crystal Cluster",
   "block.mhnw.ice_crystal_cluster": "Ice Crystal Cluster",
   "block.mhnw.machalite_ore": "Machalite Ore",
+  "creativetab.all_items_tab": "MHNW",
   "entity.mhnw.aptonoth": "Aptonoth",
   "entity.mhnw.bitterbug": "Bitter Bug",
   "entity.mhnw.blango": "Rathalos",
@@ -61,6 +62,5 @@
   "item.mhnw.sleeptoad_bucket": "Sleeptoad Bucket",
   "item.mhnw.toad": "Toads Spawn Egg",
   "item.mhnw.well_done_monster_meat": "Well Done Steak",
-  "item.mhnw.zinogre": "Zinogre Spawn Egg",
-  "itemGroup.mhnw": "MHNW"
+  "item.mhnw.zinogre": "Zinogre Spawn Egg"
 }

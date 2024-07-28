@@ -2,6 +2,7 @@ package com.carro1001.mhnw.entities;
 
 import com.carro1001.mhnw.entities.ai.MonsterAggressionStateGoal;
 import com.carro1001.mhnw.entities.interfaces.IGrows;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -41,13 +42,22 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
     protected static final EntityDataAccessor<Boolean> SCALESSIGNED = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.BOOLEAN);
     protected static final EntityDataAccessor<Float> MONSTER_SCALE = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.FLOAT);
     protected static final EntityDataAccessor<Integer> AGGRESSION_STATE = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Integer> DEATH_STATE = SynchedEntityData.defineId(AptonothEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DEATH_STATE = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> LIMPING = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> RALLY = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.BOOLEAN);
+    protected static final EntityDataAccessor<Integer> RALLY_STATE = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> SLEEPING = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.BOOLEAN);
+
+    protected int rallyCooldownTime = 0;
 
     protected String name;
 
-    public Monster(EntityType<? extends PathfinderMob> p_27557_, Level p_27558_) {
-        super(p_27557_, p_27558_);
+    public Monster(EntityType<? extends PathfinderMob> entityType, Level level) {
+        super(entityType, level);
         this.noCulling = true;
+        if (!level.isClientSide) {
+            this.setRallyState(RallyState.READY);
+        }
     }
 
     @Override
@@ -57,6 +67,26 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
         if(state == 0){
             setDeathState(1);
             setNoAi(true);
+        }
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        if(IsSleeping()){
+            this.level().addParticle(ParticleTypes.HEART, this.getRandomX(1.0D), this.getRandomY()-0.5, this.getRandomZ(1.0D), 0.0D, 0.0D, 0.0D);
+        }
+        else if(IsLimpining()){
+            this.level().addParticle(ParticleTypes.DRIPPING_WATER, this.getRandomX(1.0D), this.getRandomY(), this.getRandomZ(1.0D), 0.0D, -0.5D, 0.0D);
+        }
+        if (!level().isClientSide) {
+            if (getRallyState() == RallyState.COOL_DOWN) {
+                if (this.rallyCooldownTime >= 0) {
+                    this.rallyCooldownTime--;
+                } else {
+                    setRallyState(RallyState.READY);
+                }
+            }
         }
     }
 
@@ -93,18 +123,25 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
 
     protected PlayState poseBody(AnimationState<Monster> animationState) {
         if(getDeathState() >= 1){
-            return animationState.setAndContinue(getDeathAnimation(name));
+            return animationState.setAndContinue(getDeathAnimation());
         }
         if (this.getAggressionState() == AggressionState.ROAR) {
-            return animationState.setAndContinue(getRoarAnimation(name));
+            return animationState.setAndContinue(getRoarAnimation());
         }
 
+        if (ShouldRally()) {
+            return animationState.setAndContinue(getRallyAnimation());
+        }
+        if (IsSleeping()) {
+            return animationState.setAndContinue(getSleepAnimation());
+        }
         if (animationState.isMoving() || IsWalking()) {
-            return animationState.setAndContinue(getMovementAnimation(name));
+            return animationState.setAndContinue(getMovementAnimation());
         }
 
-        return animationState.setAndContinue(getIdleAnimation(name));
+        return animationState.setAndContinue(getIdleAnimation());
     }
+
 
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
@@ -114,16 +151,21 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
     public static AttributeSupplier.Builder prepareAttributes() {
         return Mob.createLivingAttributes()
                 .add(Attributes.ATTACK_DAMAGE, 3.0)
-                .add(Attributes.MAX_HEALTH, 10)
+                .add(Attributes.MAX_HEALTH, 100)
                 .add(Attributes.FOLLOW_RANGE, 15.0)
                 .add(Attributes.MOVEMENT_SPEED, 0.45)
                 .add(Attributes.ARMOR, 1.0D)
+                .add(Attributes.KNOCKBACK_RESISTANCE, (double)0.6F)
                 .add(Attributes.ARMOR_TOUGHNESS,1.0D);
     }
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(DEATH_STATE, 0);
+        this.entityData.define(RALLY_STATE, RallyState.READY.ordinal());
+        this.entityData.define(SLEEPING, false);
+        this.entityData.define(RALLY, false);
+        this.entityData.define(LIMPING, false);
         this.entityData.define(WALKING, false);
         this.entityData.define(SCALESSIGNED, false);
         this.entityData.define(MONSTER_SCALE, 1F);
@@ -137,7 +179,10 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
         pCompound.putFloat("Scale", this.getMonsterScale());
         pCompound.putInt("mon_aggro_state", getAggressionState().ordinal());
         pCompound.putBoolean("Walking", IsWalking());
+        pCompound.putBoolean("Limping", IsLimpining());
         pCompound.putInt("DeathState", this.getDeathState());
+        pCompound.putBoolean("Rally",ShouldRally());
+        pCompound.putBoolean("Sleeping",IsSleeping());
 
     }
 
@@ -153,6 +198,9 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
         }
         setDeathState(pCompound.getInt("DeathState"));
         setWalking(pCompound.getBoolean("Walking"));
+        setLimping(pCompound.getBoolean("Limping"));
+        setRally(pCompound.getBoolean("Rally"));
+        setSleeping(pCompound.getBoolean("Sleeping"));
     }
 
     public void GenerateScale(){
@@ -190,21 +238,30 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
         return DragonEntity.AggressionState.values()[this.entityData.get(AGGRESSION_STATE)];
     }
 
-    protected RawAnimation getIdleAnimation(String name){
+    protected RawAnimation getIdleAnimation(){
         return RawAnimation.begin().thenLoop("animation."+name+".idle");
     }
 
-    protected RawAnimation getMovementAnimation(String name) {
+    protected RawAnimation getMovementAnimation() {
         return RawAnimation.begin().thenLoop("animation."+name+".walk");
     }
 
-    protected RawAnimation getRoarAnimation(String name) {
+    protected RawAnimation getRoarAnimation() {
         return RawAnimation.begin().thenLoop("animation."+name+".roar");
     }
 
-    protected RawAnimation getDeathAnimation(String name) {
+    protected RawAnimation getDeathAnimation() {
         return RawAnimation.begin().thenPlayAndHold("animation."+name+".death");
     }
+
+    protected RawAnimation getRallyAnimation() {
+        return RawAnimation.begin().thenPlay("animation."+name+".rally");
+    }
+
+    protected RawAnimation getSleepAnimation() {
+        return RawAnimation.begin().thenPlay("animation."+name+".sleep");
+    }
+
     @Override
     public float getScale() {
         return getMonsterScale();
@@ -224,6 +281,61 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
 
     public int getDeathState(){
         return this.entityData.get(DEATH_STATE);
+    }
+    public void setLimping(boolean limping){
+        this.entityData.set(LIMPING, limping);
+    }
+
+    public boolean IsLimpining(){
+        return this.entityData.get(LIMPING);
+    }
+    public void setRally(boolean rally){
+        this.entityData.set(RALLY, rally);
+    }
+
+    public boolean ShouldRally(){
+        return this.entityData.get(RALLY) && getRallyState() == RallyState.READY;
+    }
+    public void setSleeping(boolean sleeping){
+        this.entityData.set(SLEEPING, sleeping);
+    }
+
+    public boolean IsSleeping(){
+        return this.entityData.get(SLEEPING);
+    }
+
+    public void setRallyState(RallyState state) {
+        if(!level().isClientSide && state == RallyState.COOL_DOWN){
+            this.rallyCooldownTime = this.random.nextInt(500, 2000);
+        }
+        this.entityData.set(RALLY_STATE, state.ordinal());
+    }
+
+    public RallyState getRallyState() {
+        return RallyState.values()[this.entityData.get(RALLY_STATE)];
+    }
+
+    @Override
+    public boolean hurt(DamageSource pSource, float pAmount) {
+        boolean hurt = super.hurt(pSource, pAmount);
+        if(hurt && getHealth() <= getMaxHealth()/4){
+            setLimping(true);
+        }
+        if(isSleeping() && pSource.getDirectEntity() instanceof LivingEntity livingEntity){
+            setSleeping(false);
+            setTarget(livingEntity);
+            setAggressive(true);
+        }
+        return hurt;
+    }
+
+    @Override
+    public void heal(float pHealAmount) {
+        super.heal(pHealAmount);
+        if(getHealth() > getMaxHealth()/3){
+            setLimping(false);
+            setSleeping(false);
+        }
     }
 
     @Nullable
@@ -249,5 +361,8 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
         ROAR,
         AGGRESSIVE
     }
-
+    public enum RallyState {
+        READY,
+        COOL_DOWN
+    }
 }

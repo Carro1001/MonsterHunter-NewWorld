@@ -12,7 +12,10 @@ import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.Brain;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.behavior.*;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.NearestVisibleLivingEntities;
@@ -127,4 +130,15 @@ public class IzuchiEntity extends Monster {
         DebugPackets.sendEntityBrain(this);
     }
 
+    public static AttributeSupplier.Builder prepareAttributes() {
+        return Mob.createLivingAttributes()
+                .add(Attributes.ATTACK_KNOCKBACK, 2.0)
+                .add(Attributes.ATTACK_DAMAGE, 3.0)
+                .add(Attributes.MAX_HEALTH, 10)
+                .add(Attributes.FOLLOW_RANGE, 15.0)
+                .add(Attributes.MOVEMENT_SPEED, 0.45)
+                .add(Attributes.ARMOR, 1.0D)
+                .add(Attributes.KNOCKBACK_RESISTANCE, (double)0.3F)
+                .add(Attributes.ARMOR_TOUGHNESS,1.0D);
+    }
 }

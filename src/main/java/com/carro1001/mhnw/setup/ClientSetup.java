@@ -2,6 +2,7 @@ package com.carro1001.mhnw.setup;
 
 import com.carro1001.mhnw.client.models.entities.BitterbugModel;
 import com.carro1001.mhnw.client.renderers.entities.*;
+import com.carro1001.mhnw.registration.ModRenderTypes;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.client.renderer.texture.TextureAtlas;
@@ -21,8 +22,7 @@ public class ClientSetup {
     public static ModelLayerLocation CUBE_MODEL = register("cube_fireball");
 
     public static void init(FMLClientSetupEvent event) {
-
-        //MinecraftForge.EVENT_BUS.register(ForgeHooksClient.ClientEvents.class);
+        ModRenderTypes.init();
     }
 
     @SubscribeEvent

@@ -55,7 +55,7 @@ public class ModLanguageProvider extends LanguageProvider {
         add(BONE_CHEST.get(), "Bone Chestplate" );
         add(BONE_LEGGINGS.get(), "Bone Leggings" );
         add(BONE_BOOTS.get(), "Bone Boots" );
-        add("itemGroup.mhnw", "MHNW" );
+        add("creativetab.all_items_tab", "MHNW" );
         add(APTONOTH_EGG_ITEM.get(), "Aptonoth Spawn Egg");
         add(APTONOTH.get(), "Aptonoth");
         add(BITTERBUG_ITEM.get(), "Bitter Bug");
