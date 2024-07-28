@@ -2,6 +2,7 @@ package com.carro1001.mhnw.entities;
 
 import com.carro1001.mhnw.entities.ai.MonsterAggressionStateGoal;
 import com.carro1001.mhnw.entities.interfaces.IGrows;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
@@ -47,10 +48,17 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
     private static final EntityDataAccessor<Boolean> RALLY = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.BOOLEAN);
     protected static final EntityDataAccessor<Integer> RALLY_STATE = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> SLEEPING = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<BlockPos> HOME_POS = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.BLOCK_POS);
 
     protected int rallyCooldownTime = 0;
 
     protected String name;
+
+    //TEMP FOR TESTING
+    @Override
+    public boolean removeWhenFarAway(double pDistanceToClosestPlayer) {
+        return true;
+    }
 
     public Monster(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
@@ -128,7 +136,6 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
         if (this.getAggressionState() == AggressionState.ROAR) {
             return animationState.setAndContinue(getRoarAnimation());
         }
-
         if (ShouldRally()) {
             return animationState.setAndContinue(getRallyAnimation());
         }
@@ -169,6 +176,7 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
         this.entityData.define(WALKING, false);
         this.entityData.define(SCALESSIGNED, false);
         this.entityData.define(MONSTER_SCALE, 1F);
+        this.entityData.define(HOME_POS, BlockPos.ZERO);
         this.entityData.define(AGGRESSION_STATE, AggressionState.PASSIVE.ordinal());
 
     }
@@ -184,6 +192,9 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
         pCompound.putBoolean("Rally",ShouldRally());
         pCompound.putBoolean("Sleeping",IsSleeping());
 
+        pCompound.putInt("HomePosX", this.getHomePos().getX());
+        pCompound.putInt("HomePosY", this.getHomePos().getY());
+        pCompound.putInt("HomePosZ", this.getHomePos().getZ());
     }
 
     @Override
@@ -201,6 +212,11 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
         setLimping(pCompound.getBoolean("Limping"));
         setRally(pCompound.getBoolean("Rally"));
         setSleeping(pCompound.getBoolean("Sleeping"));
+
+        int i = pCompound.getInt("HomePosX");
+        int j = pCompound.getInt("HomePosY");
+        int k = pCompound.getInt("HomePosZ");
+        this.setHomePos(new BlockPos(i, j, k));
     }
 
     public void GenerateScale(){
@@ -234,8 +250,8 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
         this.entityData.set(AGGRESSION_STATE, aggressionState.ordinal());
     }
 
-    public DragonEntity.AggressionState getAggressionState() {
-        return DragonEntity.AggressionState.values()[this.entityData.get(AGGRESSION_STATE)];
+    public Monster.AggressionState getAggressionState() {
+        return Monster.AggressionState.values()[this.entityData.get(AGGRESSION_STATE)];
     }
 
     protected RawAnimation getIdleAnimation(){
@@ -315,6 +331,14 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
         return RallyState.values()[this.entityData.get(RALLY_STATE)];
     }
 
+    public void setHomePos(BlockPos pHomePos) {
+        this.entityData.set(HOME_POS, pHomePos);
+    }
+
+    BlockPos getHomePos() {
+        return this.entityData.get(HOME_POS);
+    }
+
     @Override
     public boolean hurt(DamageSource pSource, float pAmount) {
         boolean hurt = super.hurt(pSource, pAmount);
@@ -342,6 +366,7 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
     @Override
     public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData, @Nullable CompoundTag pDataTag) {
         GenerateScale();
+        this.setHomePos(this.blockPosition());
         return super.finalizeSpawn(pLevel, pDifficulty, pReason, pSpawnData, pDataTag);
     }
 
