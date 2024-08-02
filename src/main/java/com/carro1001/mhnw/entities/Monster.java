@@ -35,7 +35,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.Random;
 
-public class Monster extends PathfinderMob implements GeoEntity, IGrows {
+public abstract class Monster extends PathfinderMob implements GeoEntity, IGrows {
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
@@ -57,7 +57,7 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
     //TEMP FOR TESTING
     @Override
     public boolean removeWhenFarAway(double pDistanceToClosestPlayer) {
-        return true;
+        return pDistanceToClosestPlayer > 64;
     }
 
     public Monster(EntityType<? extends PathfinderMob> entityType, Level level) {
@@ -380,6 +380,7 @@ public class Monster extends PathfinderMob implements GeoEntity, IGrows {
         d0 *= 64.0D * 4;
         return pDistance < d0 * d0;
     }
+
 
     public enum AggressionState {
         PASSIVE,

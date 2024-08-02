@@ -70,7 +70,7 @@ public class ModEntities {
             .build(MHNWReferences.IZUCHI));
     public static final RegistryObject<Item> IZUCHI_EGG_ITEM = ITEMS.register(MHNWReferences.IZUCHI, () -> new ForgeSpawnEggItem(IZUCHI, 0xCC6D5A, 0xD4D7D9, new Item.Properties()));
     public static final RegistryObject<EntityType<GreatIzuchiEntity>> GIZUCHI = ENTITIES.register(GREAT+MHNWReferences.IZUCHI, () -> EntityType.Builder.of(GreatIzuchiEntity::new, MobCategory.CREATURE)
-            .sized(1.4f, 3.2f)
+            .sized(1.4f, 2.8f)
             .clientTrackingRange(8)
             .setShouldReceiveVelocityUpdates(false)
             .build(GREAT+MHNWReferences.IZUCHI));
