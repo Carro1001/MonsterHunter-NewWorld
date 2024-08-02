@@ -9,13 +9,17 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.entity.PartEntity;
 
 import javax.annotation.Nullable;
 
-public class MonsterPart extends net.minecraftforge.entity.PartEntity<Monster> {
+public class MonsterPart extends PartEntity<Monster> {
     public final Monster parentMob;
     public final String name;
     private final EntityDimensions size;
+    public float scale = 1;
 
     public MonsterPart(Monster pParentMob, String pName, float pWidth, float pHeight) {
         super(pParentMob);
@@ -23,6 +27,13 @@ public class MonsterPart extends net.minecraftforge.entity.PartEntity<Monster> {
         this.refreshDimensions();
         this.parentMob = pParentMob;
         this.name = pName;
+        scale = parentMob.getMonsterScale();
+    }
+
+    @Override
+    public boolean canBeCollidedWith() {
+        Monster parent = this.getParent();
+        return parent != null && parent.canBeCollidedWith();
     }
 
     protected void defineSynchedData() {
@@ -41,7 +52,8 @@ public class MonsterPart extends net.minecraftforge.entity.PartEntity<Monster> {
      * Returns {@code true} if other Entities should be prevented from moving through this Entity.
      */
     public boolean isPickable() {
-        return true;
+        Monster parent = this.getParent();
+        return parent != null && parent.isPickable();
     }
 
     @Nullable
@@ -68,7 +80,24 @@ public class MonsterPart extends net.minecraftforge.entity.PartEntity<Monster> {
     }
 
     public EntityDimensions getDimensions(Pose pPose) {
-        return this.size;
+        Monster parent = this.getParent();
+        return parent == null ? size : size.scale(parent.getScale());
+    }
+
+    public AABB getBoundingBoxForCulling() {
+        return this.getBoundingBox().inflate(2.0D, 0.5D, 2.0D);
+    }
+
+    public void setPosCenteredY(Vec3 pos) {
+        this.setPos(pos.x, pos.y - this.getBbHeight() * 0.5F, pos.z);
+    }
+
+    public Vec3 centeredPosition() {
+        return this.position().add(0, this.getBbHeight() * 0.5F, 0);
+    }
+
+    public Vec3 centeredPosition(float partialTicks) {
+        return this.getPosition(partialTicks).add(0, this.getBbHeight() * 0.5F, 0);
     }
 
     public boolean shouldBeSaved() {

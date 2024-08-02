@@ -52,6 +52,8 @@ public abstract class Monster extends PathfinderMob implements GeoEntity, IGrows
 
     protected int rallyCooldownTime = 0;
 
+    protected float minScale = 0.6f, maxScale = 1f;
+
     protected String name;
 
     //TEMP FOR TESTING
@@ -221,7 +223,7 @@ public abstract class Monster extends PathfinderMob implements GeoEntity, IGrows
 
     public void GenerateScale(){
         if(!getScaleAssignedDir()){
-            setMonsterScale((float) new Random().nextDouble(0.5,1));
+            setMonsterScale((float) new Random().nextDouble(minScale, maxScale));
             setScaleAssignedDir(true);
         }
     }

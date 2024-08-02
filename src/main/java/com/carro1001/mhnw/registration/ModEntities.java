@@ -28,14 +28,14 @@ public class ModEntities {
     public static final RegistryObject<Item> APTONOTH_EGG_ITEM = ITEMS.register(MHNWReferences.APTONOTH, () -> new ForgeSpawnEggItem(APTONOTH, 0xB8B584, 0x664D29, new Item.Properties()));
 
     public static final RegistryObject<EntityType<RathianEntity>> RATHIAN = ENTITIES.register(MHNWReferences.RATHIAN, () -> EntityType.Builder.of(RathianEntity::new, MobCategory.CREATURE)
-            .sized(1.4f, 3.2f)
+            .sized(5.7f, 3.4f)
             .clientTrackingRange(16)
             .setShouldReceiveVelocityUpdates(false)
             .build(MHNWReferences.RATHIAN));
     public static final RegistryObject<Item> RATHIAN_EGG_ITEM = ITEMS.register(MHNWReferences.RATHIAN, () -> new ForgeSpawnEggItem(RATHIAN, 0x263920, 0x000000, new Item.Properties()));
 
     public static final RegistryObject<EntityType<RathalosEntity>> RATHALOS = ENTITIES.register(MHNWReferences.RATHALOS, () -> EntityType.Builder.of(RathalosEntity::new, MobCategory.CREATURE)
-            .sized(6.4f, 3.2f)
+            .sized(5.9f, 3.6f)
             .clientTrackingRange(128)
             .setShouldReceiveVelocityUpdates(true)
             .build(MHNWReferences.RATHALOS));

@@ -226,22 +226,11 @@ public abstract class DragonEntity extends Monster {
         }
     }
 
-    // Mimic Slime scaling
     @Override
     public void onSyncedDataUpdated(EntityDataAccessor<?> pKey) {
-/*        if (MONSTER_SCALE.equals(pKey)) {
-            this.refreshDimensions();
-            this.setYRot(this.yHeadRot);
-            this.yBodyRot = this.yHeadRot;
-            if (this.isInWater() && this.random.nextInt(20) == 0) {
-                this.doWaterSplashEffect();
-            }
-        }*/
-
         if (STATE.equals(pKey)) {
             setMovement();
         }
-
         super.onSyncedDataUpdated(pKey);
     }
 
@@ -267,20 +256,6 @@ public abstract class DragonEntity extends Monster {
     public int getFireballCooldownTime() {
         return fireballCooldownTime;
     }
-
-    public EntityDimensions getDimensions(Pose pPose) {
-        return super.getDimensions(pPose).scale(0.255F * this.getMonsterScale());
-    }
-
-/*    // Mimic Slime scaling
-    @Override
-    public void refreshDimensions() {
-        double d0 = this.getX();
-        double d1 = this.getY();
-        double d2 = this.getZ();
-        super.refreshDimensions();
-        this.setPos(d0, d1, d2);
-    }*/
 
     public enum State {
         FLYING("hover", "fly", "aerial_roar", "air_fireball"),

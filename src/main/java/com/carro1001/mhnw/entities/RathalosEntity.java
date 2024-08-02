@@ -11,6 +11,8 @@ public class RathalosEntity extends DragonEntity implements GeoEntity, IGrows {
 
     public RathalosEntity(EntityType<? extends PathfinderMob> pEntityType, Level pLevel) {
         super(pEntityType, pLevel, MHNWReferences.RATHALOS);
+        minScale = 0.6f;
+        maxScale = 1.1f;
     }
 
     @Override
