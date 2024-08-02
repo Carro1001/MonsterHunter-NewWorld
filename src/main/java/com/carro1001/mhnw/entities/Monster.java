@@ -59,13 +59,13 @@ public abstract class Monster extends PathfinderMob implements GeoEntity, IGrows
     public boolean removeWhenFarAway(double pDistanceToClosestPlayer) {
         return pDistanceToClosestPlayer > 64;
     }
-
     public Monster(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
         this.noCulling = true;
         if (!level.isClientSide) {
             this.setRallyState(RallyState.READY);
         }
+        fixupDimensions();
     }
 
     @Override
@@ -243,7 +243,29 @@ public abstract class Monster extends PathfinderMob implements GeoEntity, IGrows
         if(!getScaleAssignedDir()){
             this.entityData.set(MONSTER_SCALE, scale);
             this.setScaleAssignedDir(true);
+            this.reapplyPosition();
+            this.refreshDimensions();
         }
+    }
+
+    public void refreshDimensions() {
+        double d0 = this.getX();
+        double d1 = this.getY();
+        double d2 = this.getZ();
+        super.refreshDimensions();
+        this.setPos(d0, d1, d2);
+    }
+
+    public void onSyncedDataUpdated(EntityDataAccessor<?> pKey) {
+        if (MONSTER_SCALE.equals(pKey)) {
+            this.refreshDimensions();
+            this.setYRot(this.yHeadRot);
+            this.yBodyRot = this.yHeadRot;
+        }
+        super.onSyncedDataUpdated(pKey);
+    }
+    public EntityDimensions getDimensions(Pose pPose) {
+        return super.getDimensions(pPose).scale(getMonsterScale());
     }
 
     public void setAggressionState(DragonEntity.AggressionState aggressionState) {
@@ -276,11 +298,6 @@ public abstract class Monster extends PathfinderMob implements GeoEntity, IGrows
 
     protected RawAnimation getSleepAnimation() {
         return RawAnimation.begin().thenPlay("animation."+name+".sleep");
-    }
-
-    @Override
-    public float getScale() {
-        return getMonsterScale();
     }
 
     public void setWalking(boolean walking){

@@ -28,6 +28,11 @@ public class AptonothRenderer extends GeoEntityRenderer<AptonothEntity> {
         return RenderType.entityCutoutNoCull(getTextureLocation(animatable));
     }
 
+    public void render(AptonothEntity pEntity, float pEntityYaw, float pPartialTicks, PoseStack pPoseStack, MultiBufferSource pBuffer, int pPackedLight) {
+        this.shadowRadius = pEntity.getMonsterScale();
+        super.render(pEntity, pEntityYaw, pPartialTicks, pPoseStack, pBuffer, pPackedLight);
+    }
+
     @Override
     public void preRender(PoseStack poseStack, AptonothEntity animatable, BakedGeoModel model, MultiBufferSource bufferSource, VertexConsumer buffer, boolean isReRender, float partialTick, int packedLight, int packedOverlay, float red, float green, float blue, float alpha) {
         super.preRender(poseStack, animatable, model, bufferSource, buffer, isReRender, partialTick, packedLight, packedOverlay, red, green, blue, alpha);

@@ -20,7 +20,6 @@ import net.minecraft.world.entity.animal.horse.AbstractHorse;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
-import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.GeoEntity;
@@ -64,6 +63,7 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
         super(p_27557_, p_27558_);
         this.noCulling = true;
         this.reassessPanicGoals();
+        fixupDimensions();
 
     }
 
@@ -274,10 +274,6 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
     }
 
 //region Scale
-    @Override
-    public float getScale() {
-        return getMonsterScale();
-    }
 
     public void GenerateScale(){
         if(!getScaleAssignedDir()){
@@ -295,7 +291,6 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
 
     @Override
     public float getMonsterScale() {
-        GenerateScale();
         return this.entityData.get(MONSTER_SCALE);
     }
 
@@ -304,18 +299,35 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
         if(!getScaleAssignedDir()){
             this.entityData.set(MONSTER_SCALE, scale);
             this.setScaleAssignedDir(true);
+            this.reapplyPosition();
+            this.refreshDimensions();
         }
     }
+
+    public void refreshDimensions() {
+        double d0 = this.getX();
+        double d1 = this.getY();
+        double d2 = this.getZ();
+        super.refreshDimensions();
+        this.setPos(d0, d1, d2);
+    }
+
     protected float getStandingEyeHeight(Pose pPose, EntityDimensions pSize) {
-        float height = (2.2f)*getScale();
+        float height = (2.2f)*getMonsterScale();
         return this.isBaby() ? height * 0.95F : 1.5F;
     }
-    @Override
-    protected AABB makeBoundingBox() {
-        GenerateScale();
-        float f = (1.25f)*getScale();
-        float f1 = (2.2f)*getScale();
-        return new AABB(position().x - (double)f, position().y, position().z - (double)f, position().x + (double)f, position().y + (double)f1, position().z + (double)f);
+
+    public void onSyncedDataUpdated(EntityDataAccessor<?> pKey) {
+        if (MONSTER_SCALE.equals(pKey)) {
+            this.refreshDimensions();
+            this.setYRot(this.yHeadRot);
+            this.yBodyRot = this.yHeadRot;
+        }
+
+        super.onSyncedDataUpdated(pKey);
+    }
+    public EntityDimensions getDimensions(Pose pPose) {
+        return super.getDimensions(pPose).scale(getMonsterScale());
     }
 //
 //
