@@ -4,14 +4,12 @@ import com.carro1001.mhnw.entities.AptonothEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.world.entity.ai.util.DefaultRandomPos;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.phys.Vec3;
 
 import javax.annotation.Nullable;
-import java.util.EnumSet;
 
 public class AptonothPanicOrAttack extends MeleeAttackGoal {
 
@@ -29,7 +27,6 @@ public class AptonothPanicOrAttack extends MeleeAttackGoal {
         super(pMob, pSpeedModifier, true);
         this.aptonoth = pMob;
         this.speedModifier = pSpeedModifier;
-        this.setFlags(EnumSet.of(Goal.Flag.MOVE));
     }
 
     /**

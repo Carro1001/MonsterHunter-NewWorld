@@ -1,0 +1,92 @@
+{
+	"synched-assets": {
+		"models": [
+			"mhnw:geo/great_izuchi.geo.json"
+		],
+		"animations": [
+			"mhnw:animations/great_izuchi/animation.json"
+		],
+		"textures": [
+			"mhnw:textures/entity/great_izuchi.png"
+		]
+	},
+	"sync-with-model": true,
+	"part-update-steps": 3,
+	"trust-client": true,
+	"synched-part-update-steps": 1,
+	"_comment": "The hitbox will synch to the specified bone's pivot point. At best create a modified model with empty bones for the hitboxes and let that be enforced",
+	"synched-bones": [
+		"tail2"
+	],
+	"main-hitbox": {
+		"collidable": true,
+		"canReceiveDamage": false,
+		"size": [
+			1.6,
+			2.8
+		]
+	},
+	"parts": [
+		{
+			"name": "feet",
+			"collidable": true,
+			"can-receive-damage": 42,
+			"damage-modifier": 0.5,
+			"max-deviation-from-server": 0.125,
+			"box": {
+				"type": "multihitboxlib:aabb",
+				"size": [
+					0.75,
+					0.5
+				],
+				"position": [
+					0,
+					0,
+					0
+				],
+				"pivot-offset": [
+					0,
+					0,
+					0
+				]
+			}
+		},
+		{
+			"name": "body",
+			"collidable": true,
+			"can-receive-damage": true,
+			"damage-modifier": 1.0,
+			"box": {
+				"type": "multihitboxlib:aabb",
+				"size": [
+					0.5,
+					0.75
+				],
+				"position": [
+					0,
+					0.5,
+					0
+				]
+			}
+		},
+		{
+			"name": "head",
+			"collidable": true,
+			"can-receive-damage": true,
+			"max-deviation-from-server": 9.0,
+			"damage-modifier": 2.0,
+			"box": {
+				"type": "multihitboxlib:aabb",
+				"size": [
+					0.6,
+					0.6
+				],
+				"position": [
+					0,
+					1.2,
+					0
+				]
+			}
+		}
+	]
+}

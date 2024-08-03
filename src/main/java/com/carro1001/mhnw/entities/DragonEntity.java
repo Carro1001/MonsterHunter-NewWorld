@@ -12,7 +12,10 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.DifficultyInstance;
-import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.control.BodyRotationControl;
@@ -33,14 +36,14 @@ import software.bernie.geckolib.core.object.PlayState;
 
 import javax.annotation.Nullable;
 
-public abstract class DragonEntity extends Monster {
+public abstract class DragonEntity extends LargeMonster {
 
     protected int fireballCooldownTime = 0;
 
     protected static final EntityDataAccessor<Integer> STATE = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.INT);
     protected static final EntityDataAccessor<Integer> FIRE_BALL_CHARGE_STATE = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.INT);
 
-    public DragonEntity(EntityType<? extends PathfinderMob > pEntityType, Level pLevel, String name) {
+    public DragonEntity(EntityType<? extends LargeMonster > pEntityType, Level pLevel, String name) {
         super(pEntityType, pLevel);
         this.name = name;
         setMovement();
@@ -168,7 +171,7 @@ public abstract class DragonEntity extends Monster {
     }
 
 
-    protected PlayState poseBody(AnimationState<Monster> animationState) {
+    protected PlayState poseBody(AnimationState<LargeMonster> animationState) {
         if(getDeathState() >= 1){
             return animationState.setAndContinue(getDeathAnimation());
         }

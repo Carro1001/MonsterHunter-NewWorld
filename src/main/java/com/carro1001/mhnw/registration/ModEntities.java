@@ -69,12 +69,12 @@ public class ModEntities {
             .setShouldReceiveVelocityUpdates(false)
             .build(MHNWReferences.IZUCHI));
     public static final RegistryObject<Item> IZUCHI_EGG_ITEM = ITEMS.register(MHNWReferences.IZUCHI, () -> new ForgeSpawnEggItem(IZUCHI, 0xCC6D5A, 0xD4D7D9, new Item.Properties()));
-    public static final RegistryObject<EntityType<GreatIzuchiEntity>> GIZUCHI = ENTITIES.register(GREAT+MHNWReferences.IZUCHI, () -> EntityType.Builder.of(GreatIzuchiEntity::new, MobCategory.CREATURE)
+    public static final RegistryObject<EntityType<GreatIzuchiEntity>> GIZUCHI = ENTITIES.register(GREAT+"_"+MHNWReferences.IZUCHI, () -> EntityType.Builder.of(GreatIzuchiEntity::new, MobCategory.CREATURE)
             .sized(1.4f, 2.8f)
             .clientTrackingRange(8)
             .setShouldReceiveVelocityUpdates(false)
             .build(GREAT+MHNWReferences.IZUCHI));
-    public static final RegistryObject<Item> GIZUCHI_EGG_ITEM = ITEMS.register(GREAT+MHNWReferences.IZUCHI, () -> new ForgeSpawnEggItem(GIZUCHI, 0xCC6D5A, 0x3D4F95, new Item.Properties()));
+    public static final RegistryObject<Item> GIZUCHI_EGG_ITEM = ITEMS.register(GREAT+"_"+MHNWReferences.IZUCHI, () -> new ForgeSpawnEggItem(GIZUCHI, 0xCC6D5A, 0x3D4F95, new Item.Properties()));
 
     public static final RegistryObject<EntityType<ToadEntity>> TOAD = ENTITIES.register(MHNWReferences.TOAD, () -> EntityType.Builder.of(ToadEntity::new, MobCategory.CREATURE)
             .sized(0.4f, 0.2f)

@@ -19,6 +19,7 @@ import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
@@ -35,20 +36,23 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.Random;
 
-public abstract class Monster extends PathfinderMob implements GeoEntity, IGrows {
+public abstract class LargeMonster extends Monster implements GeoEntity, IGrows {
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
-    private static final EntityDataAccessor<Boolean> WALKING = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.BOOLEAN);
-    protected static final EntityDataAccessor<Boolean> SCALESSIGNED = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.BOOLEAN);
-    protected static final EntityDataAccessor<Float> MONSTER_SCALE = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.FLOAT);
-    protected static final EntityDataAccessor<Integer> AGGRESSION_STATE = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Integer> DEATH_STATE = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Boolean> LIMPING = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<Boolean> RALLY = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.BOOLEAN);
-    protected static final EntityDataAccessor<Integer> RALLY_STATE = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Boolean> SLEEPING = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<BlockPos> HOME_POS = SynchedEntityData.defineId(Monster.class, EntityDataSerializers.BLOCK_POS);
+    private static final EntityDataAccessor<Boolean> WALKING = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.BOOLEAN);
+    protected static final EntityDataAccessor<Boolean> SCALESSIGNED = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.BOOLEAN);
+    protected static final EntityDataAccessor<Float> MONSTER_SCALE = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.FLOAT);
+    protected static final EntityDataAccessor<Integer> AGGRESSION_STATE = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DEATH_STATE = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> LIMPING = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> RALLY = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.BOOLEAN);
+    protected static final EntityDataAccessor<Integer> RALLY_STATE = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> SLEEPING = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<BlockPos> HOME_POS = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.BLOCK_POS);
+
+    private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.BOOLEAN);
+    protected static final EntityDataAccessor<Integer> ATTACK_ANIMATION_ID = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.INT);
 
     protected int rallyCooldownTime = 0;
 
@@ -61,7 +65,7 @@ public abstract class Monster extends PathfinderMob implements GeoEntity, IGrows
     public boolean removeWhenFarAway(double pDistanceToClosestPlayer) {
         return pDistanceToClosestPlayer > 64;
     }
-    public Monster(EntityType<? extends PathfinderMob> entityType, Level level) {
+    public LargeMonster(EntityType<? extends Monster> entityType, Level level) {
         super(entityType, level);
         this.noCulling = true;
         if (!level.isClientSide) {
@@ -131,7 +135,7 @@ public abstract class Monster extends PathfinderMob implements GeoEntity, IGrows
         controllers.add(new AnimationController<>(this, "main_controller", 16, this::poseBody));
     }
 
-    protected PlayState poseBody(AnimationState<Monster> animationState) {
+    protected PlayState poseBody(AnimationState<LargeMonster> animationState) {
         if(getDeathState() >= 1){
             return animationState.setAndContinue(getDeathAnimation());
         }
@@ -165,6 +169,7 @@ public abstract class Monster extends PathfinderMob implements GeoEntity, IGrows
                 .add(Attributes.MOVEMENT_SPEED, 0.45)
                 .add(Attributes.ARMOR, 1.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, (double)0.6F)
+                .add(Attributes.ATTACK_KNOCKBACK, (double)1F)
                 .add(Attributes.ARMOR_TOUGHNESS,1.0D);
     }
     @Override
@@ -177,6 +182,8 @@ public abstract class Monster extends PathfinderMob implements GeoEntity, IGrows
         this.entityData.define(LIMPING, false);
         this.entityData.define(WALKING, false);
         this.entityData.define(SCALESSIGNED, false);
+        this.entityData.define(ATTACKING, false);
+        this.entityData.define(ATTACK_ANIMATION_ID, 0);
         this.entityData.define(MONSTER_SCALE, 1F);
         this.entityData.define(HOME_POS, BlockPos.ZERO);
         this.entityData.define(AGGRESSION_STATE, AggressionState.PASSIVE.ordinal());
@@ -190,6 +197,8 @@ public abstract class Monster extends PathfinderMob implements GeoEntity, IGrows
         pCompound.putInt("mon_aggro_state", getAggressionState().ordinal());
         pCompound.putBoolean("Walking", IsWalking());
         pCompound.putBoolean("Limping", IsLimpining());
+        pCompound.putBoolean("Attacking", Attacking());
+        pCompound.putInt("AttackID", this.GetAttackingID());
         pCompound.putInt("DeathState", this.getDeathState());
         pCompound.putBoolean("Rally",ShouldRally());
         pCompound.putBoolean("Sleeping",IsSleeping());
@@ -214,6 +223,9 @@ public abstract class Monster extends PathfinderMob implements GeoEntity, IGrows
         setLimping(pCompound.getBoolean("Limping"));
         setRally(pCompound.getBoolean("Rally"));
         setSleeping(pCompound.getBoolean("Sleeping"));
+
+        setAttacking(pCompound.getBoolean("Attacking"));
+        setAttackingID(pCompound.getInt("AttackID"));
 
         int i = pCompound.getInt("HomePosX");
         int j = pCompound.getInt("HomePosY");
@@ -274,8 +286,8 @@ public abstract class Monster extends PathfinderMob implements GeoEntity, IGrows
         this.entityData.set(AGGRESSION_STATE, aggressionState.ordinal());
     }
 
-    public Monster.AggressionState getAggressionState() {
-        return Monster.AggressionState.values()[this.entityData.get(AGGRESSION_STATE)];
+    public LargeMonster.AggressionState getAggressionState() {
+        return LargeMonster.AggressionState.values()[this.entityData.get(AGGRESSION_STATE)];
     }
 
     protected RawAnimation getIdleAnimation(){
@@ -358,6 +370,21 @@ public abstract class Monster extends PathfinderMob implements GeoEntity, IGrows
         return this.entityData.get(HOME_POS);
     }
 
+    public void setAttacking(boolean attacking){
+        this.entityData.set(ATTACKING, attacking);
+    }
+
+    public boolean Attacking(){
+        return this.entityData.get(ATTACKING);
+    }
+
+    public void setAttackingID(int attackingID){
+        this.entityData.set(ATTACK_ANIMATION_ID, attackingID);
+    }
+
+    public int GetAttackingID(){
+        return this.entityData.get(ATTACK_ANIMATION_ID);
+    }
     @Override
     public boolean hurt(DamageSource pSource, float pAmount) {
         boolean hurt = super.hurt(pSource, pAmount);

@@ -3,13 +3,12 @@ package com.carro1001.mhnw.entities;
 import com.carro1001.mhnw.entities.interfaces.IGrows;
 import com.carro1001.mhnw.utils.MHNWReferences;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.level.Level;
 import software.bernie.geckolib.animatable.GeoEntity;
 
 public class RathalosEntity extends DragonEntity implements GeoEntity, IGrows {
 
-    public RathalosEntity(EntityType<? extends PathfinderMob> pEntityType, Level pLevel) {
+    public RathalosEntity(EntityType<? extends LargeMonster> pEntityType, Level pLevel) {
         super(pEntityType, pLevel, MHNWReferences.RATHALOS);
         minScale = 0.6f;
         maxScale = 1.1f;

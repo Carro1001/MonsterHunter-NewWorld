@@ -1,6 +1,6 @@
 package com.carro1001.mhnw.entities.ai;
 
-import com.carro1001.mhnw.entities.Monster;
+import com.carro1001.mhnw.entities.LargeMonster;
 import net.minecraft.world.entity.ai.behavior.BehaviorUtils;
 import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
 import net.minecraft.world.phys.Vec3;
@@ -9,33 +9,33 @@ import javax.annotation.Nullable;
 
 public class MonsterRandomSwim extends RandomStrollGoal {
 
-    Monster monster;
-     public MonsterRandomSwim(Monster monster, double p_25754_, int p_25755_) {
-        super(monster, p_25754_, p_25755_);
-        this.monster = monster;
+    LargeMonster largeMonster;
+     public MonsterRandomSwim(LargeMonster largeMonster, double p_25754_, int p_25755_) {
+        super(largeMonster, p_25754_, p_25755_);
+        this.largeMonster = largeMonster;
     }
 
     @Override
     public boolean canUse() {
-        return super.canUse() && monster.isInWater();
+        return super.canUse() && largeMonster.isInWater();
     }
 
     @Override
     public boolean canContinueToUse() {
-        return super.canContinueToUse() && monster.isInWater();
+        return super.canContinueToUse() && largeMonster.isInWater();
     }
 
     @Override
     public void start() {
         super.start();
-        monster.setWalking(true);
-        monster.setSwimming(true);
+        largeMonster.setWalking(true);
+        largeMonster.setSwimming(true);
     }
 
     @Override
     public void stop() {
-        monster.setWalking(false);
-        monster.setSwimming(false);
+        largeMonster.setWalking(false);
+        largeMonster.setSwimming(false);
         super.stop();
     }
 

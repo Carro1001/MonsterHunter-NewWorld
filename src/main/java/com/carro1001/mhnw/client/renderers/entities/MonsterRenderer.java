@@ -1,6 +1,6 @@
 package com.carro1001.mhnw.client.renderers.entities;
 
-import com.carro1001.mhnw.entities.Monster;
+import com.carro1001.mhnw.entities.LargeMonster;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -15,33 +15,32 @@ import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
 import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 
-
-public class MonsterRenderer extends GeoEntityRenderer<Monster> {
+public class MonsterRenderer extends GeoEntityRenderer<LargeMonster> {
     private final ResourceLocation RESOURCE_LOCATION;
 
-    public MonsterRenderer(EntityRendererProvider.Context context, GeoModel<Monster> model, String name) {
+    public MonsterRenderer(EntityRendererProvider.Context context, GeoModel<LargeMonster> model, String name) {
         super(context, model);
         RESOURCE_LOCATION = new ResourceLocation(MODID, "textures/entity/"+ name +".png");
     }
 
     @Override
-    public RenderType getRenderType(Monster animatable, ResourceLocation texture, @Nullable MultiBufferSource bufferSource, float partialTick) {
+    public RenderType getRenderType(LargeMonster animatable, ResourceLocation texture, @Nullable MultiBufferSource bufferSource, float partialTick) {
         return RenderType.entityCutoutNoCull(getTextureLocation(animatable));
     }
 
-    public void render(Monster pEntity, float pEntityYaw, float pPartialTicks, PoseStack pPoseStack, MultiBufferSource pBuffer, int pPackedLight) {
+    public void render(LargeMonster pEntity, float pEntityYaw, float pPartialTicks, PoseStack pPoseStack, MultiBufferSource pBuffer, int pPackedLight) {
         this.shadowRadius = pEntity.getMonsterScale();
         super.render(pEntity, pEntityYaw, pPartialTicks, pPoseStack, pBuffer, pPackedLight);
     }
 
     @Override
-    public void preRender(PoseStack poseStack, Monster animatable, BakedGeoModel model, MultiBufferSource bufferSource, VertexConsumer buffer, boolean isReRender, float partialTick, int packedLight, int packedOverlay, float red, float green, float blue, float alpha) {
+    public void preRender(PoseStack poseStack, LargeMonster animatable, BakedGeoModel model, MultiBufferSource bufferSource, VertexConsumer buffer, boolean isReRender, float partialTick, int packedLight, int packedOverlay, float red, float green, float blue, float alpha) {
         super.preRender(poseStack, animatable, model, bufferSource, buffer, isReRender, partialTick, packedLight, packedOverlay, red, green, blue, alpha);
         poseStack.scale(animatable.getMonsterScale(),animatable.getMonsterScale(),animatable.getMonsterScale());
     }
 
     @Override
-    public @NotNull ResourceLocation getTextureLocation(@NotNull Monster pEntity) {
+    public @NotNull ResourceLocation getTextureLocation(@NotNull LargeMonster pEntity) {
         return RESOURCE_LOCATION;
     }
 }

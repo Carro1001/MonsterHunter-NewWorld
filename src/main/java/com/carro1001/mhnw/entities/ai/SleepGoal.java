@@ -1,47 +1,54 @@
 package com.carro1001.mhnw.entities.ai;
 
-import com.carro1001.mhnw.entities.Monster;
+import com.carro1001.mhnw.entities.LargeMonster;
 import net.minecraft.world.entity.ai.goal.Goal;
 
 public class SleepGoal extends Goal {
 
-    Monster monster;
+    LargeMonster largeMonster;
     //3 sec anim
     int animTicks = 0;
     int maxTicks = 20*10;
 
-    public SleepGoal (Monster monster){
-        this.monster = monster;
+    public SleepGoal (LargeMonster largeMonster){
+        this.largeMonster = largeMonster;
     }
 
     @Override
     public boolean canUse() {
-        return monster.IsLimpining() && monster.getRallyState() == Monster.RallyState.COOL_DOWN;
+        return largeMonster.IsLimpining() && !largeMonster.Attacking() && largeMonster.getRallyState() == LargeMonster.RallyState.COOL_DOWN;
+    }
+
+    @Override
+    public boolean requiresUpdateEveryTick() {
+        return true;
     }
 
     @Override
     public void start() {
         super.start();
-        monster.setSleeping(true);
+        largeMonster.setSleeping(true);
     }
 
     @Override
     public void stop() {
         super.stop();
-        monster.setSleeping(false);
+        largeMonster.setSleeping(false);
     }
 
     @Override
     public boolean canContinueToUse() {
-        return animTicks < maxTicks || monster.IsLimpining();
+        return animTicks < maxTicks || largeMonster.IsLimpining();
     }
 
     @Override
     public void tick() {
         super.tick();
-        animTicks++;
-        if(animTicks%2 == 0){
-            monster.heal(0.25f);
+        if(!largeMonster.level().isClientSide) {
+            animTicks++;
+            if (animTicks % 2 == 0) {
+                largeMonster.heal(0.25f);
+            }
         }
     }
 }

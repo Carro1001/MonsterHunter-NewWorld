@@ -28,11 +28,11 @@ import java.util.Optional;
 
 import static com.carro1001.mhnw.utils.MHNWReferences.IZUCHI;
 
-public class IzuchiEntity extends Monster {
+public class IzuchiEntity extends LargeMonster {
     protected static final ImmutableList<? extends SensorType<? extends Sensor<? super IzuchiEntity>>> SENSOR_TYPES = ImmutableList.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS);
     protected static final ImmutableList<? extends MemoryModuleType<?>> MEMORY_TYPES = ImmutableList.of(MemoryModuleType.NEAREST_LIVING_ENTITIES, MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES, MemoryModuleType.NEAREST_VISIBLE_PLAYER, MemoryModuleType.NEAREST_VISIBLE_ATTACKABLE_PLAYER, MemoryModuleType.LOOK_TARGET, MemoryModuleType.WALK_TARGET, MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE, MemoryModuleType.PATH, MemoryModuleType.ATTACK_TARGET, MemoryModuleType.ATTACK_COOLING_DOWN);
 
-    public IzuchiEntity(EntityType<? extends Monster> p_27557_, Level p_27558_) {
+    public IzuchiEntity(EntityType<? extends LargeMonster> p_27557_, Level p_27558_) {
         super(p_27557_, p_27558_);
         this.name = IZUCHI;
     }

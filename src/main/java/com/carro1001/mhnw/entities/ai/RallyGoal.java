@@ -1,8 +1,7 @@
 package com.carro1001.mhnw.entities.ai;
 
 import com.carro1001.mhnw.entities.BlangongaEntity;
-import com.carro1001.mhnw.entities.GreatIzuchiEntity;
-import com.carro1001.mhnw.entities.Monster;
+import com.carro1001.mhnw.entities.LargeMonster;
 import com.carro1001.mhnw.registration.ModEntities;
 import net.minecraft.core.Position;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -12,18 +11,18 @@ import net.minecraft.world.phys.Vec3;
 
 public class RallyGoal extends Goal {
 
-    Monster summoner;
+    LargeMonster summoner;
     //3 sec anim
     int animTicks = 0;
     int maxTicks = 20*4;
 
-    public RallyGoal(Monster monster){
-        summoner = monster;
+    public RallyGoal(LargeMonster largeMonster){
+        summoner = largeMonster;
     }
 
     @Override
     public boolean canUse() {
-        return summoner.IsLimpining() && summoner.getRallyState() == Monster.RallyState.READY;
+        return summoner.IsLimpining() && summoner.getRallyState() == LargeMonster.RallyState.READY;
     }
 
     @Override
@@ -37,9 +36,14 @@ public class RallyGoal extends Goal {
     public void stop() {
         super.stop();
         summoner.setRally(false);
-        summoner.setRallyState(Monster.RallyState.COOL_DOWN);
+        summoner.setRallyState(LargeMonster.RallyState.COOL_DOWN);
     }
 
+    @Override
+    public boolean requiresUpdateEveryTick() {
+        return true;
+    }
+    
     @Override
     public boolean canContinueToUse() {
         return animTicks <= maxTicks;
@@ -48,18 +52,20 @@ public class RallyGoal extends Goal {
     @Override
     public void tick() {
         super.tick();
-        animTicks++;
-        if(animTicks == maxTicks/2){
-            summonGang(summoner.level(), summoner.position());
+        if(!summoner.level().isClientSide) {
+            animTicks++;
+            if (animTicks == maxTicks / 2) {
+                summonGang(summoner.level(), summoner.position());
+            }
         }
     }
 
     public void summonGang(Level level, Position position){
-        Monster summon = null;
+        LargeMonster summon = null;
         for (int i = 0; i < summoner.getRandom().nextInt(2,6); i++) {
-            if(summoner instanceof GreatIzuchiEntity){
+/*            if(summoner instanceof GreatIzuchiEntity){
                 summon = ModEntities.IZUCHI.get().create(level);
-            }
+            }*/
             if(summoner instanceof BlangongaEntity){
                 summon = ModEntities.BLANGO.get().create(level);
             }

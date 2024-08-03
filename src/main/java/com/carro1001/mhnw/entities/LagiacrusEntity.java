@@ -25,9 +25,9 @@ import software.bernie.geckolib.core.animation.RawAnimation;
 
 import static com.carro1001.mhnw.utils.MHNWReferences.LAGIACRUZ;
 
-public class LagiacrusEntity extends Monster {
+public class LagiacrusEntity extends LargeMonster {
 
-    public LagiacrusEntity(EntityType<? extends Monster> p_27557_, Level p_27558_) {
+    public LagiacrusEntity(EntityType<? extends LargeMonster> p_27557_, Level p_27558_) {
         super(p_27557_, p_27558_);
         this.setPathfindingMalus(BlockPathTypes.WATER, 0.0F);
         this.moveControl = new SmoothSwimmingMoveControl(this, 85, 10, 0.1F, 0.5F, false);

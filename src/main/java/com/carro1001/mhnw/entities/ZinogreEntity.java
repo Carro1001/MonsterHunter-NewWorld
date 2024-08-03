@@ -5,8 +5,8 @@ import net.minecraft.world.level.Level;
 
 import static com.carro1001.mhnw.utils.MHNWReferences.ZINOGRE;
 
-public class ZinogreEntity extends Monster {
-    public ZinogreEntity(EntityType<? extends Monster> p_27557_, Level p_27558_) {
+public class ZinogreEntity extends LargeMonster {
+    public ZinogreEntity(EntityType<? extends LargeMonster> p_27557_, Level p_27558_) {
         super(p_27557_, p_27558_);
         this.name = ZINOGRE;
 
