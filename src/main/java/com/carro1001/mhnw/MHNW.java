@@ -25,7 +25,6 @@ import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 public class MHNW {
 
     public static final Logger LOGGER = LogUtils.getLogger();
-    public static boolean DEBUGLOG = false;
 
     public MHNW(){
         ModConfig.register();
@@ -48,10 +47,7 @@ public class MHNW {
     }
 
     public static void debugLog(String log){
-        //too lazy to figure out how to locally turn them off whem in debug xD
-        if(DEBUGLOG){
-            LOGGER.debug(log);
-        }
+        LOGGER.debug(log);
     }
 
     private void addCreative(BuildCreativeModeTabContentsEvent event) {

@@ -9,7 +9,7 @@ import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 public class MonsterModel extends DefaultedEntityGeoModel<LargeMonster> {
     String name;
     public MonsterModel(String name) {
-        super(new ResourceLocation(MODID, name), true);
+        super(new ResourceLocation(MODID, name), false);
         this.name = name;
     }
 

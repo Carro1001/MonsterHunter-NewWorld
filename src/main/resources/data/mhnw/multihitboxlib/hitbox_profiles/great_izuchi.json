@@ -28,7 +28,35 @@
 	},
 	"parts": [
 		{
-			"name": "feet",
+			"name":"tailbase",
+			"collidable": true,
+		    "can-receive-damage": 42,
+		    "damage-modifier": 0.5,
+			"box": {
+				"type": "multihitboxlib:aabb",
+				"size": [
+					0.5,
+					0.5
+				],
+				"position":[-0.5,1.9,1.3]
+			}
+		},
+		{
+			"name":"tailMid",
+			"collidable": true,
+			"can-receive-damage": 42,
+			"damage-modifier": 0.5,
+			"box": {
+				"type": "multihitboxlib:aabb",
+				"size": [
+					0.5,
+					0.5
+				],
+				"position":[-0.5,1.9,2.6]
+			}
+		},
+		{
+			"name":"tailEnd",
 			"collidable": true,
 			"can-receive-damage": 42,
 			"damage-modifier": 0.5,
@@ -36,56 +64,25 @@
 			"box": {
 				"type": "multihitboxlib:aabb",
 				"size": [
-					0.75,
+					0.5,
 					0.5
 				],
-				"position": [
-					0,
-					0,
-					0
-				],
-				"pivot-offset": [
-					0,
-					0,
-					0
-				]
+				"position":[-0.5,1.9,3.8]
 			}
 		},
 		{
-			"name": "body",
+			"name":"sharp",
 			"collidable": true,
-			"can-receive-damage": true,
-			"damage-modifier": 1.0,
+			"can-receive-damage": 42,
+			"damage-modifier": 0.5,
+			"max-deviation-from-server": 0.125,
 			"box": {
 				"type": "multihitboxlib:aabb",
 				"size": [
 					0.5,
-					0.75
+					0.5
 				],
-				"position": [
-					0,
-					0.5,
-					0
-				]
-			}
-		},
-		{
-			"name": "head",
-			"collidable": true,
-			"can-receive-damage": true,
-			"max-deviation-from-server": 9.0,
-			"damage-modifier": 2.0,
-			"box": {
-				"type": "multihitboxlib:aabb",
-				"size": [
-					0.6,
-					0.6
-				],
-				"position": [
-					0,
-					1.2,
-					0
-				]
+				"position":[-0.5,0.8,3.8]
 			}
 		}
 	]

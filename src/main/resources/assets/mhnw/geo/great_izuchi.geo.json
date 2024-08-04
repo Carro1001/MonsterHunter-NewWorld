@@ -7,8 +7,8 @@
 				"texture_width": 256,
 				"texture_height": 256,
 				"visible_bounds_width": 12,
-				"visible_bounds_height": 4.5,
-				"visible_bounds_offset": [0, 1.75, 0]
+				"visible_bounds_height": 5.5,
+				"visible_bounds_offset": [0, 2.25, 0]
 			},
 			"bones": [
 				{
@@ -142,8 +142,13 @@
 					]
 				},
 				{
-					"name": "head",
+					"name": "head_track",
 					"parent": "neck",
+					"pivot": [0, 50, -28.5]
+				},
+				{
+					"name": "head",
+					"parent": "head_track",
 					"pivot": [0, 50, -28.5],
 					"rotation": [-22.78, 0, 0],
 					"cubes": [

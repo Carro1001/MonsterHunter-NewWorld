@@ -71,6 +71,7 @@ public class GreatIzuchiEntity extends LargeMonster {
                 .add(Attributes.ARMOR, 1.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, (double)0.6F)
                 .add(Attributes.ATTACK_KNOCKBACK, (double)1F)
+                .add(Attributes.ATTACK_DAMAGE , (double)1F)
                 .add(Attributes.ARMOR_TOUGHNESS,1.0D);
     }
 

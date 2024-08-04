@@ -1,24 +1,25 @@
 modLoader="javafml"
 loaderVersion="[43,)"
 license="All Rights Reserved"
-issueTrackerURL="https://github.com/Carro1001/MonsterHunter-NewWorld/issues" #optional
-logoFile=""
-credits="Life" #optional
-authors="carro1001, AlexVR"
-[[mods]] #mandatory
-modId="mhnw" #mandatory
-version="1" #mandatory
-displayName="Monster Hunter: New World" #mandatory
+issueTrackerURL="https://github.com/Carro1001/MonsterHunter-NewWorld/issues"
+[[mods]]
+modId="mhnw"
+version="0.1.0"
+displayName="Monster Hunter: New World"
+displayURL="https://github.com/Carro1001/MonsterHunter-NewWorld"
+logoFile="logo.png"
+credits="Capcom, and the amazing artists that did the models for this mod. MultiHitBoxLib's authors: DerToaster, Meme Man, and AzureDoom. CorgiTaco('Ur mom') as a arms for hire."
+authors="Carro1001, AlexVR, Spinomania, Spooky_Indominus"
 description='''
 A Monster Hunter themed mod for Minecraft
 '''
 
-[[dependencies.mhnw]] #optional
-modId = "forge" #mandatory
-mandatory = true #mandatory
-versionRange = "[46,)" #mandatory
-ordering = "NONE" # The order that this dependency should load in relation to your mod, required to be either 'BEFORE' or 'AFTER' if the dependency is not mandatory
-side = "BOTH" # Side this dependency is applied on - 'BOTH', 'CLIENT' or 'SERVER'
+[[dependencies.mhnw]]
+modId = "forge"
+mandatory = true
+versionRange = "[46,)"
+ordering = "NONE"
+side = "BOTH"
 
 [[dependencies.mhnw]]
 modId = "minecraft"
@@ -31,5 +32,12 @@ side = "BOTH"
 modId = "geckolib"
 mandatory = true
 versionRange = "[4.4,)"
+ordering = "BEFORE"
+side = "BOTH"
+
+[[dependencies.mhnw]]
+modId = "multihitboxlib"
+mandatory = true
+versionRange = "[1.6.0,)"
 ordering = "BEFORE"
 side = "BOTH"

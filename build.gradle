@@ -8,8 +8,6 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '7.1.2'
 }
 
-
-
 base {
     archivesName = mod_id
 }
@@ -74,7 +72,7 @@ minecraft {
             // Recommended logging level for the console
             // You can set various levels here.
             // Please read: https://stackoverflow.com/questions/2031163/when-to-use-the-different-log-levels
-            property 'forge.logging.console.level', 'debug'
+            property 'forge.logging.console.level', 'info'
 
             mods {
                 "${mod_id}" {
@@ -137,7 +135,14 @@ repositories {
         metadataSources { artifact() }
     }
     maven { url 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/' }
-
+    maven {
+        name = "BlameJared maven"
+        url = "https://maven.blamejared.com/"
+    }
+    maven {
+        name = "CurseMaven Maven"
+        url = "https://www.cursemaven.com"
+    }
     // If you have mod jar dependencies in ./libs, you can declare them as a repository like so.
     // See https://docs.gradle.org/current/userguide/declaring_repositories.html#sub:flat_dir_resolver
     // flatDir {
@@ -158,6 +163,12 @@ dependencies {
     implementation("com.eliotlash.mclib:mclib:20")
     implementation fg.deobf("dertoaster98:multihitboxlib:${minecraft_version}-${multihitboox_version}@jar")
 
+    compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-common-api:${jei_version}")
+    compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-forge-api:${jei_version}")
+
+    runtimeOnly fg.deobf("mezz.jei:jei-${minecraft_version}-forge:${jei_version}")
+
+    implementation fg.deobf("curse.maven:jade-324717:${jade_version}")
     // Example mod dependency with JEI - using fg.deobf() ensures the dependency is remapped to your development mappings
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
     // compileOnly fg.deobf("mezz.jei:jei-${mc_version}-common-api:${jei_version}")
