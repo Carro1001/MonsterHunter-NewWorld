@@ -408,7 +408,7 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
         return this.entityData.get(RAGE_BUILDUP);
     }
     public void setRaging(boolean raging){
-        this.entityData.set(RAGE, raging);
+        this.entityData.set(RAGE, shouldRage && raging);
     }
 
     public boolean isRaging(){
@@ -416,7 +416,7 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
     }
 
     public void setRageBuildUp(float rageBuildUp){
-        if(!isRaging() && rageBuildUp >= maxRageBuildUp){
+        if(shouldRage && !isRaging() && rageBuildUp >= maxRageBuildUp){
             setRaging(true);
             rageBuildUp *= 2;
             MHNW.debugLog(name + ": setRaging(true) for " + rageBuildUp +  "ticks");
@@ -446,7 +446,7 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
             setAggressive(true);
             MHNW.debugLog(name + ": hurt() waking up");
         }
-        if(!isRaging() && hurt){
+        if(shouldRage && !isRaging() && hurt){
             tickRageBuildUp(pAmount);
         }
         return hurt;

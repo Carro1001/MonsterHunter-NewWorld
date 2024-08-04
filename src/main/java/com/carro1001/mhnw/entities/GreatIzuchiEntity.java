@@ -28,6 +28,7 @@ public class GreatIzuchiEntity extends LargeMonster {
     public GreatIzuchiEntity(EntityType<? extends LargeMonster> p_27557_, Level p_27558_) {
         super(p_27557_, p_27558_);
         this.name = GREAT + "_" + IZUCHI;
+        shouldRage = true;
     }
 
     protected PlayState poseBody(AnimationState<LargeMonster> animationState) {
