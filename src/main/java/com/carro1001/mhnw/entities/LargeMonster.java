@@ -47,7 +47,6 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
     protected static final EntityDataAccessor<Integer> AGGRESSION_STATE = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> DEATH_STATE = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> LIMPING = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<Boolean> RALLY = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.BOOLEAN);
     protected static final EntityDataAccessor<Integer> RALLY_STATE = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> SLEEPING = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<BlockPos> HOME_POS = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.BLOCK_POS);
