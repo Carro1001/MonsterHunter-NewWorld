@@ -6,6 +6,7 @@ import com.carro1001.mhnw.registration.ModEntities;
 import com.carro1001.mhnw.setup.ModConfig;
 import com.carro1001.mhnw.utils.MHNWReferences;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -50,6 +51,7 @@ public class ToadEntity extends PathfinderMob implements Bucketable, GeoEntity {
     private static final EntityDataAccessor<Integer> TYPE = SynchedEntityData.defineId(ToadEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> TYPEASSIGNED = SynchedEntityData.defineId(ToadEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> FROM_BUCKET = SynchedEntityData.defineId(ToadEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> WALKING = SynchedEntityData.defineId(ToadEntity.class, EntityDataSerializers.BOOLEAN);
 
     private static final EntityDataAccessor<Integer> DATA_SWELL_DIR = SynchedEntityData.defineId(ToadEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> DATA_IS_IGNITED = SynchedEntityData.defineId(ToadEntity.class, EntityDataSerializers.BOOLEAN);
@@ -64,30 +66,13 @@ public class ToadEntity extends PathfinderMob implements Bucketable, GeoEntity {
         super(p_27557_, p_27558_);
     }
 
-    public static String getVariantName(int i) {
-        switch (i) {
-            case 0 -> {
-                return MHNWReferences.POISON+MHNWReferences.TOAD;
-            }
-            case 1 -> {
-                return MHNWReferences.SLEEP+MHNWReferences.TOAD;
-            }
-            case 2 -> {
-                return MHNWReferences.PARALIZE+MHNWReferences.TOAD;
-            }
-            default -> {
-                return MHNWReferences.BLAST+MHNWReferences.TOAD;
-            }
-        }
-    }
-
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(1, new FloatGoal(this));
         this.goalSelector.addGoal(2, new ToadSwellGoal(this));
         this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 2.0F));
         this.goalSelector.addGoal(4, new RandomLookAroundGoal(this));
-        this.goalSelector.addGoal(3, new ToadWalkGoal(this,0.5f));
+        this.goalSelector.addGoal(3, new ToadWalkGoal(this,0.7D));
 
         super.registerGoals();
     }
@@ -99,6 +84,7 @@ public class ToadEntity extends PathfinderMob implements Bucketable, GeoEntity {
         this.entityData.define(FROM_BUCKET, false);
         this.entityData.define(DATA_SWELL_DIR, -1);
         this.entityData.define(DATA_IS_IGNITED, false);
+        this.entityData.define(WALKING, false);
 
     }
     public void addAdditionalSaveData(@NotNull CompoundTag pCompound) {
@@ -112,18 +98,6 @@ public class ToadEntity extends PathfinderMob implements Bucketable, GeoEntity {
         pCompound.putInt("type", getTypeDir());
         pCompound.putBoolean("FromBucket", this.fromBucket());
 
-    }
-    public boolean isIgnited() {
-        return this.entityData.get(DATA_IS_IGNITED);
-    }
-    public boolean getTypeAssignedDir() {
-        return this.entityData.get(TYPEASSIGNED);
-    }
-    public int getTypeDir() {
-        return this.entityData.get(TYPE);
-    }
-    public void setTypeAssignedDir(boolean pState) {
-        this.entityData.set(TYPEASSIGNED, pState);
     }
     public void readAdditionalSaveData(@NotNull CompoundTag pCompound) {
         super.readAdditionalSaveData(pCompound);
@@ -141,33 +115,7 @@ public class ToadEntity extends PathfinderMob implements Bucketable, GeoEntity {
         this.setTypeDir(pCompound.getInt("type"));
 
     }
-    public void setTypeDir(int pState) {
-        if(!getTypeAssignedDir()){
-            this.entityData.set(TYPE, pState);
-            this.setTypeAssignedDir(true);
-        }
-    }
-    public void setType() {
 
-        while (!getTypeAssignedDir()){
-            Random random = new Random();
-            float chance = random.nextFloat();
-            switch(random.nextInt(4)){
-                case 0:
-                    if(chance < ModConfig.POISON_CHANCE.get())setTypeDir(0);
-                    break;
-                case 1:
-                    if(chance < ModConfig.SLEEP_CHANCE.get())setTypeDir(1);
-                    break;
-                case 2:
-                    if(chance < ModConfig.PARA_CHANCE.get())setTypeDir(2);
-                    break;
-                case 3:
-                    if(chance < ModConfig.BLAST_CHANCE.get())setTypeDir(3);
-                    break;
-            }
-        }
-    }
     @Override
     public boolean fromBucket() {
         return this.entityData.get(FROM_BUCKET);
@@ -225,6 +173,7 @@ public class ToadEntity extends PathfinderMob implements Bucketable, GeoEntity {
             this.level().playSound(p_149155_, this.getX(), this.getY(), this.getZ(), SoundEvents.FLINTANDSTEEL_USE, this.getSoundSource(), 1.0F, this.random.nextFloat() * 0.4F + 0.8F);
             if (!this.level().isClientSide) {
                 this.ignite();
+                this.triggerAnim("living","fuse");
                 itemstack.hurtAndBreak(1, p_149155_, (p_32290_) -> {
                     p_32290_.broadcastBreakEvent(p_149156_);
                 });
@@ -233,6 +182,7 @@ public class ToadEntity extends PathfinderMob implements Bucketable, GeoEntity {
         }
         return Bucketable.bucketMobPickup(p_149155_, p_149156_, this).orElse(super.mobInteract(p_149155_, p_149156_));
     }
+
     @Override
     public void tick() {
         super.tick();
@@ -246,16 +196,8 @@ public class ToadEntity extends PathfinderMob implements Bucketable, GeoEntity {
             double newXPos = (this.position().x +  (float) random1.nextDouble(-0.2f,0.3f));
             double newYPos = (this.position().y + 0.35f +  (float) random1.nextDouble(-0.2f,0.3f));
             double newZPos = (this.position().z +  (float) random1.nextDouble(-0.2f,0.3f));
-            switch (getTypeDir()) {
-                case 0 ->
-                        Minecraft.getInstance().levelRenderer.addParticle(POISON_PARTICLE_TYPE.get(), true, newXPos, newYPos, newZPos, xSpeed, ySpeed, zSpeed);
-                case 1 ->
-                        Minecraft.getInstance().levelRenderer.addParticle(SLEEP_PARTICLE_TYPE.get(), true, newXPos, newYPos, newZPos, xSpeed, ySpeed, zSpeed);
-                case 2 ->
-                        Minecraft.getInstance().levelRenderer.addParticle(THUNDER_PARTICLE_TYPE.get(), true, newXPos, newYPos, newZPos, xSpeed, ySpeed, zSpeed);
-                case 3 ->
-                        Minecraft.getInstance().levelRenderer.addParticle(ICE_PARTICLE_TYPE.get(), true, newXPos, newYPos, newZPos, xSpeed, ySpeed, zSpeed);
-            }
+            Minecraft.getInstance().levelRenderer.addParticle(getCloudParticle(), true, newXPos, newYPos, newZPos, xSpeed, ySpeed, zSpeed);
+
         }
         if (this.isAlive()) {
             if (this.isIgnited()) {
@@ -280,26 +222,12 @@ public class ToadEntity extends PathfinderMob implements Bucketable, GeoEntity {
         }
     }
 
-
-
-    public SpawnGroupData finalizeSpawn(@NotNull ServerLevelAccessor p_149132_, @NotNull DifficultyInstance p_149133_, @NotNull MobSpawnType p_149134_, @Nullable SpawnGroupData p_149135_, @Nullable CompoundTag p_149136_) {
-        if (p_149134_ == MobSpawnType.BUCKET) {
-            return p_149135_;
-        } else {
-            if(ModConfig.TOADS_WEIGHT.get() == 0){
-                this.dead = true;
-            }
-            this.setType();
-            return super.finalizeSpawn(p_149132_, p_149133_, p_149134_, p_149135_, p_149136_);
-        }
-    }
     private void explode() {
         if (!this.level().isClientSide) {
             this.dead = true;
             this.discard();
             this.spawnLingeringCloud();
         }
-
     }
 
     public ArrayList<MobEffectInstance> getToadEffects() {
@@ -325,8 +253,9 @@ public class ToadEntity extends PathfinderMob implements Bucketable, GeoEntity {
         ArrayList<MobEffectInstance> effects = getToadEffects();
         if(!effects.isEmpty()){
             AreaEffectCloud areaeffectcloud = new AreaEffectCloud(this.level(), this.getX(), this.getY(), this.getZ());
-            areaeffectcloud.setRadius(2.5F);
-            areaeffectcloud.setRadiusOnUse(-0.5F);
+            areaeffectcloud.setFixedColor(getCloudColor());
+            areaeffectcloud.setRadius(2.2F);
+            areaeffectcloud.setRadiusOnUse(-0.1F);
             areaeffectcloud.setWaitTime(10);
             areaeffectcloud.setDuration(areaeffectcloud.getDuration() / 2);
             areaeffectcloud.setRadiusPerTick(-areaeffectcloud.getRadius() / (float)areaeffectcloud.getDuration());
@@ -341,60 +270,170 @@ public class ToadEntity extends PathfinderMob implements Bucketable, GeoEntity {
         }
     }
 
-    public static AttributeSupplier.Builder prepareAttributes() {
-        return Mob.createLivingAttributes()
-                .add(Attributes.ATTACK_DAMAGE, 3.0)
-                .add(Attributes.MAX_HEALTH, 10)
-                .add(Attributes.FOLLOW_RANGE, 15.0)
-                .add(Attributes.MOVEMENT_SPEED, 0.3)
-                .add(Attributes.ARMOR, 1.0D)
-                .add(Attributes.ARMOR_TOUGHNESS,1.0D);
+    public ParticleOptions getCloudParticle(){
+        switch (getTypeDir()) {
+            case 0 -> {
+                return POISON_PARTICLE_TYPE.get();
+            }
+            case 1 -> {
+                return SLEEP_PARTICLE_TYPE.get();
+            }
+            case 2 -> {
+                return THUNDER_PARTICLE_TYPE.get();
+            }
+            default -> {
+                return ICE_PARTICLE_TYPE.get();
+            }
+        }
     }
+
+    public int getCloudColor(){
+        switch (getTypeDir()) {
+            case 0 -> {
+                return 0x6834AD;
+            }
+            case 1 -> {
+                return 0x6BC6E4;
+            }
+            case 2 -> {
+                return 0xE2E068;
+            }
+            default -> {
+                return 0xE0762F;
+            }
+        }
+    }
+
     public void ignite() {
         this.entityData.set(DATA_IS_IGNITED, true);
     }
+
+    public boolean isWalking() {
+        return this.entityData.get(WALKING);
+    }
+
+    public void setWalking(boolean pState) {
+        this.entityData.set(WALKING, pState);
+    }
+
     /**
-     * Returns the current state of creeper, -1 is idle, 1 is 'in fuse'
+     * Returns the current state of toad, -1 is idle, 1 is 'in fuse'
      */
     public int getSwellDir() {
         return this.entityData.get(DATA_SWELL_DIR);
     }
 
     /**
-     * Sets the state of creeper, -1 to idle and 1 to be 'in fuse'
+     * Sets the state of toad, -1 to idle and 1 to be 'in fuse'
      */
     public void setSwellDir(int pState) {
         this.entityData.set(DATA_SWELL_DIR, pState);
+    }
+
+    public boolean isIgnited() {
+        return this.entityData.get(DATA_IS_IGNITED);
+    }
+
+    public boolean getTypeAssignedDir() {
+        return this.entityData.get(TYPEASSIGNED);
+    }
+
+    public int getTypeDir() {
+        return this.entityData.get(TYPE);
+    }
+
+    public void setTypeAssignedDir(boolean pState) {
+        this.entityData.set(TYPEASSIGNED, pState);
+    }
+
+    public void setTypeDir(int pState) {
+        if(!getTypeAssignedDir()){
+            this.entityData.set(TYPE, pState);
+            this.setTypeAssignedDir(true);
+        }
+    }
+
+    public void setType() {
+        while (!getTypeAssignedDir()){
+            Random random = new Random();
+            float chance = random.nextFloat();
+            switch(random.nextInt(4)){
+                case 0:
+                    if(chance < ModConfig.POISON_CHANCE.get())setTypeDir(0);
+                    break;
+                case 1:
+                    if(chance < ModConfig.SLEEP_CHANCE.get())setTypeDir(1);
+                    break;
+                case 2:
+                    if(chance < ModConfig.PARA_CHANCE.get())setTypeDir(2);
+                    break;
+                case 3:
+                    if(chance < ModConfig.BLAST_CHANCE.get())setTypeDir(3);
+                    break;
+            }
+        }
+    }
+
+    public SpawnGroupData finalizeSpawn(@NotNull ServerLevelAccessor p_149132_, @NotNull DifficultyInstance p_149133_, @NotNull MobSpawnType p_149134_, @Nullable SpawnGroupData p_149135_, @Nullable CompoundTag p_149136_) {
+        if (p_149134_ == MobSpawnType.BUCKET) {
+            return p_149135_;
+        } else {
+            if(ModConfig.TOADS_WEIGHT.get() == 0){
+                this.dead = true;
+            }
+            this.setType();
+            return super.finalizeSpawn(p_149132_, p_149133_, p_149134_, p_149135_, p_149136_);
+        }
+    }
+
+    public static AttributeSupplier.Builder prepareAttributes() {
+        return Mob.createLivingAttributes()
+                .add(Attributes.ATTACK_DAMAGE, 3.0)
+                .add(Attributes.MAX_HEALTH, 10)
+                .add(Attributes.FOLLOW_RANGE, 15.0)
+                .add(Attributes.MOVEMENT_SPEED, 0.25D)
+                .add(Attributes.ARMOR, 1.0D)
+                .add(Attributes.ARMOR_TOUGHNESS,1.0D);
     }
 
     private static final RawAnimation FUSE = RawAnimation.begin().thenPlay("animation.toad.fuse");
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.toad.walk");
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.toad.idle");
 
+
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(
-                new AnimationController<>(this, "Body", 1, this::poseBody)
-        );
+        controllers.add(new AnimationController<>(this, "living", 5, this::poseBody).setAnimationSpeed(1.4f).triggerableAnim("fuse", FUSE));
     }
 
     // Create the animation handler for the body segment
     protected PlayState poseBody(AnimationState<ToadEntity> state) {
-        if (this.isIgnited()){
-            state.setAnimation(FUSE);
+        if (state.isMoving() || isWalking()) {
+            return state.setAndContinue(WALK);
         }
-        else if (state.isMoving()) {
-            state.setAnimation(WALK);
-        }
-        else {
-            state.setAnimation(IDLE);
-        }
-
-        return PlayState.CONTINUE;
+        return state.setAndContinue(IDLE);
     }
+
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return this.cache;
+    }
+
+    public static String getVariantName(int i) {
+        switch (i) {
+            case 0 -> {
+                return MHNWReferences.POISON+MHNWReferences.TOAD;
+            }
+            case 1 -> {
+                return MHNWReferences.SLEEP+MHNWReferences.TOAD;
+            }
+            case 2 -> {
+                return MHNWReferences.PARALIZE+MHNWReferences.TOAD;
+            }
+            default -> {
+                return MHNWReferences.BLAST+MHNWReferences.TOAD;
+            }
+        }
     }
 
 }

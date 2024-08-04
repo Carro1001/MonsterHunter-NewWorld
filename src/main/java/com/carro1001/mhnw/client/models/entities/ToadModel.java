@@ -18,11 +18,6 @@ public class ToadModel extends DefaultedEntityGeoModel<ToadEntity> {
     }
 
     @Override
-    public ResourceLocation getModelResource(ToadEntity object) {
-        return new ResourceLocation(MODID, "geo/toad.geo.json");
-    }
-
-    @Override
     public ResourceLocation getTextureResource(ToadEntity object) {
         return switch (object.getTypeDir()) {
             case 0 -> RESOURCE_LOCATION_POISON;
@@ -32,8 +27,4 @@ public class ToadModel extends DefaultedEntityGeoModel<ToadEntity> {
         };
     }
 
-    @Override
-    public ResourceLocation getAnimationResource(ToadEntity animatable) {
-        return new ResourceLocation(MODID, "animations/toad.animation.json");
-    }
 }

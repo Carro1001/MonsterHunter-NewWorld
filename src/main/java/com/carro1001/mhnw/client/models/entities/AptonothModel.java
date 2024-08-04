@@ -13,18 +13,4 @@ public class AptonothModel extends DefaultedEntityGeoModel<AptonothEntity> {
         super(new ResourceLocation(MODID, MHNWReferences.APTONOTH), true);
     }
 
-    @Override
-    public ResourceLocation getModelResource(AptonothEntity object) {
-        return new ResourceLocation(MODID, "geo/aptonoth.geo.json");
-    }
-
-    @Override
-    public ResourceLocation getTextureResource(AptonothEntity object) {
-        return new ResourceLocation(MODID, "textures/entity/aptonoth.png");
-    }
-
-    @Override
-    public ResourceLocation getAnimationResource(AptonothEntity animatable) {
-        return new ResourceLocation(MODID, "animations/aptonoth.animation.json");
-    }
 }

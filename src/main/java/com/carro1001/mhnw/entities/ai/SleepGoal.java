@@ -30,6 +30,8 @@ public class SleepGoal extends Goal {
         MHNW.debugLog("SleepGoal: start");
         super.start();
         largeMonster.setSleeping(true);
+        largeMonster.triggerAnim("main_controller","sleep");
+
     }
 
     @Override

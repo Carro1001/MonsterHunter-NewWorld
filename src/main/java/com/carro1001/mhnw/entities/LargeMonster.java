@@ -85,6 +85,7 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
         this.setHealth(1);
         int state = getDeathState();
         if(state == 0){
+            triggerAnim("main_controller","death");
             MHNW.debugLog(name + "@"+this.position()+": i guess i will die");
             setDeathState(1);
             setNoAi(true);
@@ -95,6 +96,7 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
     public void tick() {
         super.tick();
         if(isSleeping()){
+            this.moveControl.setWantedPosition(getX(),getY(),getZ(),0);
             this.level().addParticle(ParticleTypes.HEART, this.getRandomX(1.0D), this.getRandomY()-0.5, this.getRandomZ(1.0D), 0.0D, 0.0D, 0.0D);
         }
         else if(isLimpining()){
@@ -142,25 +144,15 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "main_controller", 16, this::poseBody));
+        controllers.add(new AnimationController<>(this, "main_controller", 16, this::poseBody)
+                .triggerableAnim("death", getDeathAnimation()).triggerableAnim("roar", getRoarAnimation())
+                .triggerableAnim("rally", getRallyAnimation()).triggerableAnim("sleep", getSleepAnimation()));
     }
 
     protected PlayState poseBody(AnimationState<LargeMonster> animationState) {
         if(getDeathState() >= 1){
             MHNW.debugLog("poseBody: death");
-            return animationState.setAndContinue(getDeathAnimation());
-        }
-        if (this.getAggressionState() == AggressionState.ROAR) {
-            MHNW.debugLog("poseBody: roar");
-            return animationState.setAndContinue(getRoarAnimation());
-        }
-        if (ShouldRally()) {
-            MHNW.debugLog("poseBody: rally");
-            return animationState.setAndContinue(getRallyAnimation());
-        }
-        if (isSleeping()) {
-            MHNW.debugLog("poseBody: slep");
-            return animationState.setAndContinue(getSleepAnimation());
+            return PlayState.STOP;
         }
         if (animationState.isMoving() || isWalking()) {
             MHNW.debugLog("poseBody: getMovementAnimation");
@@ -193,7 +185,6 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
         this.entityData.define(DEATH_STATE, 0);
         this.entityData.define(RALLY_STATE, RallyState.READY.ordinal());
         this.entityData.define(SLEEPING, false);
-        this.entityData.define(RALLY, false);
         this.entityData.define(LIMPING, false);
         this.entityData.define(WALKING, false);
         this.entityData.define(SCALESSIGNED, false);
@@ -219,7 +210,6 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
         pCompound.putBoolean("Raging", isRaging());
         pCompound.putFloat("RageBuildUp", this.getRageBuildUp());
         pCompound.putInt("DeathState", this.getDeathState());
-        pCompound.putBoolean("Rally",ShouldRally());
         pCompound.putBoolean("Sleeping", isSleeping());
 
         pCompound.putInt("HomePosX", this.getHomePos().getX());
@@ -240,7 +230,6 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
         setDeathState(pCompound.getInt("DeathState"));
         setWalking(pCompound.getBoolean("Walking"));
         setLimping(pCompound.getBoolean("Limping"));
-        setRally(pCompound.getBoolean("Rally"));
         setSleeping(pCompound.getBoolean("Sleeping"));
 
         setAttacking(pCompound.getBoolean("Attacking"));
@@ -357,13 +346,7 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
     public boolean isLimpining(){
         return this.entityData.get(LIMPING);
     }
-    public void setRally(boolean rally){
-        this.entityData.set(RALLY, rally);
-    }
 
-    public boolean ShouldRally(){
-        return this.entityData.get(RALLY) && getRallyState() == RallyState.READY;
-    }
     public void setSleeping(boolean sleeping){
         this.entityData.set(SLEEPING, sleeping);
     }

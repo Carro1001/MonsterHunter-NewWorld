@@ -21,6 +21,12 @@ public class ToadRenderer extends GeoEntityRenderer<ToadEntity> {
     public RenderType getRenderType(ToadEntity animatable, ResourceLocation texture, @Nullable MultiBufferSource bufferSource, float partialTick) {
         return RenderType.entityCutoutNoCull(getTextureLocation(animatable));
     }
+
+    @Override
+    public float getMotionAnimThreshold(ToadEntity animatable) {
+        return  0.005f;
+    }
+
     @Override
     public @NotNull ResourceLocation getTextureLocation(@NotNull ToadEntity pEntity) {
         return switch (pEntity.getTypeDir()) {

@@ -24,6 +24,10 @@ public class AptonothRenderer extends GeoEntityRenderer<AptonothEntity> {
     }
 
     @Override
+    public float getMotionAnimThreshold(AptonothEntity animatable) {
+        return 0.005f;
+    }
+    @Override
     public RenderType getRenderType(AptonothEntity animatable, ResourceLocation texture, @Nullable MultiBufferSource bufferSource, float partialTick) {
         return RenderType.entityCutoutNoCull(getTextureLocation(animatable));
     }

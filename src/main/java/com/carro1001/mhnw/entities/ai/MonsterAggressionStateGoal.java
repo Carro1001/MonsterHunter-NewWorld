@@ -36,6 +36,7 @@ public class MonsterAggressionStateGoal extends Goal {
         if (this.dragonEntity.getTarget() != null) {
             LargeMonster.AggressionState aggressionState = this.dragonEntity.getAggressionState();
             if (aggressionState == LargeMonster.AggressionState.PASSIVE) {
+                this.dragonEntity.triggerAnim("main_controller","roar");
                 this.dragonEntity.setAggressionState(LargeMonster.AggressionState.ROAR);
                 this.roarTime = 60;
             } else if (aggressionState == LargeMonster.AggressionState.ROAR) {

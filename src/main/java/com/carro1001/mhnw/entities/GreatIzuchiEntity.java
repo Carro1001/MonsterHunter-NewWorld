@@ -65,7 +65,7 @@ public class GreatIzuchiEntity extends LargeMonster {
 
     public static AttributeSupplier.Builder prepareAttributes() {
         return LargeMonster.createLivingAttributes()
-                .add(Attributes.MAX_HEALTH, 350)
+                .add(Attributes.MAX_HEALTH, 100)
                 .add(Attributes.FOLLOW_RANGE, 15.0)
                 .add(Attributes.MOVEMENT_SPEED, 0.45)
                 .add(Attributes.ARMOR, 1.0D)

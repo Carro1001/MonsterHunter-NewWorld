@@ -9,16 +9,32 @@ import javax.annotation.Nullable;
 
 public class ToadWalkGoal extends RandomStrollGoal{
         protected final float probability = 0.001F;
-        private final ToadEntity toadEntity;
+        private ToadEntity toad;
         public ToadWalkGoal(ToadEntity pMob, double pSpeedModifier) {
             super(pMob, pSpeedModifier);
-            this.toadEntity = pMob;
+            this.toad = pMob;
+
         }
 
-        @Nullable
+    @Override
+    public void start() {
+        super.start();
+        toad.setWalking(true);
+        System.out.println("RandomStrollGoal: Start()");
+    }
+
+    @Override
+    public void stop() {
+        super.stop();
+        toad.setWalking(false);
+        System.out.println("RandomStrollGoal: Stop()");
+
+    }
+
+    @Nullable
         protected Vec3 getPosition() {
             if (this.mob.isInWaterOrBubble()) {
-                Vec3 vec3 = LandRandomPos.getPos(this.mob, 2, 2);
+                Vec3 vec3 = LandRandomPos.getPos(this.mob, 4, 2);
                 return vec3 == null ? super.getPosition() : vec3;
             } else {
                 return this.mob.getRandom().nextFloat() >= this.probability ? LandRandomPos.getPos(this.mob, 4, 2) : super.getPosition();

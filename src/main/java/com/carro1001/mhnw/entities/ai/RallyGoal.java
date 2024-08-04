@@ -32,14 +32,14 @@ public class RallyGoal extends Goal {
         MHNW.debugLog("RallyGoal: start");
         super.start();
         animTicks = 0;
-        summoner.setRally(true);
+        summoner.triggerAnim("main_controller","rally");
+
     }
 
     @Override
     public void stop() {
         MHNW.debugLog("RallyGoal: stop");
         super.stop();
-        summoner.setRally(false);
         summoner.setRallyState(LargeMonster.RallyState.COOL_DOWN);
     }
 

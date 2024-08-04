@@ -24,6 +24,15 @@ public class MonsterRenderer extends GeoEntityRenderer<LargeMonster> {
     }
 
     @Override
+    protected float getDeathMaxRotation(LargeMonster entityLivingBaseIn) {
+        return 0.0F;
+    }
+    @Override
+    public float getMotionAnimThreshold(LargeMonster animatable) {
+        return 0.005f;
+    }
+
+    @Override
     public RenderType getRenderType(LargeMonster animatable, ResourceLocation texture, @Nullable MultiBufferSource bufferSource, float partialTick) {
         return RenderType.entityCutoutNoCull(getTextureLocation(animatable));
     }
