@@ -1,5 +1,6 @@
 package com.carro1001.mhnw.entities.ai;
 
+import com.carro1001.mhnw.MHNW;
 import com.carro1001.mhnw.entities.DragonEntity;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomFlyingGoal;
@@ -29,6 +30,7 @@ public class DragonFlyingWaterAvoidingStrollGoal extends WaterAvoidingRandomFlyi
     @Override
     protected Vec3 getPosition() { // TODO: Something smarter
         int range = 32;
+        MHNW.debugLog("DragonFlyingWaterAvoidingStrollGoal: getPosition" );
         return this.dragonEntity.position().add(Mth.randomBetween(this.dragonEntity.getRandom(), -range, range), Mth.randomBetween(this.dragonEntity.getRandom(), -range, range), Mth.randomBetween(this.dragonEntity.getRandom(), -range, range));
     }
 }

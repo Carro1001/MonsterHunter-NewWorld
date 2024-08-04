@@ -1,5 +1,6 @@
 package com.carro1001.mhnw.entities.ai;
 
+import com.carro1001.mhnw.MHNW;
 import com.carro1001.mhnw.entities.AptonothEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.FluidTags;
@@ -59,6 +60,7 @@ public class AptonothPanicOrAttack extends MeleeAttackGoal {
         Vec3 vec3 = DefaultRandomPos.getPos(this.mob, 5, 4);
         isAttacking = mob.getRandom().nextFloat() > 0.75f && !aptonoth.isBaby();
         if(isAttacking){
+            MHNW.debugLog("findRandomPosition: isAttacking");
             return true;
         }
         if (vec3 == null) {
@@ -67,6 +69,7 @@ public class AptonothPanicOrAttack extends MeleeAttackGoal {
             this.posX = vec3.x;
             this.posY = vec3.y;
             this.posZ = vec3.z;
+            MHNW.debugLog("findRandomPosition: " + this.posX + "," +  this.posY +"," + this.posZ);
             return true;
         }
     }
@@ -80,9 +83,11 @@ public class AptonothPanicOrAttack extends MeleeAttackGoal {
         if (!isAttacking) {
             this.mob.getNavigation().moveTo(this.posX, this.posY, this.posZ, this.speedModifier);
             this.isRunning = true;
+
         }else{
             super.start();
         }
+        MHNW.debugLog("start: isAttacking: " + isAttacking);
     }
 
     /**
@@ -94,10 +99,10 @@ public class AptonothPanicOrAttack extends MeleeAttackGoal {
             aptonoth.setAttacking(false);
             super.stop();
             this.aptonoth.setAggressive(false);
-
         }else{
             this.isRunning = false;
         }
+        MHNW.debugLog("stop: isAttacking: " + isAttacking);
     }
 
     /**

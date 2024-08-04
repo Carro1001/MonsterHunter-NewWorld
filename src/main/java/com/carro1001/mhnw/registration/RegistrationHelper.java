@@ -1,5 +1,6 @@
 package com.carro1001.mhnw.registration;
 
+import com.carro1001.mhnw.MHNW;
 import com.carro1001.mhnw.entities.*;
 import com.carro1001.mhnw.utils.MHNWReferences;
 import net.minecraft.client.model.geom.ModelLayerLocation;
@@ -31,8 +32,11 @@ public class RegistrationHelper {
         event.put(FLASHBUG.get(), FlashBugEntity.prepareAttributes().build());
         event.put(DEVILJHO.get(), DeviljhoEntity.prepareAttributes().build());
         event.put(LAGIACRUS.get(), LagiacrusEntity.prepareAttributes().build());
+        MHNW.debugLog("EntityAttributeCreationEvent Monster tied to Attributes");
+
 
     }
+
     public static ModelLayerLocation register(String pPath) {
         return register(pPath, "main");
     }

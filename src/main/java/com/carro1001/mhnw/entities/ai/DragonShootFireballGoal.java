@@ -1,5 +1,6 @@
 package com.carro1001.mhnw.entities.ai;
 
+import com.carro1001.mhnw.MHNW;
 import com.carro1001.mhnw.entities.DragonEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -16,6 +17,7 @@ public class DragonShootFireballGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        MHNW.debugLog("DragonShootFireballGoal: will use");
         return true;
     }
 

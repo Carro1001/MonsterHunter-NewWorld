@@ -1,5 +1,6 @@
 package com.carro1001.mhnw.registration;
 
+import com.carro1001.mhnw.MHNW;
 import com.carro1001.mhnw.blocks.CrystalCluster;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -38,6 +39,7 @@ public class ModBlocks {
     public static final RegistryObject<Item> ICE_CRYSTAL_CLUSTER_ITEM = fromBlock(ICE_CRYSTAL_CLUSTER_BLOCK);
 
     public static <B extends  Block>RegistryObject<Item> fromBlock(RegistryObject<B> block) {
+        MHNW.debugLog("registerEntityEgg: ");
         return ITEMS.register(block.getId().getPath(), () -> new BlockItem(block.get(),(new Item.Properties())));
     }
 }

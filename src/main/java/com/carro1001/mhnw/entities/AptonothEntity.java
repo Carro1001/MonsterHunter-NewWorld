@@ -1,5 +1,6 @@
 package com.carro1001.mhnw.entities;
 
+import com.carro1001.mhnw.MHNW;
 import com.carro1001.mhnw.entities.ai.AptonothPanicOrAttack;
 import com.carro1001.mhnw.entities.interfaces.IGrows;
 import net.minecraft.nbt.CompoundTag;
@@ -136,11 +137,13 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
     }
     protected PlayState fightBody(AnimationState<AptonothEntity> state) {
         if(getDeathState() >= 1 && onGround()){
+            MHNW.debugLog("fightBody: dead");
             setDeathState(2);
             return state.setAndContinue(DEATH);
         }
         if(getDeathState() >= 1) return PlayState.STOP;
         if (isAggressive() || this.Attacking()){
+            MHNW.debugLog("fightBody: attack");
             return state.setAndContinue(ATTACK);
         }
         return PlayState.STOP;
@@ -148,14 +151,18 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
     protected PlayState runBody(AnimationState<AptonothEntity> state) {
         if(getDeathState() >= 1) return PlayState.STOP;
         if ((this.IsRunning() || isPanic())){
+            MHNW.debugLog("runBody: RUNNING");
             return state.setAndContinue(RUNNING);
         }
-        return state.setAndContinue(state.isMoving() || IsWalking() ? WALK : IDLE);
+        boolean isRunning = state.isMoving() || IsWalking();
+        MHNW.debugLog(isRunning ? "WALK" : "IDLE");
+        return state.setAndContinue(isRunning ? WALK : IDLE);
     }
 
     protected PlayState poseBody(AnimationState<AptonothEntity> state) {
         if(getDeathState() >= 1) return PlayState.STOP;
         if (this.isEating() && !(this.Attacking() || isAggressive())){
+            MHNW.debugLog("isEating");
             return state.setAndContinue(EAT);
         }
         return PlayState.STOP;
@@ -166,6 +173,7 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
         this.setHealth(1);
         int state = getDeathState();
         if(state == 0){
+            MHNW.debugLog("aptonoth@"+this.position()+": i guess i will die");
             setDeathState(1);
             setNoAi(true);
         }
@@ -372,7 +380,9 @@ public class AptonothEntity extends AbstractHorse implements GeoEntity, IGrows {
         }
 
         public boolean canUse() {
-            return this.aptonoth.isPanic() && super.canUse();
+            boolean canUse = this.aptonoth.isPanic() && super.canUse();
+            MHNW.debugLog("AptonothAvoidEntityGoal canUse:" + canUse);
+            return canUse;
         }
 
         public boolean canContinueToUse() {

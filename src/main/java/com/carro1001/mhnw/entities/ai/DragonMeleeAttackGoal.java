@@ -1,5 +1,6 @@
 package com.carro1001.mhnw.entities.ai;
 
+import com.carro1001.mhnw.MHNW;
 import com.carro1001.mhnw.entities.DragonEntity;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 
@@ -15,7 +16,9 @@ public class DragonMeleeAttackGoal extends MeleeAttackGoal {
 
     @Override
     public boolean canUse() {
-        return this.dragonEntity.getAggressionState() == DragonEntity.AggressionState.AGGRESSIVE && this.dragonEntity.getFireballChargeState() != DragonEntity.FireballState.CHARGING &&  super.canUse();
+        boolean canUse = this.dragonEntity.getAggressionState() == DragonEntity.AggressionState.AGGRESSIVE && this.dragonEntity.getFireballChargeState() != DragonEntity.FireballState.CHARGING &&  super.canUse();
+        MHNW.debugLog("DragonMeleeAttackGoal: canUse:" + canUse);
+        return canUse;
     }
 
     @Override

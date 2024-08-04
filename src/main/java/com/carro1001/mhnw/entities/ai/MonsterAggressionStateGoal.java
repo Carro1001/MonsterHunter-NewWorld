@@ -1,5 +1,6 @@
 package com.carro1001.mhnw.entities.ai;
 
+import com.carro1001.mhnw.MHNW;
 import com.carro1001.mhnw.entities.DragonEntity;
 import com.carro1001.mhnw.entities.LargeMonster;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -21,6 +22,7 @@ public class MonsterAggressionStateGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
+        MHNW.debugLog("MonsterAggressionStateGoal: do the roar");
         return true;
     }
 

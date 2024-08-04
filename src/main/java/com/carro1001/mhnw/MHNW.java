@@ -3,6 +3,7 @@ package com.carro1001.mhnw;
 import com.carro1001.mhnw.setup.ClientSetup;
 import com.carro1001.mhnw.setup.CommonSetup;
 import com.carro1001.mhnw.setup.ModConfig;
+import com.mojang.logging.LogUtils;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -10,6 +11,7 @@ import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLPaths;
+import org.slf4j.Logger;
 
 import static com.carro1001.mhnw.registration.ModBlocks.BLOCKS;
 import static com.carro1001.mhnw.registration.ModBlocks.BLOCK_ENTITIES;
@@ -22,9 +24,11 @@ import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 @Mod(MODID)
 public class MHNW {
 
+    public static final Logger LOGGER = LogUtils.getLogger();
+    public static boolean DEBUGLOG = false;
+
     public MHNW(){
         ModConfig.register();
-
         //Registration
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
         BLOCKS.register(bus);
@@ -41,6 +45,13 @@ public class MHNW {
         event.addListener(this::addCreative);
         ModConfig.loadConfig(ModConfig.CLIENT_CONFIG, FMLPaths.CONFIGDIR.get().resolve(MODID+"-client.toml"));
         ModConfig.loadConfig(ModConfig.SERVER_CONFIG, FMLPaths.CONFIGDIR.get().resolve(MODID+"-common.toml"));
+    }
+
+    public static void debugLog(String log){
+        //too lazy to figure out how to locally turn them off whem in debug xD
+        if(DEBUGLOG){
+            LOGGER.debug(log);
+        }
     }
 
     private void addCreative(BuildCreativeModeTabContentsEvent event) {

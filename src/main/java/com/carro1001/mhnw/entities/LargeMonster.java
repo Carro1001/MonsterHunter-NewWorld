@@ -1,5 +1,6 @@
 package com.carro1001.mhnw.entities;
 
+import com.carro1001.mhnw.MHNW;
 import com.carro1001.mhnw.entities.ai.MonsterAggressionStateGoal;
 import com.carro1001.mhnw.entities.interfaces.IGrows;
 import net.minecraft.core.BlockPos;
@@ -50,6 +51,8 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
     protected static final EntityDataAccessor<Integer> RALLY_STATE = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> SLEEPING = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<BlockPos> HOME_POS = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.BLOCK_POS);
+    private static final EntityDataAccessor<Boolean> RAGE = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.BOOLEAN);
+    protected static final EntityDataAccessor<Float> RAGE_BUILDUP = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.FLOAT);
 
     private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.BOOLEAN);
     protected static final EntityDataAccessor<Integer> ATTACK_ANIMATION_ID = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.INT);
@@ -59,6 +62,9 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
     protected float minScale = 0.6f, maxScale = 1f;
 
     protected String name;
+
+    protected int maxRageBuildUp = 150;
+    protected boolean shouldRage = false;
 
     //TEMP FOR TESTING
     @Override
@@ -79,6 +85,7 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
         this.setHealth(1);
         int state = getDeathState();
         if(state == 0){
+            MHNW.debugLog(name + "@"+this.position()+": i guess i will die");
             setDeathState(1);
             setNoAi(true);
         }
@@ -87,13 +94,16 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
     @Override
     public void tick() {
         super.tick();
-        if(IsSleeping()){
+        if(isSleeping()){
             this.level().addParticle(ParticleTypes.HEART, this.getRandomX(1.0D), this.getRandomY()-0.5, this.getRandomZ(1.0D), 0.0D, 0.0D, 0.0D);
         }
-        else if(IsLimpining()){
+        else if(isLimpining()){
             this.level().addParticle(ParticleTypes.DRIPPING_WATER, this.getRandomX(1.0D), this.getRandomY(), this.getRandomZ(1.0D), 0.0D, -0.5D, 0.0D);
         }
         if (!level().isClientSide) {
+            if(isRaging()){
+                this.tickRageBuildUp(-1);
+            }
             if (getRallyState() == RallyState.COOL_DOWN) {
                 if (this.rallyCooldownTime >= 0) {
                     this.rallyCooldownTime--;
@@ -137,21 +147,26 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
 
     protected PlayState poseBody(AnimationState<LargeMonster> animationState) {
         if(getDeathState() >= 1){
+            MHNW.debugLog("poseBody: death");
             return animationState.setAndContinue(getDeathAnimation());
         }
         if (this.getAggressionState() == AggressionState.ROAR) {
+            MHNW.debugLog("poseBody: roar");
             return animationState.setAndContinue(getRoarAnimation());
         }
         if (ShouldRally()) {
+            MHNW.debugLog("poseBody: rally");
             return animationState.setAndContinue(getRallyAnimation());
         }
-        if (IsSleeping()) {
+        if (isSleeping()) {
+            MHNW.debugLog("poseBody: slep");
             return animationState.setAndContinue(getSleepAnimation());
         }
-        if (animationState.isMoving() || IsWalking()) {
+        if (animationState.isMoving() || isWalking()) {
+            MHNW.debugLog("poseBody: getMovementAnimation");
             return animationState.setAndContinue(getMovementAnimation());
         }
-
+        MHNW.debugLog("poseBody: getIdleAnimation");
         return animationState.setAndContinue(getIdleAnimation());
     }
 
@@ -162,7 +177,7 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
     }
 
     public static AttributeSupplier.Builder prepareAttributes() {
-        return Mob.createLivingAttributes()
+        return Monster.createLivingAttributes()
                 .add(Attributes.ATTACK_DAMAGE, 3.0)
                 .add(Attributes.MAX_HEALTH, 100)
                 .add(Attributes.FOLLOW_RANGE, 15.0)
@@ -184,6 +199,8 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
         this.entityData.define(SCALESSIGNED, false);
         this.entityData.define(ATTACKING, false);
         this.entityData.define(ATTACK_ANIMATION_ID, 0);
+        this.entityData.define(RAGE, false);
+        this.entityData.define(RAGE_BUILDUP, 0F);
         this.entityData.define(MONSTER_SCALE, 1F);
         this.entityData.define(HOME_POS, BlockPos.ZERO);
         this.entityData.define(AGGRESSION_STATE, AggressionState.PASSIVE.ordinal());
@@ -195,13 +212,15 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
         super.addAdditionalSaveData(pCompound);
         pCompound.putFloat("Scale", this.getMonsterScale());
         pCompound.putInt("mon_aggro_state", getAggressionState().ordinal());
-        pCompound.putBoolean("Walking", IsWalking());
-        pCompound.putBoolean("Limping", IsLimpining());
-        pCompound.putBoolean("Attacking", Attacking());
-        pCompound.putInt("AttackID", this.GetAttackingID());
+        pCompound.putBoolean("Walking", isWalking());
+        pCompound.putBoolean("Limping", isLimpining());
+        pCompound.putBoolean("Attacking", isAttacking());
+        pCompound.putFloat("AttackID", this.getAttackingID());
+        pCompound.putBoolean("Raging", isRaging());
+        pCompound.putFloat("RageBuildUp", this.getRageBuildUp());
         pCompound.putInt("DeathState", this.getDeathState());
         pCompound.putBoolean("Rally",ShouldRally());
-        pCompound.putBoolean("Sleeping",IsSleeping());
+        pCompound.putBoolean("Sleeping", isSleeping());
 
         pCompound.putInt("HomePosX", this.getHomePos().getX());
         pCompound.putInt("HomePosY", this.getHomePos().getY());
@@ -226,6 +245,8 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
 
         setAttacking(pCompound.getBoolean("Attacking"));
         setAttackingID(pCompound.getInt("AttackID"));
+        setRaging(pCompound.getBoolean("Raging"));
+        setRageBuildUp(pCompound.getFloat("RageBuildUp"));
 
         int i = pCompound.getInt("HomePosX");
         int j = pCompound.getInt("HomePosY");
@@ -318,7 +339,7 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
         this.entityData.set(WALKING, walking);
     }
 
-    public boolean IsWalking(){
+    public boolean isWalking(){
         return this.entityData.get(WALKING);
     }
 
@@ -333,7 +354,7 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
         this.entityData.set(LIMPING, limping);
     }
 
-    public boolean IsLimpining(){
+    public boolean isLimpining(){
         return this.entityData.get(LIMPING);
     }
     public void setRally(boolean rally){
@@ -347,11 +368,12 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
         this.entityData.set(SLEEPING, sleeping);
     }
 
-    public boolean IsSleeping(){
+    public boolean isSleeping(){
         return this.entityData.get(SLEEPING);
     }
 
-    public void setRallyState(RallyState state) {
+    public void setRallyState(RallyState state)
+    {
         if(!level().isClientSide && state == RallyState.COOL_DOWN){
             this.rallyCooldownTime = this.random.nextInt(500, 2000);
         }
@@ -374,7 +396,7 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
         this.entityData.set(ATTACKING, attacking);
     }
 
-    public boolean Attacking(){
+    public boolean isAttacking(){
         return this.entityData.get(ATTACKING);
     }
 
@@ -382,7 +404,33 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
         this.entityData.set(ATTACK_ANIMATION_ID, attackingID);
     }
 
-    public int GetAttackingID(){
+    public float getRageBuildUp(){
+        return this.entityData.get(RAGE_BUILDUP);
+    }
+    public void setRaging(boolean raging){
+        this.entityData.set(RAGE, raging);
+    }
+
+    public boolean isRaging(){
+        return this.entityData.get(RAGE);
+    }
+
+    public void setRageBuildUp(float rageBuildUp){
+        if(!isRaging() && rageBuildUp >= maxRageBuildUp){
+            setRaging(true);
+            rageBuildUp *= 2;
+            MHNW.debugLog(name + ": setRaging(true) for " + rageBuildUp +  "ticks");
+        }
+        if(isRaging() && rageBuildUp <= 0 ){
+            setRaging(false);
+            MHNW.debugLog(name + ": setRaging(false)");
+        }
+        this.entityData.set(RAGE_BUILDUP, rageBuildUp);
+    }
+    public void tickRageBuildUp(float amount){
+        setRageBuildUp(getRageBuildUp()+amount);
+    }
+    public float getAttackingID(){
         return this.entityData.get(ATTACK_ANIMATION_ID);
     }
     @Override
@@ -390,11 +438,16 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
         boolean hurt = super.hurt(pSource, pAmount);
         if(hurt && getHealth() <= getMaxHealth()/4){
             setLimping(true);
+            MHNW.debugLog(name + ": hurt() limping");
         }
         if(isSleeping() && pSource.getDirectEntity() instanceof LivingEntity livingEntity){
             setSleeping(false);
             setTarget(livingEntity);
             setAggressive(true);
+            MHNW.debugLog(name + ": hurt() waking up");
+        }
+        if(!isRaging() && hurt){
+            tickRageBuildUp(pAmount);
         }
         return hurt;
     }
@@ -405,6 +458,7 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
         if(getHealth() > getMaxHealth()/3){
             setLimping(false);
             setSleeping(false);
+            MHNW.debugLog(name + " healed: setLimping(false); setSleeping(false);");
         }
     }
 

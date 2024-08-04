@@ -1,5 +1,6 @@
 package com.carro1001.mhnw.entities.ai;
 
+import com.carro1001.mhnw.MHNW;
 import com.carro1001.mhnw.entities.LargeMonster;
 import net.minecraft.world.entity.ai.behavior.BehaviorUtils;
 import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
@@ -17,7 +18,9 @@ public class MonsterRandomSwim extends RandomStrollGoal {
 
     @Override
     public boolean canUse() {
-        return super.canUse() && largeMonster.isInWater();
+        boolean canUse =super.canUse() && largeMonster.isInWater();
+        MHNW.debugLog("MonsterRandomSwim: canContinueToUse" + canUse);
+        return canUse;
     }
 
     @Override

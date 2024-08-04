@@ -1,5 +1,6 @@
 package com.carro1001.mhnw.entities.ai;
 
+import com.carro1001.mhnw.MHNW;
 import com.carro1001.mhnw.entities.ToadEntity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -30,6 +31,7 @@ public class ToadSwellGoal extends Goal {
      * Execute a one shot task or start executing a continuous task
      */
     public void start() {
+        MHNW.debugLog("ToadSwellGoal: start");
         this.toad.getNavigation().stop();
         this.target = this.toad.getTarget();
     }
@@ -38,6 +40,7 @@ public class ToadSwellGoal extends Goal {
      * Reset the task's internal state. Called when this task is interrupted by another one
      */
     public void stop() {
+        MHNW.debugLog("ToadSwellGoal: start");
         this.target = null;
     }
 

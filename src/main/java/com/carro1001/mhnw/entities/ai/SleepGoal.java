@@ -1,5 +1,6 @@
 package com.carro1001.mhnw.entities.ai;
 
+import com.carro1001.mhnw.MHNW;
 import com.carro1001.mhnw.entities.LargeMonster;
 import net.minecraft.world.entity.ai.goal.Goal;
 
@@ -16,7 +17,7 @@ public class SleepGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        return largeMonster.IsLimpining() && !largeMonster.Attacking() && largeMonster.getRallyState() == LargeMonster.RallyState.COOL_DOWN;
+        return largeMonster.isLimpining() && !largeMonster.isAttacking() && largeMonster.getRallyState() == LargeMonster.RallyState.COOL_DOWN;
     }
 
     @Override
@@ -26,19 +27,21 @@ public class SleepGoal extends Goal {
 
     @Override
     public void start() {
+        MHNW.debugLog("SleepGoal: start");
         super.start();
         largeMonster.setSleeping(true);
     }
 
     @Override
     public void stop() {
+        MHNW.debugLog("SleepGoal: stop");
         super.stop();
         largeMonster.setSleeping(false);
     }
 
     @Override
     public boolean canContinueToUse() {
-        return animTicks < maxTicks || largeMonster.IsLimpining();
+        return animTicks < maxTicks || largeMonster.isLimpining();
     }
 
     @Override
