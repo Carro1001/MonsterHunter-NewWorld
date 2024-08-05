@@ -11,4 +11,5 @@ public class LagiacrusRenderer extends MonsterRenderer {
         super(context, new LagiacrusModel(), LAGIACRUZ);
     }
 
+
 }

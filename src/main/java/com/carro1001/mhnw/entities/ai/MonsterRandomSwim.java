@@ -11,6 +11,7 @@ import javax.annotation.Nullable;
 public class MonsterRandomSwim extends RandomStrollGoal {
 
     LargeMonster largeMonster;
+    Vec3 wantedPos;
      public MonsterRandomSwim(LargeMonster largeMonster, double p_25754_, int p_25755_) {
         super(largeMonster, p_25754_, p_25755_);
         this.largeMonster = largeMonster;
@@ -25,7 +26,11 @@ public class MonsterRandomSwim extends RandomStrollGoal {
 
     @Override
     public boolean canContinueToUse() {
-        return super.canContinueToUse() && largeMonster.isInWater();
+         wantedPos = new Vec3(this.wantedX, this.wantedY, this.wantedZ);
+        return super.canContinueToUse() && largeMonster.isInWater() && !(this.wantedPos.distanceTo(this.largeMonster.position()) <= this.largeMonster.getBbWidth() * 16 * 3);
+    }
+
+    public void tick() {
     }
 
     @Override
@@ -44,6 +49,7 @@ public class MonsterRandomSwim extends RandomStrollGoal {
 
     @Nullable
     protected Vec3 getPosition() {
-        return BehaviorUtils.getRandomSwimmablePos(this.mob, 32, 12);
+        return BehaviorUtils.getRandomSwimmablePos(this.mob, 52, 32);
     }
+    //previously 32 and 12
 }
