@@ -131,8 +131,8 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
                 setWalking(false);
             }
         });
-        this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 6.0F));
-        this.goalSelector.addGoal(6, new RandomLookAroundGoal(this));
+        //this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 6.0F));
+        //this.goalSelector.addGoal(6, new RandomLookAroundGoal(this));
 
         this.addBehaviourGoals();
     }

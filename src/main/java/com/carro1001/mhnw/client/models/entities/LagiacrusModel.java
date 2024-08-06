@@ -31,14 +31,15 @@ public class LagiacrusModel extends MonsterModel {
             CoreGeoBone tail3 = this.getAnimationProcessor().getBone("tail3");
             CoreGeoBone tail4 = this.getAnimationProcessor().getBone("tail4");
 
-            neck1.setRotY((float) (neck1.getRotY() + Mth.PI + Mth.clamp(MathHelpers.getAngleForLinkTopDownFlat(entity.tail1Point, entity.tail0Point, entity.tail2Point, entity.leftRefPoint, entity.rightRefPoint), -Mth.PI, Mth.PI)));
-            neck2.setRotY((float) (neck2.getRotY() + Mth.PI + Mth.clamp(MathHelpers.getAngleForLinkTopDownFlat(entity.tail2Point, entity.tail1Point, entity.tail3Point, entity.leftRefPoint, entity.rightRefPoint), -Mth.PI, Mth.PI)));
-            neck3.setRotY((float) (neck3.getRotY() + Mth.PI + Mth.clamp(MathHelpers.getAngleForLinkTopDownFlat(entity.tail3Point, entity.tail2Point, entity.tail4Point, entity.leftRefPoint, entity.rightRefPoint), -Mth.PI, Mth.PI)));
+            neck1.setRotY((float) (neck1.getRotY() + Mth.PI + MathHelpers.angleClamp(MathHelpers.getAngleForLinkTopDownFlat(entity.tail1Point, entity.tail0Point, entity.tail2Point, entity.leftRefPoint, entity.rightRefPoint), Mth.PI*0.75)));
+            neck2.setRotY((float) (neck2.getRotY() + Mth.PI + MathHelpers.angleClamp(MathHelpers.getAngleForLinkTopDownFlat(entity.tail2Point, entity.tail1Point, entity.tail3Point, entity.leftRefPoint, entity.rightRefPoint), Mth.PI*0.75)));
+            neck3.setRotY((float) (neck3.getRotY() + Mth.PI + MathHelpers.angleClamp(MathHelpers.getAngleForLinkTopDownFlat(entity.tail3Point, entity.tail2Point, entity.tail4Point, entity.leftRefPoint, entity.rightRefPoint), Mth.PI*0.75)));
 
-            tail1.setRotY((float) (tail1.getRotY() + Mth.PI - Mth.clamp(MathHelpers.getAngleForLinkTopDownFlat(entity.tail1Point, entity.tail0Point, entity.tail2Point, entity.leftRefPoint, entity.rightRefPoint), -Mth.PI, Mth.PI)));
-            tail2.setRotY((float) (tail2.getRotY() + Mth.PI - Mth.clamp(MathHelpers.getAngleForLinkTopDownFlat(entity.tail2Point, entity.tail1Point, entity.tail3Point, entity.leftRefPoint, entity.rightRefPoint), -Mth.PI, Mth.PI)));
-            tail3.setRotY((float) (tail3.getRotY() + Mth.PI - Mth.clamp(MathHelpers.getAngleForLinkTopDownFlat(entity.tail3Point, entity.tail2Point, entity.tail4Point, entity.leftRefPoint, entity.rightRefPoint), -Mth.PI, Mth.PI)));
-            tail4.setRotY((float) (tail4.getRotY() + Mth.PI - Mth.clamp(MathHelpers.getAngleForLinkTopDownFlat(entity.tail4Point, entity.tail3Point, entity.tail5Point, entity.leftRefPoint, entity.rightRefPoint), -Mth.PI, Mth.PI)));
+            //System.out.println((MathHelpers.getAngleForLinkTopDownFlat(entity.tail1Point, entity.tail0Point, entity.tail2Point, entity.leftRefPoint, entity.rightRefPoint)));
+            tail1.setRotY((float) (tail1.getRotY() + Mth.PI - MathHelpers.angleClamp(MathHelpers.getAngleForLinkTopDownFlat(entity.tail1Point, entity.tail0Point, entity.tail2Point, entity.leftRefPoint, entity.rightRefPoint), Mth.PI*0.75)));
+            tail2.setRotY((float) (tail2.getRotY() + Mth.PI - MathHelpers.angleClamp(MathHelpers.getAngleForLinkTopDownFlat(entity.tail2Point, entity.tail1Point, entity.tail3Point, entity.leftRefPoint, entity.rightRefPoint), Mth.PI*0.75)));
+            tail3.setRotY((float) (tail3.getRotY() + Mth.PI - MathHelpers.angleClamp(MathHelpers.getAngleForLinkTopDownFlat(entity.tail3Point, entity.tail2Point, entity.tail4Point, entity.leftRefPoint, entity.rightRefPoint), Mth.PI*0.75)));
+            tail4.setRotY((float) (tail4.getRotY() + Mth.PI - MathHelpers.angleClamp(MathHelpers.getAngleForLinkTopDownFlat(entity.tail4Point, entity.tail3Point, entity.tail5Point, entity.leftRefPoint, entity.rightRefPoint), Mth.PI*0.75)));
             //point, parent, child
             //No deg to rad because the arccos function used to return the angle
             //gotta set up UNIQUE NODES FOR EACH BONE
@@ -51,8 +52,6 @@ public class LagiacrusModel extends MonsterModel {
             tail3.setRotX((float) (tail3.getRotX() - (MathHelpers.angleFromYdiff(Math.hypot(entity.tail3Point.x - entity.tail4Point.x, entity.tail3Point.z - entity.tail4Point.z), entity.tail3Point, entity.tail4Point))));
             tail4.setRotX((float) (tail4.getRotX() - (MathHelpers.angleFromYdiff(Math.hypot(entity.tail4Point.x - entity.tail5Point.x, entity.tail4Point.z - entity.tail5Point.z), entity.tail4Point, entity.tail5Point))));
             //positive RotX is DOWNWARDS, and increasing angle swings it forwards towards the head
-
-            //System.out.println(MathHelpers.getAngleForLinkTopDownFlat(entity.tail1Point, entity.tail0Point, entity.tail2Point, entity.leftRefPoint, entity.rightRefPoint));
         }
         //ik stuff END
 

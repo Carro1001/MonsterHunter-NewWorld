@@ -98,5 +98,13 @@ public class MathHelpers {
 
     }
 
+    public static double angleClamp(double angle, double poslim) {
+        if (angle > 0) {
+            return Mth.clamp(angle, poslim, Mth.TWO_PI - poslim);
+        } else {
+            return Mth.clamp(angle, -(Mth.TWO_PI - poslim), -poslim);
+        }
+    }
+
 
 }
