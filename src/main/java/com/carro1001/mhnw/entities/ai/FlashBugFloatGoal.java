@@ -1,56 +1,61 @@
 package com.carro1001.mhnw.entities.ai;
 
-import net.minecraft.commands.arguments.EntityAnchorArgument;
-import net.minecraft.util.RandomSource;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.ai.control.MoveControl;
+import com.carro1001.mhnw.entities.FlashBugEntity;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.entity.ai.util.AirAndWaterRandomPos;
+import net.minecraft.world.entity.ai.util.HoverRandomPos;
 import net.minecraft.world.phys.Vec3;
 
+import javax.annotation.Nullable;
 import java.util.EnumSet;
 
 public class FlashBugFloatGoal extends Goal{
-        private final Mob mob;
+    private final FlashBugEntity mob;
 
-        public FlashBugFloatGoal(Mob mob) {
-            this.mob = mob;
-            this.setFlags(EnumSet.of(Goal.Flag.MOVE));
+    public FlashBugFloatGoal(FlashBugEntity mob) {
+        this.mob = mob;
+        this.setFlags(EnumSet.of(Goal.Flag.MOVE));
+    }
+
+    /**
+     * Returns whether execution should begin. You can also read and cache any state necessary for execution in this
+     * method as well.
+     */
+    public boolean canUse() {
+        return mob.getNavigation().isDone() && mob.getRandom().nextInt(10) == 0;
+    }
+
+    /**
+     * Returns whether an in-progress EntityAIBase should continue executing
+     */
+    public boolean canContinueToUse() {
+        return mob.getNavigation().isInProgress();
+    }
+
+    /**
+     * Execute a one shot task or start executing a continuous task
+     */
+    public void start() {
+        Vec3 vec3 = this.findPos();
+        if (vec3 != null) {
+            mob.getNavigation().moveTo(mob.getNavigation().createPath(BlockPos.containing(vec3), 1), 0.7D);
         }
+        mob.setFlying(true);
 
-        /**
-         * Returns whether execution should begin. You can also read and cache any state necessary for execution in this
-         * method as well.
-         */
-        public boolean canUse() {
-            MoveControl movecontrol = this.mob.getMoveControl();
-            if (!movecontrol.hasWanted()) {
-                return true;
-            } else {
-                double d0 = movecontrol.getWantedX() - this.mob.getX();
-                double d1 = movecontrol.getWantedY() - this.mob.getY();
-                double d2 = movecontrol.getWantedZ() - this.mob.getZ();
-                double d3 = d0 * d0 + d1 * d1 + d2 * d2;
-                return d3 < 1.0D || d3 > 3600.0D;
-            }
-        }
+    }
+    @Nullable
+    private Vec3 findPos() {
+        Vec3 vec3= mob.getViewVector(0.0F);
 
-        /**
-         * Returns whether an in-progress EntityAIBase should continue executing
-         */
-        public boolean canContinueToUse() {
-            return false;
-        }
+        int i = 8;
+        Vec3 vec32 = HoverRandomPos.getPos(mob, 4, 7, vec3.x, vec3.z, ((float)Math.PI / 2F), 6, 1);
+        return vec32 != null ? vec32 : AirAndWaterRandomPos.getPos(mob, 8, 5, -2, vec3.x, vec3.z, (double)((float)Math.PI / 2F));
+    }
+    @Override
+    public void stop() {
+        super.stop();
+        mob.setFlying(false);
 
-        /**
-         * Execute a one shot task or start executing a continuous task
-         */
-        public void start() {
-            RandomSource randomsource = this.mob.getRandom();
-            double d0 = this.mob.getX() + (double)((randomsource.nextFloat() * 2.0F - 1.0F) * 32.0F);
-            double d1 = this.mob.getY() + (double)((randomsource.nextFloat() * 2.0F - 1.0F) * 32.0F);
-            double d2 = this.mob.getZ() + (double)((randomsource.nextFloat() * 2.0F - 1.0F) * 32.0F);
-            this.mob.getMoveControl().setWantedPosition(d0, d1, d2, 1.0D);
-            this.mob.lookAt(EntityAnchorArgument.Anchor.EYES,new Vec3(d0, d1, d2));
-        }
-
+    }
 }

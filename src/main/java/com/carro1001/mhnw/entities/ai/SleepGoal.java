@@ -3,6 +3,7 @@ package com.carro1001.mhnw.entities.ai;
 import com.carro1001.mhnw.MHNW;
 import com.carro1001.mhnw.entities.LargeMonster;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.phys.Vec3;
 
 public class SleepGoal extends Goal {
 
@@ -29,6 +30,8 @@ public class SleepGoal extends Goal {
     public void start() {
         MHNW.debugLog("SleepGoal: start");
         super.start();
+        largeMonster.getMoveControl().setWantedPosition(largeMonster.getX(),largeMonster.getY(),largeMonster.getZ(), 0);
+        largeMonster.setDeltaMovement(Vec3.ZERO);
         largeMonster.setSleeping(true);
         largeMonster.triggerAnim("main_controller","sleep");
 
@@ -45,10 +48,10 @@ public class SleepGoal extends Goal {
     public boolean canContinueToUse() {
         return animTicks < maxTicks || largeMonster.isLimpining();
     }
-
     @Override
     public void tick() {
         super.tick();
+        largeMonster.setDeltaMovement(Vec3.ZERO);
         if(!largeMonster.level().isClientSide) {
             animTicks++;
             if (animTicks % 2 == 0) {

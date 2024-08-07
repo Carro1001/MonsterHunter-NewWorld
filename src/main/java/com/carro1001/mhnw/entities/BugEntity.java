@@ -6,12 +6,12 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.DifficultyInstance;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.MobSpawnType;
-import net.minecraft.world.entity.SpawnGroupData;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.goal.FloatGoal;
+import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
+import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import org.jetbrains.annotations.NotNull;
@@ -19,15 +19,21 @@ import org.jetbrains.annotations.NotNull;
 import javax.annotation.Nullable;
 import java.util.Random;
 
-public class BitterbugEntity extends Mob {
-    private static final EntityDataAccessor<Integer> TYPE = SynchedEntityData.defineId(BitterbugEntity.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Boolean> TYPEASSIGNED = SynchedEntityData.defineId(BitterbugEntity.class, EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<Boolean> DATA_IS_POWERED = SynchedEntityData.defineId(BitterbugEntity.class, EntityDataSerializers.BOOLEAN);
+public class BugEntity extends PathfinderMob {
+    private static final EntityDataAccessor<Integer> TYPE = SynchedEntityData.defineId(BugEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> TYPEASSIGNED = SynchedEntityData.defineId(BugEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> DATA_IS_POWERED = SynchedEntityData.defineId(BugEntity.class, EntityDataSerializers.BOOLEAN);
 
-    public BitterbugEntity(EntityType<? extends Mob> p_27557_, Level p_27558_) {
+    public BugEntity(EntityType<? extends PathfinderMob> p_27557_, Level p_27558_) {
         super(p_27557_, p_27558_);
 
     }
+    protected void registerGoals() {
+        this.goalSelector.addGoal(5, new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(3, new WaterAvoidingRandomStrollGoal(this,0.3));
+        this.goalSelector.addGoal(8, new FloatGoal(this));
+    }
+
     protected void defineSynchedData() {
         super.defineSynchedData();
         this.entityData.define(TYPEASSIGNED, false);
@@ -97,4 +103,5 @@ public class BitterbugEntity extends Mob {
                 .add(Attributes.ARMOR, 1.0D)
                 .add(Attributes.ARMOR_TOUGHNESS,1.0D);
     }
+
 }

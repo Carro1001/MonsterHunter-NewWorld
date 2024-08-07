@@ -25,4 +25,17 @@ public class DragonMeleeAttackGoal extends MeleeAttackGoal {
     public boolean canContinueToUse() {
         return this.dragonEntity.getAggressionState() == DragonEntity.AggressionState.AGGRESSIVE && this.dragonEntity.getFireballChargeState() != DragonEntity.FireballState.CHARGING && super.canContinueToUse();
     }
+
+    @Override
+    public void start() {
+        super.start();
+        dragonEntity.setAttacking(true);
+    }
+
+    @Override
+    public void stop() {
+        super.stop();
+        dragonEntity.setAttacking(false);
+
+    }
 }

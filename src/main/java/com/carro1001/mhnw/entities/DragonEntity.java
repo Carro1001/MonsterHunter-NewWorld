@@ -1,9 +1,6 @@
 package com.carro1001.mhnw.entities;
 
-import com.carro1001.mhnw.entities.ai.DragonFlyingWaterAvoidingStrollGoal;
-import com.carro1001.mhnw.entities.ai.DragonMeleeAttackGoal;
-import com.carro1001.mhnw.entities.ai.DragonShootFireballGoal;
-import com.carro1001.mhnw.entities.ai.DragonWaterAvoidingStrollGoal;
+import com.carro1001.mhnw.entities.ai.*;
 import com.carro1001.mhnw.entities.ai.util.SmartBodyHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -89,12 +86,13 @@ public abstract class DragonEntity extends LargeMonster {
 
     @Override
     protected void registerGoals() {
-        super.registerGoals();
         this.goalSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, true)); // This finds the closest player to target
+        this.goalSelector.addGoal(1, new MonsterAggressionStateGoal(this)); // This handles the aggression state between passive, roar, and aggressive
         this.goalSelector.addGoal(2, new DragonMeleeAttackGoal(this, 1, false)); // This handles the chase and melee hit state
         this.goalSelector.addGoal(2, new DragonShootFireballGoal(this)); // This handles the fireball attack state
         this.goalSelector.addGoal(3, new DragonWaterAvoidingStrollGoal(this, 1, 0.05F)); // This handles on the ground random walk around
         this.goalSelector.addGoal(3, new DragonFlyingWaterAvoidingStrollGoal(this, 1)); // This handles random flying around
+        this.addBehaviourGoals();
     }
 
     public SpawnGroupData finalizeSpawn(@NotNull ServerLevelAccessor p_149132_, @NotNull DifficultyInstance p_149133_, @NotNull MobSpawnType p_149134_, @Nullable SpawnGroupData p_149135_, @Nullable CompoundTag p_149136_) {
@@ -173,35 +171,17 @@ public abstract class DragonEntity extends LargeMonster {
 
     protected PlayState poseBody(AnimationState<LargeMonster> animationState) {
         if(getDeathState() >= 1){
-            return animationState.setAndContinue(getDeathAnimation());
-        }
-        if (this.getAggressionState() == DragonEntity.AggressionState.ROAR) {
-            return animationState.setAndContinue(getState().getRoarAnimation(name));
+            return PlayState.STOP;
         }
         if (this.getFireballChargeState() == DragonEntity.FireballState.CHARGING) {
             return animationState.setAndContinue(getState().getFireballAnimation(name));
         }
 
         if (animationState.isMoving()) {
-            return animationState.setAndContinue(getState().getMovementAnimation(name));
+            return animationState.setAndContinue(getState().getMovementAnimation(name, getAggressionState() == AggressionState.AGGRESSIVE && getState() != State.FLYING ? "aggro" : getState() != State.FLYING ? "normal" : ""));
         }
 
-        return animationState.setAndContinue(getState().getIdleAnimation(name));
-    }
-
-    @Override
-    protected RawAnimation getIdleAnimation(){
-        return getState().getIdleAnimation(name);
-    }
-
-    @Override
-    protected RawAnimation getMovementAnimation() {
-        return getState().getMovementAnimation(name);
-    }
-
-    @Override
-    protected RawAnimation getRoarAnimation() {
-        return getState().getRoarAnimation(name);
+        return animationState.setAndContinue(getState().getIdleAnimation(name, getAggressionState() == AggressionState.AGGRESSIVE && getState() != State.FLYING ? "aggro" : getState() != State.FLYING ? "normal": ""));
     }
 
     @Override
@@ -262,7 +242,7 @@ public abstract class DragonEntity extends LargeMonster {
 
     public enum State {
         FLYING("hover", "fly", "aerial_roar", "air_fireball"),
-        WALKING("idle_normal", "walk_normal", "roar","ground_fireball");
+        WALKING("idle", "walk", "roar","ground_fireball");
 
 
         private final String idleAnimation;
@@ -276,16 +256,14 @@ public abstract class DragonEntity extends LargeMonster {
             this.roarAnimation = roarAnimation;
             this.fireballAnimation = fireballAnimation;
         }
-        RawAnimation getIdleAnimation(String name){
-            return RawAnimation.begin().thenLoop("animation."+name+"."+idleAnimation);
+        RawAnimation getIdleAnimation(String name, String agro){
+            String extraValue = agro.isBlank() ? "" : "_"+agro;
+            return RawAnimation.begin().thenLoop("animation."+name+"."+idleAnimation+extraValue);
         }
 
-        public RawAnimation getMovementAnimation(String name) {
-            return RawAnimation.begin().thenLoop("animation."+name+"."+movementAnimation);
-        }
-
-        public RawAnimation getRoarAnimation(String name) {
-            return RawAnimation.begin().thenLoop("animation."+name+"."+roarAnimation);
+        public RawAnimation getMovementAnimation(String name, String agro) {
+            String extraValue = agro.isBlank() ? "" : "_"+agro;
+            return RawAnimation.begin().thenLoop("animation."+name+"."+movementAnimation+extraValue);
         }
 
         public RawAnimation getFireballAnimation(String name) {

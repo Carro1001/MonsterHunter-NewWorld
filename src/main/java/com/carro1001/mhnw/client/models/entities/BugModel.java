@@ -1,6 +1,6 @@
 package com.carro1001.mhnw.client.models.entities;
 
-import com.carro1001.mhnw.entities.BitterbugEntity;
+import com.carro1001.mhnw.entities.BugEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.model.EntityModel;
@@ -13,14 +13,32 @@ import org.jetbrains.annotations.NotNull;
 
 import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 
-public class BitterbugModel<T extends BitterbugEntity> extends EntityModel<T> {
+public class BugModel<T extends BugEntity> extends EntityModel<T> {
     public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(new ResourceLocation(MODID, "bitterbug"), "main");
+    private final ModelPart head;
     private final ModelPart body;
+    private final ModelPart frontleftleg;
+    private final ModelPart frontrightleg;
+    private final ModelPart midrightleg;
+    private final ModelPart midleftleg;
+    private final ModelPart backleftleg;
+    private final ModelPart backrightleg;
+    private final ModelPart antennaeleft;
+    private final ModelPart antennaeright;
 
-    public BitterbugModel(ModelPart root){
+    public BugModel(ModelPart root){
         this.body = root.getChild("body");
-
+        this.head = body.getChild("head");
+        this.frontleftleg = body.getChild("frontleftleg");
+        this.frontrightleg = body.getChild("frontrightleg");
+        this.midrightleg = body.getChild("midrightleg");
+        this.midleftleg = body.getChild("midleftleg");
+        this.backleftleg = body.getChild("backleftleg");
+        this.backrightleg = body.getChild("backrightleg");
+        this.antennaeleft = head.getChild("antennaeleft");
+        this.antennaeright = head.getChild("antennaeright");
     }
+
     public static LayerDefinition createBodyLayer() {
         MeshDefinition meshdefinition = new MeshDefinition();
         PartDefinition partdefinition = meshdefinition.getRoot();
@@ -54,7 +72,28 @@ public class BitterbugModel<T extends BitterbugEntity> extends EntityModel<T> {
 
     @Override
     public void setupAnim(@NotNull T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+        float legSwingAngle = (float)  (Math.cos(limbSwing * 7F) * 1.8F * limbSwingAmount);
 
+        // Apply rotation to each leg part
+        frontleftleg.xRot = legSwingAngle;
+        midleftleg.xRot = -legSwingAngle;
+        backleftleg.xRot = legSwingAngle;
+
+        frontrightleg.xRot = -legSwingAngle;
+        midrightleg.xRot = legSwingAngle;
+        backrightleg.xRot = -legSwingAngle;
+
+        // Calculate animation parameters
+        float animationTime = ageInTicks / 20.0F; // Convert ticks to seconds
+        float wiggleFrequency = 0.5F; // Antennae wiggle every 2 seconds
+        float wiggleAmplitude = 0.35F; // Small rotation angle
+
+        // Calculate rotation angle using sine function
+        float antennaeRotation = (float) (wiggleAmplitude * Math.sin(animationTime * (2 * (float) Math.PI) * wiggleFrequency));
+
+        // Apply rotation to antennae parts
+        antennaeleft.xRot = antennaeRotation;
+        antennaeright.xRot = -antennaeRotation;
     }
 
     @Override

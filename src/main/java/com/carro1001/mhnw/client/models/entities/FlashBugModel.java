@@ -12,19 +12,4 @@ public class FlashBugModel extends DefaultedEntityGeoModel<FlashBugEntity> {
     public FlashBugModel() {
         super(new ResourceLocation(MODID, FLASHBUG), true);
     }
-
-    @Override
-    public ResourceLocation getModelResource(FlashBugEntity object) {
-        return new ResourceLocation(MODID, "geo/flashbug.geo.json");
-    }
-
-    @Override
-    public ResourceLocation getTextureResource(FlashBugEntity object) {
-        return new ResourceLocation(MODID, "textures/entity/flashbug.png");
-    }
-
-    @Override
-    public ResourceLocation getAnimationResource(FlashBugEntity animatable) {
-        return new ResourceLocation(MODID, "animations/flashbug.animation.json");
-    }
 }

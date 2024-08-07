@@ -1,6 +1,6 @@
 package com.carro1001.mhnw.setup;
 
-import com.carro1001.mhnw.client.models.entities.BitterbugModel;
+import com.carro1001.mhnw.client.models.entities.BugModel;
 import com.carro1001.mhnw.client.renderers.entities.*;
 import com.carro1001.mhnw.registration.ModRenderTypes;
 import net.minecraft.client.model.geom.ModelLayerLocation;
@@ -27,7 +27,7 @@ public class ClientSetup {
 
     @SubscribeEvent
     public static void onRegisterLayers(EntityRenderersEvent.RegisterLayerDefinitions event) {
-        event.registerLayerDefinition(BitterbugModel.LAYER_LOCATION, BitterbugModel::createBodyLayer);
+        event.registerLayerDefinition(BugModel.LAYER_LOCATION, BugModel::createBodyLayer);
         //event.registerLayerDefinition(CubeFireballModel.LAYER_LOCATION, CubeFireballModel::createMobHeadLayer);
         //event.registerLayerDefinition(CUBE_MODEL, CubeFireballRenderer::createSkullLayer);
     }
@@ -39,7 +39,7 @@ public class ClientSetup {
         event.registerEntityRenderer(RATHIAN.get(), RathianRenderer::new);
         event.registerEntityRenderer(RATHALOS.get(), RathalosRenderer::new);
         event.registerEntityRenderer(RATHALOS_FIREBALL.get(), pContext ->  new ThrownItemRenderer<>(pContext, 3.0F, true));
-        event.registerEntityRenderer(BITTERBUG.get(), BitterbugRenderer::new);
+        event.registerEntityRenderer(BITTERBUG.get(), BugRenderer::new);
         event.registerEntityRenderer(TOAD.get(), ToadRenderer::new);
         event.registerEntityRenderer(ZINOGRE.get(), ZinogreRenderer::new);
         event.registerEntityRenderer(IZUCHI.get(), IzuchiRenderer::new);

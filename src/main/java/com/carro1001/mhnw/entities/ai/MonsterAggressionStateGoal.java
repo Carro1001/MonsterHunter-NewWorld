@@ -17,13 +17,13 @@ public class MonsterAggressionStateGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        return true;
+        return dragonEntity.getAggressionState() == LargeMonster.AggressionState.PASSIVE;
     }
 
     @Override
     public boolean canContinueToUse() {
         MHNW.debugLog("MonsterAggressionStateGoal: do the roar");
-        return true;
+        return dragonEntity.getAggressionState() == LargeMonster.AggressionState.PASSIVE || dragonEntity.getAggressionState() == LargeMonster.AggressionState.ROAR;
     }
 
     @Override
