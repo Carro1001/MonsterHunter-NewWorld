@@ -7,8 +7,8 @@
 				"texture_width": 256,
 				"texture_height": 256,
 				"visible_bounds_width": 12,
-				"visible_bounds_height": 5.5,
-				"visible_bounds_offset": [0, 2.25, 0]
+				"visible_bounds_height": 6,
+				"visible_bounds_offset": [0, 2, 0]
 			},
 			"bones": [
 				{
@@ -107,6 +107,11 @@
 					]
 				},
 				{
+					"name": "baseTailHitbox",
+					"parent": "tail1",
+					"pivot": [0, 29, 26]
+				},
+				{
 					"name": "tail2",
 					"parent": "tail1",
 					"pivot": [0, 39.5, 40],
@@ -114,6 +119,11 @@
 						{"origin": [-4.5, 35, 36], "size": [9, 9, 39], "uv": [0, 0]},
 						{"origin": [-7.5, 42, 36], "size": [15, 0, 46], "uv": [155, 0]}
 					]
+				},
+				{
+					"name": "midTailHitbox",
+					"parent": "tail2",
+					"pivot": [0, 31, 49]
 				},
 				{
 					"name": "tailblade",
@@ -125,12 +135,22 @@
 					]
 				},
 				{
+					"name": "tailBladeHitbox",
+					"parent": "tailblade",
+					"pivot": [0, 25, 70]
+				},
+				{
 					"name": "torso",
 					"parent": "body",
 					"pivot": [0, 38, -14],
 					"cubes": [
 						{"origin": [-7, 30, -34.5], "size": [14, 15, 23], "uv": [72, 74]}
 					]
+				},
+				{
+					"name": "torsoHitbox",
+					"parent": "torso",
+					"pivot": [0, 29, -35]
 				},
 				{
 					"name": "neck",
@@ -154,6 +174,11 @@
 					"cubes": [
 						{"origin": [-4.5, 50, -38.5], "size": [9, 8, 13], "uv": [58, 0]}
 					]
+				},
+				{
+					"name": "headHitbox",
+					"parent": "head",
+					"pivot": [0, 45, -39]
 				},
 				{
 					"name": "snout",
