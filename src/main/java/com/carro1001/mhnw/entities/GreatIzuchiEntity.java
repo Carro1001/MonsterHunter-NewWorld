@@ -3,6 +3,7 @@ package com.carro1001.mhnw.entities;
 import com.carro1001.mhnw.entities.ai.RallyGoal;
 import com.carro1001.mhnw.entities.ai.SleepGoal;
 import com.carro1001.mhnw.registration.ModEntities;
+import com.carro1001.mhnw.registration.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.DifficultyInstance;
@@ -12,12 +13,15 @@ import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.core.animation.AnimationState;
 import software.bernie.geckolib.core.animation.RawAnimation;
 import software.bernie.geckolib.core.object.PlayState;
+
+import java.util.List;
 
 import static com.carro1001.mhnw.utils.MHNWReferences.GREAT;
 import static com.carro1001.mhnw.utils.MHNWReferences.IZUCHI;
@@ -79,6 +83,11 @@ public class GreatIzuchiEntity extends LargeMonster {
         NONE,
         TAIL_SWIPE,
         TAIL_SLAM
+    }
+
+    public List<Item> getDrops(){
+        return List.of(ModItems.IZUCHI_HIDE_ITEM.get(),ModItems.IZUCHI_TAIL_ITEM.get(),
+                ModItems.IZUCHI_HIDE_ITEM.get(),ModItems.IZUCHI_HIDE_ITEM.get());
     }
 
     public class TailAttackGoal extends MeleeAttackGoal {

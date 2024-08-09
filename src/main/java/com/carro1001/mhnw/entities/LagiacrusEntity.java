@@ -9,8 +9,6 @@ import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.ai.control.SmoothSwimmingLookControl;
 import net.minecraft.world.entity.ai.control.SmoothSwimmingMoveControl;
 import net.minecraft.world.entity.ai.goal.FollowBoatGoal;
-import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
-import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.RandomStrollGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.ai.navigation.AmphibiousPathNavigation;
@@ -116,13 +114,11 @@ public class LagiacrusEntity extends LargeMonster {
             @Override
             public void start() {
                 super.start();
-                setWalking(true);
             }
 
             @Override
             public void stop() {
                 super.stop();
-                setWalking(false);
             }
         });
         //this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 6.0F));

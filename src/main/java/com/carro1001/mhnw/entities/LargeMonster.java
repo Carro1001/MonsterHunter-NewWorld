@@ -3,6 +3,7 @@ package com.carro1001.mhnw.entities;
 import com.carro1001.mhnw.MHNW;
 import com.carro1001.mhnw.entities.ai.MonsterAggressionStateGoal;
 import com.carro1001.mhnw.entities.interfaces.IGrows;
+import com.carro1001.mhnw.registration.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
@@ -10,7 +11,10 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.DifficultyInstance;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -18,8 +22,11 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import org.jetbrains.annotations.NotNull;
@@ -33,13 +40,13 @@ import software.bernie.geckolib.core.animation.RawAnimation;
 import software.bernie.geckolib.core.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
+import java.util.List;
 import java.util.Random;
 
 public abstract class LargeMonster extends Monster implements GeoEntity, IGrows {
 
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
-    private static final EntityDataAccessor<Boolean> WALKING = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.BOOLEAN);
     protected static final EntityDataAccessor<Boolean> SCALESSIGNED = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.BOOLEAN);
     protected static final EntityDataAccessor<Float> MONSTER_SCALE = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.FLOAT);
     protected static final EntityDataAccessor<Integer> AGGRESSION_STATE = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.INT);
@@ -118,20 +125,8 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
         this.goalSelector.addGoal(1, new MonsterAggressionStateGoal(this)); // This handles the aggression state between passive, roar, and aggressive
         this.goalSelector.addGoal(4, new WaterAvoidingRandomStrollGoal(this, 0.7D){
             @Override
-            public void start() {
-                super.start();
-                setWalking(true);
-            }
-
-            @Override
             public boolean canUse() {
                 return super.canUse() && !mob.isSleeping();
-            }
-
-            @Override
-            public void stop() {
-                super.stop();
-                setWalking(false);
             }
         });
         //this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 6.0F));
@@ -154,9 +149,9 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
     protected PlayState poseBody(AnimationState<LargeMonster> animationState) {
         if(getDeathState() >= 1){
             MHNW.debugLog("poseBody: death");
-            return PlayState.STOP;
+            return animationState.setAndContinue(getDeathAnimation());
         }
-        if (animationState.isMoving() || isWalking()) {
+        if (animationState.isMoving()) {
             MHNW.debugLog("poseBody: getMovementAnimation");
             return animationState.setAndContinue(getMovementAnimation());
         }
@@ -188,7 +183,6 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
         this.entityData.define(RALLY_STATE, RallyState.READY.ordinal());
         this.entityData.define(SLEEPING, false);
         this.entityData.define(LIMPING, false);
-        this.entityData.define(WALKING, false);
         this.entityData.define(SCALESSIGNED, false);
         this.entityData.define(ATTACKING, false);
         this.entityData.define(ATTACK_ANIMATION_ID, 0);
@@ -205,7 +199,6 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
         super.addAdditionalSaveData(pCompound);
         pCompound.putFloat("Scale", this.getMonsterScale());
         pCompound.putInt("mon_aggro_state", getAggressionState().ordinal());
-        pCompound.putBoolean("Walking", isWalking());
         pCompound.putBoolean("Limping", isLimpining());
         pCompound.putBoolean("Attacking", isAttacking());
         pCompound.putFloat("AttackID", this.getAttackingID());
@@ -230,7 +223,6 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
             this.setAggressionState(DragonEntity.AggressionState.values()[pCompound.getInt("mon_aggro_state")]);
         }
         setDeathState(pCompound.getInt("DeathState"));
-        setWalking(pCompound.getBoolean("Walking"));
         setLimping(pCompound.getBoolean("Limping"));
         setSleeping(pCompound.getBoolean("Sleeping"));
 
@@ -324,14 +316,6 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
 
     protected RawAnimation getSleepAnimation() {
         return RawAnimation.begin().thenPlay("animation."+name+".sleep");
-    }
-
-    public void setWalking(boolean walking){
-        this.entityData.set(WALKING, walking);
-    }
-
-    public boolean isWalking(){
-        return this.entityData.get(WALKING);
     }
 
     public void setDeathState(int state){
@@ -466,6 +450,26 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
         return pDistance < d0 * d0;
     }
 
+    @Override
+    protected InteractionResult mobInteract(Player pPlayer, InteractionHand pHand) {
+        if(getDeathState() >= 1 && pPlayer.getItemInHand(pHand).isEmpty() && pPlayer.isCrouching()){
+            pPlayer.playSound(SoundEvents.AXE_STRIP, 1.0F, 1.0F);
+            List<Item> lootTable = getDrops();
+            ItemStack itemstack1 = new ItemStack(lootTable.get(getRandom().nextInt(0,lootTable.size())),getRandom().nextInt(2,5));
+            ItemEntity etity = new ItemEntity(pPlayer.level(), pPlayer.getX(),pPlayer.getY(),pPlayer.getZ(),itemstack1);
+            pPlayer.level().addFreshEntity(etity);
+            setDeathState(getDeathState()+1);
+            if(getDeathState() >= 4){
+                this.discard();
+            }
+            return InteractionResult.sidedSuccess(this.level().isClientSide);
+        }
+        return super.mobInteract(pPlayer, pHand);
+    }
+
+    public List<Item> getDrops(){
+        return List.of(ModItems.RAW_MEAT_ITEM.get());
+    }
 
     public enum AggressionState {
         PASSIVE,

@@ -171,7 +171,7 @@ public abstract class DragonEntity extends LargeMonster {
 
     protected PlayState poseBody(AnimationState<LargeMonster> animationState) {
         if(getDeathState() >= 1){
-            return PlayState.STOP;
+            return animationState.setAndContinue(getDeathAnimation());
         }
         if (this.getFireballChargeState() == DragonEntity.FireballState.CHARGING) {
             return animationState.setAndContinue(getState().getFireballAnimation(name));

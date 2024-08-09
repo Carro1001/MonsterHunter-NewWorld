@@ -36,13 +36,11 @@ public class MonsterRandomSwim extends RandomStrollGoal {
     @Override
     public void start() {
         super.start();
-        largeMonster.setWalking(true);
         largeMonster.setSwimming(true);
     }
 
     @Override
     public void stop() {
-        largeMonster.setWalking(false);
         largeMonster.setSwimming(false);
         super.stop();
     }

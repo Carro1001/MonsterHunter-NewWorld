@@ -36,6 +36,8 @@
   "item.mhnw.great_izuchi": "Great Izuchi Spawn Egg",
   "item.mhnw.ice_crystal": "Ice Crystal",
   "item.mhnw.izuchi": "Izuchi Spawn Egg",
+  "item.mhnw.izuchi_hide": "Izuchi Hide",
+  "item.mhnw.izuchi_tail": "Great Izuchi Tail",
   "item.mhnw.lagiacrus": "Lagiacrus Spawn Egg",
   "item.mhnw.machalite": "Machalite",
   "item.mhnw.monster_feces": "Monster Feces",
@@ -58,9 +60,11 @@
   "item.mhnw.raw_machalite": "Raw Machalite",
   "item.mhnw.raw_monster_meat": "Raw Steak",
   "item.mhnw.screamer_sack": "Screamer Sack",
+  "item.mhnw.sharp_claw": "Sharp Claw",
   "item.mhnw.sleep_sack": "Sleep Sack",
   "item.mhnw.sleeptoad_bucket": "Sleeptoad Bucket",
   "item.mhnw.toad": "Toads Spawn Egg",
   "item.mhnw.well_done_monster_meat": "Well Done Steak",
+  "item.mhnw.wyvern_gem": "Wyvern Gem",
   "item.mhnw.zinogre": "Zinogre Spawn Egg"
 }

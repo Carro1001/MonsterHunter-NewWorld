@@ -62,6 +62,21 @@ public class ModItemModels extends ItemModelProvider {
                 mcLoc("item/handheld"),
                 "layer0",modLoc("item/"+ MHNWReferences.MONSTER_FECES_ITEM));
 
+        singleTexture(WYVERN_GEM_ITEM.getId().getPath(),
+                mcLoc("item/handheld"),
+                "layer0",modLoc("item/"+ MHNWReferences.WYVERN_GEM_ITEM));
+        
+        singleTexture(SHARP_CLAW_ITEM.getId().getPath(),
+                mcLoc("item/handheld"),
+                "layer0",modLoc("item/"+ MHNWReferences.SHARP_CLAW_ITEM));
+
+        singleTexture(IZUCHI_TAIL_ITEM.getId().getPath(),
+                mcLoc("item/handheld"),
+                "layer0",modLoc("item/"+ MHNWReferences.IZUCHI+"_"+MHNWReferences.TAIL_ITEM));
+        singleTexture(IZUCHI_HIDE_ITEM.getId().getPath(),
+                mcLoc("item/handheld"),
+                "layer0",modLoc("item/"+ MHNWReferences.IZUCHI+"_"+MHNWReferences.HIDE_ITEM));
+
         singleTexture(RATHALOS_PLATE_ITEM.getId().getPath(),
                 mcLoc("item/handheld"),
                 "layer0",modLoc("item/"+ MHNWReferences.RATHALOS+"_"+MHNWReferences.PLATE_ITEM));

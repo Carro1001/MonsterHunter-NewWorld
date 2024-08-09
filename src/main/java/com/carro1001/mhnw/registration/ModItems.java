@@ -35,6 +35,12 @@ public class ModItems {
     public static final RegistryObject<Item> WELL_DONE_MEAT_ITEM = ITEMS.register(MHNWReferences.WELL_DONE_MEAT_ITEM, () -> new Item(basicItem.food(WELL_DONE_MEAT)));
     public static final RegistryObject<Item> MONSTER_FECES_ITEM = ITEMS.register(MHNWReferences.MONSTER_FECES_ITEM, () -> new Item(basicItem));
 
+    public static final RegistryObject<Item> SHARP_CLAW_ITEM = ITEMS.register(MHNWReferences.SHARP_CLAW_ITEM, () -> new Item(basicItem));
+    public static final RegistryObject<Item> WYVERN_GEM_ITEM = ITEMS.register(MHNWReferences.WYVERN_GEM_ITEM, () -> new Item(basicItem));
+
+    public static final RegistryObject<Item> IZUCHI_TAIL_ITEM = ITEMS.register(IZUCHI+"_"+ TAIL_ITEM, () -> new Item(basicItem));
+    public static final RegistryObject<Item> IZUCHI_HIDE_ITEM = ITEMS.register(IZUCHI+"_"+ HIDE_ITEM, () -> new Item(basicItem));
+
     public static final RegistryObject<Item> RATHIAN_PLATE_ITEM = ITEMS.register(MHNWReferences.RATHIAN+"_"+ PLATE_ITEM, () -> new Item(basicItem));
     public static final RegistryObject<Item> RATHIAN_SCALE_ITEM = ITEMS.register(MHNWReferences.RATHIAN+"_"+ SCALE_ITEM, () -> new Item(basicItem));
     public static final RegistryObject<Item> RATHIAN_TAIL_ITEM = ITEMS.register(MHNWReferences.RATHIAN+"_"+ TAIL_ITEM, () -> new Item(basicItem));

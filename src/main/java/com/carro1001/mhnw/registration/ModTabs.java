@@ -38,6 +38,10 @@ public class ModTabs {
                         pOutput.accept(ModItems.RARE_MEAT_ITEM.get());
                         pOutput.accept(ModItems.WELL_DONE_MEAT_ITEM.get());
                         pOutput.accept(ModItems.MONSTER_FECES_ITEM.get());
+                        pOutput.accept(ModItems.WYVERN_GEM_ITEM.get());
+                        pOutput.accept(ModItems.SHARP_CLAW_ITEM.get());
+                        pOutput.accept(ModItems.IZUCHI_TAIL_ITEM.get());
+                        pOutput.accept(ModItems.IZUCHI_HIDE_ITEM.get());
                         pOutput.accept(ModItems.RATHIAN_PLATE_ITEM.get());
                         pOutput.accept(ModItems.RATHIAN_SCALE_ITEM.get());
                         pOutput.accept(ModItems.RATHIAN_TAIL_ITEM.get());

@@ -34,6 +34,12 @@ public class ModLanguageProvider extends LanguageProvider {
         add(RAW_MEAT_ITEM.get(), "Raw Steak" );
         add(RARE_MEAT_ITEM.get(), "Rare Steak" );
         add(WELL_DONE_MEAT_ITEM.get(), "Well Done Steak" );
+
+        add(SHARP_CLAW_ITEM.get(), "Sharp Claw" );
+        add(WYVERN_GEM_ITEM.get(), "Wyvern Gem" );
+        add(IZUCHI_TAIL_ITEM.get(), "Great Izuchi Tail" );
+        add(IZUCHI_HIDE_ITEM.get(), "Izuchi Hide" );
+
         add(RATHALOS_PLATE_ITEM.get(), "Rathalos Plate" );
         add(RATHALOS_SCALE_ITEM.get(), "Rathalos Scale" );
         add(RATHALOS_TAIL_ITEM.get(), "Rathalos Tail" );

@@ -27,6 +27,9 @@ public class MHNWReferences {
     public static final String WELL_DONE_MEAT_ITEM = "well_done_monster_meat";
     public static final String MONSTER_FECES_ITEM = "monster_feces";
 
+    public static final String WYVERN_GEM_ITEM = "wyvern_gem";
+    public static final String SHARP_CLAW_ITEM = "sharp_claw";
+    public static final String HIDE_ITEM = "hide";
     public static final String PLATE_ITEM = "plate";
     public static final String SCALE_ITEM = "scale";
     public static final String TAIL_ITEM = "tail";

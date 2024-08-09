@@ -78,7 +78,6 @@ public class AptonothPanicOrAttack extends MeleeAttackGoal {
      * Execute a one shot task or start executing a continuous task
      */
     public void start() {
-        aptonoth.setWalking(2);
         aptonoth.setAttacking(false);
         if (!isAttacking) {
             this.mob.getNavigation().moveTo(this.posX, this.posY, this.posZ, this.speedModifier);
@@ -94,7 +93,6 @@ public class AptonothPanicOrAttack extends MeleeAttackGoal {
      * Reset the task's internal state. Called when this task is interrupted by another one
      */
     public void stop() {
-        aptonoth.setWalking(0);
         if (isAttacking) {
             aptonoth.setAttacking(false);
             super.stop();
