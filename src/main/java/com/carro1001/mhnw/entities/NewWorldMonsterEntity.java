@@ -3,8 +3,6 @@ package com.carro1001.mhnw.entities;
 import com.carro1001.mhnw.MHNW;
 import com.carro1001.mhnw.entities.ai.MonsterAggressionStateGoal;
 import com.carro1001.mhnw.entities.interfaces.IGrows;
-import com.carro1001.mhnw.registration.ModItems;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
@@ -12,76 +10,56 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.*;
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.ServerLevelAccessor;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.GeoEntity;
-import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.core.animation.AnimatableManager;
 import software.bernie.geckolib.core.animation.AnimationController;
 import software.bernie.geckolib.core.animation.AnimationState;
 import software.bernie.geckolib.core.animation.RawAnimation;
 import software.bernie.geckolib.core.object.PlayState;
-import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.List;
-import java.util.Random;
 
-public abstract class LargeMonster extends Monster implements GeoEntity, IGrows {
+public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implements Enemy, GeoEntity, IGrows {
 
-    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+    protected static final EntityDataAccessor<Integer> AGGRESSION_STATE = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DEATH_STATE = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> LIMPING = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.BOOLEAN);
+    protected static final EntityDataAccessor<Integer> RALLY_STATE = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> SLEEPING = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.BOOLEAN);
 
-    protected static final EntityDataAccessor<Boolean> SCALESSIGNED = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.BOOLEAN);
-    protected static final EntityDataAccessor<Float> MONSTER_SCALE = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.FLOAT);
-    protected static final EntityDataAccessor<Integer> AGGRESSION_STATE = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Integer> DEATH_STATE = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Boolean> LIMPING = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.BOOLEAN);
-    protected static final EntityDataAccessor<Integer> RALLY_STATE = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Boolean> SLEEPING = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<BlockPos> HOME_POS = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.BLOCK_POS);
-    private static final EntityDataAccessor<Boolean> RAGE = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.BOOLEAN);
-    protected static final EntityDataAccessor<Float> RAGE_BUILDUP = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Boolean> RAGE = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.BOOLEAN);
+    protected static final EntityDataAccessor<Float> RAGE_BUILDUP = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.FLOAT);
 
-    private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.BOOLEAN);
-    protected static final EntityDataAccessor<Integer> ATTACK_ANIMATION_ID = SynchedEntityData.defineId(LargeMonster.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.BOOLEAN);
+    protected static final EntityDataAccessor<Integer> ATTACK_ANIMATION_ID = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.INT);
 
     protected int rallyCooldownTime = 0;
-
-    protected float minScale = 0.6f, maxScale = 1f;
 
     protected String name;
 
     protected int maxRageBuildUp = 150;
     protected boolean shouldRage = false;
 
-    //TEMP FOR TESTING
-    @Override
-    public boolean removeWhenFarAway(double pDistanceToClosestPlayer) {
-        return pDistanceToClosestPlayer > 64;
-    }
-    public LargeMonster(EntityType<? extends Monster> entityType, Level level) {
+    public NewWorldMonsterEntity(EntityType<? extends NewWorldGrowingEntity> entityType, Level level) {
         super(entityType, level);
-        this.noCulling = true;
         if (!level.isClientSide) {
             this.setRallyState(RallyState.READY);
         }
-        fixupDimensions();
     }
 
     @Override
@@ -146,7 +124,7 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
                 .triggerableAnim("rally", getRallyAnimation()).triggerableAnim("sleep", getSleepAnimation()));
     }
 
-    protected PlayState poseBody(AnimationState<LargeMonster> animationState) {
+    protected PlayState poseBody(AnimationState<NewWorldMonsterEntity> animationState) {
         if(getDeathState() >= 1){
             MHNW.debugLog("poseBody: death");
             return animationState.setAndContinue(getDeathAnimation());
@@ -158,24 +136,25 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
         MHNW.debugLog("poseBody: getIdleAnimation");
         return animationState.setAndContinue(getIdleAnimation());
     }
-
-
-    @Override
-    public AnimatableInstanceCache getAnimatableInstanceCache() {
-        return this.cache;
+    protected RawAnimation getIdleAnimation(){
+        return RawAnimation.begin().thenLoop("animation."+name+".idle");
+    }
+    protected RawAnimation getMovementAnimation() {
+        return RawAnimation.begin().thenLoop("animation."+name+".walk");
+    }
+    protected RawAnimation getRoarAnimation() {
+        return RawAnimation.begin().thenPlay("animation."+name+".roar");
+    }
+    protected RawAnimation getDeathAnimation() {
+        return RawAnimation.begin().thenPlayAndHold("animation."+name+".death");
+    }
+    protected RawAnimation getRallyAnimation() {
+        return RawAnimation.begin().thenPlay("animation."+name+".rally");
+    }
+    protected RawAnimation getSleepAnimation() {
+        return RawAnimation.begin().thenPlay("animation."+name+".sleep");
     }
 
-    public static AttributeSupplier.Builder prepareAttributes() {
-        return Monster.createLivingAttributes()
-                .add(Attributes.ATTACK_DAMAGE, 3.0)
-                .add(Attributes.MAX_HEALTH, 100)
-                .add(Attributes.FOLLOW_RANGE, 15.0)
-                .add(Attributes.MOVEMENT_SPEED, 0.45)
-                .add(Attributes.ARMOR, 1.0D)
-                .add(Attributes.KNOCKBACK_RESISTANCE, (double)0.6F)
-                .add(Attributes.ATTACK_KNOCKBACK, (double)1F)
-                .add(Attributes.ARMOR_TOUGHNESS,1.0D);
-    }
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
@@ -183,21 +162,16 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
         this.entityData.define(RALLY_STATE, RallyState.READY.ordinal());
         this.entityData.define(SLEEPING, false);
         this.entityData.define(LIMPING, false);
-        this.entityData.define(SCALESSIGNED, false);
         this.entityData.define(ATTACKING, false);
         this.entityData.define(ATTACK_ANIMATION_ID, 0);
         this.entityData.define(RAGE, false);
         this.entityData.define(RAGE_BUILDUP, 0F);
-        this.entityData.define(MONSTER_SCALE, 1F);
-        this.entityData.define(HOME_POS, BlockPos.ZERO);
         this.entityData.define(AGGRESSION_STATE, AggressionState.PASSIVE.ordinal());
-
     }
 
     @Override
     public void addAdditionalSaveData(@NotNull CompoundTag pCompound) {
         super.addAdditionalSaveData(pCompound);
-        pCompound.putFloat("Scale", this.getMonsterScale());
         pCompound.putInt("mon_aggro_state", getAggressionState().ordinal());
         pCompound.putBoolean("Limping", isLimpining());
         pCompound.putBoolean("Attacking", isAttacking());
@@ -206,19 +180,11 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
         pCompound.putFloat("RageBuildUp", this.getRageBuildUp());
         pCompound.putInt("DeathState", this.getDeathState());
         pCompound.putBoolean("Sleeping", isSleeping());
-
-        pCompound.putInt("HomePosX", this.getHomePos().getX());
-        pCompound.putInt("HomePosY", this.getHomePos().getY());
-        pCompound.putInt("HomePosZ", this.getHomePos().getZ());
     }
 
     @Override
     public void readAdditionalSaveData(@NotNull CompoundTag pCompound) {
         super.readAdditionalSaveData(pCompound);
-        if (pCompound.contains("Scale", Tag.TAG_FLOAT)) {
-            this.setMonsterScale(pCompound.getFloat("Scale"));
-        }
-
         if (pCompound.contains("mon_aggro_state", Tag.TAG_INT)) {
             this.setAggressionState(DragonEntity.AggressionState.values()[pCompound.getInt("mon_aggro_state")]);
         }
@@ -230,105 +196,26 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
         setAttackingID(pCompound.getInt("AttackID"));
         setRaging(pCompound.getBoolean("Raging"));
         setRageBuildUp(pCompound.getFloat("RageBuildUp"));
-
-        int i = pCompound.getInt("HomePosX");
-        int j = pCompound.getInt("HomePosY");
-        int k = pCompound.getInt("HomePosZ");
-        this.setHomePos(new BlockPos(i, j, k));
-    }
-
-    public void GenerateScale(){
-        if(!getScaleAssignedDir()){
-            setMonsterScale((float) new Random().nextDouble(minScale, maxScale));
-            setScaleAssignedDir(true);
-        }
-    }
-
-    public void setScaleAssignedDir(boolean pState) {
-        this.entityData.set(SCALESSIGNED, pState);
-    }
-    public boolean getScaleAssignedDir() {
-        return this.entityData.get(SCALESSIGNED);
-    }
-
-    @Override
-    public float getMonsterScale() {
-        return this.entityData.get(MONSTER_SCALE);
-    }
-
-    @Override
-    public void setMonsterScale(float scale) {
-        if(!getScaleAssignedDir()){
-            this.entityData.set(MONSTER_SCALE, scale);
-            this.setScaleAssignedDir(true);
-            this.reapplyPosition();
-            this.refreshDimensions();
-        }
-    }
-
-    public void refreshDimensions() {
-        double d0 = this.getX();
-        double d1 = this.getY();
-        double d2 = this.getZ();
-        super.refreshDimensions();
-        this.setPos(d0, d1, d2);
-    }
-
-    public void onSyncedDataUpdated(EntityDataAccessor<?> pKey) {
-        if (MONSTER_SCALE.equals(pKey)) {
-            this.refreshDimensions();
-            this.setYRot(this.yHeadRot);
-            this.yBodyRot = this.yHeadRot;
-        }
-        super.onSyncedDataUpdated(pKey);
-    }
-    public EntityDimensions getDimensions(Pose pPose) {
-        return super.getDimensions(pPose).scale(getMonsterScale());
     }
 
     public void setAggressionState(DragonEntity.AggressionState aggressionState) {
         this.entityData.set(AGGRESSION_STATE, aggressionState.ordinal());
     }
 
-    public LargeMonster.AggressionState getAggressionState() {
-        return LargeMonster.AggressionState.values()[this.entityData.get(AGGRESSION_STATE)];
-    }
-
-    protected RawAnimation getIdleAnimation(){
-        return RawAnimation.begin().thenLoop("animation."+name+".idle");
-    }
-
-    protected RawAnimation getMovementAnimation() {
-        return RawAnimation.begin().thenLoop("animation."+name+".walk");
-    }
-
-    protected RawAnimation getRoarAnimation() {
-        return RawAnimation.begin().thenPlay("animation."+name+".roar");
-    }
-
-    protected RawAnimation getDeathAnimation() {
-        return RawAnimation.begin().thenPlayAndHold("animation."+name+".death");
-    }
-
-    protected RawAnimation getRallyAnimation() {
-        return RawAnimation.begin().thenPlay("animation."+name+".rally");
-    }
-
-    protected RawAnimation getSleepAnimation() {
-        return RawAnimation.begin().thenPlay("animation."+name+".sleep");
+    public NewWorldMonsterEntity.AggressionState getAggressionState() {
+        return NewWorldMonsterEntity.AggressionState.values()[this.entityData.get(AGGRESSION_STATE)];
     }
 
     public void setDeathState(int state){
         this.entityData.set(DEATH_STATE, state);
     }
-
     public int getDeathState(){
         return this.entityData.get(DEATH_STATE);
     }
+
     public void setLimping(boolean limping){
         this.entityData.set(LIMPING, limping);
     }
-
     public boolean isLimpining(){
         return this.entityData.get(LIMPING);
     }
@@ -336,41 +223,32 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
     public void setSleeping(boolean sleeping){
         this.entityData.set(SLEEPING, sleeping);
     }
-
     public boolean isSleeping(){
         return this.entityData.get(SLEEPING);
     }
 
-    public void setRallyState(RallyState state)
-    {
+    public void setRallyState(RallyState state) {
         if(!level().isClientSide && state == RallyState.COOL_DOWN){
             this.rallyCooldownTime = this.random.nextInt(500, 2000);
         }
         this.entityData.set(RALLY_STATE, state.ordinal());
     }
-
     public RallyState getRallyState() {
         return RallyState.values()[this.entityData.get(RALLY_STATE)];
-    }
-
-    public void setHomePos(BlockPos pHomePos) {
-        this.entityData.set(HOME_POS, pHomePos);
-    }
-
-    BlockPos getHomePos() {
-        return this.entityData.get(HOME_POS);
     }
 
     public void setAttacking(boolean attacking){
         this.entityData.set(ATTACKING, attacking);
     }
-
     public boolean isAttacking(){
         return this.entityData.get(ATTACKING);
     }
 
     public void setAttackingID(int attackingID){
         this.entityData.set(ATTACK_ANIMATION_ID, attackingID);
+    }
+    public float getAttackingID(){
+        return this.entityData.get(ATTACK_ANIMATION_ID);
     }
 
     public float getRageBuildUp(){
@@ -379,7 +257,6 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
     public void setRaging(boolean raging){
         this.entityData.set(RAGE, shouldRage && raging);
     }
-
     public boolean isRaging(){
         return this.entityData.get(RAGE);
     }
@@ -399,9 +276,7 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
     public void tickRageBuildUp(float amount){
         setRageBuildUp(getRageBuildUp()+amount);
     }
-    public float getAttackingID(){
-        return this.entityData.get(ATTACK_ANIMATION_ID);
-    }
+
     @Override
     public boolean hurt(DamageSource pSource, float pAmount) {
         boolean hurt = super.hurt(pSource, pAmount);
@@ -430,24 +305,22 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
             MHNW.debugLog(name + " healed: setLimping(false); setSleeping(false);");
         }
     }
-
-    @Nullable
-    @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData, @Nullable CompoundTag pDataTag) {
-        GenerateScale();
-        this.setHomePos(this.blockPosition());
-        return super.finalizeSpawn(pLevel, pDifficulty, pReason, pSpawnData, pDataTag);
+    public void aiStep() {
+        this.updateSwingTime();
+        this.updateNoActionTime();
+        super.aiStep();
     }
 
-    @Override
-    public boolean shouldRenderAtSqrDistance(double pDistance) {
-        double d0 = this.getBoundingBox().getSize();
-        if (Double.isNaN(d0)) {
-            d0 = 1.0D;
+    protected void updateNoActionTime() {
+        float f = this.getLightLevelDependentMagicValue();
+        if (f > 0.5F) {
+            this.noActionTime += 2;
         }
 
-        d0 *= 64.0D * 4;
-        return pDistance < d0 * d0;
+    }
+
+    protected boolean shouldDespawnInPeaceful() {
+        return true;
     }
 
     @Override
@@ -467,8 +340,8 @@ public abstract class LargeMonster extends Monster implements GeoEntity, IGrows 
         return super.mobInteract(pPlayer, pHand);
     }
 
-    public List<Item> getDrops(){
-        return List.of(ModItems.RAW_MEAT_ITEM.get());
+    public LivingEntity.Fallsounds getFallSounds() {
+        return new LivingEntity.Fallsounds(SoundEvents.HOSTILE_SMALL_FALL, SoundEvents.HOSTILE_BIG_FALL);
     }
 
     public enum AggressionState {

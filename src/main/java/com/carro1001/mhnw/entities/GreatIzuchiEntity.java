@@ -26,16 +26,16 @@ import java.util.List;
 import static com.carro1001.mhnw.utils.MHNWReferences.GREAT;
 import static com.carro1001.mhnw.utils.MHNWReferences.IZUCHI;
 
-public class GreatIzuchiEntity extends LargeMonster {
+public class GreatIzuchiEntity extends NewWorldMonsterEntity {
 
 
-    public GreatIzuchiEntity(EntityType<? extends LargeMonster> p_27557_, Level p_27558_) {
+    public GreatIzuchiEntity(EntityType<? extends NewWorldMonsterEntity> p_27557_, Level p_27558_) {
         super(p_27557_, p_27558_);
         this.name = GREAT + "_" + IZUCHI;
         shouldRage = true;
     }
 
-    protected PlayState poseBody(AnimationState<LargeMonster> animationState) {
+    protected PlayState poseBody(AnimationState<NewWorldMonsterEntity> animationState) {
         if(getDeathState() >= 1){
             return super.poseBody(animationState);
         }
@@ -68,7 +68,7 @@ public class GreatIzuchiEntity extends LargeMonster {
     }
 
     public static AttributeSupplier.Builder prepareAttributes() {
-        return LargeMonster.createLivingAttributes()
+        return NewWorldMonsterEntity.createLivingAttributes()
                 .add(Attributes.MAX_HEALTH, 100)
                 .add(Attributes.FOLLOW_RANGE, 15.0)
                 .add(Attributes.MOVEMENT_SPEED, 0.45)

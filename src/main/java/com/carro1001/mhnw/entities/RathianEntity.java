@@ -10,7 +10,7 @@ import java.util.List;
 
 public class RathianEntity extends DragonEntity {
 
-    public RathianEntity(EntityType<? extends LargeMonster > p_27557_, Level p_27558_) {
+    public RathianEntity(EntityType<? extends NewWorldMonsterEntity> p_27557_, Level p_27558_) {
         super(p_27557_, p_27558_, MHNWReferences.RATHIAN);
         minScale = 0.5f;
         maxScale = 1f;

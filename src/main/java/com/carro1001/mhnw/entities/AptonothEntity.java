@@ -29,7 +29,7 @@ import software.bernie.geckolib.core.object.PlayState;
 import java.util.List;
 import java.util.function.Predicate;
 
-public class AptonothEntity extends LargeMonster{
+public class AptonothEntity extends NewWorldMonsterEntity {
 
     private static final RawAnimation RUNNING = RawAnimation.begin().thenPlay("animation.aptonoth.run");
     private static final RawAnimation EAT = RawAnimation.begin().thenPlay("animation.aptonoth.eat");
@@ -45,7 +45,7 @@ public class AptonothEntity extends LargeMonster{
     @javax.annotation.Nullable
     private AptonothEntity.AptonothAvoidEntityGoal aptonothAvoidPlayersGoal;
 
-    public AptonothEntity(EntityType<? extends LargeMonster> p_27557_, Level p_27558_) {
+    public AptonothEntity(EntityType<? extends NewWorldMonsterEntity> p_27557_, Level p_27558_) {
         super(p_27557_, p_27558_);
         this.reassessPanicGoals();
         name = MHNWReferences.APTONOTH;
@@ -253,7 +253,7 @@ public class AptonothEntity extends LargeMonster{
         return state.setAndContinue(isRunning ? getMovementAnimation() : getIdleAnimation());
     }
 
-    protected PlayState poseBody (AnimationState < LargeMonster > state) {
+    protected PlayState poseBody (AnimationState <NewWorldMonsterEntity> state) {
         if (getDeathState() >= 1 || isAggressive() || this.isAttacking()) return PlayState.STOP;
         if (this.isEating()) {
             MHNW.debugLog("isEating");

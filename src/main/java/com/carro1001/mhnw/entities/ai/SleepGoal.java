@@ -1,24 +1,24 @@
 package com.carro1001.mhnw.entities.ai;
 
 import com.carro1001.mhnw.MHNW;
-import com.carro1001.mhnw.entities.LargeMonster;
+import com.carro1001.mhnw.entities.NewWorldMonsterEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.phys.Vec3;
 
 public class SleepGoal extends Goal {
 
-    LargeMonster largeMonster;
+    NewWorldMonsterEntity newWorldMonsterEntity;
     //3 sec anim
     int animTicks = 0;
     int maxTicks = 20*10;
 
-    public SleepGoal (LargeMonster largeMonster){
-        this.largeMonster = largeMonster;
+    public SleepGoal (NewWorldMonsterEntity newWorldMonsterEntity){
+        this.newWorldMonsterEntity = newWorldMonsterEntity;
     }
 
     @Override
     public boolean canUse() {
-        return largeMonster.isLimpining() && !largeMonster.isAttacking() && largeMonster.getRallyState() == LargeMonster.RallyState.COOL_DOWN;
+        return newWorldMonsterEntity.isLimpining() && !newWorldMonsterEntity.isAttacking() && newWorldMonsterEntity.getRallyState() == NewWorldMonsterEntity.RallyState.COOL_DOWN;
     }
 
     @Override
@@ -30,10 +30,10 @@ public class SleepGoal extends Goal {
     public void start() {
         MHNW.debugLog("SleepGoal: start");
         super.start();
-        largeMonster.getMoveControl().setWantedPosition(largeMonster.getX(),largeMonster.getY(),largeMonster.getZ(), 0);
-        largeMonster.setDeltaMovement(Vec3.ZERO);
-        largeMonster.setSleeping(true);
-        largeMonster.triggerAnim("main_controller","sleep");
+        newWorldMonsterEntity.getMoveControl().setWantedPosition(newWorldMonsterEntity.getX(), newWorldMonsterEntity.getY(), newWorldMonsterEntity.getZ(), 0);
+        newWorldMonsterEntity.setDeltaMovement(Vec3.ZERO);
+        newWorldMonsterEntity.setSleeping(true);
+        newWorldMonsterEntity.triggerAnim("main_controller","sleep");
 
     }
 
@@ -41,21 +41,21 @@ public class SleepGoal extends Goal {
     public void stop() {
         MHNW.debugLog("SleepGoal: stop");
         super.stop();
-        largeMonster.setSleeping(false);
+        newWorldMonsterEntity.setSleeping(false);
     }
 
     @Override
     public boolean canContinueToUse() {
-        return animTicks < maxTicks || largeMonster.isLimpining();
+        return animTicks < maxTicks || newWorldMonsterEntity.isLimpining();
     }
     @Override
     public void tick() {
         super.tick();
-        largeMonster.setDeltaMovement(Vec3.ZERO);
-        if(!largeMonster.level().isClientSide) {
+        newWorldMonsterEntity.setDeltaMovement(Vec3.ZERO);
+        if(!newWorldMonsterEntity.level().isClientSide) {
             animTicks++;
             if (animTicks % 2 == 0) {
-                largeMonster.heal(0.25f);
+                newWorldMonsterEntity.heal(0.25f);
             }
         }
     }

@@ -33,14 +33,14 @@ import software.bernie.geckolib.core.object.PlayState;
 
 import javax.annotation.Nullable;
 
-public abstract class DragonEntity extends LargeMonster {
+public abstract class DragonEntity extends NewWorldMonsterEntity {
 
     protected int fireballCooldownTime = 0;
 
     protected static final EntityDataAccessor<Integer> STATE = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.INT);
     protected static final EntityDataAccessor<Integer> FIRE_BALL_CHARGE_STATE = SynchedEntityData.defineId(DragonEntity.class, EntityDataSerializers.INT);
 
-    public DragonEntity(EntityType<? extends LargeMonster > pEntityType, Level pLevel, String name) {
+    public DragonEntity(EntityType<? extends NewWorldMonsterEntity> pEntityType, Level pLevel, String name) {
         super(pEntityType, pLevel);
         this.name = name;
         setMovement();
@@ -169,7 +169,7 @@ public abstract class DragonEntity extends LargeMonster {
     }
 
 
-    protected PlayState poseBody(AnimationState<LargeMonster> animationState) {
+    protected PlayState poseBody(AnimationState<NewWorldMonsterEntity> animationState) {
         if(getDeathState() >= 1){
             return animationState.setAndContinue(getDeathAnimation());
         }

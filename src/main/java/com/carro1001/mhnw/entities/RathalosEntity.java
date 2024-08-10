@@ -12,7 +12,7 @@ import java.util.List;
 
 public class RathalosEntity extends DragonEntity implements GeoEntity, IGrows {
 
-    public RathalosEntity(EntityType<? extends LargeMonster> pEntityType, Level pLevel) {
+    public RathalosEntity(EntityType<? extends NewWorldMonsterEntity> pEntityType, Level pLevel) {
         super(pEntityType, pLevel, MHNWReferences.RATHALOS);
         minScale = 0.6f;
         maxScale = 1.1f;
