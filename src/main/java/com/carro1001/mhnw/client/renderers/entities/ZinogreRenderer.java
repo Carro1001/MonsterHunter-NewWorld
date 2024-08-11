@@ -5,7 +5,7 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 
 import static com.carro1001.mhnw.utils.MHNWReferences.ZINOGRE;
 
-public class ZinogreRenderer extends MonsterRenderer {
+public class ZinogreRenderer extends NewWorldGrowingEntityRenderer {
 
     public ZinogreRenderer(EntityRendererProvider.Context context) {
         super(context, new ZinogreModel(),ZINOGRE);

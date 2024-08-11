@@ -1,7 +1,7 @@
 package com.carro1001.mhnw.client.models.entities;
 
 import com.carro1001.mhnw.entities.LagiacrusEntity;
-import com.carro1001.mhnw.entities.NewWorldMonsterEntity;
+import com.carro1001.mhnw.entities.NewWorldGrowingEntity;
 import com.carro1001.mhnw.utils.MathHelpers;
 import net.minecraft.util.Mth;
 import software.bernie.geckolib.constant.DataTickets;
@@ -11,13 +11,13 @@ import software.bernie.geckolib.model.data.EntityModelData;
 
 import static com.carro1001.mhnw.utils.MHNWReferences.LAGIACRUZ;
 
-public class LagiacrusModel extends MonsterModel {
+public class LagiacrusModel extends NewWorldGrowingEntityModel {
     public LagiacrusModel() {
         super(LAGIACRUZ);
     }
 
     @Override
-    public void setCustomAnimations(NewWorldMonsterEntity E, long uniqueID, AnimationState<NewWorldMonsterEntity> customPredicate) {
+    public void setCustomAnimations(NewWorldGrowingEntity E, long uniqueID, AnimationState<NewWorldGrowingEntity> customPredicate) {
         EntityModelData extraData = customPredicate.getData(DataTickets.ENTITY_MODEL_DATA);
 
         //ik stuff START

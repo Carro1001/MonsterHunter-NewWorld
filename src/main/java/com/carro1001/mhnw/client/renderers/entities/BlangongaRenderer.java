@@ -5,7 +5,7 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 
 import static com.carro1001.mhnw.utils.MHNWReferences.BLANGONGA;
 
-public class BlangongaRenderer extends MonsterRenderer {
+public class BlangongaRenderer extends NewWorldGrowingEntityRenderer {
 
     public BlangongaRenderer(EntityRendererProvider.Context context) {
         super(context, new BlangongaModel(),BLANGONGA);

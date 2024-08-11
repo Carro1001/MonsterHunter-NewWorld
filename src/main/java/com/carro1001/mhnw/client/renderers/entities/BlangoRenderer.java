@@ -5,7 +5,7 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 
 import static com.carro1001.mhnw.utils.MHNWReferences.BLANGO;
 
-public class BlangoRenderer extends MonsterRenderer {
+public class BlangoRenderer extends NewWorldGrowingEntityRenderer {
 
     public BlangoRenderer(EntityRendererProvider.Context context) {
         super(context, new BlangoModel(),BLANGO);

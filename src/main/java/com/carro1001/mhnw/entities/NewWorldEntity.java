@@ -27,7 +27,7 @@ import java.util.List;
 
 public abstract class NewWorldEntity extends PathfinderMob implements GeoEntity{
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
-    private static final EntityDataAccessor<BlockPos> HOME_POS = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.BLOCK_POS);
+    private static final EntityDataAccessor<BlockPos> HOME_POS = SynchedEntityData.defineId(NewWorldEntity.class, EntityDataSerializers.BLOCK_POS);
 
     //TEMP FOR TESTING
     @Override

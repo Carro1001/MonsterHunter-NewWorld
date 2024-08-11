@@ -261,6 +261,7 @@ public class AptonothEntity extends NewWorldMonsterEntity {
         }
         return PlayState.STOP;
     }
+
     //
 
     static class AptonothAvoidEntityGoal extends AvoidEntityGoal {

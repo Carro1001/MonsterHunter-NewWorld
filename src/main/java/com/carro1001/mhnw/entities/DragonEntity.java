@@ -32,6 +32,7 @@ import software.bernie.geckolib.core.animation.RawAnimation;
 import software.bernie.geckolib.core.object.PlayState;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 public abstract class DragonEntity extends NewWorldMonsterEntity {
 
@@ -48,6 +49,8 @@ public abstract class DragonEntity extends NewWorldMonsterEntity {
             fireballCooldownTime = this.random.nextInt(500, 2000);
             this.setFireBallChargeState(DragonEntity.FireballState.COOL_DOWN);
         }
+        MonsterWeakness = List.of(Elements.THUNDER,Elements.DRAGON);
+        MonsterPossibleAttackingBlights = List.of(Blights.POISON);
     }
 
     @Override

@@ -5,7 +5,7 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 
 import static com.carro1001.mhnw.utils.MHNWReferences.IZUCHI;
 
-public class IzuchiRenderer extends MonsterRenderer {
+public class IzuchiRenderer extends NewWorldGrowingEntityRenderer {
 
     public IzuchiRenderer(EntityRendererProvider.Context context) {
         super(context, new IzuchiModel(),IZUCHI);

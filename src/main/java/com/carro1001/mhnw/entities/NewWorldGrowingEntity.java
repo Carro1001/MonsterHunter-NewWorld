@@ -12,8 +12,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.core.animation.AnimatableManager;
 
 import java.util.Random;
 
@@ -26,6 +24,7 @@ public abstract class NewWorldGrowingEntity extends NewWorldEntity implements IG
         super(pEntityType, pLevel);
         fixupDimensions();
     }
+
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
@@ -107,13 +106,4 @@ public abstract class NewWorldGrowingEntity extends NewWorldEntity implements IG
         return super.finalizeSpawn(pLevel, pDifficulty, pReason, pSpawnData, pDataTag);
     }
 
-    @Override
-    public void registerControllers(AnimatableManager.ControllerRegistrar controllerRegistrar) {
-
-    }
-
-    @Override
-    public AnimatableInstanceCache getAnimatableInstanceCache() {
-        return null;
-    }
 }

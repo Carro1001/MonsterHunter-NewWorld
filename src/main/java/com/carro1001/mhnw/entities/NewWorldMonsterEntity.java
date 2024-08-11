@@ -1,8 +1,13 @@
 package com.carro1001.mhnw.entities;
 
 import com.carro1001.mhnw.MHNW;
+import com.carro1001.mhnw.entities.ai.ExhaustedStallGoal;
 import com.carro1001.mhnw.entities.ai.MonsterAggressionStateGoal;
-import com.carro1001.mhnw.entities.interfaces.IGrows;
+import com.carro1001.mhnw.entities.helpers.MonsterBreakablePart;
+import com.carro1001.mhnw.entities.interfaces.IAttributes;
+import de.dertoaster.multihitboxlib.api.IMultipartEntity;
+import de.dertoaster.multihitboxlib.entity.MHLibPartEntity;
+import de.dertoaster.multihitboxlib.entity.hitbox.SubPartConfig;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
@@ -24,17 +29,21 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraftforge.entity.PartEntity;
 import org.jetbrains.annotations.NotNull;
-import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.core.animation.AnimatableManager;
 import software.bernie.geckolib.core.animation.AnimationController;
 import software.bernie.geckolib.core.animation.AnimationState;
 import software.bernie.geckolib.core.animation.RawAnimation;
 import software.bernie.geckolib.core.object.PlayState;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
+import java.util.UUID;
+import java.util.concurrent.LinkedTransferQueue;
 
-public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implements Enemy, GeoEntity, IGrows {
+public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implements Enemy, IAttributes, IMultipartEntity<NewWorldMonsterEntity> {
 
     protected static final EntityDataAccessor<Integer> AGGRESSION_STATE = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> DEATH_STATE = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.INT);
@@ -45,13 +54,29 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
     private static final EntityDataAccessor<Boolean> RAGE = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.BOOLEAN);
     protected static final EntityDataAccessor<Float> RAGE_BUILDUP = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.FLOAT);
 
+    private static final EntityDataAccessor<Boolean> EXHAUSTED = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.BOOLEAN);
+    protected static final EntityDataAccessor<Float> EXHAUST_BUILDUP = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.FLOAT);
+
     private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.BOOLEAN);
     protected static final EntityDataAccessor<Integer> ATTACK_ANIMATION_ID = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.INT);
+
+    protected List<Elements> MonsterWeakness = List.of(Elements.NONE);
+    protected List<Elements> MonsterAttackElements = List.of(Elements.NONE);
+
+    protected List<Blights> MonsterBlightWeakness = List.of(Blights.NONE);
+    protected List<Blights> MonsterBlightResistance = List.of(Blights.NONE);
+    protected List<Blights> MonsterPossibleAttackingBlights = List.of(Blights.NONE);
+
+    protected List<MonsterBreakablePart> BreakableParts;
+
+    private final Queue<UUID> trackerQueue = new LinkedTransferQueue<>();
+    private int _mhTicksSinceLastSync = 0;
 
     protected int rallyCooldownTime = 0;
 
     protected String name;
 
+    protected int maxExhaustBuildUp = 150;
     protected int maxRageBuildUp = 150;
     protected boolean shouldRage = false;
 
@@ -60,6 +85,52 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
         if (!level.isClientSide) {
             this.setRallyState(RallyState.READY);
         }
+        if(BreakableParts == null){
+            BreakableParts = new ArrayList<>();
+        }
+    }
+
+    @Override
+    public boolean hurt(DamageSource pSource, float pAmount) {
+        boolean hurt = super.hurt(pSource, pAmount);
+        if(hurt && getHealth() <= getMaxHealth()/4){
+            setLimping(true);
+            MHNW.debugLog(name + ": hurt() limping");
+        }
+        if(isSleeping() && pSource.getDirectEntity() instanceof LivingEntity livingEntity){
+            setSleeping(false);
+            setTarget(livingEntity);
+            setAggressive(true);
+            MHNW.debugLog(name + ": hurt() waking up");
+        }
+        if(shouldRage && !isRaging() && hurt){
+            tickRageBuildUp(pAmount);
+        }
+        if(!isExhausted() && hurt){
+            tickExhaustBuildUp(pAmount);
+        }
+        return hurt;
+    }
+
+    @Override
+    public boolean hurt(PartEntity<NewWorldMonsterEntity> subPart, DamageSource source, float damage) {
+        if(subPart instanceof MHLibPartEntity partEntity){
+            for(MonsterBreakablePart part: BreakableParts){
+                if(part.getPartName().equals(partEntity.getConfigName())){
+                    part.hurt(damage);
+                    if(part.getHP() <= 0){
+                        if(part.isGoneWhenDead()){
+                            return false;
+                        }else{
+                            //its broken, no multiplier
+                            damage = damage/((MHLibPartEntity<NewWorldMonsterEntity>) subPart).getConfig().damageModifier();
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+        return IMultipartEntity.super.hurt(subPart, source, damage);
     }
 
     @Override
@@ -101,6 +172,7 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
     protected void registerGoals() {
         this.goalSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, true)); // This finds the closest player to target
         this.goalSelector.addGoal(1, new MonsterAggressionStateGoal(this)); // This handles the aggression state between passive, roar, and aggressive
+        this.goalSelector.addGoal(2, new ExhaustedStallGoal(this)); // This handles the stall for when a mob is exhausted
         this.goalSelector.addGoal(4, new WaterAvoidingRandomStrollGoal(this, 0.7D){
             @Override
             public boolean canUse() {
@@ -166,6 +238,8 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
         this.entityData.define(ATTACK_ANIMATION_ID, 0);
         this.entityData.define(RAGE, false);
         this.entityData.define(RAGE_BUILDUP, 0F);
+        this.entityData.define(EXHAUSTED, false);
+        this.entityData.define(EXHAUST_BUILDUP, 0F);
         this.entityData.define(AGGRESSION_STATE, AggressionState.PASSIVE.ordinal());
     }
 
@@ -178,6 +252,8 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
         pCompound.putFloat("AttackID", this.getAttackingID());
         pCompound.putBoolean("Raging", isRaging());
         pCompound.putFloat("RageBuildUp", this.getRageBuildUp());
+        pCompound.putBoolean("Exhausted", isExhausted());
+        pCompound.putFloat("ExhaustBuildUp", this.getExhaustBuildUp());
         pCompound.putInt("DeathState", this.getDeathState());
         pCompound.putBoolean("Sleeping", isSleeping());
     }
@@ -196,6 +272,8 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
         setAttackingID(pCompound.getInt("AttackID"));
         setRaging(pCompound.getBoolean("Raging"));
         setRageBuildUp(pCompound.getFloat("RageBuildUp"));
+        setExhausted(pCompound.getBoolean("Exhausted"));
+        setExhaustBuildUp(pCompound.getFloat("ExhaustBuildUp"));
     }
 
     public void setAggressionState(DragonEntity.AggressionState aggressionState) {
@@ -251,6 +329,30 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
         return this.entityData.get(ATTACK_ANIMATION_ID);
     }
 
+    public float getExhaustBuildUp(){
+        return this.entityData.get(EXHAUST_BUILDUP);
+    }
+    public void setExhausted(boolean exhausted){
+        this.entityData.set(EXHAUSTED, exhausted);
+    }
+    public boolean isExhausted(){
+        return this.entityData.get(EXHAUSTED);
+    }
+
+    public void setExhaustBuildUp(float exhaustBuildUp){
+        if(!isExhausted() && exhaustBuildUp >= maxExhaustBuildUp){
+            setExhausted(true);
+            maxExhaustBuildUp *= 2;
+            exhaustBuildUp *= 2;
+            MHNW.debugLog(name + ": setExhausted(true) for " + exhaustBuildUp +  "ticks");
+        }
+        if(isExhausted() && exhaustBuildUp <= 0 ){
+            setExhausted(false);
+            MHNW.debugLog(name + ": setExhausted(false)");
+        }
+        this.entityData.set(RAGE_BUILDUP, exhaustBuildUp);
+    }
+
     public float getRageBuildUp(){
         return this.entityData.get(RAGE_BUILDUP);
     }
@@ -269,31 +371,18 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
         }
         if(isRaging() && rageBuildUp <= 0 ){
             setRaging(false);
+            setExhaustBuildUp(maxExhaustBuildUp);
             MHNW.debugLog(name + ": setRaging(false)");
         }
         this.entityData.set(RAGE_BUILDUP, rageBuildUp);
     }
+
     public void tickRageBuildUp(float amount){
         setRageBuildUp(getRageBuildUp()+amount);
     }
 
-    @Override
-    public boolean hurt(DamageSource pSource, float pAmount) {
-        boolean hurt = super.hurt(pSource, pAmount);
-        if(hurt && getHealth() <= getMaxHealth()/4){
-            setLimping(true);
-            MHNW.debugLog(name + ": hurt() limping");
-        }
-        if(isSleeping() && pSource.getDirectEntity() instanceof LivingEntity livingEntity){
-            setSleeping(false);
-            setTarget(livingEntity);
-            setAggressive(true);
-            MHNW.debugLog(name + ": hurt() waking up");
-        }
-        if(shouldRage && !isRaging() && hurt){
-            tickRageBuildUp(pAmount);
-        }
-        return hurt;
+    public void tickExhaustBuildUp(float amount){
+        setExhaustBuildUp(getExhaustBuildUp()+amount);
     }
 
     @Override
@@ -342,6 +431,52 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
 
     public LivingEntity.Fallsounds getFallSounds() {
         return new LivingEntity.Fallsounds(SoundEvents.HOSTILE_SMALL_FALL, SoundEvents.HOSTILE_BIG_FALL);
+    }
+
+    public List<Elements> getMonsterWeakness() {
+        return MonsterWeakness;
+    }
+
+    public List<Elements> getMonsterAttackElements() {
+
+        return MonsterAttackElements;
+    }
+
+    public List<Blights> getMonsterBlightWeakness() {
+        return MonsterBlightWeakness;
+    }
+    public List<Blights> getMonsterBlightResistance() {
+
+        return MonsterBlightResistance;
+    }
+
+    public List<Blights> getMonsterPossibleAttackingBlights() {
+        return MonsterPossibleAttackingBlights;
+    }
+
+    @Override
+    public boolean callSuperHurt(DamageSource damageSource, float v) {
+        return super.hurt(damageSource,v);
+    }
+
+    @Override
+    public Queue<UUID> getTrackerQueue() {
+        return trackerQueue;
+    }
+
+    @Override
+    public int getTicksSinceLastSync() {
+        return _mhTicksSinceLastSync;
+    }
+
+    @Override
+    public MHLibPartEntity<NewWorldMonsterEntity> createNewPartFrom(SubPartConfig spc, NewWorldMonsterEntity parentEntity, int subPartNumber) {
+        MHLibPartEntity<NewWorldMonsterEntity> newHitBox = IMultipartEntity.super.createNewPartFrom(spc, parentEntity, subPartNumber);
+        if(BreakableParts ==  null){
+            BreakableParts = new ArrayList<>();
+        }
+        BreakableParts.add(new MonsterBreakablePart(newHitBox, 50, false));
+        return newHitBox;
     }
 
     public enum AggressionState {

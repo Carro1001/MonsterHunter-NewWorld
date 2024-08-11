@@ -1,10 +1,7 @@
 package com.carro1001.mhnw.entities;
 
-import com.carro1001.mhnw.entities.ai.RallyGoal;
 import com.carro1001.mhnw.entities.ai.SleepGoal;
-import com.carro1001.mhnw.registration.ModEntities;
 import com.carro1001.mhnw.registration.ModItems;
-import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.entity.EntityType;
@@ -33,6 +30,7 @@ public class GreatIzuchiEntity extends NewWorldMonsterEntity {
         super(p_27557_, p_27558_);
         this.name = GREAT + "_" + IZUCHI;
         shouldRage = true;
+        MonsterWeakness = List.of(Elements.THUNDER);
     }
 
     protected PlayState poseBody(AnimationState<NewWorldMonsterEntity> animationState) {
@@ -51,19 +49,20 @@ public class GreatIzuchiEntity extends NewWorldMonsterEntity {
     protected void registerGoals() {
         super.registerGoals();
         this.goalSelector.addGoal(5, new TailAttackGoal(this));
-        this.goalSelector.addGoal(8, new RallyGoal(this));
+        //this.goalSelector.addGoal(8, new RallyGoal(this));
         this.goalSelector.addGoal(10, new SleepGoal(this));
     }
 
     @Override
     public @Nullable SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData, @Nullable CompoundTag pDataTag) {
-        for (int i = 0; i < 2; i++) {
+
+        /*        for (int i = 0; i < 2; i++) {
             BlockPos pos = i == 0 ? getOnPos().east(4):getOnPos().west(4);
 
             IzuchiEntity izuchi = ModEntities.IZUCHI.get().create(pLevel.getLevel());
             izuchi.setPos(pos.getX(),pos.getY()+1,pos.getZ());
             pLevel.getLevel().addFreshEntity(izuchi);
-        }
+        }*/
         return super.finalizeSpawn(pLevel, pDifficulty, pReason, pSpawnData, pDataTag);
     }
 
