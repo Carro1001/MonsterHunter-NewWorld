@@ -18,6 +18,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -28,6 +29,7 @@ import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraftforge.entity.PartEntity;
 import org.jetbrains.annotations.NotNull;
@@ -75,10 +77,13 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
     protected int rallyCooldownTime = 0;
 
     protected String name;
+    public int deathTickTime = 40;
 
     protected int maxExhaustBuildUp = 150;
     protected int maxRageBuildUp = 150;
     protected boolean shouldRage = false;
+
+    protected int currentAnimationTick = 0;
 
     public NewWorldMonsterEntity(EntityType<? extends NewWorldGrowingEntity> entityType, Level level) {
         super(entityType, level);
@@ -88,6 +93,28 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
         if(BreakableParts == null){
             BreakableParts = new ArrayList<>();
         }
+    }
+
+    @Override
+    protected InteractionResult mobInteract(Player pPlayer, InteractionHand pHand) {
+        if(pPlayer.getItemInHand(pHand).is(Items.STICK) && pPlayer.isCreative()){
+            pPlayer.playSound(SoundEvents.ALLAY_DEATH, 3.0F, 2.0F);
+            this.discard();
+            return InteractionResult.sidedSuccess(this.level().isClientSide);
+        }
+        if(getDeathState() >= 1 && pPlayer.getItemInHand(pHand).isEmpty() && pPlayer.isCrouching()){
+            pPlayer.playSound(SoundEvents.AXE_STRIP, 1.0F, 1.0F);
+            List<Item> lootTable = getDrops();
+            ItemStack itemstack1 = new ItemStack(lootTable.get(getRandom().nextInt(0,lootTable.size())),getRandom().nextInt(2,5));
+            ItemEntity etity = new ItemEntity(pPlayer.level(), pPlayer.getX(),pPlayer.getY(),pPlayer.getZ(),itemstack1);
+            pPlayer.level().addFreshEntity(etity);
+            setDeathState(getDeathState()+1);
+            if(getDeathState() >= 4){
+                this.discard();
+            }
+            return InteractionResult.sidedSuccess(this.level().isClientSide);
+        }
+        return super.mobInteract(pPlayer, pHand);
     }
 
     @Override
@@ -169,6 +196,44 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
         }
     }
 
+    @Override
+    public void heal(float pHealAmount) {
+        super.heal(pHealAmount);
+        if(getHealth() > getMaxHealth()/3){
+            setLimping(false);
+            setSleeping(false);
+            MHNW.debugLog(name + " healed: setLimping(false); setSleeping(false);");
+        }
+    }
+
+    public void aiStep() {
+        this.updateSwingTime();
+        super.aiStep();
+        if(currentAnimationTick> 0){
+            currentAnimationTick--;
+        }
+    }
+
+    @Override
+    protected void tickDeath() {
+        if(this.deathTime < deathTickTime){
+            ++this.deathTime;
+        }
+        if (this.deathTime >= deathTickTime && !this.level().isClientSide() && !this.isRemoved() && getDeathState() > 4 ) {
+            this.level().broadcastEntityEvent(this, (byte)60);
+            this.remove(Entity.RemovalReason.KILLED);
+            for (MonsterBreakablePart parts: BreakableParts){
+                parts.getPart().discard();
+            }
+        }
+    }
+
+    @Override
+    public boolean isDeadOrDying() {
+        return super.isDeadOrDying() || getDeathState() >= 1;
+    }
+
+//region Goals
     protected void registerGoals() {
         this.goalSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, true)); // This finds the closest player to target
         this.goalSelector.addGoal(1, new MonsterAggressionStateGoal(this)); // This handles the aggression state between passive, roar, and aggressive
@@ -188,12 +253,23 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
     protected void addBehaviourGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
     }
+    //endregion
+
+//region Animation
+
+    public boolean isAnimating(){
+        return currentAnimationTick > 0;
+    }
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "main_controller", 16, this::poseBody)
+        controllers.add(getNewWorldMonsterEntityAnimationController());
+    }
+
+    protected AnimationController<NewWorldMonsterEntity> getNewWorldMonsterEntityAnimationController() {
+        return new AnimationController<>(this, "main_controller", 16, this::poseBody)
                 .triggerableAnim("death", getDeathAnimation()).triggerableAnim("roar", getRoarAnimation())
-                .triggerableAnim("rally", getRallyAnimation()).triggerableAnim("sleep", getSleepAnimation()));
+                .triggerableAnim("rally", getRallyAnimation()).triggerableAnim("sleep", getSleepAnimation());
     }
 
     protected PlayState poseBody(AnimationState<NewWorldMonsterEntity> animationState) {
@@ -208,6 +284,7 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
         MHNW.debugLog("poseBody: getIdleAnimation");
         return animationState.setAndContinue(getIdleAnimation());
     }
+
     protected RawAnimation getIdleAnimation(){
         return RawAnimation.begin().thenLoop("animation."+name+".idle");
     }
@@ -226,7 +303,9 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
     protected RawAnimation getSleepAnimation() {
         return RawAnimation.begin().thenPlay("animation."+name+".sleep");
     }
+//endregion
 
+//region Data
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
@@ -275,7 +354,9 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
         setExhausted(pCompound.getBoolean("Exhausted"));
         setExhaustBuildUp(pCompound.getFloat("ExhaustBuildUp"));
     }
+    //endregion
 
+//region SET/GET
     public void setAggressionState(DragonEntity.AggressionState aggressionState) {
         this.entityData.set(AGGRESSION_STATE, aggressionState.ordinal());
     }
@@ -384,49 +465,11 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
     public void tickExhaustBuildUp(float amount){
         setExhaustBuildUp(getExhaustBuildUp()+amount);
     }
+//endregion
 
-    @Override
-    public void heal(float pHealAmount) {
-        super.heal(pHealAmount);
-        if(getHealth() > getMaxHealth()/3){
-            setLimping(false);
-            setSleeping(false);
-            MHNW.debugLog(name + " healed: setLimping(false); setSleeping(false);");
-        }
-    }
-    public void aiStep() {
-        this.updateSwingTime();
-        this.updateNoActionTime();
-        super.aiStep();
-    }
-
-    protected void updateNoActionTime() {
-        float f = this.getLightLevelDependentMagicValue();
-        if (f > 0.5F) {
-            this.noActionTime += 2;
-        }
-
-    }
 
     protected boolean shouldDespawnInPeaceful() {
         return true;
-    }
-
-    @Override
-    protected InteractionResult mobInteract(Player pPlayer, InteractionHand pHand) {
-        if(getDeathState() >= 1 && pPlayer.getItemInHand(pHand).isEmpty() && pPlayer.isCrouching()){
-            pPlayer.playSound(SoundEvents.AXE_STRIP, 1.0F, 1.0F);
-            List<Item> lootTable = getDrops();
-            ItemStack itemstack1 = new ItemStack(lootTable.get(getRandom().nextInt(0,lootTable.size())),getRandom().nextInt(2,5));
-            ItemEntity etity = new ItemEntity(pPlayer.level(), pPlayer.getX(),pPlayer.getY(),pPlayer.getZ(),itemstack1);
-            pPlayer.level().addFreshEntity(etity);
-            setDeathState(getDeathState()+1);
-            if(getDeathState() >= 4){
-                this.discard();
-            }
-            return InteractionResult.sidedSuccess(this.level().isClientSide);
-        }
-        return super.mobInteract(pPlayer, pHand);
     }
 
     public LivingEntity.Fallsounds getFallSounds() {

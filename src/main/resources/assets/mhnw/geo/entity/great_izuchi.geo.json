@@ -148,11 +148,6 @@
 					]
 				},
 				{
-					"name": "clawHitbox",
-					"parent": "torso",
-					"pivot": [0, 12, -36]
-				},
-				{
 					"name": "torsoHitbox",
 					"parent": "torso",
 					"pivot": [0, 29, -35]

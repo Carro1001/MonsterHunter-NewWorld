@@ -49,6 +49,7 @@ public class AptonothEntity extends NewWorldMonsterEntity {
         super(p_27557_, p_27558_);
         this.reassessPanicGoals();
         name = MHNWReferences.APTONOTH;
+        deathTickTime = 20;
     }
 
 
