@@ -52,6 +52,7 @@ public abstract class DragonEntity extends NewWorldMonsterEntity {
         MonsterWeakness = List.of(Elements.THUNDER,Elements.DRAGON);
         MonsterPossibleAttackingBlights = List.of(Blights.POISON);
         deathTickTime = 50;
+        setTailCutable();
     }
 
     @Override
@@ -116,7 +117,7 @@ public abstract class DragonEntity extends NewWorldMonsterEntity {
                 .add(Attributes.ATTACK_DAMAGE, 3.0)
                 .add(Attributes.ATTACK_KNOCKBACK, 4.0)
                 .add(Attributes.FOLLOW_RANGE, 64) // This is the target finding range
-                .add(Attributes.MAX_HEALTH, 10)
+                .add(Attributes.MAX_HEALTH, 250)
                 .add(Attributes.FOLLOW_RANGE, 128)
                 .add(Attributes.MOVEMENT_SPEED, 0.5)
                 .add(Attributes.FLYING_SPEED, 25)
@@ -157,9 +158,7 @@ public abstract class DragonEntity extends NewWorldMonsterEntity {
 
     @Override
     protected void checkFallDamage(double pY, boolean pOnGround, BlockState pState, BlockPos pPos) {
-        if (getState() != DragonEntity.State.FLYING) {
-            super.checkFallDamage(pY, pOnGround, pState, pPos);
-        }
+        this.resetFallDistance();
     }
 
     @Override

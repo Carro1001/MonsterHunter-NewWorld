@@ -10,5 +10,6 @@ public class DeviljhoEntity extends NewWorldMonsterEntity {
     public DeviljhoEntity(EntityType<? extends NewWorldMonsterEntity> p_27557_, Level p_27558_) {
         super(p_27557_, p_27558_);
         this.name = DEVILJHO;
+        setTailCutable();
     }
 }

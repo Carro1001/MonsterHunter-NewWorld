@@ -4,17 +4,21 @@ import com.carro1001.mhnw.MHNW;
 import com.carro1001.mhnw.entities.NewWorldMonsterEntity;
 import com.carro1001.mhnw.entities.interfaces.IMonsterBreakablePart;
 import de.dertoaster.multihitboxlib.entity.MHLibPartEntity;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.Vec3;
 
 public class MonsterBreakablePart implements IMonsterBreakablePart {
 
     float hp;
     boolean isGone;
     MHLibPartEntity<NewWorldMonsterEntity> partEntity;
-    public MonsterBreakablePart(MHLibPartEntity<NewWorldMonsterEntity> part,float hp, boolean isGoneOnDeath){
+    PART partType;
+    public MonsterBreakablePart(MHLibPartEntity<NewWorldMonsterEntity> part,float hp, boolean isGoneOnDeath, PART partType){
         setPart(part);
         setHP(hp);
         isGone = isGoneOnDeath;
+        this.partType = partType;
         MHNW.LOGGER.debug("Breakable part added: {}", this);
     }
 
@@ -31,6 +35,16 @@ public class MonsterBreakablePart implements IMonsterBreakablePart {
     @Override
     public void addHP(float value) {
         hp = Math.max(value + getHP(),0);
+    }
+
+    @Override
+    public boolean isDead() {
+        return getHP()<=0;
+    }
+
+    @Override
+    public void setGoneWhenDead(boolean goneWhenDead) {
+        isGone = goneWhenDead;
     }
 
     @Override
@@ -55,7 +69,8 @@ public class MonsterBreakablePart implements IMonsterBreakablePart {
             partEntity.setInvulnerable(true);
             if(isGoneWhenDead()){
                 partEntity.discard();
-                partEntity.level().setBlock(partEntity.getOnPos(), Blocks.SAND.defaultBlockState(),3);
+                Vec3 pos = partEntity.getPosition(0);
+                partEntity.level().setBlock(new BlockPos((int) pos.x, (int) pos.y, (int) pos.z), Blocks.SAND.defaultBlockState(),3);
             }
         }
     }
@@ -66,7 +81,12 @@ public class MonsterBreakablePart implements IMonsterBreakablePart {
     }
 
     @Override
+    public PART getPartType() {
+        return partType;
+    }
+
+    @Override
     public String toString(){
-        return "Part: " + partEntity.getConfigName() + " with health: " + getHP();
+        return getPartType().toString() + " type part: " + partEntity.getConfigName() + " with health: " + getHP() +", status: " + (isGoneWhenDead()?"Can be cut":"Can be broken");
     }
 }

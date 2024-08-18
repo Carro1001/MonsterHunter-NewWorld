@@ -2,8 +2,10 @@ package com.carro1001.mhnw.entities;
 
 import com.carro1001.mhnw.entities.ai.RallyGoal;
 import com.carro1001.mhnw.entities.ai.SleepGoal;
+import com.carro1001.mhnw.entities.interfaces.IMonsterBreakablePart;
 import com.carro1001.mhnw.registration.ModEntities;
 import com.carro1001.mhnw.registration.ModItems;
+import de.dertoaster.multihitboxlib.api.IMultipartEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.DifficultyInstance;
@@ -28,7 +30,7 @@ import java.util.List;
 import static com.carro1001.mhnw.utils.MHNWReferences.GREAT;
 import static com.carro1001.mhnw.utils.MHNWReferences.IZUCHI;
 
-public class GreatIzuchiEntity extends NewWorldMonsterEntity {
+public class GreatIzuchiEntity extends NewWorldMonsterEntity implements IMultipartEntity<NewWorldMonsterEntity>{
 
 
     public GreatIzuchiEntity(EntityType<? extends NewWorldMonsterEntity> p_27557_, Level p_27558_) {
@@ -36,15 +38,16 @@ public class GreatIzuchiEntity extends NewWorldMonsterEntity {
         this.name = GREAT + "_" + IZUCHI;
         shouldRage = true;
         MonsterWeakness = List.of(Elements.THUNDER);
+
     }
 
     protected AnimationController<NewWorldMonsterEntity> getNewWorldMonsterEntityAnimationController() {
-        return super.getNewWorldMonsterEntityAnimationController().setAnimationSpeed(1.5).triggerableAnim("claw", getClawAnimation())
+        return super.getNewWorldMonsterEntityAnimationController().setAnimationSpeed(1.5).triggerableAnim("attack_scratch", getClawAnimation())
                 .triggerableAnim("tailswipe", getSwipeAnimation()).triggerableAnim("tailslam", getSlamAnimation());
     }
 
     protected RawAnimation getClawAnimation() {
-        return RawAnimation.begin().thenPlay("animation.great_izuchi.scratch");
+        return RawAnimation.begin().thenPlay("animation.great_izuchi.attack_scratch");
     }
     protected RawAnimation getSwipeAnimation() {
         return RawAnimation.begin().thenPlay("animation.great_izuchi.tailswipe");
@@ -56,8 +59,15 @@ public class GreatIzuchiEntity extends NewWorldMonsterEntity {
 
     protected void registerGoals() {
         super.registerGoals();
+        IMonsterBreakablePart torseHitBox = null;
+        for (IMonsterBreakablePart part: BreakableParts){
+            if(part.getPartName().equals("torsoHitbox")){
+                torseHitBox =part;
+                break;
+            }
+        }
         this.goalSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Ravager.class, true));
-        this.goalSelector.addGoal(3, new ClawAttack(this,1.2));
+        this.goalSelector.addGoal(3, new ClawAttack(this,1.2,torseHitBox));
         this.goalSelector.addGoal(3, new TailAttackGoal(this));
         this.goalSelector.addGoal(9, new RallyGoal(this));
         this.goalSelector.addGoal(10, new SleepGoal(this));
@@ -120,7 +130,7 @@ public class GreatIzuchiEntity extends NewWorldMonsterEntity {
             super.start();
             int state = monster.random.nextIntBetweenInclusive(1,2);
             maxTicks = state == 1? 60 : 100;
-            monster.triggerAnim("main_controller", state == 1 ? "tailswipe" : "tailslam");
+            monster.triggerAnim("main_controller", state == 1 ? "attack_tailswipe" : "attack_tailslam");
             monster.currentAnimationTick = maxTicks;
         }
 
@@ -139,16 +149,20 @@ public class GreatIzuchiEntity extends NewWorldMonsterEntity {
         }
     }
 
-
     class ClawAttack extends MeleeAttackGoal{
         private GreatIzuchiEntity greatIzuchiEntity;
+        private int ticksUntilNextAttack;
         private final int attackInterval = 70;
+        private boolean animatingAttack = false;
         int animTicks = 0;
         int maxTicks = 20*3;
-        public ClawAttack(GreatIzuchiEntity pMob, double pSpeedModifier) {
+        IMonsterBreakablePart hitboxOrigin;
+        public ClawAttack(GreatIzuchiEntity pMob, double pSpeedModifier,IMonsterBreakablePart hitbox) {
             super(pMob, pSpeedModifier, true);
             this.greatIzuchiEntity = pMob;
+            this.hitboxOrigin = hitbox;
         }
+
 
         @Override
         public boolean canUse() {
@@ -159,31 +173,35 @@ public class GreatIzuchiEntity extends NewWorldMonsterEntity {
         public boolean canContinueToUse() {
             return super.canContinueToUse() && greatIzuchiEntity.getTarget() != null && animTicks < maxTicks && greatIzuchiEntity.getTarget().isAlive();
         }
+
+
         @Override
         public void tick() {
             super.tick();
-            if(!greatIzuchiEntity.level().isClientSide){
-                animTicks++;
+            LivingEntity livingentity = this.mob.getTarget();
+            if (livingentity != null) {
+                this.mob.getLookControl().setLookAt(livingentity, 5.0F, 5.0F);
+                double d0 = this.mob.getPerceivedTargetDistanceSquareForMeleeAttack(livingentity);
+                this.ticksUntilNextAttack = Math.max(this.ticksUntilNextAttack - 1, 0);
+                if(!greatIzuchiEntity.level().isClientSide && animatingAttack){
+                    if(this.ticksUntilNextAttack <= 0){
+                        animatingAttack = false;
+                        //wait a bit until you try and attack again if the goal stays active
+                        this.ticksUntilNextAttack = this.adjustedTickDelay(attackInterval/3);
+                    }
+                }else if(!animatingAttack){
+                    this.checkAndPerformAttack(livingentity, d0);
+                }
             }
         }
-
         protected void checkAndPerformAttack(LivingEntity pEnemy, double pDistToEnemySqr) {
-            double d0 = this.getAttackReachSqr(pEnemy);
-            if (pDistToEnemySqr <= d0 && this.isTimeToAttack()) {
-                this.resetAttackCooldown();
+            if(hitboxOrigin.getPart().closerThan(pEnemy,this.getAttackReachSqr(pEnemy)) && this.ticksUntilNextAttack <= 0){
+                //wait a until anim is over until you try and attack again, in monster hunter fashion im trying to limit hits per animation
+                greatIzuchiEntity.triggerAnim("main_controller","attack_scratch");
+                this.ticksUntilNextAttack = this.adjustedTickDelay(attackInterval);
                 this.mob.doHurtTarget(pEnemy);
-            } else if (pDistToEnemySqr <= d0 * 2.0D) {
-                if (this.isTimeToAttack()) {
-                    this.resetAttackCooldown();
-                }
-                if (this.getTicksUntilNextAttack() <= 10) {
-                    greatIzuchiEntity.triggerAnim("main_controller","claw");
-                    greatIzuchiEntity.currentAnimationTick = 30;
-                }
-            } else {
-                this.resetAttackCooldown();
+                animatingAttack = true;
             }
-
         }
     }
 

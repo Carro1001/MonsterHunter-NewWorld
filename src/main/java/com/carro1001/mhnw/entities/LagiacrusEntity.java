@@ -84,7 +84,7 @@ public class LagiacrusEntity extends NewWorldMonsterEntity {
         tail3Point = MathHelpers.rotateAroundCenterFlatDeg(tail2Point, tail2Point.subtract(tail3Offset), (double) -this.getYRot());
         tail4Point = MathHelpers.rotateAroundCenterFlatDeg(tail3Point, tail3Point.subtract(tail4Offset), (double) -this.getYRot());
         tail5Point = MathHelpers.rotateAroundCenterFlatDeg(tail4Point, tail4Point.subtract(tail5Offset), (double) -this.getYRot());
-
+        setTailCutable();
     }
 
     protected RawAnimation getIdleAnimation(){

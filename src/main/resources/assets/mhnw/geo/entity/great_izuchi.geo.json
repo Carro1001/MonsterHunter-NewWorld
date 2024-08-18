@@ -135,7 +135,7 @@
 					]
 				},
 				{
-					"name": "tailBladeHitbox",
+					"name": "tailEndHitbox",
 					"parent": "tailblade",
 					"pivot": [0, 25, 70]
 				},

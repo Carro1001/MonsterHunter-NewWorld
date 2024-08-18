@@ -51,7 +51,7 @@ public abstract class NewWorldEntity extends PathfinderMob implements GeoEntity{
     public static AttributeSupplier.Builder prepareAttributes() {
         return Monster.createLivingAttributes()
                 .add(Attributes.ATTACK_DAMAGE, 3.0)
-                .add(Attributes.MAX_HEALTH, 100)
+                .add(Attributes.MAX_HEALTH, 250)
                 .add(Attributes.FOLLOW_RANGE, 15.0)
                 .add(Attributes.MOVEMENT_SPEED, 0.45)
                 .add(Attributes.ARMOR, 1.0D)

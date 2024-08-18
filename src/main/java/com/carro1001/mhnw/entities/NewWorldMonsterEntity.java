@@ -5,6 +5,7 @@ import com.carro1001.mhnw.entities.ai.ExhaustedStallGoal;
 import com.carro1001.mhnw.entities.ai.MonsterAggressionStateGoal;
 import com.carro1001.mhnw.entities.helpers.MonsterBreakablePart;
 import com.carro1001.mhnw.entities.interfaces.IAttributes;
+import com.carro1001.mhnw.entities.interfaces.IMonsterBreakablePart;
 import de.dertoaster.multihitboxlib.api.IMultipartEntity;
 import de.dertoaster.multihitboxlib.entity.MHLibPartEntity;
 import de.dertoaster.multihitboxlib.entity.hitbox.SubPartConfig;
@@ -39,10 +40,7 @@ import software.bernie.geckolib.core.animation.AnimationState;
 import software.bernie.geckolib.core.animation.RawAnimation;
 import software.bernie.geckolib.core.object.PlayState;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Queue;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.LinkedTransferQueue;
 
 public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implements Enemy, IAttributes, IMultipartEntity<NewWorldMonsterEntity> {
@@ -52,6 +50,7 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
     private static final EntityDataAccessor<Boolean> LIMPING = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.BOOLEAN);
     protected static final EntityDataAccessor<Integer> RALLY_STATE = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> SLEEPING = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDataAccessor<Boolean> TAIL_CUT = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.BOOLEAN);
 
     private static final EntityDataAccessor<Boolean> RAGE = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.BOOLEAN);
     protected static final EntityDataAccessor<Float> RAGE_BUILDUP = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.FLOAT);
@@ -69,8 +68,8 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
     protected List<Blights> MonsterBlightResistance = List.of(Blights.NONE);
     protected List<Blights> MonsterPossibleAttackingBlights = List.of(Blights.NONE);
 
-    protected List<MonsterBreakablePart> BreakableParts;
-
+    protected List<IMonsterBreakablePart> BreakableParts;
+    public Map<IMonsterBreakablePart.PART, IMonsterBreakablePart> partTypeMap;
     private final Queue<UUID> trackerQueue = new LinkedTransferQueue<>();
     private int _mhTicksSinceLastSync = 0;
 
@@ -142,11 +141,14 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
     @Override
     public boolean hurt(PartEntity<NewWorldMonsterEntity> subPart, DamageSource source, float damage) {
         if(subPart instanceof MHLibPartEntity partEntity){
-            for(MonsterBreakablePart part: BreakableParts){
+            for(IMonsterBreakablePart part: BreakableParts){
                 if(part.getPartName().equals(partEntity.getConfigName())){
                     part.hurt(damage);
                     if(part.getHP() <= 0){
                         if(part.isGoneWhenDead()){
+                            if(part.getPartType() == IMonsterBreakablePart.PART.TAIL){
+                                setTailCut(true);
+                            }
                             return false;
                         }else{
                             //its broken, no multiplier
@@ -169,6 +171,36 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
             MHNW.debugLog(name + "@"+this.position()+": i guess i will die");
             setDeathState(1);
             setNoAi(true);
+        }
+    }
+
+    @Override
+    public MHLibPartEntity<NewWorldMonsterEntity> createNewPartFrom(SubPartConfig spc, NewWorldMonsterEntity parentEntity, int subPartNumber) {
+        MHLibPartEntity<NewWorldMonsterEntity> newHitBox = IMultipartEntity.super.createNewPartFrom(spc, parentEntity, subPartNumber);
+        if(BreakableParts ==  null){
+            BreakableParts = new ArrayList<>();
+            partTypeMap = new HashMap<>();
+        }
+        String name = newHitBox.getConfigName();
+        IMonsterBreakablePart.PART part = IMonsterBreakablePart.PART.OTHER;
+        if(name.equals("tailEndHitbox")){
+            part = IMonsterBreakablePart.PART.TAIL;
+        }
+        if(name.equals("headHitbox")){
+            part = IMonsterBreakablePart.PART.HEAD;
+        }
+        if(name.equals("wingHitbox")){
+            part = IMonsterBreakablePart.PART.WING;
+        }
+        partTypeMap.put(part,new MonsterBreakablePart(newHitBox, 50, false, part));
+
+        BreakableParts.add(partTypeMap.get(part));
+        return newHitBox;
+    }
+
+    protected void setTailCutable(){
+        if(partTypeMap.containsKey(IMonsterBreakablePart.PART.TAIL)){
+            partTypeMap.get(IMonsterBreakablePart.PART.TAIL).setGoneWhenDead(true);
         }
     }
 
@@ -222,7 +254,7 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
         if (this.deathTime >= deathTickTime && !this.level().isClientSide() && !this.isRemoved() && getDeathState() > 4 ) {
             this.level().broadcastEntityEvent(this, (byte)60);
             this.remove(Entity.RemovalReason.KILLED);
-            for (MonsterBreakablePart parts: BreakableParts){
+            for (IMonsterBreakablePart parts: BreakableParts){
                 parts.getPart().discard();
             }
         }
@@ -312,6 +344,7 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
         this.entityData.define(DEATH_STATE, 0);
         this.entityData.define(RALLY_STATE, RallyState.READY.ordinal());
         this.entityData.define(SLEEPING, false);
+        this.entityData.define(TAIL_CUT, false);
         this.entityData.define(LIMPING, false);
         this.entityData.define(ATTACKING, false);
         this.entityData.define(ATTACK_ANIMATION_ID, 0);
@@ -335,6 +368,7 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
         pCompound.putFloat("ExhaustBuildUp", this.getExhaustBuildUp());
         pCompound.putInt("DeathState", this.getDeathState());
         pCompound.putBoolean("Sleeping", isSleeping());
+        pCompound.putBoolean("TailCut", isTailCut());
     }
 
     @Override
@@ -346,6 +380,7 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
         setDeathState(pCompound.getInt("DeathState"));
         setLimping(pCompound.getBoolean("Limping"));
         setSleeping(pCompound.getBoolean("Sleeping"));
+        setTailCut(pCompound.getBoolean("TailCut"));
 
         setAttacking(pCompound.getBoolean("Attacking"));
         setAttackingID(pCompound.getInt("AttackID"));
@@ -384,6 +419,12 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
     }
     public boolean isSleeping(){
         return this.entityData.get(SLEEPING);
+    }
+    public void setTailCut(boolean tailCut){
+        this.entityData.set(TAIL_CUT, tailCut);
+    }
+    public boolean isTailCut(){
+        return this.entityData.get(TAIL_CUT);
     }
 
     public void setRallyState(RallyState state) {
@@ -510,16 +551,6 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
     @Override
     public int getTicksSinceLastSync() {
         return _mhTicksSinceLastSync;
-    }
-
-    @Override
-    public MHLibPartEntity<NewWorldMonsterEntity> createNewPartFrom(SubPartConfig spc, NewWorldMonsterEntity parentEntity, int subPartNumber) {
-        MHLibPartEntity<NewWorldMonsterEntity> newHitBox = IMultipartEntity.super.createNewPartFrom(spc, parentEntity, subPartNumber);
-        if(BreakableParts ==  null){
-            BreakableParts = new ArrayList<>();
-        }
-        BreakableParts.add(new MonsterBreakablePart(newHitBox, 50, false));
-        return newHitBox;
     }
 
     public enum AggressionState {
