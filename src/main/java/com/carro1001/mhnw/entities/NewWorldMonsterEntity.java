@@ -3,7 +3,7 @@ package com.carro1001.mhnw.entities;
 import com.carro1001.mhnw.MHNW;
 import com.carro1001.mhnw.entities.ai.ExhaustedStallGoal;
 import com.carro1001.mhnw.entities.ai.MonsterAggressionStateGoal;
-import com.carro1001.mhnw.entities.helpers.MonsterBreakablePart;
+import com.carro1001.mhnw.entities.helpers.MonsterBreakablePartEntity;
 import com.carro1001.mhnw.entities.interfaces.IAttributes;
 import com.carro1001.mhnw.entities.interfaces.IMonsterBreakablePart;
 import de.dertoaster.multihitboxlib.api.IMultipartEntity;
@@ -32,7 +32,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.entity.PartEntity;
 import org.jetbrains.annotations.NotNull;
 import software.bernie.geckolib.core.animation.AnimatableManager;
 import software.bernie.geckolib.core.animation.AnimationController;
@@ -68,8 +67,7 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
     protected List<Blights> MonsterBlightResistance = List.of(Blights.NONE);
     protected List<Blights> MonsterPossibleAttackingBlights = List.of(Blights.NONE);
 
-    protected List<IMonsterBreakablePart> BreakableParts;
-    public Map<IMonsterBreakablePart.PART, IMonsterBreakablePart> partTypeMap;
+    public Map<IMonsterBreakablePart.PART, List<MonsterBreakablePartEntity<NewWorldMonsterEntity>>> partTypeMap;
     private final Queue<UUID> trackerQueue = new LinkedTransferQueue<>();
     private int _mhTicksSinceLastSync = 0;
 
@@ -88,9 +86,6 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
         super(entityType, level);
         if (!level.isClientSide) {
             this.setRallyState(RallyState.READY);
-        }
-        if(BreakableParts == null){
-            BreakableParts = new ArrayList<>();
         }
     }
 
@@ -139,30 +134,6 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
     }
 
     @Override
-    public boolean hurt(PartEntity<NewWorldMonsterEntity> subPart, DamageSource source, float damage) {
-        if(subPart instanceof MHLibPartEntity partEntity){
-            for(IMonsterBreakablePart part: BreakableParts){
-                if(part.getPartName().equals(partEntity.getConfigName())){
-                    part.hurt(damage);
-                    if(part.getHP() <= 0){
-                        if(part.isGoneWhenDead()){
-                            if(part.getPartType() == IMonsterBreakablePart.PART.TAIL){
-                                setTailCut(true);
-                            }
-                            return false;
-                        }else{
-                            //its broken, no multiplier
-                            damage = damage/((MHLibPartEntity<NewWorldMonsterEntity>) subPart).getConfig().damageModifier();
-                        }
-                    }
-                    break;
-                }
-            }
-        }
-        return IMultipartEntity.super.hurt(subPart, source, damage);
-    }
-
-    @Override
     public void die(DamageSource pDamageSource) {
         this.setHealth(1);
         int state = getDeathState();
@@ -177,31 +148,15 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
     @Override
     public MHLibPartEntity<NewWorldMonsterEntity> createNewPartFrom(SubPartConfig spc, NewWorldMonsterEntity parentEntity, int subPartNumber) {
         MHLibPartEntity<NewWorldMonsterEntity> newHitBox = IMultipartEntity.super.createNewPartFrom(spc, parentEntity, subPartNumber);
-        if(BreakableParts ==  null){
-            BreakableParts = new ArrayList<>();
-            partTypeMap = new HashMap<>();
-        }
-        String name = newHitBox.getConfigName();
-        IMonsterBreakablePart.PART part = IMonsterBreakablePart.PART.OTHER;
-        if(name.equals("tailEndHitbox")){
-            part = IMonsterBreakablePart.PART.TAIL;
-        }
-        if(name.equals("headHitbox")){
-            part = IMonsterBreakablePart.PART.HEAD;
-        }
-        if(name.equals("wingHitbox")){
-            part = IMonsterBreakablePart.PART.WING;
-        }
-        partTypeMap.put(part,new MonsterBreakablePart(newHitBox, 50, false, part));
+        if(newHitBox instanceof MonsterBreakablePartEntity<NewWorldMonsterEntity> partEntity){
+            if(partTypeMap ==  null){
+                partTypeMap = new HashMap<>();
+            }
+            List<MonsterBreakablePartEntity<NewWorldMonsterEntity>> list = partTypeMap.getOrDefault(partEntity.getPartType(), List.of(partEntity));
+            partTypeMap.put(partEntity.getPartType(),list);
 
-        BreakableParts.add(partTypeMap.get(part));
+        }
         return newHitBox;
-    }
-
-    protected void setTailCutable(){
-        if(partTypeMap.containsKey(IMonsterBreakablePart.PART.TAIL)){
-            partTypeMap.get(IMonsterBreakablePart.PART.TAIL).setGoneWhenDead(true);
-        }
     }
 
     @Override
@@ -254,9 +209,6 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
         if (this.deathTime >= deathTickTime && !this.level().isClientSide() && !this.isRemoved() && getDeathState() > 4 ) {
             this.level().broadcastEntityEvent(this, (byte)60);
             this.remove(Entity.RemovalReason.KILLED);
-            for (IMonsterBreakablePart parts: BreakableParts){
-                parts.getPart().discard();
-            }
         }
     }
 

@@ -2,7 +2,6 @@ package com.carro1001.mhnw.entities;
 
 import com.carro1001.mhnw.entities.ai.RallyGoal;
 import com.carro1001.mhnw.entities.ai.SleepGoal;
-import com.carro1001.mhnw.entities.interfaces.IMonsterBreakablePart;
 import com.carro1001.mhnw.registration.ModEntities;
 import com.carro1001.mhnw.registration.ModItems;
 import de.dertoaster.multihitboxlib.api.IMultipartEntity;
@@ -59,15 +58,9 @@ public class GreatIzuchiEntity extends NewWorldMonsterEntity implements IMultipa
 
     protected void registerGoals() {
         super.registerGoals();
-        IMonsterBreakablePart torseHitBox = null;
-        for (IMonsterBreakablePart part: BreakableParts){
-            if(part.getPartName().equals("torsoHitbox")){
-                torseHitBox =part;
-                break;
-            }
-        }
+
         this.goalSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Ravager.class, true));
-        this.goalSelector.addGoal(3, new ClawAttack(this,1.2,torseHitBox));
+        this.goalSelector.addGoal(3, new ClawAttack(this,1.2));
         this.goalSelector.addGoal(3, new TailAttackGoal(this));
         this.goalSelector.addGoal(9, new RallyGoal(this));
         this.goalSelector.addGoal(10, new SleepGoal(this));
@@ -156,11 +149,9 @@ public class GreatIzuchiEntity extends NewWorldMonsterEntity implements IMultipa
         private boolean animatingAttack = false;
         int animTicks = 0;
         int maxTicks = 20*3;
-        IMonsterBreakablePart hitboxOrigin;
-        public ClawAttack(GreatIzuchiEntity pMob, double pSpeedModifier,IMonsterBreakablePart hitbox) {
+        public ClawAttack(GreatIzuchiEntity pMob, double pSpeedModifier) {
             super(pMob, pSpeedModifier, true);
             this.greatIzuchiEntity = pMob;
-            this.hitboxOrigin = hitbox;
         }
 
 
@@ -195,13 +186,13 @@ public class GreatIzuchiEntity extends NewWorldMonsterEntity implements IMultipa
             }
         }
         protected void checkAndPerformAttack(LivingEntity pEnemy, double pDistToEnemySqr) {
-            if(hitboxOrigin.getPart().closerThan(pEnemy,this.getAttackReachSqr(pEnemy)) && this.ticksUntilNextAttack <= 0){
+/*            if(hitboxOrigin.getPart().closerThan(pEnemy,this.getAttackReachSqr(pEnemy)) && this.ticksUntilNextAttack <= 0){
                 //wait a until anim is over until you try and attack again, in monster hunter fashion im trying to limit hits per animation
                 greatIzuchiEntity.triggerAnim("main_controller","attack_scratch");
                 this.ticksUntilNextAttack = this.adjustedTickDelay(attackInterval);
                 this.mob.doHurtTarget(pEnemy);
                 animatingAttack = true;
-            }
+            }*/
         }
     }
 

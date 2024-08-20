@@ -52,7 +52,6 @@ public abstract class DragonEntity extends NewWorldMonsterEntity {
         MonsterWeakness = List.of(Elements.THUNDER,Elements.DRAGON);
         MonsterPossibleAttackingBlights = List.of(Blights.POISON);
         deathTickTime = 50;
-        setTailCutable();
     }
 
     @Override

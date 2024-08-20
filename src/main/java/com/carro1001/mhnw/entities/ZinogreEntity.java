@@ -9,7 +9,6 @@ public class ZinogreEntity extends NewWorldMonsterEntity {
     public ZinogreEntity(EntityType<? extends NewWorldMonsterEntity> p_27557_, Level p_27558_) {
         super(p_27557_, p_27558_);
         this.name = ZINOGRE;
-        setTailCutable();
     }
 
 }

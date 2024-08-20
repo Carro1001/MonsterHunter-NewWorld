@@ -874,7 +874,7 @@
 				}
 			}
 		},
-		"animation.rathalos.walk": {
+		"animation.rathalos.walk_normal": {
 			"loop": true,
 			"animation_length": 2,
 			"bones": {
@@ -1607,7 +1607,7 @@
 				}
 			}
 		},
-		"animation.rathalos.run": {
+		"animation.rathalos.walk_aggro": {
 			"loop": true,
 			"animation_length": 1,
 			"bones": {

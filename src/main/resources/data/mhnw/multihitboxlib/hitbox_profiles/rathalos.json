@@ -126,12 +126,15 @@
 			"damage-modifier": 0.5,
 			"max-deviation-from-server": 0.125,
 			"box": {
-				"type": "multihitboxlib:aabb",
+				"type": "mhnw:breakable",
 				"size": [
 					2,
 					2
 				],
-				"position":[0,0,0]
+				"position":[0,0,0],
+				"hp":50,
+				"will_cut":true,
+				"part_type":"tail"
 			}
 		},
 		{

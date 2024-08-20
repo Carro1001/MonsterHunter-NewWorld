@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import static com.carro1001.mhnw.registration.ModBlocks.BLOCKS;
 import static com.carro1001.mhnw.registration.ModBlocks.BLOCK_ENTITIES;
 import static com.carro1001.mhnw.registration.ModEntities.ENTITIES;
+import static com.carro1001.mhnw.registration.ModHitboxTypes.HITBOXES;
 import static com.carro1001.mhnw.registration.ModItems.ITEMS;
 import static com.carro1001.mhnw.registration.ModParticle.PARTICLES;
 import static com.carro1001.mhnw.registration.ModTabs.TABS;
@@ -36,6 +37,7 @@ public class MHNW {
         PARTICLES.register(bus);
 /*        CONFIGURED_FEATURES.register(bus);
         PLACED_FEATURES.register(bus);*/
+        HITBOXES.register(bus);
         ENTITIES.register(bus);
         TABS.register(bus);
         IEventBus event = FMLJavaModLoadingContext.get().getModEventBus();
