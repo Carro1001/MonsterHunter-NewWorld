@@ -10375,7 +10375,10 @@
 					"rotation": {
 						"0.0": ["math.sin(query.anim_time*180/1.5)*-90", 0, "math.sin(query.anim_time*180/3)*2.5"],
 						"0.75": ["math.sin(query.anim_time*360/4-35)*-420", 0, 0],
-						"2.0": {"pre": [-360, 0, 0], "post": [0, 0, 0]}
+						"2.0": {
+							"pre": [-360, 0, 0],
+							"post": [0, 0, 0]
+						}
 					},
 					"position": {
 						"0.0": [
@@ -16662,7 +16665,10 @@
 						"0.0": [0, "math.sin(query.anim_time*180/1.66)*30", 0],
 						"0.8333": [0, "math.sin(query.anim_time*180/2.66-20)*60", 0],
 						"1.3333": [0, "math.sin(query.anim_time*180/6+25)*210", 0],
-						"3.0": {"pre": [0, 180, 0], "post": [0, 0, 0]}
+						"3.0": {
+							"pre": [0, 180, 0],
+							"post": [0, 0, 0]
+						}
 					},
 					"position": {
 						"0.0": {

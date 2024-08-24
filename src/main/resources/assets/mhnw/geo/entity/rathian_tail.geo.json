@@ -1,0 +1,73 @@
+{
+	"format_version": "1.12.0",
+	"minecraft:geometry": [
+		{
+			"description": {
+				"identifier": "geometry.rathian_tail",
+				"texture_width": 192,
+				"texture_height": 112,
+				"visible_bounds_width": 35,
+				"visible_bounds_height": 7,
+				"visible_bounds_offset": [0, 2.5, 0]
+			},
+			"bones": [
+				{
+					"name": "tailclub",
+					"pivot": [0, 11.1298, -1.0959],
+					"cubes": [
+						{"origin": [-17, 0.1298, -19.0959], "size": [34, 22, 36], "uv": [0, 0]}
+					]
+				},
+				{
+					"name": "tailEndHitbox",
+					"parent": "tailclub",
+					"pivot": [0, 39.1298, -0.0959]
+				},
+				{
+					"name": "stingerbase",
+					"parent": "tailclub",
+					"pivot": [0, 9.1298, 15.9041],
+					"rotation": [4.47, 0, 0],
+					"cubes": [
+						{"origin": [-11, 1.1298, 15.9041], "size": [22, 16, 12], "uv": [113, 4]}
+					]
+				},
+				{
+					"name": "spikes",
+					"parent": "stingerbase",
+					"pivot": [0, 8.1298, 27.9041],
+					"rotation": [0, 0, -45],
+					"cubes": [
+						{"origin": [0, -10.8702, 27.9041], "size": [0, 40, 56], "uv": [79, 11]}
+					]
+				},
+				{
+					"name": "spikes2",
+					"parent": "stingerbase",
+					"pivot": [0, 8.1298, 27.9041],
+					"rotation": [0, 0, 45],
+					"cubes": [
+						{"origin": [0, -10.8702, 27.9041], "size": [0, 40, 56], "uv": [79, 11]}
+					]
+				},
+				{
+					"name": "spikes3",
+					"parent": "stingerbase",
+					"pivot": [0, 8.1298, 27.9041],
+					"cubes": [
+						{"origin": [0, -10.8702, 27.9041], "size": [0, 40, 56], "uv": [79, 11]}
+					]
+				},
+				{
+					"name": "spikes4",
+					"parent": "stingerbase",
+					"pivot": [0, 8.1298, 27.9041],
+					"rotation": [0, 0, 90],
+					"cubes": [
+						{"origin": [0, -10.8702, 27.9041], "size": [0, 40, 56], "uv": [79, 11]}
+					]
+				}
+			]
+		}
+	]
+}

@@ -219,8 +219,8 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
     }
 
     //TODO change per mob, make generic
-    public EntityType<NewWorldGrowingEntity> getTailEntity(){
-        return ModEntities.RATH_TAIL.get();
+    public EntityType<TailEntity> getTailEntity(){
+        return ModEntities.RATHALOS_TAIL.get();
     }
 
 //region Goals

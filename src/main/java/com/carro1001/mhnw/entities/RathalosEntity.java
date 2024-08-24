@@ -1,6 +1,7 @@
 package com.carro1001.mhnw.entities;
 
 import com.carro1001.mhnw.entities.interfaces.IGrows;
+import com.carro1001.mhnw.registration.ModEntities;
 import com.carro1001.mhnw.registration.ModItems;
 import com.carro1001.mhnw.utils.MHNWReferences;
 import net.minecraft.world.entity.EntityType;
@@ -29,5 +30,8 @@ public class RathalosEntity extends DragonEntity implements GeoEntity, IGrows {
     public List<Item> getDrops(){
         return List.of(ModItems.RATHALOS_PLATE_ITEM.get(),ModItems.RATHALOS_SCALE_ITEM.get(),
                 ModItems.RATHALOS_TAIL_ITEM.get(),ModItems.RATHALOS_WEBBING_ITEM.get(),ModItems.FLAME_SACK_ITEM.get());
+    }
+    public EntityType<TailEntity> getTailEntity(){
+        return ModEntities.RATHALOS_TAIL.get();
     }
 }

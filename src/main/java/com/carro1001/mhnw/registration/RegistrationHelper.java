@@ -22,7 +22,8 @@ public class RegistrationHelper {
         event.put(APTONOTH.get(), AptonothEntity.prepareAttributes().build());
         event.put(RATHIAN.get(), RathianEntity.prepareAttributes().build());
         event.put(RATHALOS.get(), RathalosEntity.prepareAttributes().build());
-        event.put(RATH_TAIL.get(), NewWorldGrowingEntity.prepareAttributes().build());
+        event.put(RATHALOS_TAIL.get(), NewWorldGrowingEntity.prepareAttributes().build());
+        event.put(RATHIAN_TAIL.get(), NewWorldGrowingEntity.prepareAttributes().build());
         event.put(BITTERBUG.get(), BugEntity.prepareAttributes().build());
         event.put(TOAD.get(), ToadEntity.prepareAttributes().build());
         event.put(BLANGO.get(), BlangoEntity.prepareAttributes().build());

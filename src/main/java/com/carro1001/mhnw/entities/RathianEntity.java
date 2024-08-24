@@ -1,5 +1,6 @@
 package com.carro1001.mhnw.entities;
 
+import com.carro1001.mhnw.registration.ModEntities;
 import com.carro1001.mhnw.registration.ModItems;
 import com.carro1001.mhnw.utils.MHNWReferences;
 import net.minecraft.world.entity.EntityType;
@@ -20,5 +21,7 @@ public class RathianEntity extends DragonEntity {
         return List.of(ModItems.RATHIAN_PLATE_ITEM.get(),ModItems.RATHIAN_SCALE_ITEM.get(),
                 ModItems.RATHIAN_TAIL_ITEM.get(),ModItems.RATHIAN_WEBBING_ITEM.get(),ModItems.FLAME_SACK_ITEM.get());
     }
-
+    public EntityType<TailEntity> getTailEntity(){
+        return ModEntities.RATHIAN_TAIL.get();
+    }
 }
