@@ -1,0 +1,101 @@
+{
+	"format_version": "1.12.0",
+	"minecraft:geometry": [
+		{
+			"description": {
+				"identifier": "geometry.rathalos_tail",
+				"texture_width": 256,
+				"texture_height": 128,
+				"visible_bounds_width": 35,
+				"visible_bounds_height": 6.5,
+				"visible_bounds_offset": [0, 2.75, 0]
+			},
+			"bones": [
+				{
+					"name": "tailclub",
+					"pivot": [0, 11.1298, -1.0959],
+					"cubes": [
+						{"origin": [-17, 0.1298, -19.0959], "size": [34, 22, 36], "uv": [76, 5]}
+					]
+				},
+				{
+					"name": "tailEndHitbox",
+					"parent": "tailclub",
+					"pivot": [0, 39.1298, -0.0959]
+				},
+				{
+					"name": "leftthagomizer1",
+					"parent": "tailclub",
+					"pivot": [9, 50.1298, -13.0959],
+					"rotation": [-5, 120, 0],
+					"cubes": [
+						{"origin": [5, 7.27821, -9.69683], "size": [7, 7, 23], "uv": [0, 0]}
+					]
+				},
+				{
+					"name": "leftthagomizer2",
+					"parent": "tailclub",
+					"pivot": [10, 50.1298, -1.5959],
+					"rotation": [-5, 90, 0],
+					"cubes": [
+						{"origin": [6, 7.27821, 1.80317], "size": [7, 7, 28], "uv": [1, 42]}
+					]
+				},
+				{
+					"name": "leftthagomizer3",
+					"parent": "tailclub",
+					"pivot": [11, 50.1298, 10.9041],
+					"rotation": [-5, 55, 0],
+					"cubes": [
+						{"origin": [7, 7.27821, 14.30317], "size": [7, 7, 23], "uv": [0, 0]}
+					]
+				},
+				{
+					"name": "rightthagomizer1",
+					"parent": "tailclub",
+					"pivot": [-9, 50.1298, -13.0959],
+					"rotation": [-5, -120, 0],
+					"cubes": [
+						{"origin": [-12, 7.27821, -9.69683], "size": [7, 7, 23], "uv": [0, 0]}
+					]
+				},
+				{
+					"name": "rightthagomizer2",
+					"parent": "tailclub",
+					"pivot": [-10, 50.1298, -1.5959],
+					"rotation": [-5, -90, 0],
+					"cubes": [
+						{"origin": [-13, 7.27821, 1.80317], "size": [7, 7, 28], "uv": [1, 42]}
+					]
+				},
+				{
+					"name": "rightthagomizer3",
+					"parent": "tailclub",
+					"pivot": [-11, 50.1298, 10.9041],
+					"rotation": [-5, -55, 0],
+					"cubes": [
+						{"origin": [-14, 7.27821, 14.30317], "size": [7, 7, 23], "uv": [0, 0]}
+					]
+				},
+				{
+					"name": "stingerbase",
+					"parent": "tailclub",
+					"pivot": [0, 48.1298, 15.9041],
+					"rotation": [5, 0, 0],
+					"cubes": [
+						{"origin": [-11, 1.27821, 12.50502], "size": [22, 16, 12], "uv": [110, 66]}
+					]
+				},
+				{
+					"name": "stinger",
+					"parent": "stingerbase",
+					"pivot": [0, 49.1298, 21.9041],
+					"rotation": [-2.5, 0, 0],
+					"cubes": [
+						{"origin": [-4.5, 5.66692, 20.20294], "size": [9, 9, 30], "uv": [31, 1]}
+					]
+				}
+			]
+		}
+	]
+}

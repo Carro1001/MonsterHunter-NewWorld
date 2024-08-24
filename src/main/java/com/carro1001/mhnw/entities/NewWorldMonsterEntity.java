@@ -6,6 +6,7 @@ import com.carro1001.mhnw.entities.ai.MonsterAggressionStateGoal;
 import com.carro1001.mhnw.entities.helpers.MonsterBreakablePartEntity;
 import com.carro1001.mhnw.entities.interfaces.IAttributes;
 import com.carro1001.mhnw.entities.interfaces.IMonsterBreakablePart;
+import com.carro1001.mhnw.registration.ModEntities;
 import de.dertoaster.multihitboxlib.api.IMultipartEntity;
 import de.dertoaster.multihitboxlib.entity.MHLibPartEntity;
 import de.dertoaster.multihitboxlib.entity.hitbox.SubPartConfig;
@@ -44,21 +45,21 @@ import java.util.concurrent.LinkedTransferQueue;
 
 public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implements Enemy, IAttributes, IMultipartEntity<NewWorldMonsterEntity> {
 
-    protected static final EntityDataAccessor<Integer> AGGRESSION_STATE = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> AGGRESSION_STATE = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> DEATH_STATE = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> LIMPING = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.BOOLEAN);
-    protected static final EntityDataAccessor<Integer> RALLY_STATE = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> RALLY_STATE = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> SLEEPING = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> TAIL_CUT = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.BOOLEAN);
 
     private static final EntityDataAccessor<Boolean> RAGE = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.BOOLEAN);
-    protected static final EntityDataAccessor<Float> RAGE_BUILDUP = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Float> RAGE_BUILDUP = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.FLOAT);
 
     private static final EntityDataAccessor<Boolean> EXHAUSTED = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.BOOLEAN);
-    protected static final EntityDataAccessor<Float> EXHAUST_BUILDUP = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Float> EXHAUST_BUILDUP = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.FLOAT);
 
     private static final EntityDataAccessor<Boolean> ATTACKING = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.BOOLEAN);
-    protected static final EntityDataAccessor<Integer> ATTACK_ANIMATION_ID = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> ATTACK_ANIMATION_ID = SynchedEntityData.defineId(NewWorldMonsterEntity.class, EntityDataSerializers.INT);
 
     protected List<Elements> MonsterWeakness = List.of(Elements.NONE);
     protected List<Elements> MonsterAttackElements = List.of(Elements.NONE);
@@ -215,6 +216,11 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
     @Override
     public boolean isDeadOrDying() {
         return super.isDeadOrDying() || getDeathState() >= 1;
+    }
+
+    //TODO change per mob, make generic
+    public EntityType<NewWorldGrowingEntity> getTailEntity(){
+        return ModEntities.RATH_TAIL.get();
     }
 
 //region Goals

@@ -12,15 +12,16 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import software.bernie.geckolib.core.animation.AnimatableManager;
 
 import java.util.Random;
 
-public abstract class NewWorldGrowingEntity extends NewWorldEntity implements IGrows {
+public class NewWorldGrowingEntity extends NewWorldEntity implements IGrows {
     protected static final EntityDataAccessor<Boolean> SCALESSIGNED = SynchedEntityData.defineId(NewWorldGrowingEntity.class, EntityDataSerializers.BOOLEAN);
     protected static final EntityDataAccessor<Float> MONSTER_SCALE = SynchedEntityData.defineId(NewWorldGrowingEntity.class, EntityDataSerializers.FLOAT);
     protected float minScale = 0.6f, maxScale = 1f;
 
-    protected NewWorldGrowingEntity(EntityType<? extends PathfinderMob> pEntityType, Level pLevel) {
+    public NewWorldGrowingEntity(EntityType<? extends PathfinderMob> pEntityType, Level pLevel) {
         super(pEntityType, pLevel);
         fixupDimensions();
     }
@@ -44,13 +45,13 @@ public abstract class NewWorldGrowingEntity extends NewWorldEntity implements IG
     public void readAdditionalSaveData(@NotNull CompoundTag pCompound) {
         super.readAdditionalSaveData(pCompound);
         if (pCompound.contains("Scale", Tag.TAG_FLOAT)) {
-            this.setMonsterScale(pCompound.getFloat("Scale"));
+            this.setMonsterScale(pCompound.getFloat("Scale"), false);
         }
     }
 
     public void GenerateScale(){
         if(!getScaleAssignedDir()){
-            setMonsterScale((float) new Random().nextDouble(minScale, maxScale));
+            setMonsterScale((float) new Random().nextDouble(minScale, maxScale), false);
             setScaleAssignedDir(true);
         }
     }
@@ -69,8 +70,8 @@ public abstract class NewWorldGrowingEntity extends NewWorldEntity implements IG
     }
 
     @Override
-    public void setMonsterScale(float scale) {
-        if(!getScaleAssignedDir()){
+    public void setMonsterScale(float scale, boolean force) {
+        if(!getScaleAssignedDir() || force){
             this.entityData.set(MONSTER_SCALE, scale);
             this.setScaleAssignedDir(true);
             this.reapplyPosition();
@@ -106,4 +107,8 @@ public abstract class NewWorldGrowingEntity extends NewWorldEntity implements IG
         return super.finalizeSpawn(pLevel, pDifficulty, pReason, pSpawnData, pDataTag);
     }
 
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllerRegistrar) {
+
+    }
 }

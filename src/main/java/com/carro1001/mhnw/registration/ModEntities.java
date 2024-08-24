@@ -32,6 +32,7 @@ public class ModEntities {
     public static final RegistryObject<EntityType<RathalosEntity>> RATHALOS = registerEntity(MHNWReferences.RATHALOS,RathalosEntity::new, MobCategory.CREATURE,5.9f, 3.6f,16,true);
     public static final RegistryObject<Item> RATHALOS_EGG_ITEM = registerEntityEgg(MHNWReferences.RATHALOS, RATHALOS, 0x642628, 0x000000);
     public static final RegistryObject<EntityType<RathalosLargeFireballEntity>> RATHALOS_FIREBALL = ENTITIES.register(MHNWReferences.RATHALOS_FIREBALL, () -> EntityType.Builder.<RathalosLargeFireballEntity>of(RathalosLargeFireballEntity::new, MobCategory.MISC).sized(1.0F, 1.0F).clientTrackingRange(4).updateInterval(10).build(MHNWReferences.RATHALOS_FIREBALL));
+    public static final RegistryObject<EntityType<NewWorldGrowingEntity>> RATH_TAIL = registerEntity(MHNWReferences.RATHALOS  + "_tail",NewWorldGrowingEntity::new, MobCategory.CREATURE,3f, 1.2f,16,true);
 
     public static final RegistryObject<EntityType<BugEntity>> BITTERBUG = registerEntity(MHNWReferences.BITTERBUG, BugEntity::new, MobCategory.CREATURE,0.4f, 0.2f,8,true);
     public static final RegistryObject<Item> BITTERBUG_ITEM = registerEntityEgg(MHNWReferences.BITTERBUG_ITEM, BITTERBUG, 0x351c75, 0x5b5b5b);

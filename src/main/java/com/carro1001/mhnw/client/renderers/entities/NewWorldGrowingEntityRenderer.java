@@ -17,10 +17,12 @@ import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 
 public class NewWorldGrowingEntityRenderer<T extends NewWorldGrowingEntity> extends GeoEntityRenderer<T> {
     private final ResourceLocation RESOURCE_LOCATION;
+    protected final ResourceLocation TAIL_CUT_RESOURCE_LOCATION;
 
     public NewWorldGrowingEntityRenderer(EntityRendererProvider.Context context, GeoModel<T> model, String name) {
         super(context, model);
         RESOURCE_LOCATION = new ResourceLocation(MODID, "textures/entity/"+ name +".png");
+        TAIL_CUT_RESOURCE_LOCATION = new ResourceLocation(MODID, "textures/entity/"+ name +"_tailcut.png");
     }
 
     @Override

@@ -6,6 +6,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.model.DefaultedEntityGeoModel;
 
@@ -18,10 +19,15 @@ public abstract class DragonRenderer extends NewWorldGrowingEntityRenderer<NewWo
 
     @Override
     public void renderRecursively(PoseStack poseStack, NewWorldMonsterEntity animatable, GeoBone bone, RenderType renderType, MultiBufferSource bufferSource, VertexConsumer buffer, boolean isReRender, float partialTick, int packedLight, int packedOverlay, float red, float green, float blue, float alpha) {
-        if(bone.getName().equals(tailName) && animatable.isTailCut()){
-            bone.setHidden(true);
-            bone.setChildrenHidden(true);
+        if(bone.getName().equals(tailName)){
+            bone.setHidden(animatable.isTailCut());
         }
         super.renderRecursively(poseStack, animatable, bone, renderType, bufferSource, buffer, isReRender, partialTick, packedLight, packedOverlay, red, green, blue, alpha);
     }
+
+    @Override
+    public ResourceLocation getTextureLocation(NewWorldMonsterEntity animatable) {
+        return animatable.isTailCut() ? TAIL_CUT_RESOURCE_LOCATION: super.getTextureLocation(animatable);
+    }
+
 }

@@ -38,6 +38,7 @@ public class ClientSetup {
         event.registerEntityRenderer(APTONOTH.get(), AptonothRenderer::new);
         event.registerEntityRenderer(RATHIAN.get(), RathianRenderer::new);
         event.registerEntityRenderer(RATHALOS.get(), RathalosRenderer::new);
+        event.registerEntityRenderer(RATH_TAIL.get(), RathalosTailRenderer::new);
         event.registerEntityRenderer(RATHALOS_FIREBALL.get(), pContext ->  new ThrownItemRenderer<>(pContext, 3.0F, true));
         event.registerEntityRenderer(BITTERBUG.get(), BugRenderer::new);
         event.registerEntityRenderer(TOAD.get(), ToadRenderer::new);

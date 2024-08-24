@@ -21,11 +21,7 @@
 		"tailEndHitbox",
 		"headHitbox",
 		"neckHitbox",
-		"torsoHitbox",
-		"mainRightWingHitbox",
-		"connetorRightWingHitbox",
-		"mainLeftWingHitbox",
-		"connetorLeftWingHitbox"
+		"torsoHitbox"
 	],
 	"main-hitbox": {
 		"collidable": true,
@@ -37,61 +33,6 @@
 	},
 	"parts": [
 		{
-			"name":"mainRightWingHitbox",
-			"collidable": false,
-		    "can-receive-damage": true,
-		    "damage-modifier": 0.5,
-			"box": {
-				"type": "multihitboxlib:aabb",
-				"size": [
-					6,
-					1
-				],
-				"position":[0,0,0]
-			}
-		},
-		{
-			"name":"connetorRightWingHitbox",
-			"collidable": false,
-			"can-receive-damage": true,
-			"damage-modifier": 0.5,
-			"box": {
-				"type": "multihitboxlib:aabb",
-				"size": [
-					3,
-					1
-				],
-				"position":[0,0,0]
-			}
-		},
-		{
-			"name":"mainLeftWingHitbox",
-			"collidable": false,
-			"can-receive-damage": true,
-			"damage-modifier": 0.5,
-			"box": {
-				"type": "multihitboxlib:aabb",
-				"size": [
-					6,
-					1
-				],
-				"position":[0,0,0]
-			}
-		},
-		{
-			"name":"connetorLeftWingHitbox",
-			"collidable": false,
-			"can-receive-damage": true,
-			"damage-modifier": 0.5,
-			"box": {
-				"type": "multihitboxlib:aabb",
-				"size": [
-					3,
-					1
-				],
-				"position":[0,0,0]
-			}
-		},{
 			"name":"baseTailHitbox",
 			"collidable": true,
 		    "can-receive-damage": true,
