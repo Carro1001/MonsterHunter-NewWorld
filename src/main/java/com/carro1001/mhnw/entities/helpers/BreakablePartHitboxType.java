@@ -27,17 +27,13 @@ public class BreakablePartHitboxType extends AABBHitboxType {
     }
 
     private IMonsterBreakablePart.PART getPartType(String partType) {
-        switch (partType){
-            case "tail":
-                return IMonsterBreakablePart.PART.TAIL;
-            case "head":
-                return IMonsterBreakablePart.PART.HEAD;
-            case "wing":
-                return IMonsterBreakablePart.PART.WING;
-            case "arm":
-                return IMonsterBreakablePart.PART.ARM;
-        }
-        return IMonsterBreakablePart.PART.OTHER;
+        return switch (partType) {
+            case "tail" -> IMonsterBreakablePart.PART.TAIL;
+            case "head" -> IMonsterBreakablePart.PART.HEAD;
+            case "wing" -> IMonsterBreakablePart.PART.WING;
+            case "claw" -> IMonsterBreakablePart.PART.CLAW;
+            default -> IMonsterBreakablePart.PART.OTHER;
+        };
     }
 
     public static final Codec<BreakablePartHitboxType> CODEC = RecordCodecBuilder.create(instance -> instance.group(

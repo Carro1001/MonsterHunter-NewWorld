@@ -16,7 +16,7 @@ public interface IMonsterBreakablePart {
 
     enum  PART{
         HEAD,
-        ARM,
+        CLAW,
         BODY,
         WING,
         TAIL,

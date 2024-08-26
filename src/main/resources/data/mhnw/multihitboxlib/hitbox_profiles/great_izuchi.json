@@ -20,6 +20,7 @@
 		"midTailHitbox",
 		"tailEndHitbox",
 		"headHitbox",
+		"clawHitbox",
 		"torsoHitbox"
 	],
 	"main-hitbox": {
@@ -39,8 +40,8 @@
 			"box": {
 				"type": "multihitboxlib:aabb",
 				"size": [
-					0.9,
-					0.9
+					1.2,
+					1.2
 				],
 				"position":[0,0,0]
 			}
@@ -53,8 +54,8 @@
 			"box": {
 				"type": "multihitboxlib:aabb",
 				"size": [
-					0.9,
-					0.9
+					1.2,
+					1.2
 				],
 				"position":[0,0,0]
 			}
@@ -66,12 +67,15 @@
 			"damage-modifier": 0.5,
 			"max-deviation-from-server": 0.125,
 			"box": {
-				"type": "multihitboxlib:aabb",
+				"type": "mhnw:breakable",
 				"size": [
-					0.9,
-					0.9
+					1.2,
+					1.2
 				],
-				"position":[0,0,0]
+				"position":[0,0,0],
+				"hp":25,
+				"will_cut":false,
+				"part_type":"tail"
 			}
 		},
 		{
@@ -79,14 +83,33 @@
 			"collidable": true,
 			"can-receive-damage": true,
 			"damage-modifier": 0.5,
-			"max-deviation-from-server": 0.125,
 			"box": {
-				"type": "multihitboxlib:aabb",
+				"type": "mhnw:breakable",
 				"size": [
 					0.9,
 					0.9
 				],
-				"position":[0,0,0]
+				"position":[0,0,0],
+				"hp":25,
+				"will_cut":false,
+				"part_type":"head"
+			}
+		},
+		{
+			"name":"clawHitbox",
+			"collidable": false,
+			"can-receive-damage": false,
+			"damage-modifier": 0.5,
+			"box": {
+				"type": "mhnw:breakable",
+				"size": [
+					0.8,
+					0.8
+				],
+				"position":[0,0,0],
+				"hp":10000,
+				"will_cut":false,
+				"part_type":"claw"
 			}
 		},
 		{
