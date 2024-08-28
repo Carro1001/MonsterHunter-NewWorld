@@ -17,6 +17,7 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.util.Mth;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -170,6 +171,10 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
         }
         else if(isLimpining()){
             this.level().addParticle(ParticleTypes.DRIPPING_WATER, this.getRandomX(1.0D), this.getRandomY(), this.getRandomZ(1.0D), 0.0D, -0.5D, 0.0D);
+        }
+        else if(!isSleeping()){
+            //TODO actually check this is helping
+            this.yBodyRot = Mth.approachDegrees(this.yBodyRotO, yBodyRot, getHeadRotSpeed());
         }
         if (!level().isClientSide) {
             if(isRaging()){
@@ -518,6 +523,9 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
         return _mhTicksSinceLastSync;
     }
 
+    public int getHeadRotSpeed() {
+        return 15;
+    }
     public enum AggressionState {
         PASSIVE,
         ROAR,
@@ -527,4 +535,6 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
         READY,
         COOL_DOWN
     }
+
+
 }
