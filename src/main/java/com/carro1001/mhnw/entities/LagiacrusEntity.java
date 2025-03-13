@@ -55,13 +55,13 @@ public class LagiacrusEntity extends NewWorldMonsterEntity {
 
 
     //Offset to the points relative to their parent point
-    public Vec3 tail0Offset = new Vec3(0.0, 0.0, 10);
-    public Vec3 tail1Offset = new Vec3(0.0, 0.0, 10);
+    public Vec3 tail0Offset = new Vec3(0.0, 0.0, 2);
+    public Vec3 tail1Offset = new Vec3(0.0, 0.0, 2);
     //technically the second segment's bone position offset, but affects the segment before it
-    public Vec3 tail2Offset = new Vec3(0.0, 0.0, 10);
-    public Vec3 tail3Offset = new Vec3(0.0, 0.0, 10);
-    public Vec3 tail4Offset = new Vec3(0.0, 0.0, 10);
-    public Vec3 tail5Offset = new Vec3(0.0, 0.0, 10);
+    public Vec3 tail2Offset = new Vec3(0.0, 0.0, 2);
+    public Vec3 tail3Offset = new Vec3(0.0, 0.0, 2);
+    public Vec3 tail4Offset = new Vec3(0.0, 0.0, 2);
+    public Vec3 tail5Offset = new Vec3(0.0, 0.0, 2);
     //x = side to side offset
     //y = vert offset
     //z = fore to back offset(pos is back)
@@ -186,7 +186,8 @@ public class LagiacrusEntity extends NewWorldMonsterEntity {
         tail4Point = MathHelpers.rotateAroundCenter3dDeg(tail3Point, tail3Point.subtract(tail4Offset), -MathHelpers.angleTo(tail3Point, tail4Point).y, -MathHelpers.angleTo(tail3Point, tail4Point).x);
         tail5Point = MathHelpers.rotateAroundCenter3dDeg(tail4Point, tail4Point.subtract(tail5Offset), -MathHelpers.angleTo(tail4Point, tail5Point).y, -MathHelpers.angleTo(tail4Point, tail5Point).x);
 
-        if(!this.level().getBlockState(new BlockPos(new Vec3i((int) tail0Point.y(), (int) tail0Point.y(), (int) tail0Point.y()))).isSolid()){
+        //trying to give gravity to the nodes(ain't working)
+        /*if(!this.level().getBlockState(new BlockPos(new Vec3i((int) tail0Point.y(), (int) tail0Point.y(), (int) tail0Point.y()))).isSolid()){
             tail0Point.subtract(0, 10, 0);
         }
         if(!this.level().getBlockState(new BlockPos(new Vec3i((int) tail1Point.y(), (int) tail1Point.y(), (int) tail1Point.y()))).isSolid()){
@@ -203,7 +204,7 @@ public class LagiacrusEntity extends NewWorldMonsterEntity {
         }
         if(!this.level().getBlockState(new BlockPos(new Vec3i((int) tail5Point.y(), (int) tail5Point.y(), (int) tail5Point.y()))).isSolid()){
             tail5Point.subtract(0, 10, 0);
-        }
+        }*/
 
         //side refs don't move vertically
         leftRefPoint = MathHelpers.rotateAroundCenterFlatDeg(this.position(), this.position().subtract(leftRefOffset), (double) -this.getViewYRot(1));
