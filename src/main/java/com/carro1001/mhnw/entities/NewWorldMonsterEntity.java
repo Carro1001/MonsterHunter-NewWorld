@@ -231,7 +231,7 @@ public abstract class NewWorldMonsterEntity extends NewWorldGrowingEntity implem
 
     @Override
     public @Nullable SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData, @Nullable CompoundTag pDataTag) {
-        partTypeMap.forEach((key, value) -> MHNW.LOGGER.debug(this+ "spawned with hitbox: " + key + ": " + value));
+        //partTypeMap.forEach((key, value) -> MHNW.LOGGER.debug(this+ "spawned with hitbox: " + key + ": " + value));
         return super.finalizeSpawn(pLevel, pDifficulty, pReason, pSpawnData, pDataTag);
     }
 

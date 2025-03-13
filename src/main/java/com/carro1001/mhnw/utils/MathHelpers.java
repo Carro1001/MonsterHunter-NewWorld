@@ -59,10 +59,33 @@ public class MathHelpers {
         return new Vec3(newMeX, newMeY, newMeZ);
     }
 
-    public static double angleFromYdiff(double hyp, Vec3 point, Vec3 child) {
-        double ydiff = child.y - point.y;
+    public static double angleFromYdiff(Vec3 lead, Vec3 point, Vec3 trail) {
+        double NextHeight = trail.y - point.y;
+        double PrevHeight = lead.y - point.y;
 
-        return Math.asin(ydiff/hyp);
+        double distToNextFlat = flatDist(point, trail);
+        double distToPrevFlat = flatDist(lead, point);
+
+        double ThetaPrevious = Math.atan(PrevHeight/distToPrevFlat);
+        double ThetaNext = Math.atan(NextHeight/distToNextFlat);
+
+        /*if (PrevHeight/distToPrevFlat > 1){
+            ThetaPrevious = Math.atan(1);
+        } else if (PrevHeight/distToPrevFlat < -1) {
+            ThetaPrevious = Math.atan(-1);
+        }
+        if (NextHeight/distToNextFlat > 1){
+            ThetaNext = Math.atan(1);
+        } else if (NextHeight/distToNextFlat < -1) {
+            ThetaNext = Math.atan(-1);
+        }*/
+
+
+        return (ThetaPrevious + ThetaNext);
+    }
+
+    public static double flatDist(Vec3 a, Vec3 b) {
+        return Math.abs(Math.hypot(a.x - b.x, a.z - b.z));
     }
 
     public static double getAngleForLinkTopDownFlat(Vec3 point, Vec3 parent, Vec3 child, Vec3 leftRef, Vec3 rightRef){
@@ -105,6 +128,50 @@ public class MathHelpers {
             return Mth.clamp(angle, -(Mth.TWO_PI - poslim), -poslim);
         }
     }
+
+    public static double LerpDegrees(double start, double end, double amount)
+    {
+        double difference = Math.abs(end - start);
+        //System.out.println("guh");
+        //System.out.println(Math.abs(end - start));
+
+        if (difference > Mth.PI)
+        {
+            // We need to add on to one of the values.
+            if (end > start)
+            {
+                // We'll add it on to start...
+                start += Mth.TWO_PI;
+            }
+            else
+            {
+                // Add it on to end.
+                end += Mth.TWO_PI;
+            }
+        }
+
+        // Interpolate it.
+        double value = (start + ((end - start) * amount));
+
+        //System.out.println(value);
+
+        // Wrap it..
+        float rangeZero = Mth.TWO_PI;
+
+        if (Double.isNaN(value)) {
+            return 0;
+        }
+
+        if (value >= 0 && value <= Mth.TWO_PI) {
+            //System.out.println(value);
+            return value;
+        }
+
+        //System.out.println(value % rangeZero);
+
+        return (value % rangeZero);
+    }
+
 
 
 }
