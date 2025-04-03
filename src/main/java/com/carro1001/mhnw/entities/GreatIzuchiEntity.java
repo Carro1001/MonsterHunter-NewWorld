@@ -4,10 +4,8 @@ import com.carro1001.mhnw.entities.ai.HitboxMeeleeAttackGoal;
 import com.carro1001.mhnw.entities.ai.RallyGoal;
 import com.carro1001.mhnw.entities.ai.SleepGoal;
 import com.carro1001.mhnw.entities.interfaces.IMonsterBreakablePart;
-import com.carro1001.mhnw.registration.ModEntities;
 import com.carro1001.mhnw.registration.ModItems;
 import de.dertoaster.multihitboxlib.api.IMultipartEntity;
-import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.entity.EntityType;
@@ -45,30 +43,31 @@ public class GreatIzuchiEntity extends NewWorldMonsterEntity implements IMultipa
     }
 
     protected RawAnimation getClawAnimation() {
-        return RawAnimation.begin().thenPlayXTimes("animation.great_izuchi.attack_scratch",1);
+        return RawAnimation.begin().thenPlay("animation.great_izuchi.attack_scratch");
     }
     protected RawAnimation getSwipeAnimation() {
-        return RawAnimation.begin().thenPlayXTimes("animation.great_izuchi.attack_tailswipe",1);
+        return RawAnimation.begin().thenPlay("animation.great_izuchi.attack_tailswipe");
     }
     protected RawAnimation getSlamAnimation() {
-        return RawAnimation.begin().thenPlayXTimes("animation.great_izuchi.attack_tailslam",1);
+        return RawAnimation.begin().thenPlay("animation.great_izuchi.attack_tailslam");
     }
 
 
     protected void registerGoals() {
         super.registerGoals();
-        //TODO this will constanly pick the same attack, accurate MH experience i guess?
+
+        this.goalSelector.addGoal(3, new HitboxMeeleeAttackGoal(this,1.1,partTypeMap.get(IMonsterBreakablePart.PART.CLAW).get(0),
+                "main_controller","attack_scratch",3,1.5f,4,
+                5,22,42,66, true));
+        this.goalSelector.addGoal(3, new HitboxMeeleeAttackGoal(this,1.1,partTypeMap.get(IMonsterBreakablePart.PART.TAIL).get(0),
+                "main_controller","tailslam",2f,2f,1,
+                2,34,40,87, true));
+        this.goalSelector.addGoal(3, new HitboxMeeleeAttackGoal(this,1.1,partTypeMap.get(IMonsterBreakablePart.PART.TAIL).get(0),
+                "main_controller","tailswipe",1.5f,1.5f,1,
+                2,21,40,48, true));
 
         this.goalSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Vindicator.class, true));
-        this.goalSelector.addGoal(3, new HitboxMeeleeAttackGoal(this,1.2,partTypeMap.get(IMonsterBreakablePart.PART.CLAW).get(0),
-                "main_controller","attack_scratch",3,1.5f,4,
-                6,40,66));
-        this.goalSelector.addGoal(3, new HitboxMeeleeAttackGoal(this,1.2,partTypeMap.get(IMonsterBreakablePart.PART.TAIL).get(0),
-                "main_controller","tailslam",3,1.5f,1,
-                0,52,87));
-        this.goalSelector.addGoal(3, new HitboxMeeleeAttackGoal(this,1.2,partTypeMap.get(IMonsterBreakablePart.PART.TAIL).get(0),
-                "main_controller","tailswipe",3,1.5f,1,
-                0,36,47));
+
         this.goalSelector.addGoal(9, new RallyGoal(this));
         this.goalSelector.addGoal(10, new SleepGoal(this));
     }
@@ -76,13 +75,13 @@ public class GreatIzuchiEntity extends NewWorldMonsterEntity implements IMultipa
     @Override
     public @Nullable SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData, @Nullable CompoundTag pDataTag) {
 
-        for (int i = 0; i < 2; i++) {
+/*        for (int i = 0; i < 2; i++) {
             BlockPos pos = i == 0 ? getOnPos().east(4):getOnPos().west(4);
 
             IzuchiEntity izuchi = ModEntities.IZUCHI.get().create(pLevel.getLevel());
             izuchi.setPos(pos.getX(),pos.getY()+1,pos.getZ());
             pLevel.getLevel().addFreshEntity(izuchi);
-        }
+        }*/
         return super.finalizeSpawn(pLevel, pDifficulty, pReason, pSpawnData, pDataTag);
     }
 

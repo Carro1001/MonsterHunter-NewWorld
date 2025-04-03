@@ -33,7 +33,9 @@ public class MonsterAggressionStateGoal extends Goal {
 
     @Override
     public void tick() {
-        if (this.dragonEntity.getTarget() != null) {
+        LivingEntity livingentity = this.dragonEntity.getTarget();
+        if (livingentity!= null) {
+            this.dragonEntity.getLookControl().setLookAt(livingentity, 10.0F, 10.0F);
             NewWorldMonsterEntity.AggressionState aggressionState = this.dragonEntity.getAggressionState();
             if (aggressionState == NewWorldMonsterEntity.AggressionState.PASSIVE) {
                 this.dragonEntity.triggerAnim("main_controller","roar");
