@@ -3,6 +3,7 @@ package com.carro1001.mhnw.entities.ai;
 import com.carro1001.mhnw.MHNW;
 import com.carro1001.mhnw.entities.DragonEntity;
 import com.carro1001.mhnw.entities.NewWorldMonsterEntity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 
 public class MonsterAggressionStateGoal extends Goal {
