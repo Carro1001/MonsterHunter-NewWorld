@@ -32,6 +32,11 @@ public class MonsterBreakablePartEntity<T extends Entity> extends MHLibPartEntit
     }
 
     @Override
+    public void setScaling(Vec3 scale) {
+        super.setScaling(scale);
+    }
+
+    @Override
     public float getHP() {
         return hp;
     }

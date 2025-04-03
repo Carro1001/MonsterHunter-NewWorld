@@ -89,8 +89,14 @@ repositories {
         name = "CurseMaven Maven"
         url = "https://www.cursemaven.com"
     }
-
-
+    maven {
+        name = "SmartBrainLib (SBL) Maven Repo"
+        url = "https://dl.cloudsmith.io/public/tslat/sbl/maven/"
+    }
+    maven {
+        name = 'Sinytra'
+        url = 'https://maven.su5ed.dev/releases/'
+    }
 }
 
 dependencies {
@@ -98,9 +104,15 @@ dependencies {
     implementation 'org.jetbrains:annotations:23.0.0'
 
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+
     implementation fg.deobf("software.bernie.geckolib:geckolib-forge-${minecraft_version}:${gecko_version}")
+
     implementation("com.eliotlash.mclib:mclib:20")
-    implementation fg.deobf("dertoaster98:multihitboxlib:${minecraft_version}-${multihitboox_version}@jar")
+
+    implementation fg.deobf("dertoaster98:multihitboxlib:${minecraft_version}-${multihitbox_version}@jar")
+
+    implementation fg.deobf("net.tslat.smartbrainlib:SmartBrainLib-forge-${minecraft_version}:${sbl_version}")
+    implementation("org.sinytra.mixinbooster:mixin-booster:${mixinbooster_version}+${minecraft_version}")
 
     compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-common-api:${jei_version}")
     compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-forge-api:${jei_version}")

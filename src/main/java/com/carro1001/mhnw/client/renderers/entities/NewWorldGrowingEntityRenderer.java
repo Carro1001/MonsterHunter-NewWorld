@@ -2,7 +2,6 @@ package com.carro1001.mhnw.client.renderers.entities;
 
 import com.carro1001.mhnw.entities.NewWorldGrowingEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -31,7 +30,14 @@ public class NewWorldGrowingEntityRenderer<T extends NewWorldGrowingEntity> exte
     }
     @Override
     public float getMotionAnimThreshold(T animatable) {
-        return 0.012f;
+        return 0.005f;
+    }
+
+    @Override
+    public void scaleModelForRender(float widthScale, float heightScale, PoseStack poseStack, T animatable, BakedGeoModel model, boolean isReRender, float partialTick, int packedLight, int packedOverlay) {
+        widthScale = animatable.getMonsterScale();
+        heightScale = animatable.getMonsterScale();
+        super.scaleModelForRender(widthScale, heightScale, poseStack, animatable, model, isReRender, partialTick, packedLight, packedOverlay);
     }
 
     @Override
@@ -42,12 +48,6 @@ public class NewWorldGrowingEntityRenderer<T extends NewWorldGrowingEntity> exte
     public void render(T pEntity, float pEntityYaw, float pPartialTicks, PoseStack pPoseStack, MultiBufferSource pBuffer, int pPackedLight) {
         this.shadowRadius = pEntity.getMonsterScale();
         super.render(pEntity, pEntityYaw, pPartialTicks, pPoseStack, pBuffer, pPackedLight);
-    }
-
-    @Override
-    public void preRender(PoseStack poseStack, T animatable, BakedGeoModel model, MultiBufferSource bufferSource, VertexConsumer buffer, boolean isReRender, float partialTick, int packedLight, int packedOverlay, float red, float green, float blue, float alpha) {
-        super.preRender(poseStack, animatable, model, bufferSource, buffer, isReRender, partialTick, packedLight, packedOverlay, red, green, blue, alpha);
-        poseStack.scale(animatable.getMonsterScale(),animatable.getMonsterScale(),animatable.getMonsterScale());
     }
 
     @Override
