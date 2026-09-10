@@ -3,23 +3,34 @@ package com.carro1001.mhnw;
 import net.neoforged.neoforge.common.ModConfigSpec;
 
 /**
- * Server-side settings. Deliberately tiny: the handoff's "small data budget" rule
- * means we add a value here only when a packet actually needs it.
+ * Settings. Deliberately tiny: the handoff's "small data budget" rule means a value is added here
+ * only when a packet actually needs it.
  */
 public final class MHNWConfig {
-    private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
+
+    // --- Server: per-world gameplay settings. ---
+    private static final ModConfigSpec.Builder SERVER_BUILDER = new ModConfigSpec.Builder();
 
     /** A11: natural spawning must be disableable. */
-    public static final ModConfigSpec.BooleanValue NATURAL_SPAWNING = BUILDER
+    public static final ModConfigSpec.BooleanValue NATURAL_SPAWNING = SERVER_BUILDER
             .comment("Whether MHNW monsters spawn naturally. Disable to stop all natural spawns.")
             .define("naturalSpawning", true);
 
-    /** Sparse combat diagnostics: attack transitions and contact decisions, never per tick. */
-    public static final ModConfigSpec.BooleanValue DEBUG_COMBAT = BUILDER
+    public static final ModConfigSpec SERVER_SPEC = SERVER_BUILDER.build();
+
+    // --- Common: per-instance development toggles, not per-world. ---
+    private static final ModConfigSpec.Builder COMMON_BUILDER = new ModConfigSpec.Builder();
+
+    /**
+     * Sparse combat diagnostics: attack transitions and contact decisions, never per tick.
+     * Common rather than server so it lives at {@code config/mhnw-common.toml} and can be set
+     * before a world exists.
+     */
+    public static final ModConfigSpec.BooleanValue DEBUG_COMBAT = COMMON_BUILDER
             .comment("Log monster attack transitions and accepted/rejected contact. Development aid.")
             .define("debugCombat", false);
 
-    public static final ModConfigSpec SPEC = BUILDER.build();
+    public static final ModConfigSpec COMMON_SPEC = COMMON_BUILDER.build();
 
     private MHNWConfig() {}
 }

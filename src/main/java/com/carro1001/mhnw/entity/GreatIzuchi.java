@@ -18,6 +18,7 @@ import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
+import net.minecraft.world.entity.monster.AbstractIllager;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -49,28 +50,32 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * Model Y = 0 is the ground the creature stands on: its feet solve to Y = -0.20 .. 0.10.
  *
  * <h2>Where the part offsets came from</h2>
- * The raw bone pivots in the geometry are NOT rest positions. The bind pose carries real rotations
- * (neck +30 deg, head -22.78 deg, arms -62.5 deg, legs bent) and the locomotion clips add more.
- * The constants below are the result of running forward kinematics offline, once, over the bind
- * rotations plus the constant term of the walk clip, for the six marker bones the original artists
- * authored (torsoHitbox, headHitbox, clawHitbox, baseTailHitbox, midTailHitbox, tailEndHitbox).
+ * They are fitted to the rendered mesh, NOT to the {@code *Hitbox} marker bones the geometry
+ * carries. Those markers were authored for MultiHitboxLib, which positioned them by a different
+ * rule, and in-game they sit visibly off the body: the torso marker is about 0.9 block too far
+ * forward and the tail markers about 0.45 block too low. They are preserved in the geometry as
+ * authoring history and deliberately ignored here.
  *
- * <p>Cross-checks that the transform is right: the idle and walk poses agree within 0.1 block, the
- * walk pose solves the two feet symmetrically at +/- 0.47, and the head solves to 3.0 blocks tall,
- * matching the 2.8-tall main hitbox the original MultiHitboxLib profile declared. Part sizes below
- * are the authored values preserved from that same profile.
+ * <p>Instead, the eight corners of every cube of each body region were transformed through the
+ * full bone chain (bind rotations plus animation channels, with the MoLang sine terms evaluated
+ * rather than zeroed) and sampled across the idle, walk and run cycles. Each constant below is the
+ * centre of the resulting swept bounding box, and each size is that box rounded down slightly.
  *
- * <p>Nothing here evaluates animation at runtime. The server never runs a skeletal-animation
- * engine and never asks a client where a bone is (handoff section 4.2).
+ * <p>Cross-checks that the transform is right: the feet solve to ground level (Y = -0.14 .. 0.10),
+ * the walk cycle solves them symmetrically at +/- 0.49, and the solved body length matches the
+ * rendered creature. Nothing here evaluates animation at runtime; the server never runs a
+ * skeletal-animation engine and never asks a client where a bone is (handoff section 4.2).
  *
- * <p>Known limitation: the sign of the local X axis (which side the claw is on) has only the
- * symmetric-feet cross-check, not visual confirmation. The creature is bilaterally symmetric and
- * the claw is the sole asymmetric volume, so a mirrored claw would shift contact by 0.21 block.
+ * <p>Known limitations: a static local offset cannot track a tail that swings sideways during
+ * locomotion, so the tail boxes approximate a swept envelope rather than the instantaneous tail.
+ * The sign of the local X axis has only the symmetric-feet cross-check, not visual confirmation.
  */
 public class GreatIzuchi extends Monster implements GeoEntity {
 
     // Provisional balance constants. Tuning is a later packet; the behaviour itself is finished.
-    public static final double MAX_HEALTH = 120.0D;
+    // ponytail: 40 HP is a deliberately low testing value so a slice can be killed quickly during
+    // development. Raise toward 120 once the combat slice is signed off.
+    public static final double MAX_HEALTH = 40.0D;
     public static final double MOVE_SPEED = 0.28D;
     public static final double FOLLOW_RANGE = 32.0D;
     public static final double KNOCKBACK_RESISTANCE = 0.6D;
@@ -123,12 +128,12 @@ public class GreatIzuchi extends Monster implements GeoEntity {
     public GreatIzuchi(EntityType<? extends Monster> type, Level level) {
         super(type, level);
         this.parts = new MonsterPart[] {
-                //              name          width  height  left    up      forward
-                new MonsterPart(this, "torso",     1.3F, 1.2F, 0.00D, 1.89D,  1.72D),
-                new MonsterPart(this, "head",      0.9F, 0.9F, 0.00D, 3.00D,  1.85D),
-                new MonsterPart(this, "tail_base", 1.2F, 1.2F, 0.00D, 1.69D, -1.63D),
-                new MonsterPart(this, "tail_mid",  1.2F, 1.2F, 0.00D, 1.81D, -3.06D),
-                new MonsterPart(this, "tail_end",  1.2F, 1.2F, 0.00D, 1.75D, -4.88D),
+                //              name           width height  left    up      forward
+                new MonsterPart(this, "torso",     1.6F, 1.9F, 0.00D, 2.38D,  0.81D),
+                new MonsterPart(this, "head",      1.3F, 1.2F, 0.00D, 3.36D,  1.96D),
+                new MonsterPart(this, "tail_base", 1.3F, 1.1F, 0.00D, 2.25D, -1.37D),
+                new MonsterPart(this, "tail_mid",  1.3F, 1.2F, 0.00D, 2.24D, -3.62D),
+                new MonsterPart(this, "tail_end",  1.4F, 1.6F, 0.00D, 1.69D, -4.33D),
         };
         this.xpReward = 20;
     }
@@ -164,6 +169,9 @@ public class GreatIzuchi extends Monster implements GeoEntity {
 
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
+        // Pillagers make the attack observable from outside the fight, which a player being hit
+        // cannot easily do. Also reasonable flavour: a large monster does not care who you are.
+        this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, AbstractIllager.class, true));
     }
 
     @Override
@@ -217,6 +225,25 @@ public class GreatIzuchi extends Monster implements GeoEntity {
     @Override
     public PartEntity<?>[] getParts() {
         return this.parts;
+    }
+
+    /**
+     * Parts have no spawn packet of their own, so a client allocates their entity ids from its own
+     * counter and would disagree with the server about which id is which part. A player clicking a
+     * hurtbox sends that client-side id, the server resolves it to nothing, and the hit silently
+     * vanishes: the parts render but cannot be attacked.
+     *
+     * <p>Vanilla solves this by numbering parts as successors of the parent id, which both sides
+     * derive identically once the parent id arrives in the spawn packet. See EnderDragon.setId and
+     * MC-158205. The parts are constructed in this constructor, immediately after the parent, so
+     * the ids they reserve from the shared counter are exactly the ones claimed here.
+     */
+    @Override
+    public void setId(int id) {
+        super.setId(id);
+        for (int i = 0; i < this.parts.length; i++) {
+            this.parts[i].setId(id + i + 1);
+        }
     }
 
     public MonsterPart[] monsterParts() {

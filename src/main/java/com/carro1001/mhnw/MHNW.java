@@ -25,7 +25,8 @@ public class MHNW {
         modBus.addListener(MHNW::onAttributeCreation);
         modBus.addListener(MHNW::onRegisterSpawnPlacements);
         modBus.addListener(MHNW::onBuildCreativeTabs);
-        container.registerConfig(ModConfig.Type.SERVER, MHNWConfig.SPEC);
+        container.registerConfig(ModConfig.Type.SERVER, MHNWConfig.SERVER_SPEC);
+        container.registerConfig(ModConfig.Type.COMMON, MHNWConfig.COMMON_SPEC);
     }
 
     @SubscribeEvent

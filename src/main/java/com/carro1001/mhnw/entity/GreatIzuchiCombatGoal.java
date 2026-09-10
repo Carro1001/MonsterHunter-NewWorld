@@ -60,8 +60,8 @@ public class GreatIzuchiCombatGoal extends Goal {
     /** Ticks after recovery before another attack may start. */
     public static final int COOLDOWN = 30;
 
-    /** Edge length of the cubic claw volume, preserved from the authored hitbox profile. */
-    public static final double CLAW_SIZE = 0.8D;
+    /** Edge length of the cubic claw volume. The solved hand mesh measures 0.75 to 1.06 across. */
+    public static final double CLAW_SIZE = 0.9D;
 
     /**
      * Distance at which the attack may be started, measured from the monster position to the
@@ -76,20 +76,23 @@ public class GreatIzuchiCombatGoal extends Goal {
 
     /**
      * Sampled claw positions, {tick, left, up, forward} in blocks, across the active window.
-     * Taken directly from the frame-by-frame solve of the scratch clip.
+     *
+     * <p>These are the centre of the solved {@code right_hand} mesh, frame by frame through the
+     * scratch clip, for the same reason the hurtboxes are fitted to mesh rather than markers: the
+     * {@code clawHitbox} marker bone does not sit on the rendered hand.
      */
     private static final double[][] CLAW_PATH = {
-            {18, 0.293D, 2.278D, 1.103D},
-            {21, 0.534D, 2.626D, 0.803D},
-            {24, 0.494D, 1.796D, 0.591D},
-            {27, -0.585D, 0.156D, 0.603D},
-            {30, -1.233D, 0.573D, 1.683D},
-            {33, 0.486D, 2.518D, 0.970D},
-            {36, 0.775D, 1.379D, 0.504D},
-            {39, -1.337D, 0.543D, 1.287D},
-            {42, -0.993D, 0.103D, 1.440D},
-            {45, -0.736D, 0.613D, 1.716D},
-            {47, -0.701D, 0.694D, 1.162D},
+            {18, 0.294D, 2.148D, 1.072D},
+            {21, 0.510D, 2.603D, 0.957D},
+            {24, 0.458D, 1.897D, 0.485D},
+            {27, -0.605D, 0.179D, 0.593D},
+            {30, -1.245D, 0.594D, 1.663D},
+            {33, 0.455D, 2.514D, 0.966D},
+            {36, 0.758D, 1.406D, 0.499D},
+            {39, -1.350D, 0.561D, 1.264D},
+            {42, -0.954D, 0.102D, 1.368D},
+            {45, -0.820D, 0.693D, 1.782D},
+            {47, -1.002D, 0.790D, 1.344D},
     };
 
     private static final int REPATH_INTERVAL = 10;

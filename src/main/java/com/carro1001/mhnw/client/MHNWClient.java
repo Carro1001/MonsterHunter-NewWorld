@@ -37,6 +37,16 @@ public final class MHNWClient {
                     ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, "great_izuchi")));
             this.shadowRadius = 1.0F;
         }
+
+        /**
+         * Vanilla flops a corpse 90 degrees onto its side while it dies. This creature has an
+         * authored death clip that already lays it down, so the vanilla rotation fought it and
+         * drove the body through the floor face-first. Zero hands the pose entirely to the clip.
+         */
+        @Override
+        protected float getDeathMaxRotation(GreatIzuchi entity) {
+            return 0.0F;
+        }
     }
 
     private MHNWClient() {}
