@@ -1,0 +1,668 @@
+{
+  "baseline_commit": "8eec41d7845c80d5944f9575806fa58a570de2a4",
+  "wip_snapshot_commit": "fa33e57f4866745b82190f00441ec9ccd821488a",
+  "brain_branch_tip": "27e05f281bb56bd19d6e98d4a973360794db1eb6",
+  "note": "Canonical originals stay in version control. Nothing here was converted or retargeted.",
+  "files": [
+    {
+      "path": "legacy/candidate-art-brain-branch/izuchi.animation.json",
+      "sha256": "369a7a1babd6959c725b511bc85085d9b693f084cc1f650bad724325716b79ed",
+      "bytes": 96108
+    },
+    {
+      "path": "legacy/candidate-art-brain-branch/izuchi.geo.json",
+      "sha256": "0864484dd710320afecda149958dd7eb8017b4c289d6dee3ec3ed979d0426ca3",
+      "bytes": 5203
+    },
+    {
+      "path": "legacy/candidate-art-brain-branch/izuchi.json",
+      "sha256": "0b6a90aa241fb8bdd98cd07e136af878fe280691efe7742c72a94bf7bdf0f5d8",
+      "bytes": 1719
+    },
+    {
+      "path": "legacy/candidate-art-brain-branch/izuchi.png",
+      "sha256": "883c45260e5134cb72ca73ee6739c409b110d8af2675809b165b5dc938dba56c",
+      "bytes": 5547
+    },
+    {
+      "path": "legacy/forge-1.20.1-runtime/src/main/java/com/carro1001/mhnw/client/models/entities/BugModel.java",
+      "sha256": "73e8c81e5a83091dd7ae11b1919a7787105c2e2237b5ddbf508fcb2c8925cc75",
+      "bytes": 6558
+    },
+    {
+      "path": "legacy/forge-1.20.1-runtime/src/main/resources/data/mhnw/multihitboxlib/hitbox_profiles/great_izuchi.json",
+      "sha256": "766aa24100bfc15910af4b88b550fb2f902ccb653c5ea034c5ada7b445a73089",
+      "bytes": 2518
+    },
+    {
+      "path": "legacy/forge-1.20.1-runtime/src/main/resources/data/mhnw/multihitboxlib/hitbox_profiles/lagiacrus.json",
+      "sha256": "9f6755c8f4c9fd7124abaf3dbeb66de2f70286180623d4e01710f0f1e36cf479",
+      "bytes": 2722
+    },
+    {
+      "path": "legacy/forge-1.20.1-runtime/src/main/resources/data/mhnw/multihitboxlib/hitbox_profiles/rathalos.json",
+      "sha256": "1c44e7533dc9ec6344918bb18bc21bfef0211a78de70c0f4843240a4f8cbe74c",
+      "bytes": 2461
+    },
+    {
+      "path": "legacy/forge-1.20.1-runtime/src/main/resources/data/mhnw/multihitboxlib/hitbox_profiles/rathian.json",
+      "sha256": "3a9db6d7a319572b5f222eb882f8f3b3ed556001aae9f6fec40a3fab9463ac69",
+      "bytes": 2734
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/animations/entity/aptonoth.animation.json",
+      "sha256": "a5760484a9c715987e007abc2be86eb62513f120eeab451afd17843b5a49c6a5",
+      "bytes": 9728
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/animations/entity/blango.animation.json",
+      "sha256": "5f32cc214bb3b315c4bbe51ccb0d8d7d43f7ee3df69f9a842b8306aff9540e2c",
+      "bytes": 138
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/animations/entity/blangonga.animation.json",
+      "sha256": "1d21a709069573d67a323455093a113f88ad36c5a75fe5961d5386e976bf5bdd",
+      "bytes": 141
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/animations/entity/bone_armor.animation.json",
+      "sha256": "4232a93a7474ea771c7b5cfb798478df48acec0c3c71967786f0a1a83e1bdf9d",
+      "bytes": 158
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/animations/entity/deviljho.animation.json",
+      "sha256": "dd4745f5ce74992231557812e71963e7c3c2309e531dd4b0a79025b2b6d6cf2f",
+      "bytes": 140
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/animations/entity/flashbug.animation.json",
+      "sha256": "b192d3359e75389980f18ba9c716f54cdfe258ca9e45785448b8c8d280e01907",
+      "bytes": 2102
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/animations/entity/great_izuchi.animation.json",
+      "sha256": "7f4086365e042a4fce16392da31310242911b9aa279a0799874791cd76262543",
+      "bytes": 197305
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/animations/entity/izuchi.animation.json",
+      "sha256": "eef2c79e003ef044fb5e991e9c1d29e266511527eb3a25895961591525cde953",
+      "bytes": 17294
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/animations/entity/lagiacrus.animation.json",
+      "sha256": "9fecbeded5f622e427bbe1d6889ba6ff16c7865d58d94ce04516503cd3a83178",
+      "bytes": 77591
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/animations/entity/rathalos.animation.json",
+      "sha256": "4464247edb18095adc6708f528fc91e1abd6c9f0012c5570565daad5b267f717",
+      "bytes": 595498
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/animations/entity/rathian.animation.json",
+      "sha256": "e9c4901bb40428c83a5f21efdd04ce03967c5e6d633e391be2a3a8a5c889956e",
+      "bytes": 548516
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/animations/entity/toad.animation.json",
+      "sha256": "13b793a78cd4f19c06a907ced97ae5f793c22d026fc3876ec839e79c9137d0ec",
+      "bytes": 11711
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/animations/entity/zinogre.animation.json",
+      "sha256": "7fa5d61b1736ca20298d7144658e1cd8ece755dff7c372c85ecbc378a229c28a",
+      "bytes": 139
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/animations/item/armor/bone_armor.animation.json",
+      "sha256": "f20742027c8a713ed89f037578a6e3643d22fb8b48ec3e38bbc17cdc49820a96",
+      "bytes": 84
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/geo/entity/aptonoth.geo.json",
+      "sha256": "f2f9546b8e21b3844f3cf6563e01f7fdd4a915b0bb45c7f4715fa73abcaac61a",
+      "bytes": 5372
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/geo/entity/blango.geo.json",
+      "sha256": "054d100aa40a281ad56b723788d0a31bad94951ce0cbb1f2a2e7d8261bc4d491",
+      "bytes": 6090
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/geo/entity/blangonga.geo.json",
+      "sha256": "e92123bca54c066892add64e540423d15497c9ea6096aa7f9ace280c7a9d35de",
+      "bytes": 10468
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/geo/entity/bone_armor.geo.json",
+      "sha256": "7f133798d3771233d0132c0ad93e100f6627e545a5d6674ab6279e93f9b6353e",
+      "bytes": 3205
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/geo/entity/deviljho.geo.json",
+      "sha256": "57a3d77af7887cb8c4e1c16dd92cce121e250d0f6b34442d553ec1711a2d7dc2",
+      "bytes": 9997
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/geo/entity/flashbug.geo.json",
+      "sha256": "096cac88a10820a1de11c15d1b2c8d6beb745c70388c74de237ce4f966ae0029",
+      "bytes": 2223
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/geo/entity/great_izuchi.geo.json",
+      "sha256": "a18a6642fc1d4f51ced7611e7c162230cf0729694a2251251ed63e624cd88345",
+      "bytes": 7083
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/geo/entity/izuchi.geo.json",
+      "sha256": "77e29833fc6a36f0d91563304cd1253f46ad739ba311d2997f65c97fcff8a0f9",
+      "bytes": 5042
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/geo/entity/lagiacrus.geo.json",
+      "sha256": "4bda4c5124b25b371e687c89fea3397a4a99883ef19a3ccc63cd49b425d50bdd",
+      "bytes": 20675
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/geo/entity/rathalos.geo.json",
+      "sha256": "85c1688cde185f93e1b26a241bc57bfb48879c9c7fbf9d745082e09caac829af",
+      "bytes": 19285
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/geo/entity/rathalos_tail.geo.json",
+      "sha256": "4d5cdf42fdb0a057ebb5644418ab6d675ad631f0aa0b09e4e8511ce730934771",
+      "bytes": 2620
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/geo/entity/rathian.geo.json",
+      "sha256": "85a6d8e780881b39c38fa7adcedcda004b9bae22be49e9200b1f889fa354a737",
+      "bytes": 18346
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/geo/entity/rathian_tail.geo.json",
+      "sha256": "7060186b1ebd844437648651129473c88b4e0965629b09509dc0b5019c172114",
+      "bytes": 1807
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/geo/entity/toad.geo.json",
+      "sha256": "399cd668d20196e614c50275c36956a48b95f08a3d7494af9dc5031df0d0c33e",
+      "bytes": 3437
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/geo/entity/zinogre.geo.json",
+      "sha256": "40ee01098f6a48cca34b8d9f2592badb8e58fd6e5f047295b02e1945cceb2952",
+      "bytes": 29085
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/geo/item/armor/bone_armor.geo.json",
+      "sha256": "fa3463f058b77dcde9d9f1692476025f34e00eeae4f9035b86769c0ee74a5b58",
+      "bytes": 2773
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/lang/en_us.json",
+      "sha256": "d6d1d5684c090ecd4116b0bf3088a07b5a723a3f566e52287a2ff08a372f7ec8",
+      "bytes": 117
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/models/block/bitterbug.json",
+      "sha256": "0c9621a83e3d4eb526fed4a42f240a4dd3c6de383c1bb4f69550ac847c3190f7",
+      "bytes": 6171
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/models/block/godbug.json",
+      "sha256": "f064205786798f46c4df0c65f4377cca7b078176d2cf5212b2edb7b553217d4c",
+      "bytes": 6168
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/models/item/great_izuchi_spawn_egg.json",
+      "sha256": "754272dac9040d7b6769a1e53011b64aee4cafa8d1d51750e6d3f62b4ca46d15",
+      "bytes": 55
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/particles/ice_particle.json",
+      "sha256": "2dd188ea79a4d28eae76f4b63c75326c57ccf701e390f497cb2e9a7331fe0169",
+      "bytes": 51
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/particles/poison_particle.json",
+      "sha256": "cd3ecb3ff0cd0f2c426489a490f700b9dc130e44cc77c3f3ffafa8d935d29e31",
+      "bytes": 54
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/particles/sleep_particle.json",
+      "sha256": "75b86e3391ed428311acf3eda9ebc719e8d9052acdb7395225ab47286e08f04a",
+      "bytes": 53
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/particles/thunder_particle.json",
+      "sha256": "065746a21e29b4ea967ce89721bf5b975e447afb3cff838f827ebafbb079013e",
+      "bytes": 55
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/block/carbalite_ore.png",
+      "sha256": "be69119316a0ec4489f602002890e1ae58515151fd3c67ea374f8a0619bc6abd",
+      "bytes": 510
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/block/dragonite_ore.png",
+      "sha256": "4ae9f0ecb54a5d6f6152f2309dd11a2f80b80b47957be31e7161b15c29d2e72e",
+      "bytes": 532
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/block/earth_crystal_cluster.png",
+      "sha256": "e613da75dd300c867ae74adeec22d10577e33a8ed20eaaa84dc830c84edae300",
+      "bytes": 384
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/block/ice_crystal_cluster.png",
+      "sha256": "3e0266fc3c927a8a408aae603d16b67e04845f589a1a60d9342101cf41f1f10e",
+      "bytes": 416
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/block/machalite_ore.png",
+      "sha256": "495265222e1b3cb33aabda30b9e551be0800892c51b9ea4ad6dcc309a81a931e",
+      "bytes": 494
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/block/particle_ore.png",
+      "sha256": "debae9cd0e010a7415fc023a899e694d6e8450a378bb84fb97527362e7ecf7c4",
+      "bytes": 215
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/entity/aptonoth.png",
+      "sha256": "08199e50df3b8fa4a23ec9d5b606c4d823869a97bb8b160623159f2f5f5b4b05",
+      "bytes": 19485
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/entity/bitterbug.png",
+      "sha256": "3bbe76224401f11f08b19e6196d93ba9e17f71fb028ee72e403d95804fd60b2b",
+      "bytes": 385
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/entity/blango.png",
+      "sha256": "36dc0d2cf0353805f7cf55dc6584cd4daa2bf2d26242737fdaddc1b19207af3e",
+      "bytes": 8019
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/entity/blangonga.png",
+      "sha256": "4d338bb769adfcb470b5f0cb1e06a57ec6e1e957f34e886302dfe4ae3043067c",
+      "bytes": 13988
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/entity/blastoad.png",
+      "sha256": "c697039cb42c2a0099083aacc4fc150ed3ec76d4842ee8eb2a3287c778c14c48",
+      "bytes": 1554
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/entity/deviljho.png",
+      "sha256": "179e9b0a6694991a7e7af1f99725c6962c5ebba22304ca4b43dbe39355986a3a",
+      "bytes": 65016
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/entity/flashbug.png",
+      "sha256": "bbc8bbca906ed2abc32da5f9e9f6d8e639eadc768a700acf656eb9d0229eb701",
+      "bytes": 684
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/entity/godbug.png",
+      "sha256": "700dd1e2f178edd7a261390134c55bb8a8b3c7e15c0493dcb6ff79c6f01152f7",
+      "bytes": 325
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/entity/great_izuchi.png",
+      "sha256": "8a43a27c946006c9adf4c2e2eefa29d69cef7878fe4b5932fe3352c12ddae930",
+      "bytes": 21062
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/entity/izuchi.png",
+      "sha256": "883c45260e5134cb72ca73ee6739c409b110d8af2675809b165b5dc938dba56c",
+      "bytes": 5547
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/entity/lagiacrus.png",
+      "sha256": "631961c3d9dc959e77a9a0382be86c36d8bfb1475cfd32eb8ce28c22a0f90a7e",
+      "bytes": 70884
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/entity/paratoad.png",
+      "sha256": "020904f46e1f2a790630321e30c0e5b3725eb93a0fe75a69cb0383d81fd9a04b",
+      "bytes": 1667
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/entity/poisontoad.png",
+      "sha256": "8694af8934852b9e5df69a909a6d0d7c69fc8caee9ca99f865589ea44cdae9e0",
+      "bytes": 1651
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/entity/rathalos.png",
+      "sha256": "8af6b7987a8deb2dbe8a548d80c3e5bf3d888e2871807afa01ffe08f8182acc4",
+      "bytes": 89756
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/entity/rathalos_tail.png",
+      "sha256": "bd4d3052774aa616717c59b4687577b63170e8a86f0fb9817cb2699d781ab8c5",
+      "bytes": 8011
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/entity/rathalos_tailcut.png",
+      "sha256": "ef4c4dc839fa99fdac8e3ce2ca30185c596a2f131bda97edb4f9f1bb359ed4e5",
+      "bytes": 44011
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/entity/rathian.png",
+      "sha256": "7d41aa8800a6ef2b8fde9ea4c163c58d834bd75951e7fd155e5db81c54b073e3",
+      "bytes": 87706
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/entity/rathian_tail.png",
+      "sha256": "c380b856c3e907d532cc4eb28692c10f72b769d359df6182809f73e05d9b9872",
+      "bytes": 3366
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/entity/rathian_tailcut.png",
+      "sha256": "e8821525d849a8e5cad73131cb8311576a61c471b940c8f0e194f5f72c108d07",
+      "bytes": 43549
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/entity/sleeptoad.png",
+      "sha256": "51696d094e1a735bc61ca2362e4f1cad3583a7fe69414336c9947c70d6b141df",
+      "bytes": 1603
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/entity/spit_fireball.png",
+      "sha256": "31ebb1fc7c4106e9ba78f4cbdeae784f153d961a854bd4c382bd1a423d97cccf",
+      "bytes": 369
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/entity/zinogre.png",
+      "sha256": "f4a718197c275c916cc858b8c1d786f6f6dd4627f040f0ef40e0dfe495229133",
+      "bytes": 71557
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/armor/bone_armor.png",
+      "sha256": "17812db6769e9bf804c07b68c49dfe53d64d3ef36642d8f0bbc30f25dc7f56b3",
+      "bytes": 4472
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/bitterbug_item.png",
+      "sha256": "117604dc823051565b9e0813b0a1408e8eab567e2c4cb159031b926797fed0bf",
+      "bytes": 387
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/bone_boots.png",
+      "sha256": "9a58edf9238bb33ab7e614016612d5037aa7b274535cbd64d31f532571230742",
+      "bytes": 374
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/bone_chestplate.png",
+      "sha256": "1086e6db5503450c4a9a79c4712cd0c822cc1d7437aeaaa933c6a3441637b8e8",
+      "bytes": 537
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/bone_head.png",
+      "sha256": "f24b37ae0b3eba2d373216303d624d81370426aea9ff9d89091d15e06814d91b",
+      "bytes": 579
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/bone_legging.png",
+      "sha256": "37e98f58f52218bfc0e8aefd3d68f3799ee3b1ce79f8c91c33c75f18fe0153be",
+      "bytes": 299
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/carbalite.png",
+      "sha256": "aa833ad51fea9b82610e813220fbfaa3f171d840ca749bdd27b3f44a7f6fcd8c",
+      "bytes": 264
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/dragonite.png",
+      "sha256": "ba0efe9952850bcbd61a118e7814ce9a121c82b758efddd241cc17d6a0c43f02",
+      "bytes": 287
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/drone_substance.png",
+      "sha256": "9b06119b7720fdd029c6b074ae5dd58f9fee7407103f10064d31f66d877cb6ac",
+      "bytes": 470
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/earth_crystal.png",
+      "sha256": "ea3a072af1907bea954005378902219cb0186a3d800edbf9c15cc4c8a1e91ea6",
+      "bytes": 351
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/flame_sack.png",
+      "sha256": "ded7d31791aec9ce40ae9822c2fd856230be31b15d709cf48c517403e1df5833",
+      "bytes": 884
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/flame_sack.png.mcmeta",
+      "sha256": "2ef39b6ae49d988ac1d12ddc9d4ff990a8522c02212ffd33b35233c4a3d008df",
+      "bytes": 84
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/freezer_sack.png",
+      "sha256": "ac1a13c54565bed59068ba13e554f58ff60245875fde3b5e8ee84e8da09a8f9b",
+      "bytes": 853
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/freezer_sack.png.mcmeta",
+      "sha256": "2ef39b6ae49d988ac1d12ddc9d4ff990a8522c02212ffd33b35233c4a3d008df",
+      "bytes": 84
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/fulgurbug.png",
+      "sha256": "2a5d9e0420fb090abcccc38b866c0338a6488506168adda5c921209f093e8a37",
+      "bytes": 367
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/ice_crystal.png",
+      "sha256": "4797a5549280ad788f57818de574bc42f68cd13d01eb024e61e33647c5327468",
+      "bytes": 346
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/img.png",
+      "sha256": "0415c6aa23719f4176cdd13b11596fe8e26b84d161d33d747c386c2086e56b26",
+      "bytes": 203
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/izuchi_hide.png",
+      "sha256": "dc52a87756cbf1f0722f7c83bcb6298916a921b86c07fb14fa5fb352a099a354",
+      "bytes": 374
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/izuchi_tail.png",
+      "sha256": "fecc2d06b584f9e8819341f2b9dbd25f65ce4ae1be9bc60a65af7d5d12b95879",
+      "bytes": 438
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/machalite.png",
+      "sha256": "df7b45a9ba4eb45900bf44ca17f019e58576ed820a8e2ecdeded8ce4a248ff77",
+      "bytes": 308
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/monster_feces.png",
+      "sha256": "159cdeef9129c765d8370298272017ff215a062fc4f576895c839056e8f7773f",
+      "bytes": 673
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/monster_feces.png.mcmeta",
+      "sha256": "2ef39b6ae49d988ac1d12ddc9d4ff990a8522c02212ffd33b35233c4a3d008df",
+      "bytes": 84
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/nitrotoad_bucket.png",
+      "sha256": "6d1e42b8b70fdac065254b186ab01394e0edadcafbbddc0ae61811f641b2a3db",
+      "bytes": 461
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/paddock_oil.png",
+      "sha256": "cd0dacb85628604c48a007e0c67e697ac5a567556f361ce63dcbee29c2779ce2",
+      "bytes": 471
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/paratoad_bucket.png",
+      "sha256": "8578ea1796e6cf22e45d89514863f4457673b7b80505bc9f210763e3adca7bf9",
+      "bytes": 500
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/poisontoad_bucket.png",
+      "sha256": "e742d01b927579be82b0cacefce6cd163e349f07a2fb95606e45ef9e5c0aa90d",
+      "bytes": 438
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/rare_monster_meat.png",
+      "sha256": "7d155037ff352c621fd74d201e64118ab8ce965b044a5bba54f55b172854af55",
+      "bytes": 403
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/rathalos_plate.png",
+      "sha256": "5d8102b9e1823513a7cc33c72ec013425cea29e5978a6113e5635e434b95ea53",
+      "bytes": 361
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/rathalos_scale.png",
+      "sha256": "99dda38dc1d5c6e06fe0a32ebc73d7b29245227239a5dc1bdcb3616b7d72983c",
+      "bytes": 295
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/rathalos_tail.png",
+      "sha256": "e948dcc7832bc0241dcfe7fce37d2b57d8073030db8549d5a41f7a79450f1873",
+      "bytes": 521
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/rathalos_webbing.png",
+      "sha256": "34aef543945f5cc198d6df51eeccff4d1ee098aadae8d305135ce856ef1d35bd",
+      "bytes": 339
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/rathian_plate.png",
+      "sha256": "a914f6413a0110c2ce0a703112c402358035e798c55f9ef17ca0a5c591a64774",
+      "bytes": 357
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/rathian_scale.png",
+      "sha256": "5f2b451fc4275d382d285c70bfa4cc423c0322e3d1df11e8528d73650fa63ef8",
+      "bytes": 288
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/rathian_tail.png",
+      "sha256": "6e376541d228467f62d07c26f4815226a617638124630179b42896df0a6270ba",
+      "bytes": 428
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/rathian_webbing.png",
+      "sha256": "c47fd5d1009ec1c6ad23a8d4ae80b6feaf11a3282a2e04e3d86abf816444e5d5",
+      "bytes": 427
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/raw_carbalite.png",
+      "sha256": "b32688c412d2098c17e912203f5db1c326620066d1ed36bd59a112ffc1fae87b",
+      "bytes": 408
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/raw_dragonite.png",
+      "sha256": "26738ebd23fd176af035db35bfe7b7044cbda44aadfcb6c407c2c330f943692c",
+      "bytes": 399
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/raw_machalite.png",
+      "sha256": "190ab422669109d17d60e7a49a25c6525c3d4d7995a5cba828035607e6568d27",
+      "bytes": 385
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/raw_monster_meat.png",
+      "sha256": "e2ef5a762d9d18de156b7c7b7952f51015b06c2e644df774d4398ca43a2d1263",
+      "bytes": 406
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/screamer_sack.png",
+      "sha256": "76d283c7254dd3f7c267874d43f643aee8ff0a66369a31c105f8e085e33eee84",
+      "bytes": 884
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/screamer_sack.png.mcmeta",
+      "sha256": "2ef39b6ae49d988ac1d12ddc9d4ff990a8522c02212ffd33b35233c4a3d008df",
+      "bytes": 84
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/sharp_claw.png",
+      "sha256": "ae184bc7e8058712fa54206bd652d63f84c8e62a68fb326bf32e96c2d0b82cd4",
+      "bytes": 296
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/sleep_sack.png",
+      "sha256": "c96e8fcb6472008950d6ebb5462a302a6625a82ef19a11eb969fc896339bc5af",
+      "bytes": 895
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/sleep_sack.png.mcmeta",
+      "sha256": "2ef39b6ae49d988ac1d12ddc9d4ff990a8522c02212ffd33b35233c4a3d008df",
+      "bytes": 84
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/sleeptoad_bucket.png",
+      "sha256": "fa00b74fd0e349a352bba867227ad1100428e268f1c8ae7a5827e8fffacba315",
+      "bytes": 447
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/well_done_monster_meat.png",
+      "sha256": "5bb59e463e3cde66db855b2afceb560257be27871f4b8e8eef8084e14a49b9cc",
+      "bytes": 406
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/wyvern_gem.png",
+      "sha256": "f28768d4b6849926bd7c0ff48387a9c4c4e74f16abe6a3a69bd3e0bea98215c1",
+      "bytes": 431
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/zinogre_horn.png",
+      "sha256": "ebcee12bdd752fda35ada50666737823859ce46b0e9b7f51d6e39c360d198004",
+      "bytes": 333
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/zinogre_plate.png",
+      "sha256": "d86a972cc7c0db5b9c1e9df8dd2ffb71290f82a4d9aabc9d32209f0f9ad5a224",
+      "bytes": 536
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/zinogre_shell.png",
+      "sha256": "cd8f3995624e371f086ebc35569816352f9bf99e988fb2ff93a2ed491b706fdb",
+      "bytes": 371
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/zinogre_shockfurl.png",
+      "sha256": "db57d69f2a1caa76ea2c0edbf248634ed1f274344cce0dabc5e7f16c00f3b460",
+      "bytes": 349
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/item/zinogre_tail.png",
+      "sha256": "4fa9c3f6b1d23239ff4ef301631e89ca6c889dd74a58c46316f1b7b0f34c9d7f",
+      "bytes": 503
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/particle/ice_particle.png",
+      "sha256": "455c2abdfd0e891c6d95036bd0ef16d5a93bff551c441816e3a44c219be52771",
+      "bytes": 377
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/particle/poison_particle.png",
+      "sha256": "438fc3580b49934bc8e414b121090af200de6dcf793b0c1a815fc355c7753c5d",
+      "bytes": 352
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/particle/sleep_particle.png",
+      "sha256": "da271b5c775327aad1aba3d6cb7187aff9295acba32ea1140a0c87483c0fd338",
+      "bytes": 249
+    },
+    {
+      "path": "src/main/resources/assets/mhnw/textures/particle/thunder_particle.png",
+      "sha256": "a3fbde436c4b011c67203c925917c92fd3397ebb419b091b3cbe25020177eddc",
+      "bytes": 423
+    },
+    {
+      "path": "src/main/resources/logo.png",
+      "sha256": "216d367de8cf3dfa145410b436046566277b279de3f2dc3190286635df017ce9",
+      "bytes": 6300
+    }
+  ]
+}
