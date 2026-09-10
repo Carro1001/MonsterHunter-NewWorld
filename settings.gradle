@@ -1,23 +1,12 @@
 pluginManagement {
     repositories {
         gradlePluginPortal()
-        maven {
-            name = 'MinecraftForge'
-            url = 'https://maven.minecraftforge.net/'
-        }
-        maven { url = 'https://maven.parchmentmc.org' }
-        maven {
-            name = 'GeckoLib'
-            url = 'https://maven.parchmentmc.org'
-            content {
-                includeGroupByRegex("software\\.bernie.*")
-                includeGroup("com.eliotlash.mclib")
-            }
-        }
-        maven { url = 'https://repo.spongepowered.org/repository/maven-public/' }
     }
 }
 
 plugins {
-    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.7.0'
+    // Lets Gradle auto-provision the Java 21 toolchain the 1.21.1 target requires.
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
+
+rootProject.name = 'MonsterHunter-NewWorld'

@@ -1,60 +1,51 @@
 package com.carro1001.mhnw;
 
-import com.carro1001.mhnw.setup.ClientSetup;
-import com.carro1001.mhnw.setup.CommonSetup;
-import com.carro1001.mhnw.setup.ModConfig;
-import com.mojang.logging.LogUtils;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.fml.loading.FMLPaths;
+import com.carro1001.mhnw.entity.GreatIzuchi;
+import com.carro1001.mhnw.registry.ModEntities;
+import net.minecraft.world.entity.SpawnPlacementTypes;
+import net.minecraft.world.item.CreativeModeTabs;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
+import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
+import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import static com.carro1001.mhnw.registration.ModBlocks.BLOCKS;
-import static com.carro1001.mhnw.registration.ModBlocks.BLOCK_ENTITIES;
-import static com.carro1001.mhnw.registration.ModEntities.ENTITIES;
-import static com.carro1001.mhnw.registration.ModHitboxTypes.HITBOXES;
-import static com.carro1001.mhnw.registration.ModItems.ITEMS;
-import static com.carro1001.mhnw.registration.ModParticle.PARTICLES;
-import static com.carro1001.mhnw.registration.ModTabs.TABS;
-import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
-
-@Mod(MODID)
+@Mod(MHNW.MOD_ID)
 public class MHNW {
+    public static final String MOD_ID = "mhnw";
+    public static final Logger LOG = LoggerFactory.getLogger("mhnw");
 
-    public static final Logger LOGGER = LogUtils.getLogger();
-
-    public MHNW(){
-        ModConfig.register();
-        //Registration
-        IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
-        BLOCKS.register(bus);
-        ITEMS.register(bus);
-        BLOCK_ENTITIES.register(bus);
-        PARTICLES.register(bus);
-/*        CONFIGURED_FEATURES.register(bus);
-        PLACED_FEATURES.register(bus);*/
-        HITBOXES.register(bus);
-        ENTITIES.register(bus);
-        TABS.register(bus);
-        IEventBus event = FMLJavaModLoadingContext.get().getModEventBus();
-        event.addListener(CommonSetup::init);
-        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> event.addListener(ClientSetup::init));
-        event.addListener(this::addCreative);
-        ModConfig.loadConfig(ModConfig.CLIENT_CONFIG, FMLPaths.CONFIGDIR.get().resolve(MODID+"-client.toml"));
-        ModConfig.loadConfig(ModConfig.SERVER_CONFIG, FMLPaths.CONFIGDIR.get().resolve(MODID+"-common.toml"));
+    public MHNW(IEventBus modBus, ModContainer container) {
+        ModEntities.register(modBus);
+        modBus.addListener(MHNW::onAttributeCreation);
+        modBus.addListener(MHNW::onRegisterSpawnPlacements);
+        modBus.addListener(MHNW::onBuildCreativeTabs);
+        container.registerConfig(ModConfig.Type.SERVER, MHNWConfig.SPEC);
     }
 
-    public static void debugLog(String log){
-        LOGGER.debug(log);
+    @SubscribeEvent
+    private static void onAttributeCreation(EntityAttributeCreationEvent event) {
+        event.put(ModEntities.GREAT_IZUCHI.get(), GreatIzuchi.createAttributes().build());
     }
 
-    private void addCreative(BuildCreativeModeTabContentsEvent event) {
-        /*if(event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
-            event.accept(ModItems.);
-        }*/
+    @SubscribeEvent
+    private static void onRegisterSpawnPlacements(RegisterSpawnPlacementsEvent event) {
+        event.register(ModEntities.GREAT_IZUCHI.get(),
+                SpawnPlacementTypes.ON_GROUND,
+                ModEntities.SPAWN_HEIGHTMAP,
+                GreatIzuchi::checkSpawnRules,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+    }
+
+    @SubscribeEvent
+    private static void onBuildCreativeTabs(BuildCreativeModeTabContentsEvent event) {
+        if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS) {
+            event.accept(ModEntities.GREAT_IZUCHI_SPAWN_EGG.get());
+        }
     }
 }

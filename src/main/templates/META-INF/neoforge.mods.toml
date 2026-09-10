@@ -1,0 +1,42 @@
+modLoader = "javafml"
+loaderVersion = "${loader_version_range}"
+license = "${mod_license}"
+issueTrackerURL = "https://github.com/Carro1001/MonsterHunter-NewWorld/issues"
+
+[[mods]]
+modId = "${mod_id}"
+version = "${mod_version}"
+displayName = "${mod_name}"
+displayURL = "https://github.com/Carro1001/MonsterHunter-NewWorld"
+logoFile = "logo.png"
+authors = "Carro1001, AlexVR, Spinomania, Spooky_Indominus"
+credits = '''
+Capcom, and the amazing artists that did the models for this mod.
+MultiHitBoxLib's authors: DerToaster, Meme Man, and AzureDoom.
+CorgiTaco('Ur mom') as a arms for hire.
+SmartBrainLib's authors: Tslat, AzureDoom, and OmbreMoon.
+'''
+description = '''
+A Monster Hunter themed mod for Minecraft.
+'''
+
+[[dependencies.${mod_id}]]
+modId = "neoforge"
+type = "required"
+versionRange = "[${neo_version},)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.${mod_id}]]
+modId = "minecraft"
+type = "required"
+versionRange = "${minecraft_version_range}"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.${mod_id}]]
+modId = "geckolib"
+type = "required"
+versionRange = "${geckolib_version_range}"
+ordering = "NONE"
+side = "BOTH"

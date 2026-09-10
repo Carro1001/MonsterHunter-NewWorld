@@ -1,0 +1,33 @@
+org.gradle.jvmargs=-Xmx4G
+org.gradle.daemon=false
+
+# Version properties
+modid=mhnw
+minecraft_version=1.20.1
+minecraft_version_range=[1.20,1.21)
+forge_version=47.4.23
+forge_version_range=[47,)
+loader_version_range=[47,)
+mod_group=com.carro1001.mhnw
+# Dependencies (Embedded)
+gecko_version=4.8.4
+multihitbox_version=1.8.1
+sbl_version=1.15
+top_version=1.20.0-9.0.0-1
+jei_version=15.20.0.116
+jade_version=6855440
+jade_version_range=[11.5.1,)
+mixinbooster_version=0.1.3
+mixinbooster_version_range=[0.1.0+1.20.1,)
+
+mapping_channel=parchment
+mapping_version=2023.09.03-1.20.1
+
+mod_license=GNU GENERAL PUBLIC LICENSE
+mod_version=1.0.0
+
+mod_id=mhnw
+mod_name=MonsterHunterNewWorld
+mod_group_id=com.carro1001.mhnw
+mod_authors=alexvr
+mod_description=Monster Hunter
