@@ -78,6 +78,9 @@ public class GreatIzuchi extends Monster implements GeoEntity {
     public static final float BODY_WIDTH = 1.6F;
     public static final float BODY_HEIGHT = 2.8F;
 
+    /** Length of {@code animation.great_izuchi.death}: 1.875 s at normal playback. */
+    public static final int DEATH_ANIMATION_TICKS = 38;
+
     /** No attack in progress. */
     public static final byte ATTACK_NONE = 0;
     /** Plays {@code animation.great_izuchi.attack_scratch}. */
@@ -85,9 +88,15 @@ public class GreatIzuchi extends Monster implements GeoEntity {
 
     private static final EntityDataAccessor<Byte> DATA_ATTACK_ID =
             SynchedEntityData.defineId(GreatIzuchi.class, EntityDataSerializers.BYTE);
-    /** Value of {@link #tickCount} when the current action began; meaningless when id is NONE. */
-    private static final EntityDataAccessor<Integer> DATA_ATTACK_START =
-            SynchedEntityData.defineId(GreatIzuchi.class, EntityDataSerializers.INT);
+    /**
+     * Level game time at which the current action began; meaningless when the id is NONE.
+     *
+     * <p>Deliberately game time rather than {@code tickCount}: a client creates the entity when the
+     * spawn packet arrives, so its {@code tickCount} starts at zero and bears no relation to the
+     * server's. Game time is shared, which keeps {@link #getAttackAge()} meaningful on both sides.
+     */
+    private static final EntityDataAccessor<Long> DATA_ATTACK_START =
+            SynchedEntityData.defineId(GreatIzuchi.class, EntityDataSerializers.LONG);
     /** Bumped for every new action so that repeating an attack restarts its animation. */
     private static final EntityDataAccessor<Integer> DATA_ACTION_SEQ =
             SynchedEntityData.defineId(GreatIzuchi.class, EntityDataSerializers.INT);
@@ -161,7 +170,7 @@ public class GreatIzuchi extends Monster implements GeoEntity {
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         builder.define(DATA_ATTACK_ID, ATTACK_NONE);
-        builder.define(DATA_ATTACK_START, 0);
+        builder.define(DATA_ATTACK_START, 0L);
         builder.define(DATA_ACTION_SEQ, 0);
     }
 
@@ -171,7 +180,7 @@ public class GreatIzuchi extends Monster implements GeoEntity {
         return this.entityData.get(DATA_ATTACK_ID);
     }
 
-    public int getAttackStartTick() {
+    public long getAttackStartTime() {
         return this.entityData.get(DATA_ATTACK_START);
     }
 
@@ -179,15 +188,17 @@ public class GreatIzuchi extends Monster implements GeoEntity {
         return this.entityData.get(DATA_ACTION_SEQ);
     }
 
-    /** Ticks elapsed in the current action, or -1 when idle. */
+    /** Ticks elapsed in the current action, or -1 when idle. Valid on both sides. */
     public int getAttackAge() {
-        return getAttackId() == ATTACK_NONE ? -1 : this.tickCount - getAttackStartTick();
+        return getAttackId() == ATTACK_NONE
+                ? -1
+                : (int) (level().getGameTime() - getAttackStartTime());
     }
 
     /** Server: begin an action. Allocates a new sequence so a repeat restarts cleanly. */
     void beginAttack(byte attackId) {
         this.entityData.set(DATA_ATTACK_ID, attackId);
-        this.entityData.set(DATA_ATTACK_START, this.tickCount);
+        this.entityData.set(DATA_ATTACK_START, level().getGameTime());
         this.entityData.set(DATA_ACTION_SEQ, getActionSequence() + 1);
     }
 
@@ -240,8 +251,20 @@ public class GreatIzuchi extends Monster implements GeoEntity {
         }
     }
 
+    /** Place the parts before the first tick, so they never sit at the world origin. */
+    @Override
+    public void onAddedToLevel() {
+        super.onAddedToLevel();
+        positionParts();
+    }
+
     @Override
     public void tick() {
+        // super.tick() runs aiStep, which is where the body actually moves, so positioning the
+        // parts afterwards keeps them on the body within the same tick. Position them exactly
+        // ONCE per tick: setOldPosAndRot is what F3+B interpolates part boxes from, and calling
+        // it twice would collapse xOld onto x and make correctly placed parts render as though
+        // they were lagging the body.
         super.tick();
         positionParts();
         if (!level().isClientSide && this.attackCooldown > 0) {
@@ -249,12 +272,17 @@ public class GreatIzuchi extends Monster implements GeoEntity {
         }
     }
 
+    /**
+     * The death clip is 1.875 s (38 ticks) but vanilla removes a corpse at 20. Hold the body long
+     * enough for its authored death to finish, then defer to vanilla removal (handoff A13).
+     */
     @Override
-    public void aiStep() {
-        super.aiStep();
-        // Re-glue parts on the same tick the body moved, so a raytrace later in this tick cannot
-        // see a stale hurtbox.
-        positionParts();
+    protected void tickDeath() {
+        if (this.deathTime < DEATH_ANIMATION_TICKS) {
+            this.deathTime++;
+            return;
+        }
+        super.tickDeath();
     }
 
     /**
@@ -330,7 +358,9 @@ public class GreatIzuchi extends Monster implements GeoEntity {
             return state.setAndContinue(SCRATCH);
         }
         if (state.isMoving()) {
-            return state.setAndContinue(getTarget() != null ? RUN : WALK);
+            // isAggressive() rides the synched mob flags, so it is readable here. getTarget() is
+            // server-only state and is always null on a client, which would pin this to WALK.
+            return state.setAndContinue(isAggressive() ? RUN : WALK);
         }
         return state.setAndContinue(IDLE);
     }

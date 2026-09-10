@@ -1,7 +1,10 @@
 package com.carro1001.mhnw.entity;
 
+import com.carro1001.mhnw.MHNW;
+import com.carro1001.mhnw.MHNWConfig;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -40,7 +43,10 @@ import java.util.List;
  */
 public class GreatIzuchiCombatGoal extends Goal {
 
-    /** Provisional damage. Balance is a later packet. */
+    /**
+     * Provisional damage, used as the default value of the ATTACK_DAMAGE attribute. The attribute
+     * is the single source of truth at runtime; this constant only seeds it.
+     */
     public static final double SCRATCH_DAMAGE = 8.0D;
 
     /** Last tick of the telegraph. Facing locks at the end of this phase. */
@@ -57,8 +63,16 @@ public class GreatIzuchiCombatGoal extends Goal {
     /** Edge length of the cubic claw volume, preserved from the authored hitbox profile. */
     public static final double CLAW_SIZE = 0.8D;
 
-    /** Distance at which the attack may be started, measured body-centre to victim bounding box. */
-    public static final double REACH = 4.0D;
+    /**
+     * Distance at which the attack may be started, measured from the monster position to the
+     * nearest point of the victim bounding box.
+     *
+     * <p>Derived from the claw path rather than picked by feel: the claw centre reaches at most
+     * 1.72 blocks forward, and the volume is 0.8 across, so its leading face reaches about 2.12.
+     * Starting an attack beyond that would make the monster stop out of range and swing at air
+     * indefinitely, because approach stops as soon as this threshold is met.
+     */
+    public static final double REACH = 2.2D;
 
     /**
      * Sampled claw positions, {tick, left, up, forward} in blocks, across the active window.
@@ -157,6 +171,8 @@ public class GreatIzuchiCombatGoal extends Goal {
         }
 
         this.monster.getLookControl().setLookAt(target, 30.0F, 30.0F);
+        // Drives the run animation on clients, which cannot see getTarget().
+        this.monster.setAggressive(true);
 
         double distance = distanceToBox(target);
         if (distance > REACH) {
@@ -164,29 +180,52 @@ public class GreatIzuchiCombatGoal extends Goal {
                 this.repathCooldown = REPATH_INTERVAL;
                 // Bounded re-pathing: a failed path abandons the approach for this interval
                 // instead of recalculating every tick (handoff section 4.5, A10).
-                this.monster.getNavigation().moveTo(target, 1.0D);
+                boolean pathed = this.monster.getNavigation().moveTo(target, 1.0D);
+                if (!pathed) {
+                    debug("approach: no path to {} at {} blocks", target.getName().getString(), distance);
+                }
             }
             return;
         }
 
         this.monster.getNavigation().stop();
-        if (this.monster.attackCooldown <= 0 && this.monster.hasLineOfSight(target)) {
-            beginAttack();
+        if (this.monster.attackCooldown > 0) {
+            return;
         }
+        if (!this.monster.hasLineOfSight(target)) {
+            debug("attack rejected: no line of sight to {}", target.getName().getString());
+            return;
+        }
+        beginAttack(target, distance);
     }
 
-    private void beginAttack() {
+    private void beginAttack(LivingEntity target, double distance) {
         this.attacking = true;
         this.hitThisAction.clear();
         this.monster.setAggressive(true);
         this.monster.getNavigation().stop();
         this.monster.beginAttack(GreatIzuchi.ATTACK_SCRATCH);
+        debug("attack start: id={} seq={} target={} distance={}",
+                GreatIzuchi.ATTACK_SCRATCH, this.monster.getActionSequence(),
+                target.getName().getString(), String.format("%.2f", distance));
+    }
+
+    /**
+     * Sparse development diagnostics: transitions and contact decisions only, never per tick.
+     * Off unless the server config enables it (handoff P2).
+     */
+    private void debug(String message, Object... args) {
+        if (MHNWConfig.DEBUG_COMBAT.get()) {
+            MHNW.LOG.info("[great_izuchi] " + message, args);
+        }
     }
 
     private void tickAttack() {
         int age = this.monster.getAttackAge();
 
         if (age < 0 || age > ACTION_END) {
+            debug("attack end: seq={} age={} victims={}",
+                    this.monster.getActionSequence(), age, this.hitThisAction.size());
             this.attacking = false;
             this.monster.endAttack();
             this.monster.attackCooldown = COOLDOWN;
@@ -265,10 +304,14 @@ public class GreatIzuchiCombatGoal extends Goal {
             }
             // A melee swing must not reach through a wall (rule 3).
             if (!this.monster.hasLineOfSight(victim)) {
+                debug("contact rejected at age={}: {} is behind cover", age, victim.getName().getString());
                 continue;
             }
             this.hitThisAction.add(victim.getId());
-            victim.hurt(this.monster.damageSources().mobAttack(this.monster), (float) SCRATCH_DAMAGE);
+            float damage = (float) this.monster.getAttributeValue(Attributes.ATTACK_DAMAGE);
+            victim.hurt(this.monster.damageSources().mobAttack(this.monster), damage);
+            debug("contact accepted at age={}: {} for {} damage (seq={})",
+                    age, victim.getName().getString(), damage, this.monster.getActionSequence());
         }
     }
 
