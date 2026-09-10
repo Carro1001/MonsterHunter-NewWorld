@@ -8,6 +8,7 @@ import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.client.event.TextureStitchEvent;
@@ -16,12 +17,17 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 
 import static com.carro1001.mhnw.registration.ModEntities.*;
-import static com.carro1001.mhnw.registration.RegistrationHelper.register;
 import static com.carro1001.mhnw.utils.MHNWReferences.MODID;
 
+// keep anything ModelLayerLocation-shaped here - that type doesn't exist on a dedicated server, so
+// a helper returning it has to live in a client-only class, not the shared RegistrationHelper
 @Mod.EventBusSubscriber(modid = MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class ClientSetup {
     public static ModelLayerLocation CUBE_MODEL = register("cube_fireball");
+
+    private static ModelLayerLocation register(String pPath) {
+        return new ModelLayerLocation(new ResourceLocation("minecraft", pPath), "main");
+    }
 
     public static void init(FMLClientSetupEvent event) {
         ModRenderTypes.init();

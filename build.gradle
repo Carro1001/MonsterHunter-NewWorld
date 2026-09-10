@@ -90,6 +90,10 @@ repositories {
         url = "https://www.cursemaven.com"
     }
     maven {
+        name = "Modrinth Maven"
+        url = "https://api.modrinth.com/maven"
+    }
+    maven {
         name = "SmartBrainLib (SBL) Maven Repo"
         url = "https://dl.cloudsmith.io/public/tslat/sbl/maven/"
     }
@@ -109,7 +113,9 @@ dependencies {
 
     implementation("com.eliotlash.mclib:mclib:20")
 
-    implementation fg.deobf("dertoaster98:multihitboxlib:${minecraft_version}-${multihitbox_version}@jar")
+    // dertoaster98's GitHub-releases host for this dependency is gone (project is discontinued
+    // upstream); pulling the same jar from its Modrinth maven instead.
+    implementation fg.deobf("maven.modrinth:multihitboxlib:${multihitbox_version}")
 
     implementation fg.deobf("net.tslat.smartbrainlib:SmartBrainLib-forge-${minecraft_version}:${sbl_version}")
     implementation("org.sinytra.mixinbooster:mixin-booster:${mixinbooster_version}+${minecraft_version}")

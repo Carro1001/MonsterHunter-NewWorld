@@ -36,6 +36,13 @@ public class MonsterBreakablePartEntity<T extends Entity> extends MHLibPartEntit
         super.setScaling(scale);
     }
 
+    // tried re-applying growth scale to the synced position here - theory was GeckoLib's bone world
+    // position comes out as if scale=1.0, so MHLib's raw sync needed correcting for growing/shrinking
+    // monsters. wrong: it pulled every part hitbox toward the entity's center on any monster below
+    // max scale (the roll is always <=1.0, so basically every spawn), confirmed live. reverted, trust
+    // MHLib's raw sync as-is. only revisit with a live test if growth-scaled hitboxes need their own
+    // fix later.
+
     @Override
     public float getHP() {
         return hp;

@@ -137,7 +137,7 @@
 				{
 					"name": "tailEndHitbox",
 					"parent": "tailblade",
-					"pivot": [0, 25, 70]
+					"pivot": [0, 30, 78]
 				},
 				{
 					"name": "torso",
@@ -154,8 +154,8 @@
 				},
 				{
 					"name": "clawHitbox",
-					"parent": "torsoHitbox",
-					"pivot": [0, 15, -40]
+					"parent": "right_hand",
+					"pivot": [-5, 11, -24]
 				},
 				{
 					"name": "neck",
