@@ -1,5 +1,6 @@
 package com.carro1001.mhnw.entity;
 
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -16,6 +17,8 @@ import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.entity.PartEntity;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
@@ -28,11 +31,15 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 /**
  * The P3 proof of reuse: a passive herbivore, not another combat monster.
  *
- * <p>Deliberately ordinary. A single fitted hurtbox (the whole entity's own bounding box), normal
- * Minecraft health/damage/death, and stock vanilla goals for all of its behaviour. None of the
- * multipart, attack-timeline or attack-profile machinery built for Great Izuchi is used here,
- * because none of it is needed: section 4.2 says a single fitted region is fine for a small
- * creature, and section 4.1 says ordinary Minecraft facilities come before inventing replacements.
+ * <p>Ordinary in every way except one: it is {@link MonsterPart} multipart (body, head/neck, tail),
+ * because a single vanilla AABB genuinely cannot fit a long-necked, long-tailed quadruped any
+ * better than it can a wyvern's tail. This was originally single-hurtbox on the theory that section
+ * 4.2's "a single fitted region is fine for a small creature" applied; a screenshot of the actual
+ * shape made clear that theory did not survive contact with this particular body plan, and
+ * {@link MonsterPart} generalizing to any {@link net.minecraft.world.entity.Mob} rather than only
+ * hostile {@code Monster}s is what made fixing that possible without a parallel class hierarchy.
+ * None of Great Izuchi's attack-timeline or attack-profile machinery is used here; only the part
+ * positioning, which is a different, smaller piece of that infrastructure.
  *
  * <p>{@link Animal} rather than {@link PathfinderMob} directly, purely so {@link EatBlockGoal}
  * (used for the grass-eating flavour the {@code eat} clip was authored for) has the convenience
@@ -55,8 +62,12 @@ public class Aptonoth extends Animal implements GeoEntity {
     public static final double MOVE_SPEED = 0.22D;
     public static final double ATTACK_DAMAGE = 1.0D;
 
-    public static final float BODY_WIDTH = 1.3F;
-    public static final float BODY_HEIGHT = 1.4F;
+    // Was 1.3x1.4, close to square; a screenshot showed it visibly too tall and boxy for a
+    // low, elongated quadruped, and the box read as offset toward the tail rather than fitted
+    // to the body. Narrower and lower is a reasoned estimate from that screenshot, not a fresh
+    // measurement; call it out again if the fit still looks wrong.
+    public static final float BODY_WIDTH = 1.2F;
+    public static final float BODY_HEIGHT = 1.0F;
 
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.aptonoth.idle");
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.aptonoth.walk");
@@ -65,6 +76,7 @@ public class Aptonoth extends Animal implements GeoEntity {
     private static final RawAnimation DEATH = RawAnimation.begin().thenPlayAndHold("animation.aptonoth.death");
 
     private final AnimatableInstanceCache animCache = GeckoLibUtil.createInstanceCache(this);
+    private final MonsterPart[] parts;
 
     /**
      * Client-side countdown driving the eat animation, the same mechanism vanilla's own grazing
@@ -76,8 +88,21 @@ public class Aptonoth extends Animal implements GeoEntity {
      */
     private int eatAnimationTicks;
 
+    /** Same fairness-corrected guard as the large monsters; see {@link Rathian#hurt} for why the
+     * {@code invulnerableTime} reset matters and not just the source-identity check. */
+    private DamageSource lastDamageSource;
+    private int lastDamageTick = -1;
+
     public Aptonoth(EntityType<? extends Animal> type, Level level) {
         super(type, level);
+        // Offline-solved from the idle pose (simple constant/sine channels, no combat motion to
+        // get wrong), not yet checked live. Sizes are a first estimate to match, not a measurement.
+        this.parts = new MonsterPart[] {
+                //              name          width height  left    up      forward
+                new MonsterPart(this, "body",  1.3F, 1.1F, 0.00D, 1.90D, -0.50D),
+                new MonsterPart(this, "head",  0.9F, 0.9F, 0.00D, 3.20D,  1.30D),
+                new MonsterPart(this, "tail",  0.7F, 0.7F, 0.00D, 1.90D, -3.40D),
+        };
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -90,7 +115,7 @@ public class Aptonoth extends Animal implements GeoEntity {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(1, new PanicGoal(this, 1.5D));
+        this.goalSelector.addGoal(1, new AptonothPanicGoal(this, 1.5D));
         this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.0D, true));
         this.goalSelector.addGoal(3, new EatBlockGoal(this));
         this.goalSelector.addGoal(4, new WaterAvoidingRandomStrollGoal(this, 0.8D));
@@ -136,6 +161,89 @@ public class Aptonoth extends Animal implements GeoEntity {
             this.eatAnimationTicks--;
         }
         super.aiStep();
+        positionParts();
+    }
+
+    // ---------------------------------------------------------------- multipart
+
+    @Override
+    public boolean isMultipartEntity() {
+        return true;
+    }
+
+    @Override
+    public PartEntity<?>[] getParts() {
+        return this.parts;
+    }
+
+    public MonsterPart[] monsterParts() {
+        return this.parts;
+    }
+
+    public MonsterPart part(String name) {
+        for (MonsterPart p : this.parts) {
+            if (p.partName.equals(name)) {
+                return p;
+            }
+        }
+        throw new IllegalArgumentException("no such part: " + name);
+    }
+
+    /** Same convention as {@link GreatIzuchi}: model -Z is the direction the entity faces. */
+    public Vec3 localToWorld(double left, double up, double forward) {
+        double rad = Math.toRadians(this.yBodyRot);
+        double sin = Math.sin(rad);
+        double cos = Math.cos(rad);
+        return new Vec3(
+                getX() + left * cos - forward * sin,
+                getY() + up,
+                getZ() + left * sin + forward * cos);
+    }
+
+    /** Same fix as the large monsters: a client independently allocating part ids would disagree
+     * with the server about which id is which part (MC-158205). */
+    @Override
+    public void setId(int id) {
+        super.setId(id);
+        for (int i = 0; i < this.parts.length; i++) {
+            this.parts[i].setId(id + i + 1);
+        }
+    }
+
+    private void positionParts() {
+        for (MonsterPart part : this.parts) {
+            part.setOldPosAndRot();
+            Vec3 centre = localToWorld(part.localLeft, part.localUp, part.localForward);
+            part.setPos(centre.x, centre.y - part.halfHeight(), centre.z);
+        }
+    }
+
+    @Override
+    public void onAddedToLevel() {
+        super.onAddedToLevel();
+        positionParts();
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        positionParts();
+    }
+
+    /** Same contract and the same fairness correction as {@link Rathian#hurt}. */
+    @Override
+    public boolean hurt(DamageSource source, float amount) {
+        if (!level().isClientSide) {
+            if (source == this.lastDamageSource && this.tickCount == this.lastDamageTick) {
+                return false;
+            }
+            if (source != this.lastDamageSource) {
+                this.invulnerableTime = 0;
+            }
+            this.lastDamageSource = source;
+            this.lastDamageTick = this.tickCount;
+        }
+        return super.hurt(source, amount);
     }
 
     /**

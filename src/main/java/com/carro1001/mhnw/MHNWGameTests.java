@@ -492,6 +492,65 @@ public class MHNWGameTests {
                 aptonoth.isRemoved(), "the Aptonoth was not removed after dying"));
     }
 
+    /**
+     * A03: the same shared {@code MonsterPart} contract Great Izuchi/Rathian/Rathalos already prove,
+     * checked again for the first passive, non-{@code Monster} owner (the box shape a single AABB
+     * cannot fit is the same problem, not a combat concern; see {@link Aptonoth}'s class doc).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void aptonothPartDamageReachesParent(GameTestHelper helper) {
+        Aptonoth aptonoth = helper.spawn(ModEntities.APTONOTH.get(), 8, 2, 8);
+        aptonoth.setNoAi(true);
+        float before = aptonoth.getHealth();
+
+        MonsterPart head = aptonoth.part("head");
+        head.hurt(helper.getLevel().damageSources().generic(), PROBE_DAMAGE);
+
+        float lost = before - aptonoth.getHealth();
+        helper.assertTrue(Math.abs(lost - PROBE_DAMAGE) < EPSILON,
+                "hitting Aptonoth's head should cost the parent exactly " + PROBE_DAMAGE
+                        + " health, but it lost " + lost);
+        helper.succeed();
+    }
+
+    /** A03/A06: one source touching several of Aptonoth's three parts is still one hit. */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void aptonothOneSourceAcrossManyPartsCountsOnce(GameTestHelper helper) {
+        Aptonoth aptonoth = helper.spawn(ModEntities.APTONOTH.get(), 8, 2, 8);
+        aptonoth.setNoAi(true);
+        float before = aptonoth.getHealth();
+
+        DamageSource source = helper.getLevel().damageSources().generic();
+        aptonoth.part("body").hurt(source, PROBE_DAMAGE);
+        aptonoth.part("head").hurt(source, PROBE_DAMAGE);
+        aptonoth.part("tail").hurt(source, PROBE_DAMAGE);
+
+        float lost = before - aptonoth.getHealth();
+        helper.assertTrue(Math.abs(lost - PROBE_DAMAGE) < EPSILON,
+                "one source touching all three of Aptonoth's parts should cost " + PROBE_DAMAGE
+                        + " health once, but the parent lost " + lost);
+        helper.succeed();
+    }
+
+    /** A02/A13: death removes Aptonoth and every one of its three parts, exactly once. */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void aptonothDeathRemovesTheWholeCreature(GameTestHelper helper) {
+        Aptonoth aptonoth = helper.spawn(ModEntities.APTONOTH.get(), 8, 2, 8);
+        aptonoth.setNoAi(true);
+        int partCount = aptonoth.getParts().length;
+        helper.assertTrue(partCount == 3, "Aptonoth registered " + partCount + " parts, expected 3");
+
+        aptonoth.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
+
+        helper.succeedWhen(() -> {
+            helper.assertTrue(aptonoth.isRemoved(), "Aptonoth was not removed after dying");
+            for (MonsterPart part : aptonoth.monsterParts()) {
+                helper.assertTrue(part.isRemoved() || !part.isAddedToLevel(),
+                        "part " + part.partName + " outlived its parent");
+            }
+        });
+    }
+
     // ---------------------------------------------------------------- Toad (P3, endemic life)
 
     /**
