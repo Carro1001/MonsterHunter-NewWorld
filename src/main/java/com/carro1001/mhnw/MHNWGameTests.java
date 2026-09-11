@@ -551,7 +551,7 @@ public class MHNWGameTests {
         helper.succeed();
     }
 
-    /** A03/A06: one source touching several of Aptonoth's four parts is still one hit. */
+    /** A03/A06: one source touching several of Aptonoth's five parts is still one hit. */
     @GameTest(template = ARENA, timeoutTicks = 40)
     public static void aptonothOneSourceAcrossManyPartsCountsOnce(GameTestHelper helper) {
         Aptonoth aptonoth = helper.spawn(ModEntities.APTONOTH.get(), 8, 2, 8);
@@ -563,22 +563,23 @@ public class MHNWGameTests {
         aptonoth.part("tail_1").hurt(source, PROBE_DAMAGE);
         aptonoth.part("tail_2").hurt(source, PROBE_DAMAGE);
         aptonoth.part("tail_3").hurt(source, PROBE_DAMAGE);
+        aptonoth.part("tail_4").hurt(source, PROBE_DAMAGE);
 
         float lost = before - aptonoth.getHealth();
         helper.assertTrue(Math.abs(lost - PROBE_DAMAGE) < EPSILON,
-                "one source touching all four of Aptonoth's parts should cost " + PROBE_DAMAGE
+                "one source touching all five of Aptonoth's parts should cost " + PROBE_DAMAGE
                         + " health once, but the parent lost " + lost);
         helper.succeed();
     }
 
-    /** A02/A13: death removes Aptonoth and every one of its four parts, exactly once. There is
-     * deliberately no "body" part (see the class doc), so this is head + a three-segment tail. */
+    /** A02/A13: death removes Aptonoth and every one of its five parts, exactly once. There is
+     * deliberately no "body" part (see the class doc), so this is head + a four-segment tail. */
     @GameTest(template = ARENA, timeoutTicks = 200)
     public static void aptonothDeathRemovesTheWholeCreature(GameTestHelper helper) {
         Aptonoth aptonoth = helper.spawn(ModEntities.APTONOTH.get(), 8, 2, 8);
         aptonoth.setNoAi(true);
         int partCount = aptonoth.getParts().length;
-        helper.assertTrue(partCount == 4, "Aptonoth registered " + partCount + " parts, expected 4");
+        helper.assertTrue(partCount == 5, "Aptonoth registered " + partCount + " parts, expected 5");
 
         aptonoth.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
 

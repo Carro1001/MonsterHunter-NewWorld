@@ -32,7 +32,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * The P3 proof of reuse: a passive herbivore, not another combat monster.
  *
  * <p>Ordinary in every way except one: it is {@link MonsterPart} multipart for the head and a
- * three-segment tail (reach the root hitbox can't cover), because a single vanilla AABB
+ * four-segment tail (reach the root hitbox can't cover), because a single vanilla AABB
  * genuinely cannot fit a long-necked, long-tailed quadruped any better than it can a wyvern's tail.
  * This was originally single-hurtbox on the theory that section 4.2's "a single fitted region is
  * fine for a small creature" applied; a screenshot of the actual shape made clear that theory did
@@ -72,12 +72,17 @@ public class Aptonoth extends Animal implements GeoEntity {
     public static final double MOVE_SPEED = 0.22D;
     public static final double ATTACK_DAMAGE = 1.0D;
 
-    // Was 1.3x1.4, close to square; a screenshot showed it visibly too tall and boxy for a
-    // low, elongated quadruped, and the box read as offset toward the tail rather than fitted
-    // to the body. Narrower and lower is a reasoned estimate from that screenshot, not a fresh
-    // measurement; call it out again if the fit still looks wrong.
-    public static final float BODY_WIDTH = 1.2F;
-    public static final float BODY_HEIGHT = 1.0F;
+    // BODY_HEIGHT was reduced to 1.0 early on for reading "too tall and boxy" in a screenshot, but
+    // that undershot: the real BoneProbe measurement for the "body" bone (the torso's own pivot, see
+    // the constructor below) sits at up=1.87, meaning a 1.0-tall root box doesn't even reach the
+    // CENTRE of the chest, let alone its top -- confirmed by a later screenshot showing the white
+    // root box sitting well below the visible chest. Raised to comfortably clear that measured
+    // centre; still not itself a direct measurement of the box's own correct height (that would need
+    // a leg/foot bone in the BoneProbe capture to fix the ground reference precisely), so treat as
+    // closer, not necessarily final. BODY_WIDTH nudged up slightly toward the real mesh's ~1.25-wide
+    // main body cube (aptonoth.geo.json), a much smaller, low-risk change by comparison.
+    public static final float BODY_WIDTH = 1.3F;
+    public static final float BODY_HEIGHT = 2.0F;
 
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.aptonoth.idle");
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.aptonoth.walk");
@@ -106,23 +111,26 @@ public class Aptonoth extends Animal implements GeoEntity {
     public Aptonoth(EntityType<? extends Animal> type, Level level) {
         super(type, level);
         // Real BoneProbe measurements (see docs/TEST_PLAN.md and Rathian's constructor for the same
-        // change) for head/tail_1/tail_3: the maintainer ran with debugCombat on and stood near a
-        // live Aptonoth, and the head/tail1/tail2 bones' logged positions are plugged in directly.
-        // No "body" part: see the class doc for why the plain root hitbox already covers the torso
-        // without one.
+        // change) for head/tail_1/tail_4: the maintainer ran with debugCombat on and stood near a
+        // live Aptonoth twice, and the head/tail1/tail2 bones' logged positions came back the same
+        // both times, confirming these specific numbers. No "body" part: see the class doc for why
+        // the plain root hitbox already covers the torso without one.
         //
-        // A middle tail_2 was added on top of the two measured segments: aptonoth.geo.json's own
-        // tail1/tail2 cubes are each about 1.9-2.0 blocks long, but two small boxes at the measured
-        // bone positions alone leave roughly 1.9 blocks of tail in between with no hurtbox at all --
-        // a real, calculable gap, not a guess. tail_2 is interpolated at the midpoint of the two
-        // measured points (still not itself measured), the same "several overlapping boxes along a
-        // long axis" fix the large monsters' tails already use for the identical reason.
+        // The tail needed a second round: aptonoth.geo.json's own tail1/tail2 cubes are each about
+        // 1.9-2.0 blocks long, but small boxes at only the two measured bone positions leave real,
+        // calculable gaps of bare tail with no hurtbox at all. Round one added one interpolated
+        // midpoint (tail_2); the follow-up screenshot still read as a bit gappy/undersized, so this
+        // adds a second interpolated segment (tail_3, between tail_2 and the measured tail end) and
+        // bumps every tail box's size up modestly. tail_2 and tail_3 are interpolated, not
+        // themselves measured; the same "several overlapping boxes along a long axis" fix the large
+        // monsters' tails already use for the identical reason.
         this.parts = new MonsterPart[] {
                 //              name          width height  left    up      forward
                 new MonsterPart(this, "head",   0.9F, 0.9F, 0.00D, 2.25D,  2.85D),
-                new MonsterPart(this, "tail_1", 0.8F, 0.8F, 0.00D, 2.60D, -1.31D),
-                new MonsterPart(this, "tail_2", 0.75F, 0.75F, 0.00D, 2.75D, -2.27D),
-                new MonsterPart(this, "tail_3", 0.6F, 0.6F, 0.00D, 2.90D, -3.22D),
+                new MonsterPart(this, "tail_1", 0.9F, 0.9F, 0.00D, 2.60D, -1.31D),
+                new MonsterPart(this, "tail_2", 0.85F, 0.85F, 0.00D, 2.75D, -2.27D),
+                new MonsterPart(this, "tail_3", 0.8F, 0.8F, 0.00D, 2.82D, -2.75D),
+                new MonsterPart(this, "tail_4", 0.7F, 0.7F, 0.00D, 2.90D, -3.22D),
         };
     }
 
