@@ -11,6 +11,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
+import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +26,7 @@ public class MHNW {
         modBus.addListener(MHNW::onAttributeCreation);
         modBus.addListener(MHNW::onRegisterSpawnPlacements);
         modBus.addListener(MHNW::onBuildCreativeTabs);
+        modBus.addListener(MHNW::onRegisterGameTests);
         container.registerConfig(ModConfig.Type.SERVER, MHNWConfig.SERVER_SPEC);
         container.registerConfig(ModConfig.Type.COMMON, MHNWConfig.COMMON_SPEC);
     }
@@ -41,6 +43,11 @@ public class MHNW {
                 ModEntities.SPAWN_HEIGHTMAP,
                 GreatIzuchi::checkSpawnRules,
                 RegisterSpawnPlacementsEvent.Operation.REPLACE);
+    }
+
+    @SubscribeEvent
+    private static void onRegisterGameTests(RegisterGameTestsEvent event) {
+        event.register(MHNWGameTests.class);
     }
 
     @SubscribeEvent

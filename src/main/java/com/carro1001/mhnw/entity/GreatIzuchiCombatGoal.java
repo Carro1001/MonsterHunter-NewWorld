@@ -34,21 +34,37 @@ import java.util.List;
  *   ticks 48-64   RECOVERY  settles back to rest, speed decaying 0.09 -&gt; 0.03
  * </pre>
  *
- * The scratch is visibly several slashes. Per the handoff, one damage application per action per
- * victim is the accepted provisional design; the active window is evaluated every tick so contact
- * is wherever the animation actually put the claw, but each victim is recorded and skipped after
- * its first hit.
+ * The scratch is visibly several slashes, so it strikes up to {@link #STRIKES} times: the active
+ * window is split into that many strike windows and a victim may be hit once per window. Contact
+ * is evaluated every tick, so a hit lands wherever the animation actually put the claw, but
+ * continuous overlap still costs at most three hits rather than one per tick.
  *
- * <p>{@link #CLAW_PATH} is a short authored offset path sampled from that same solve, in the local
- * (left, up, forward) frame documented on {@link GreatIzuchi}, linearly interpolated between keys.
+ * <p>{@link #CLAW_PATH} is a short offset path in the local (left, up, forward) frame documented on
+ * {@link GreatIzuchi}, linearly interpolated between keys. It is the measured hand position,
+ * smoothed over a seven tick window to take out the vertical bounce that made the volume jitter as
+ * the claw rose and fell, and pushed outward on a ramp from 1.04 to 1.26 so the claw extends as
+ * the swing progresses rather than hugging the body.
  */
 public class GreatIzuchiCombatGoal extends Goal {
 
     /**
-     * Provisional damage, used as the default value of the ATTACK_DAMAGE attribute. The attribute
+     * Damage per strike, used as the default value of the ATTACK_DAMAGE attribute. The attribute
      * is the single source of truth at runtime; this constant only seeds it.
+     *
+     * <p>Per strike, not per attack: a scratch can land up to {@link #STRIKES} times, so the worst
+     * case for a victim who stays in the arc throughout is three times this.
      */
-    public static final double SCRATCH_DAMAGE = 8.0D;
+    public static final double SCRATCH_DAMAGE = 2.5D;
+
+    /**
+     * How many times one scratch may strike the same victim.
+     *
+     * <p>The clip is visibly several slashes, so a single application per action under-sold it.
+     * This is the "intentionally supported strike index" the runtime contract allows: the active
+     * window is divided into this many equal strike windows, and a victim may be hit at most once
+     * per window. Continuous overlap therefore costs at most three hits, never one per tick.
+     */
+    public static final int STRIKES = 3;
 
     /** Last tick of the telegraph. Facing locks at the end of this phase. */
     public static final int WINDUP_END = 17;
@@ -89,17 +105,27 @@ public class GreatIzuchiCombatGoal extends Goal {
      * target that is not where the arc passes. That is the animation being honest, not a bug.
      */
     private static final double[][] CLAW_PATH = {
-            {18, -1.07D, 1.29D, 1.96D},
-            {19, -1.10D, 1.31D, 1.97D},
-            {25, -1.28D, 1.83D, 1.98D},
-            {30, -0.94D, 2.06D, 2.31D},
-            {34, -0.12D, 1.33D, 1.78D},
-            {39, -1.24D, 3.13D, 1.95D},
-            {44, -0.46D, 1.44D, 1.77D},
-            {47, -1.29D, 1.29D, 0.87D},
+            // age    left      up   forward
+            {18,  -1.09D,  1.29D,  2.03D},
+            {21,  -1.19D,  1.39D,  2.13D},
+            {24,  -1.32D,  1.77D,  2.19D},
+            {27,  -1.32D,  2.13D,  2.33D},
+            {30,  -0.88D,  1.97D,  2.39D},
+            {33,  -0.28D,  1.58D,  2.16D},
+            {36,  -0.69D,  1.97D,  2.11D},
+            {39,  -1.41D,  2.35D,  2.32D},
+            {42,  -1.28D,  2.02D,  2.40D},
+            {45,  -1.10D,  1.34D,  1.99D},
+            {47,  -1.29D,  1.30D,  1.43D},
     };
 
     private static final int REPATH_INTERVAL = 10;
+
+    /** Which of the {@link #STRIKES} strike windows this action age falls in. */
+    private static int strikeIndexAt(int age) {
+        int span = ACTIVE_END - ACTIVE_START + 1;
+        return Mth.clamp((age - ACTIVE_START) * STRIKES / span, 0, STRIKES - 1);
+    }
 
     /**
      * How far to the monster's right the scratch arc actually travels, in degrees.
@@ -120,7 +146,7 @@ public class GreatIzuchiCombatGoal extends Goal {
 
     private final GreatIzuchi monster;
     /** Entity ids already hit by the current action. Cleared per action, so it cannot grow. */
-    private final List<Integer> hitThisAction = new ArrayList<>();
+    private final List<Long> hitThisAction = new ArrayList<>();
 
     private int repathCooldown;
     private boolean attacking;
@@ -352,7 +378,8 @@ public class GreatIzuchiCombatGoal extends Goal {
             if (victim == this.monster || victim.is(this.monster) || !victim.isAlive()) {
                 continue;
             }
-            if (this.hitThisAction.contains(victim.getId())) {
+            long strikeKey = ((long) victim.getId() << 8) | strikeIndexAt(age);
+            if (this.hitThisAction.contains(strikeKey)) {
                 continue;
             }
             if (!victim.getBoundingBox().intersects(volume)) {
@@ -363,11 +390,18 @@ public class GreatIzuchiCombatGoal extends Goal {
                 debug("contact rejected at age={}: {} is behind cover", age, victim.getName().getString());
                 continue;
             }
-            this.hitThisAction.add(victim.getId());
+            this.hitThisAction.add(strikeKey);
             float damage = (float) this.monster.getAttributeValue(Attributes.ATTACK_DAMAGE);
+            // The reviewed exception to leaving vanilla invulnerability alone. Strikes land about
+            // ten ticks apart, inside vanilla's twenty tick window, so without this only the first
+            // of the three would ever be felt and the multi-hit design would be silent. Scoped to
+            // this attack's own strikes: the per-strike key above still forbids more than one hit
+            // per victim per window, so it cannot become per-tick damage.
+            victim.invulnerableTime = 0;
             victim.hurt(this.monster.damageSources().mobAttack(this.monster), damage);
-            debug("contact accepted at age={}: {} for {} damage (seq={})",
-                    age, victim.getName().getString(), damage, this.monster.getActionSequence());
+            debug("contact accepted at age={} strike={}: {} for {} damage (seq={})",
+                    age, strikeIndexAt(age), victim.getName().getString(), damage,
+                    this.monster.getActionSequence());
         }
     }
 
