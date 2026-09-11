@@ -32,7 +32,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * The P3 proof of reuse: a passive herbivore, not another combat monster.
  *
  * <p>Ordinary in every way except one: it is {@link MonsterPart} multipart for the chest, head, and
- * a six-segment tail, because a single vanilla AABB genuinely cannot fit a long-necked, long-tailed
+ * a three-segment tail, because a single vanilla AABB genuinely cannot fit a long-necked, long-tailed
  * quadruped any better than it can a wyvern's tail. This was originally single-hurtbox on the theory
  * that section 4.2's "a single fitted region is fine for a small creature" applied; a screenshot of
  * the actual shape made clear that theory did not survive contact with this particular body plan,
@@ -110,32 +110,34 @@ public class Aptonoth extends Animal implements GeoEntity {
 
     public Aptonoth(EntityType<? extends Animal> type, Level level) {
         super(type, level);
-        // Real BoneProbe measurements for chest/head/tail_1/tail_6 (see docs/TEST_PLAN.md and
-        // Rathian's constructor for the same change): the maintainer stood near a live Aptonoth
-        // across three separate sessions, and the body/head/tail1/tail2 bones' logged positions came
-        // back the same each time, confirming these specific numbers. `chest` is back after being
-        // dropped once (see the class doc for why); its `up`/`forward` are the measured "body" bone
-        // position directly.
+        // Real BoneProbe measurements for head/tail_1/tail_3 (see docs/TEST_PLAN.md and Rathian's
+        // constructor for the same change): the maintainer stood near a live Aptonoth across several
+        // sessions, and the head/tail1/tail2 bones' logged positions came back the same every time.
         //
-        // The tail is now six evenly-spaced points between the two measured endpoints (tail_1 at the
-        // measured tail1 bone, tail_6 at the measured tail2 bone) instead of a chain of one-off
-        // interpolations: aptonoth.geo.json's own tail1/tail2 cubes are each about 1.9-2.0 blocks
-        // long, and two rounds of adding one patch segment at a time to a growing gap kept leaving
-        // the middle under-covered. Straight linear interpolation between the two measured `up`
-        // values would keep climbing monotonically toward the tip, which read as the tail rising
-        // rather than the gentle droop it actually has; a small sag (a sine dip, low a few segments
-        // in and rising back to the measured tip) is applied on top of the straight line instead, per
-        // feedback that the middle needed to read a little lower, not higher.
+        // `chest` moved forward: it was originally placed at the measured "body" bone position
+        // itself (forward=0.00), which is also where the vanilla root hitbox is centred -- a
+        // screenshot showed the root box reading rear-biased (toward the hips, not the chest), with
+        // no separate chest box visible at all because it sat exactly on top of the root box. Moved
+        // forward toward the neck base (measured at forward=1.74) to actually cover the front of the
+        // ribcage the root box was missing, which is the whole reason this part exists.
+        //
+        // Tail simplified back to three points (two measured endpoints, one interpolated midpoint)
+        // sized to exactly touch their neighbours, not six: aptonoth.geo.json's tail1/tail2 bones
+        // carry their own additional rotation (tail2 tilts a further -15 degrees beyond tail1's own
+        // -7.5), meaning the tail genuinely curves -- so six points spaced by straight-line
+        // interpolation between the two measured ends don't lie on that real curve, and sized
+        // generously enough to avoid gaps, ended up overlapping each other instead (confirmed by a
+        // screenshot). There is no per-bone "binding" to get wrong here (parts are static offsets,
+        // not attached to a live bone), so the fix is fewer points sized by the actual math: three
+        // points 0.96 blocks apart, each 0.96 wide, meet their neighbours exactly -- no gap, no
+        // overlap -- rather than guessing at the curve's true shape with more synthetic points.
         this.parts = new MonsterPart[] {
                 //              name          width height  left    up      forward
-                new MonsterPart(this, "chest",  1.4F, 1.4F, 0.00D, 1.87D,  0.00D),
+                new MonsterPart(this, "chest",  1.1F, 1.1F, 0.00D, 1.90D,  1.00D),
                 new MonsterPart(this, "head",   0.9F, 0.9F, 0.00D, 2.25D,  2.85D),
-                new MonsterPart(this, "tail_1", 0.9F, 0.9F,  0.00D, 2.60D, -1.31D),
-                new MonsterPart(this, "tail_2", 0.85F, 0.85F, 0.00D, 2.59D, -1.69D),
-                new MonsterPart(this, "tail_3", 0.8F, 0.8F,  0.00D, 2.60D, -2.08D),
-                new MonsterPart(this, "tail_4", 0.75F, 0.75F, 0.00D, 2.66D, -2.46D),
-                new MonsterPart(this, "tail_5", 0.7F, 0.7F,  0.00D, 2.76D, -2.85D),
-                new MonsterPart(this, "tail_6", 0.65F, 0.65F, 0.00D, 2.89D, -3.23D),
+                new MonsterPart(this, "tail_1", 0.96F, 0.6F, 0.00D, 2.60D, -1.31D),
+                new MonsterPart(this, "tail_2", 0.96F, 0.6F, 0.00D, 2.75D, -2.27D),
+                new MonsterPart(this, "tail_3", 0.96F, 0.6F, 0.00D, 2.89D, -3.23D),
         };
     }
 
