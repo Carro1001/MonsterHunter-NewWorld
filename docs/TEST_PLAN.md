@@ -1,8 +1,8 @@
 # Manual test plan
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
-state-machine wedging, save/reload of gameplay facts) has a GameTest and runs headless via
-`gradlew runGameTestServer` — see `MHNWGameTests.java`, currently 45 tests, all passing.
+state-machine wedging, save/reload of gameplay facts, navigation) has a GameTest and runs headless
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, currently 51 tests, all passing.
 
 This file is updated as features land. Checked items were confirmed by the maintainer; unchecked
 items are open. When you find a problem, say what you saw and I'll fix it and update this file.
@@ -51,8 +51,12 @@ under Rathian/Rathalos below, same fix applies here too.
       mid-turn** — this was a real bug (see Rathian/Rathalos note below), fixed for all three
 - [ ] **New: a naturally-spawned Great Izuchi has 1-4 regular Izuchi nearby when you first find it**
 - [ ] **A11 natural spawning** — deferred by your call; wired but never observed (see `docs/DEFERRED.md`)
-- [ ] **A10 navigation scenarios** — corner, body-wide passage, narrow passage, step, unreachable
-      target — deferred by your call (see `docs/DEFERRED.md`)
+- [x] **A10 navigation scenarios** — closed, not deferred: added six headless GameTests (open ground,
+      an outside corner, a passage exactly as wide as the body, a passage narrower than the body, a
+      single-block step, and a fully sealed unreachable target), all passing on the first run — no
+      code change was needed, vanilla ground navigation already handles this body correctly. See
+      `navigatesOpenGroundToReachTarget` through `anUnreachableTargetDoesNotProduceAnUnboundedRepathLoop`
+      in `MHNWGameTests.java`.
 - [ ] **A08/A09 two-client agreement** — needs a dedicated server + two clients, which I cannot run;
       deferred to polishing (see `docs/DEFERRED.md`)
 

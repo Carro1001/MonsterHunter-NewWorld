@@ -19,19 +19,6 @@ To close it: confirm a monster actually appears without a spawn egg, confirm tha
 `naturalSpawning` to false stops it, and check rarity and group size feel right rather than
 flooding a forest. Spawn weight and biome choice are guesses and should be revisited.
 
-### A10 — navigation scenarios
-**Status:** only open flat ground has been exercised.
-
-The creature is 1.6 blocks wide with a step height of 1.0, which is unusual enough that vanilla
-ground navigation deserves real coverage: open terrain, an outside corner, a body-wide passage, a
-passage narrower than the body, a single-block step, and a target that cannot be reached at all
-(which must not produce an unbounded re-path loop).
-
-One concrete hint that this matters: during combat testing the log showed a burst of
-`approach: no path` failures when a victim was held just outside attack range. That particular
-deadlock is fixed, but it showed vanilla pathing does struggle to route this body to a target
-already touching it.
-
 ### Izuchi (small) — attack and death animation
 **Status:** genuinely hostile and damaging (ordinary vanilla `MeleeAttackGoal`/`Mob.doHurtTarget`,
 no custom timeline), but with no dedicated attack or death clip to present. This is a P4 decision

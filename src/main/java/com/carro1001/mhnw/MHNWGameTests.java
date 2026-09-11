@@ -474,6 +474,178 @@ public class MHNWGameTests {
         });
     }
 
+    // ---------------------------------------------------------------- A10 navigation (Great Izuchi)
+
+    /**
+     * A10 baseline: open flat ground with nothing in the way. This is the control every other A10
+     * test is compared against -- if this one doesn't reach, the others failing means nothing.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void navigatesOpenGroundToReachTarget(GameTestHelper helper) {
+        GreatIzuchi monster = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 2, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 13, 2, 8);
+        victim.setNoAi(true);
+
+        monster.setTarget(victim);
+
+        helper.succeedWhen(() -> helper.assertTrue(
+                monster.distanceTo(victim) < 3.0F,
+                "the monster never closed on a target across open ground (still "
+                        + monster.distanceTo(victim) + " blocks away)"));
+    }
+
+    /**
+     * A10: an outside corner. The straight line from monster to victim is blocked by a wall with a
+     * 90-degree turn in it, so reaching the victim requires actually routing around the corner, not
+     * just walking toward it.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 300)
+    public static void navigatesAroundAnOutsideCorner(GameTestHelper helper) {
+        GreatIzuchi monster = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 2, 2, 4);
+        Cow victim = helper.spawn(EntityType.COW, 10, 2, 12);
+        victim.setNoAi(true);
+
+        // An L-shaped wall between them: a leg blocking the direct line in Z, then a leg blocking the
+        // direct line in X, so the only way through is around the outside corner at (6, 8).
+        for (int z = 4; z <= 8; z++) {
+            for (int y = 2; y <= 6; y++) {
+                helper.setBlock(6, y, z, net.minecraft.world.level.block.Blocks.STONE);
+            }
+        }
+        for (int x = 6; x <= 10; x++) {
+            for (int y = 2; y <= 6; y++) {
+                helper.setBlock(x, y, 8, net.minecraft.world.level.block.Blocks.STONE);
+            }
+        }
+
+        monster.setTarget(victim);
+
+        helper.succeedWhen(() -> helper.assertTrue(
+                monster.distanceTo(victim) < 3.0F,
+                "the monster never routed around the corner to reach its target (still "
+                        + monster.distanceTo(victim) + " blocks away)"));
+    }
+
+    /**
+     * A10: a passage exactly as wide as the body (2 blocks, since {@link GreatIzuchi#BODY_WIDTH} is
+     * 1.6 and a passage narrower than that can't be occupied at all). Flanking walls on both sides
+     * of a 2-wide corridor must not be treated as blocking.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 300)
+    public static void navigatesABodyWidePassage(GameTestHelper helper) {
+        GreatIzuchi monster = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 2);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 13);
+        victim.setNoAi(true);
+
+        for (int z = 5; z <= 10; z++) {
+            for (int y = 2; y <= 6; y++) {
+                helper.setBlock(6, y, z, net.minecraft.world.level.block.Blocks.STONE);
+                helper.setBlock(9, y, z, net.minecraft.world.level.block.Blocks.STONE);
+            }
+        }
+
+        monster.setTarget(victim);
+
+        helper.succeedWhen(() -> helper.assertTrue(
+                monster.distanceTo(victim) < 3.0F,
+                "the monster could not pass through a corridor exactly as wide as its own body (still "
+                        + monster.distanceTo(victim) + " blocks away)"));
+    }
+
+    /**
+     * A10: a passage narrower than the body (1 block, against a 1.6-wide body) genuinely cannot be
+     * entered. This isn't asserting the monster reaches the victim -- it can't, physically -- it's
+     * asserting the opposite failure mode: no crash, and no endless burst of failed repathing that
+     * never lets the monster settle (the concrete bug the handoff's own A10 note names). A monster
+     * that gives up and stands still, or wanders without ever entering the gap, both count as sane.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 300)
+    public static void aNarrowerThanBodyPassageDoesNotSoftlockPathing(GameTestHelper helper) {
+        GreatIzuchi monster = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 2);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 13);
+        victim.setNoAi(true);
+
+        // A solid wall the width of the arena, one block wide gap at x=8 -- too narrow for a
+        // 1.6-wide body to actually stand inside.
+        for (int x = 4; x <= 12; x++) {
+            if (x == 8) {
+                continue;
+            }
+            for (int y = 2; y <= 6; y++) {
+                helper.setBlock(x, y, 7, net.minecraft.world.level.block.Blocks.STONE);
+            }
+        }
+
+        monster.setTarget(victim);
+
+        helper.runAtTickTime(280, () -> {
+            helper.assertTrue(monster.isAlive() && !monster.isRemoved(),
+                    "the monster was removed or died just from failing to path through a gap");
+            helper.succeed();
+        });
+    }
+
+    /** A10: a single-block step, which {@link GreatIzuchi#createAttributes}'s step height of 1.0
+     * should climb without needing to jump or path around. */
+    @GameTest(template = ARENA, timeoutTicks = 300)
+    public static void navigatesOverASingleBlockStep(GameTestHelper helper) {
+        GreatIzuchi monster = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 2);
+        Cow victim = helper.spawn(EntityType.COW, 8, 3, 10);
+        victim.setNoAi(true);
+
+        // Raise the floor by one block from z=6 onward, so the last stretch to the victim is a single
+        // step up, not a ramp or staircase.
+        for (int x = 4; x <= 12; x++) {
+            for (int z = 6; z <= 13; z++) {
+                helper.setBlock(x, 2, z, net.minecraft.world.level.block.Blocks.STONE);
+            }
+        }
+
+        monster.setTarget(victim);
+
+        helper.succeedWhen(() -> helper.assertTrue(
+                monster.distanceTo(victim) < 3.0F,
+                "the monster never climbed a single-block step to reach its target (still "
+                        + monster.distanceTo(victim) + " blocks away, step height is "
+                        + GreatIzuchi.createAttributes().build().getValue(
+                                net.minecraft.world.entity.ai.attributes.Attributes.STEP_HEIGHT) + ")"));
+    }
+
+    /**
+     * A10: a target that cannot be reached at all (fully enclosed) must not produce an unbounded
+     * re-path loop -- the handoff calls this out by name as the specific failure mode to guard
+     * against. Success here just means the monster survives a long window of continuously wanting
+     * a target it can never reach, without crashing, dying, or being removed.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 300)
+    public static void anUnreachableTargetDoesNotProduceAnUnboundedRepathLoop(GameTestHelper helper) {
+        GreatIzuchi monster = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 2);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 12);
+        victim.setNoAi(true);
+
+        // Seal the victim in a solid 3x3x3 box with no opening at all.
+        for (int x = 7; x <= 9; x++) {
+            for (int y = 1; y <= 3; y++) {
+                for (int z = 11; z <= 13; z++) {
+                    boolean shell = x == 7 || x == 9 || y == 1 || y == 3 || z == 11 || z == 13;
+                    if (shell) {
+                        helper.setBlock(x, y, z, net.minecraft.world.level.block.Blocks.STONE);
+                    }
+                }
+            }
+        }
+
+        monster.setTarget(victim);
+
+        helper.runAtTickTime(280, () -> {
+            helper.assertTrue(monster.isAlive() && !monster.isRemoved(),
+                    "the monster was removed or died just from wanting an unreachable target");
+            helper.assertTrue(monster.distanceTo(victim) > 2.0F,
+                    "the monster reached a target sealed in solid blocks on every side");
+            helper.succeed();
+        });
+    }
+
     // ---------------------------------------------------------------- Aptonoth (P3)
 
     /**
