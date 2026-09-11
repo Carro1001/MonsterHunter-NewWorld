@@ -4,8 +4,10 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
 
@@ -14,11 +16,10 @@ import java.util.List;
  * second, then blind whatever can actually see the flash, once, and go dark for a while. See
  * {@link EndemicAreaEffectGoal} for the shared trigger/telegraph/cooldown machinery.
  *
- * <p>A flash is a strictly line-of-sight effect by its own nature, not merely by borrowed
- * convention: something that cannot see the bug cannot be blinded by it, so the same
- * {@code hasLineOfSight} check the base class already uses for the trigger is reused for who gets
- * hit, and there is no separate "must not reach through a wall" concern to bolt on here the way
- * there was for the toad's gas cloud.
+ * <p>Blinding is narrower than plain line-of-sight: players are never affected at all (a flash
+ * that could blind the person playing would be a punishing surprise, not a readable hazard), and
+ * a non-player victim is only blinded if it is actually looking toward the bug, not merely able to
+ * see it — the flash is a startle reaction to something in view, not an omnidirectional pulse.
  */
 public class FlashbugFlashGoal extends EndemicAreaEffectGoal {
 
@@ -29,6 +30,8 @@ public class FlashbugFlashGoal extends EndemicAreaEffectGoal {
     private static final int COOLDOWN_TICKS = 100;
     /** A startling burst, not a sustained ailment: brief on purpose. */
     private static final int BLINDNESS_DURATION_TICKS = 40;
+    /** Dot product of a victim's look vector with the direction to the bug; ~50 degree cone. */
+    private static final double FACING_DOT_THRESHOLD = 0.65D;
 
     private final Flashbug flashbug;
 
@@ -59,9 +62,9 @@ public class FlashbugFlashGoal extends EndemicAreaEffectGoal {
         }
         AABB range = this.flashbug.getBoundingBox().inflate(FLASH_RADIUS);
         List<LivingEntity> nearby = this.flashbug.level().getEntitiesOfClass(LivingEntity.class, range,
-                e -> e != this.flashbug && e.isAlive());
+                e -> e != this.flashbug && e.isAlive() && !(e instanceof Player));
         for (LivingEntity victim : nearby) {
-            if (!this.flashbug.hasLineOfSight(victim)) {
+            if (!this.flashbug.hasLineOfSight(victim) || !isFacingFlashbug(victim)) {
                 continue;
             }
             victim.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, BLINDNESS_DURATION_TICKS, 0));
@@ -70,5 +73,26 @@ public class FlashbugFlashGoal extends EndemicAreaEffectGoal {
             serverLevel.getLevel().sendParticles(ParticleTypes.FLASH,
                     this.flashbug.getX(), this.flashbug.getY(), this.flashbug.getZ(), 1, 0.0, 0.0, 0.0, 0.0);
         }
+    }
+
+    /**
+     * Whether the victim is facing roughly toward the bug, not merely able to see it. Horizontal
+     * (yaw) only, deliberately ignoring pitch: the bug hovers low and most victims' eye height sits
+     * well above it, so a full 3D look-angle comparison would fail this for anything standing right
+     * next to a low-hovering bug and looking straight at it, purely from the vertical offset between
+     * eye height and the bug's low altitude — not the "is it facing this way" question this asks.
+     */
+    private boolean isFacingFlashbug(LivingEntity victim) {
+        Vec3 toBug = new Vec3(
+                this.flashbug.getX() - victim.getX(), 0.0D, this.flashbug.getZ() - victim.getZ());
+        if (toBug.lengthSqr() < 1.0E-6) {
+            return true;
+        }
+        Vec3 look = victim.getLookAngle();
+        Vec3 lookFlat = new Vec3(look.x, 0.0D, look.z);
+        if (lookFlat.lengthSqr() < 1.0E-6) {
+            return false;
+        }
+        return lookFlat.normalize().dot(toBug.normalize()) > FACING_DOT_THRESHOLD;
     }
 }

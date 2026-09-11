@@ -678,12 +678,36 @@ public class MHNWGameTests {
         com.carro1001.mhnw.entity.Flashbug flashbug = helper.spawn(ModEntities.FLASHBUG.get(), 8, 2, 8);
         Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
         victim.setNoAi(true);
+        // north (yaw 180) is -Z, i.e. facing back toward the flashbug at z=8: blinding now requires
+        // actually looking at it, not merely being able to see it (see FlashbugFlashGoal).
+        victim.setYRot(180.0F);
+        victim.setXRot(0.0F);
 
         flashbug.hurt(helper.getLevel().damageSources().generic(), 1.0F);
 
         helper.succeedWhen(() -> helper.assertTrue(
                 victim.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS),
-                "a nearby victim never went blind after the flashbug was provoked"));
+                "a nearby victim facing the flashbug never went blind after it was provoked"));
+    }
+
+    /** Players are excluded from blinding entirely, however they are looking (see the goal doc). */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void flashbugNeverBlindsAFacingNonLookingBystander(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Flashbug flashbug = helper.spawn(ModEntities.FLASHBUG.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
+        victim.setNoAi(true);
+        // south (yaw 0) is +Z, i.e. facing away from the flashbug: it can still see the bug (nothing
+        // blocks line of sight at this range) but is not looking toward it.
+        victim.setYRot(0.0F);
+        victim.setXRot(0.0F);
+
+        flashbug.hurt(helper.getLevel().damageSources().generic(), 1.0F);
+
+        helper.runAtTickTime(50, () -> {
+            helper.assertTrue(!victim.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS),
+                    "a victim looking away from the flashbug was blinded anyway");
+            helper.succeed();
+        });
     }
 
     /** Bounded the same way the toad's cloud is: one release, then quiet until the cooldown ends. */
@@ -701,6 +725,33 @@ public class MHNWGameTests {
                 .thenExecute(() -> flashbug.hurt(helper.getLevel().damageSources().generic(), 1.0F))
                 .thenExecuteFor(40, () -> helper.assertTrue(!flashbug.isFlashing(),
                         "the flashbug flashed again while still on cooldown from the first"))
+                .thenSucceed();
+    }
+
+    /**
+     * The cooldown must actually expire, not just hold for a while. Regression test for a real bug:
+     * the cooldown was originally a counter decremented inside the goal's own {@code tick()}, but
+     * {@code tick()} only ever runs while the goal selector considers the goal running, which is
+     * precisely the window a cooldown is not active in; that counter would sit at its starting value
+     * forever and the goal could never be selected again after its first release. Unlike the toad
+     * (which now discards itself on release and so has no "again" to test), a flashbug survives its
+     * own flash and can genuinely refire once the cooldown elapses.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void flashbugCanFlashAgainAfterCooldownElapses(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Flashbug flashbug = helper.spawn(ModEntities.FLASHBUG.get(), 8, 2, 8);
+
+        flashbug.hurt(helper.getLevel().damageSources().generic(), 1.0F);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(
+                        flashbug.isFlashing(), "waiting for the first flash to actually start"))
+                .thenWaitUntil(() -> helper.assertTrue(
+                        !flashbug.isFlashing(), "waiting for the first flash to finish releasing"))
+                .thenIdle(110)
+                .thenExecute(() -> flashbug.hurt(helper.getLevel().damageSources().generic(), 1.0F))
+                .thenWaitUntil(() -> helper.assertTrue(flashbug.isFlashing(),
+                        "the flashbug never flashed a second time once its cooldown had elapsed"))
                 .thenSucceed();
     }
 

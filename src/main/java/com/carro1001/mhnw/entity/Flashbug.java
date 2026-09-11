@@ -48,6 +48,8 @@ public class Flashbug extends PathfinderMob implements GeoEntity {
     public static final double MAX_HEALTH = 3.0D;
     public static final float BODY_WIDTH = 0.4F;
     public static final float BODY_HEIGHT = 0.3F;
+    /** Keeps it within player melee/jump reach instead of drifting up out of reach. */
+    private static final double MAX_HOVER_HEIGHT = 4.0D;
 
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.flashbug.idle");
     private static final RawAnimation FLY = RawAnimation.begin().thenLoop("animation.flashbug.fly");
@@ -114,6 +116,46 @@ public class Flashbug extends PathfinderMob implements GeoEntity {
             this.provoked = true;
         }
         return hurt;
+    }
+
+    /** A flyer never takes fall damage; it has no floor to fall onto in the first place. */
+    @Override
+    public boolean causeFallDamage(float distance, float multiplier, DamageSource source) {
+        return false;
+    }
+
+    @Override
+    protected void customServerAiStep() {
+        super.customServerAiStep();
+        clampHoverHeight();
+    }
+
+    /**
+     * Nudges it back down whenever it drifts above {@link #MAX_HOVER_HEIGHT} blocks off the ground
+     * below it, rather than constraining the wander goal itself: cheaper, and it also catches
+     * spawning too high. No lower bound is enforced — flying close to the ground is fine and is
+     * what keeps it near player reach.
+     */
+    private void clampHoverHeight() {
+        double groundY = findGroundY();
+        if (groundY != Double.MIN_VALUE && getY() - groundY > MAX_HOVER_HEIGHT) {
+            net.minecraft.world.phys.Vec3 v = getDeltaMovement();
+            setDeltaMovement(v.x, Math.min(v.y, -0.02D), v.z);
+        }
+    }
+
+    /** Highest solid block's top surface below this entity, searched within 32 blocks. */
+    private double findGroundY() {
+        net.minecraft.core.BlockPos.MutableBlockPos pos = new net.minecraft.core.BlockPos.MutableBlockPos(
+                net.minecraft.util.Mth.floor(getX()), net.minecraft.util.Mth.floor(getY()), net.minecraft.util.Mth.floor(getZ()));
+        int minY = level().getMinBuildHeight();
+        for (int i = 0; i < 32 && pos.getY() > minY; i++) {
+            pos.move(0, -1, 0);
+            if (!level().getBlockState(pos).isAir()) {
+                return pos.getY() + 1.0D;
+            }
+        }
+        return Double.MIN_VALUE;
     }
 
     @Override
