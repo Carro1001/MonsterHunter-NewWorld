@@ -707,6 +707,82 @@ public class MHNWGameTests {
      * moment {@code NearestAttackableTargetGoal} or {@code HurtByTargetGoal} sets one, with no
      * custom "check for threats" logic of its own (see the goal's own doc comment).
      */
+    // ---------------------------------------------------------------- Rathian (P4, ground wyvern)
+
+    /**
+     * A03: the same multipart contract Great Izuchi proved works generically for the shared
+     * {@code MonsterPart} class, checked again for a second, independently constructed owner
+     * rather than assumed to still hold.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void rathianPartDamageReachesParent(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Rathian rathian = helper.spawn(ModEntities.RATHIAN.get(), 8, 2, 8);
+        rathian.setNoAi(true);
+        float before = rathian.getHealth();
+
+        MonsterPart head = rathian.part("head");
+        head.hurt(helper.getLevel().damageSources().generic(), PROBE_DAMAGE);
+
+        float lost = before - rathian.getHealth();
+        helper.assertTrue(Math.abs(lost - PROBE_DAMAGE) < EPSILON,
+                "hitting Rathian's head should cost the parent exactly " + PROBE_DAMAGE
+                        + " health, but it lost " + lost);
+        helper.succeed();
+    }
+
+    /** A03/A06: one source touching several of Rathian's seven parts is still one hit. */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void rathianOneSourceAcrossManyPartsCountsOnce(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Rathian rathian = helper.spawn(ModEntities.RATHIAN.get(), 8, 2, 8);
+        rathian.setNoAi(true);
+        float before = rathian.getHealth();
+
+        DamageSource explosion = helper.getLevel().damageSources().generic();
+        rathian.part("torso").hurt(explosion, PROBE_DAMAGE);
+        rathian.part("head").hurt(explosion, PROBE_DAMAGE);
+        rathian.part("tail_end").hurt(explosion, PROBE_DAMAGE);
+        rathian.part("stinger").hurt(explosion, PROBE_DAMAGE);
+
+        float lost = before - rathian.getHealth();
+        helper.assertTrue(Math.abs(lost - PROBE_DAMAGE) < EPSILON,
+                "one source touching four of Rathian's parts should cost " + PROBE_DAMAGE
+                        + " health once, but the parent lost " + lost);
+        helper.succeed();
+    }
+
+    /** A05: genuinely hostile, unlike every P3 species, using ordinary vanilla melee. */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void rathianAttacksAndDamagesTarget(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Rathian rathian = helper.spawn(ModEntities.RATHIAN.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
+        victim.setNoAi(true);
+
+        rathian.setTarget(victim);
+        float startingHealth = victim.getHealth();
+
+        helper.succeedWhen(() -> helper.assertTrue(victim.getHealth() < startingHealth,
+                "Rathian never damaged a target standing right next to it"));
+    }
+
+    /** A02/A13: death removes Rathian and every one of its seven parts, exactly once. */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void rathianDeathRemovesTheWholeCreature(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Rathian rathian = helper.spawn(ModEntities.RATHIAN.get(), 8, 2, 8);
+        rathian.setNoAi(true);
+        int partCount = rathian.getParts().length;
+        helper.assertTrue(partCount == 7, "Rathian registered " + partCount + " parts, expected 7");
+
+        rathian.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
+
+        helper.succeedWhen(() -> {
+            helper.assertTrue(rathian.isRemoved(), "Rathian was not removed after dying");
+            for (MonsterPart part : rathian.monsterParts()) {
+                helper.assertTrue(part.isRemoved() || !part.isAddedToLevel(),
+                        "part " + part.partName + " outlived its parent");
+            }
+        });
+    }
+
     @GameTest(template = ARENA, timeoutTicks = 40)
     public static void izuchiWontStartSleepingWithATarget(GameTestHelper helper) {
         com.carro1001.mhnw.entity.Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);

@@ -6,6 +6,7 @@ import com.carro1001.mhnw.entity.Bug;
 import com.carro1001.mhnw.entity.Flashbug;
 import com.carro1001.mhnw.entity.GreatIzuchi;
 import com.carro1001.mhnw.entity.Izuchi;
+import com.carro1001.mhnw.entity.Rathian;
 import com.carro1001.mhnw.entity.Toad;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.EntityType;
@@ -119,6 +120,20 @@ public final class ModEntities {
     public static final DeferredHolder<Item, Item> IZUCHI_SPAWN_EGG =
             ITEMS.register("izuchi_spawn_egg", () -> new DeferredSpawnEggItem(
                     IZUCHI, 0x8B7355, 0x4A3B2A, new Item.Properties()));
+
+    /** P4's first large wyvern, ground-only for now. See {@link Rathian}. */
+    public static final DeferredHolder<EntityType<?>, EntityType<Rathian>> RATHIAN =
+            ENTITY_TYPES.register("rathian", () -> EntityType.Builder
+                    .of(Rathian::new, MobCategory.MONSTER)
+                    .sized(Rathian.BODY_WIDTH, Rathian.BODY_HEIGHT)
+                    .eyeHeight(3.2F)
+                    .clientTrackingRange(12)
+                    .updateInterval(1)
+                    .build("rathian"));
+
+    public static final DeferredHolder<Item, Item> RATHIAN_SPAWN_EGG =
+            ITEMS.register("rathian_spawn_egg", () -> new DeferredSpawnEggItem(
+                    RATHIAN, 0x4A7A2E, 0xD4C13A, new Item.Properties()));
 
     /** Where natural spawn placement is anchored. Referenced by the spawn placement registration. */
     public static final Heightmap.Types SPAWN_HEIGHTMAP = Heightmap.Types.MOTION_BLOCKING_NO_LEAVES;

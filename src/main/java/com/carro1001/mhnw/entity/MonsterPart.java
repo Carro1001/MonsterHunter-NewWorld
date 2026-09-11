@@ -6,6 +6,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.monster.Monster;
 import net.neoforged.neoforge.entity.PartEntity;
 
 /**
@@ -17,17 +18,20 @@ import net.neoforged.neoforge.entity.PartEntity;
  * automatically from {@link Entity#isMultipartEntity()}, and {@code Level#getEntities} scans them,
  * so melee picking, projectiles and area damage all reach this class without any custom packet.
  *
- * <p>Local frame used by {@link GreatIzuchi#positionParts()}: +X = the monster's left,
+ * <p>Generic over {@link Monster} rather than any one species: {@link GreatIzuchi} was the first
+ * user, {@link Rathian} the second, both sharing this exact class rather than each reinventing it.
+ *
+ * <p>Local frame used by each owner's own {@code positionParts()}: +X = the monster's left,
  * +Y = up, +Z = the direction it faces. Units are blocks. See {@link GreatIzuchi} for the
- * model-to-world derivation.
+ * model-to-world derivation both owners share.
  */
-public class MonsterPart extends PartEntity<GreatIzuchi> {
+public class MonsterPart extends PartEntity<Monster> {
     public final String partName;
     private final EntityDimensions size;
     /** Centre of this part in the parent's local frame (left, up, forward), in blocks. */
     public final double localLeft, localUp, localForward;
 
-    public MonsterPart(GreatIzuchi parent, String partName, float width, float height,
+    public MonsterPart(Monster parent, String partName, float width, float height,
                        double localLeft, double localUp, double localForward) {
         super(parent);
         this.partName = partName;

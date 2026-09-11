@@ -10,5 +10,7 @@
   "entity.mhnw.bug": "Bitterbug",
   "item.mhnw.bug_spawn_egg": "Bitterbug Spawn Egg",
   "entity.mhnw.izuchi": "Izuchi",
-  "item.mhnw.izuchi_spawn_egg": "Izuchi Spawn Egg"
+  "item.mhnw.izuchi_spawn_egg": "Izuchi Spawn Egg",
+  "entity.mhnw.rathian": "Rathian",
+  "item.mhnw.rathian_spawn_egg": "Rathian Spawn Egg"
 }

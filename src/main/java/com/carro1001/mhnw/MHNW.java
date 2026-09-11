@@ -5,6 +5,7 @@ import com.carro1001.mhnw.entity.Bug;
 import com.carro1001.mhnw.entity.Flashbug;
 import com.carro1001.mhnw.entity.GreatIzuchi;
 import com.carro1001.mhnw.entity.Izuchi;
+import com.carro1001.mhnw.entity.Rathian;
 import com.carro1001.mhnw.entity.Toad;
 import com.carro1001.mhnw.registry.ModEntities;
 import net.minecraft.world.entity.SpawnPlacementTypes;
@@ -44,6 +45,7 @@ public class MHNW {
         event.put(ModEntities.FLASHBUG.get(), Flashbug.createAttributes().build());
         event.put(ModEntities.BUG.get(), Bug.createAttributes().build());
         event.put(ModEntities.IZUCHI.get(), Izuchi.createAttributes().build());
+        event.put(ModEntities.RATHIAN.get(), Rathian.createAttributes().build());
     }
 
     @SubscribeEvent
@@ -72,6 +74,7 @@ public class MHNW {
             event.accept(ModEntities.FLASHBUG_SPAWN_EGG.get());
             event.accept(ModEntities.BUG_SPAWN_EGG.get());
             event.accept(ModEntities.IZUCHI_SPAWN_EGG.get());
+            event.accept(ModEntities.RATHIAN_SPAWN_EGG.get());
         }
     }
 }

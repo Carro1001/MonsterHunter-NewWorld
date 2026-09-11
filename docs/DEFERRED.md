@@ -50,6 +50,44 @@ Whichever is chosen, wire it the same way `GreatIzuchi`/`Toad`/`Flashbug` alread
 needs `getDeathMaxRotation` zeroed the way Great Izuchi's does (only add that override if the new
 clip actually fights vanilla's flop the way Great Izuchi's did).
 
+### Rathian — flight, and the real charge/bite/tailwhip/fireball timeline
+**Status:** ground-only, genuinely hostile via ordinary vanilla melee (no custom attack volume),
+seven hurtboxes offline-solved from the idle pose and not yet visually confirmed.
+
+Flight is out of scope for this pass by the handoff's own text for this species ("bounded flight
+later in its packet"); nothing flight-related (takeoff/landing states, a flying navigation mode)
+exists yet.
+
+The real attack clips (`attack_charge_bite_left/right`, `attack_tailwhip`, the fireball clips,
+`attack_backhop`, `attack_backflip_ground/flying`) are not wired to any custom attack volume. While
+investigating this, a real bug was found and fixed in the offline FK tooling itself: a keyframed
+bone's per-keyframe MoLang formula was being evaluated at the currently-sampled query time instead
+of that keyframe's own declared time, which is wrong for any multi-keyframe channel (Bedrock bakes
+each keyframe to a fixed number using its own time, then linearly interpolates between those fixed
+numbers). Fixing it did not close the gap against Great Izuchi's runtime-measured claw path, though,
+so something else about actively-animated, heavily keyframed chains still makes offline solving
+untrustworthy for motion, not only this bug. Rathian's attack clips use exactly that pattern (four
+real keyframes per bone on the Chest/Neck/Head chain, each carrying its own compound MoLang formula)
+where the idle pose that was trusted for the hurtbox offsets uses only plain constants and single
+sine waves — the same category of channel that solved Great Izuchi's tail to within 0.05 block of
+the runtime-measured truth.
+
+To close it: same playbook as Great Izuchi's tail attacks. Enable `debugCombat`, add temporary bone
+probe logging for the relevant Chest/Neck1/Neck2/Head/Jaw bones (or the tail bones for tailwhip),
+play the attack live, and bake measured keyframes the way `AttackProfile.SCRATCH`'s path was built.
+Given Rathian likely wants more than one attack eventually, consider whether `AttackProfile` and
+`GreatIzuchiCombatGoal` are worth generalizing the same way `EndemicAreaEffectGoal` was generalized
+from the toad to the flashbug, once a second large-monster attack timeline actually exists to compare
+against, not before.
+
+Also unconfirmed: the seven hurtbox offsets and part sizes. Sizes are borrowed from the archived
+hitbox profile nominally named for this species, which itself points at Rathalos's model/texture
+files (a copy-paste bug in that old file), so treat them as a same-size-class approximation, not
+Rathian-specific measurement. The vertical (`up`) values in particular are unverified: the idle
+pose's feet solve to about -0.75 to -0.80 rather than the near-zero Great Izuchi's did, which could
+mean this model's origin genuinely sits higher above its feet, or could mean the offsets need a
+downward nudge once someone can actually look at it in game.
+
 ## Deferred to the polishing phase
 
 ### A02 — actual save/quit/reload cycle

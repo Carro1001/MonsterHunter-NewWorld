@@ -94,3 +94,27 @@ That is the current, deliberate state, not a bug to report.
       observe; not urgent to confirm
 - [ ] Wakes immediately and attacks if hit or approached while sleeping
 - [ ] Does not get stuck permanently asleep or permanently passive
+
+## Rathian (P4 ground wyvern, ground-only)
+
+This one needs the most scrutiny of anything so far. Its seven hurtboxes were solved offline from
+the geometry rather than measured live with the bone probe (unlike everything else in this file),
+because I have no way to spawn it, walk around it, or trigger anything myself without you at the
+keyboard. See `docs/DEFERRED.md` for exactly what is and is not trustworthy about the numbers.
+
+**No dedicated attack animation.** Like Izuchi, it fights using ordinary melee with no custom swing;
+unlike Izuchi, real attack clips exist (charge, bite, tailwhip, fireball) but need the same
+bone-probe measurement pass Great Izuchi's attacks got before they can be wired safely — attempting
+that blind risks shipping a volume that misses or hits through the wrong geometry, worse than not
+having it.
+
+- [ ] Renders, spawns via egg, idles/walks/runs with correct animation
+- [ ] **F3+B: do the seven green hurtboxes sit on the body?** This is the important one — if
+      anything looks badly placed (especially vertically — see the deferred-doc note about the feet
+      solving lower than Great Izuchi's did), that confirms the offline estimate needs correcting,
+      and I'll need a bone-probe session against it the same way Great Izuchi's claw got fixed
+- [ ] Hitting a hurtbox (try the head, then the tail tip) reduces health
+- [ ] Attacks and damages a nearby player using ordinary melee (no special swing — this is expected
+      for now, not a bug)
+- [ ] Death removes the whole creature and all seven parts
+- [ ] No flight yet — it should behave as a purely ground-bound creature; this is expected, not a bug

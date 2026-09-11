@@ -7,6 +7,7 @@ import com.carro1001.mhnw.entity.Bug;
 import com.carro1001.mhnw.entity.Flashbug;
 import com.carro1001.mhnw.entity.GreatIzuchi;
 import com.carro1001.mhnw.entity.Izuchi;
+import com.carro1001.mhnw.entity.Rathian;
 import com.carro1001.mhnw.entity.Toad;
 import com.carro1001.mhnw.registry.ModEntities;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -35,6 +36,7 @@ public final class MHNWClient {
         event.registerEntityRenderer(ModEntities.FLASHBUG.get(), FlashbugRenderer::new);
         event.registerEntityRenderer(ModEntities.BUG.get(), BugRenderer::new);
         event.registerEntityRenderer(ModEntities.IZUCHI.get(), IzuchiRenderer::new);
+        event.registerEntityRenderer(ModEntities.RATHIAN.get(), RathianRenderer::new);
     }
 
     /**
@@ -148,6 +150,24 @@ public final class MHNWClient {
             super(context, new DefaultedEntityGeoModel<>(
                     ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, "izuchi")));
             this.shadowRadius = 0.5F;
+        }
+    }
+
+    /**
+     * Plain reuse of the preserved geometry/animations/texture; no death rotation override since
+     * {@code death} is an authored clip and vanilla's flop is disabled the same way Great Izuchi's
+     * is, for the same reason (the clip already lays the body down).
+     */
+    public static class RathianRenderer extends GeoEntityRenderer<Rathian> {
+        public RathianRenderer(EntityRendererProvider.Context context) {
+            super(context, new DefaultedEntityGeoModel<>(
+                    ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, "rathian")));
+            this.shadowRadius = 1.4F;
+        }
+
+        @Override
+        protected float getDeathMaxRotation(Rathian entity) {
+            return 0.0F;
         }
     }
 
