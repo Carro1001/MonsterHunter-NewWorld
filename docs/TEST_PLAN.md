@@ -58,27 +58,29 @@ under Rathian/Rathalos below, same fix applies here too.
 
 ## Aptonoth (P3 passive herbivore)
 
-Seventh round this pass, from screenshots showing the chest box invisible/hidden and the tail boxes
-visibly overlapping each other:
+Eighth round this pass, from a top-down screenshot showing the tail visibly continuing past the
+last box:
 
-- **Chest moved forward.** It was sitting at the same position as the vanilla root hitbox itself
-  (`forward=0.00`), so it was invisible — perfectly hidden behind the white box, and the white box
-  itself read as biased toward the hips rather than the chest. Moved to `forward=1.00`, toward the
-  neck base, to actually cover the front-of-ribcage area the root box misses.
-- **Tail simplified from six segments back to three, sized to exactly touch.** The six-segment "sag"
-  version overlapped itself badly (confirmed by two screenshots, including a top-down view) — the
-  tail bones carry their own extra rotation beyond the entity's yaw (tail2 tilts a further 15° past
-  tail1), so it genuinely curves, and six points spaced by straight-line interpolation between the
-  two measured ends don't lie on that curve. There's no per-part "wrong bone" bug to fix here (parts
-  are static offsets, not bound to a live bone) — the fix is fewer points, sized by the actual math:
-  three points 0.96 blocks apart, each 0.96 wide, meet their neighbours exactly.
+- **Root box raised again**: `BODY_HEIGHT` 2.0 → 2.4. Still an eyeballed nudge, not a direct
+  measurement (would need a leg/foot bone in a capture to pin the ground reference exactly) — flag
+  again if this overshoots into "too tall."
+- **Chest moved forward again and enlarged**: `forward` 1.00 → 1.60 (short of the measured neck base
+  at 1.74), size 1.1 → 1.4.
+- **New: a fourth tail segment at the actual tip.** `tail_3` sits exactly at the measured tail2
+  *bone*, but that bone's own mesh cube extends roughly 2 more blocks beyond its pivot before the
+  tail visually ends — confirmed by the screenshot showing real tail mesh past the last box. There's
+  no bone out there to measure (tail1/tail2 are the only two tail bones in the model), so `tail_4` is
+  extrapolated by continuing the one real observed trend (the tail_1-to-tail_3 delta in both `up` and
+  `forward`) one more step, rather than a fresh guess, and sized generously since it's now an
+  estimate rather than a measurement.
 - Flee duration unchanged (still a sustained flee after a hit, not one short hop).
 
 - [ ] Renders, spawns via egg, idles/walks with correct animation
-- [ ] **F3+B: is the chest box now visible and separate from the white root box**, sitting toward the
-      front of the torso rather than hidden behind it?
-- [ ] **F3+B: do the three tail boxes now meet edge-to-edge** instead of overlapping each other or
-      leaving gaps? Head box should still sit right on the head as before
+- [ ] **F3+B: does the root box now read as tall enough**, without overshooting into looking too
+      tall again?
+- [ ] **F3+B: is the chest box clearly visible, separate from the white box, and close to the face?**
+- [ ] **F3+B: does the tail's fourth box now reach the actual tail tip**, instead of the tail
+      continuing past the last box?
 - [ ] **Re-check:** when hurt, flees for a real sustained duration, not just one short hop
 - [ ] Eats grass occasionally (the `eat` animation should play when it's actually eating, not just
       standing still) — grass must be nearby (short/tall grass on a grass block) for this to trigger
@@ -188,16 +190,23 @@ and the tail_end-stinger gap was 1.1 blocks, computed directly from the measured
 widths. Added `throat` (between neck and head) and `tail_tip` (between tail_end and stinger),
 interpolated at each gap's midpoint. Rathian now has 9 parts, not 7.
 
-**This round: still-visible gaps and a still-low tail chain, fixed by exact math instead of another
-guess.** Your screenshot showed both problems clearly. Widths for the torso/neck/throat and the whole
-tail chain are now set to the *exact* distance to each neighbour, so consecutive boxes meet exactly
-("start where the next ends") — this meant shrinking `throat`/`tail_tip`/`stinger`, which the
-previous round's interpolated midpoints had sized into overlapping their neighbours instead of
-closing the gap. Separately, the tail chain's `up` (`tail_base` through `stinger`) is raised +0.35 on
-top of the range-midpoint value: that screenshot's rendered pose sat consistently higher than the
-statistical centre across the *whole* chain, not just one part, which range-midpoint alone doesn't
-correct for. `head` keeps its original size — it's genuinely bulky mesh, not just a connector, so it
-wasn't shrunk to the bare touching-minimum.
+**Round three (previous): still-visible gaps and a still-low tail chain.** A screenshot showed both
+problems clearly. Widths for the torso/neck/throat and the whole tail chain were set to the *exact*
+distance to each neighbour, so consecutive boxes meet exactly ("start where the next ends") — this
+meant shrinking `throat`/`tail_tip`/`stinger`, which the previous round's interpolated midpoints had
+sized into overlapping their neighbours instead of closing the gap. A flat +0.35 raise was also
+applied to the tail chain's `up`, on the theory that the screenshot's rendered pose sat higher than
+the statistical centre.
+
+**Round four (this pass): the +0.35 raise was the wrong fix, reverted.** A further screenshot still
+showed the tail reading low, and closer analysis of the full observed range (`stinger` alone swings
+across roughly a full block, `-0.48` to `1.08`, during ordinary idle sway) showed why: no single
+centre value reads correctly against *every* frame of a sway that wide, whichever moment a screenshot
+happens to catch — shifting the centre up just moves which frames look wrong. Reverted to the plain
+range-midpoint centre (the actual mathematical "centred on the bone" value, which is what was asked
+for), and instead widened `height` on the tail chain (`tail_base` through `stinger`) so the box spans
+the real swing instead of one instant of it. This is expected to read as "mostly right, every frame"
+rather than "perfectly centred in some frames, visibly off in others."
 
 Also fixed a few rounds ago: the entity no longer stops rendering (head/neck suddenly disappearing)
 when the root hitbox leaves the camera frustum while the model still visibly extends into frame.
@@ -208,9 +217,9 @@ placement settled first, or a swing could land or miss for the wrong reason. Now
 measured rather than guessed, this is worth revisiting.
 
 - [ ] Renders, spawns via egg, idles/walks/runs with correct animation
-- [ ] **F3+B: do the boxes now meet edge-to-edge with no visible gap**, and **does the tail chain sit
-      on the actual tail instead of trailing below it**? Flag anything still off and I'll keep
-      adjusting that specific part
+- [ ] **F3+B: do the boxes meet edge-to-edge with no visible gap**, and **does the tail chain read as
+      roughly centred on the tail across a few seconds of watching it sway**, rather than checking
+      only one instant? Flag anything still off and I'll keep adjusting that specific part
 - [ ] Turning away no longer makes the head/neck suddenly vanish while still on screen
 - [ ] Hitting a hurtbox (try the head, then the tail tip) reduces health
 - [ ] Attacks and damages a nearby player using ordinary melee (no special swing — this is expected
@@ -224,12 +233,13 @@ measured rather than guessed, this is worth revisiting.
 identical, you can use the numbers for one on the other"): no `[rathalos]` bone-probe lines have
 shown up in a log yet, but the two species share the same base skeleton and closely similar
 proportions, so Rathian's offsets are plugged in directly rather than waiting on a Rathalos-specific
-session — including this round's exact-touch resizing and the tail chain's +0.35 raise. Should be far
-closer than the old offline-solved/hand-corrected guess, though not guaranteed pixel-perfect the way
-an actual Rathalos measurement would be — if any one part still looks off, that's the part worth a
-real session for. Its attack clips are blocked regardless: they reference bones that don't exist
-anywhere in this species' model at all, confirmed by checking, not guessed — see `docs/DEFERRED.md`.
-That needs actual art/model-editor work before it's even worth wiring.
+session — including this round's revert of the +0.35 raise back to plain range-midpoint, with the
+tail chain's `height` widened instead. Should be far closer than the old offline-solved/hand-corrected
+guess, though not guaranteed pixel-perfect the way an actual Rathalos measurement would be — if any
+one part still looks off, that's the part worth a real session for. Its attack clips are blocked
+regardless: they reference bones that don't exist anywhere in this species' model at all, confirmed
+by checking, not guessed — see `docs/DEFERRED.md`. That needs actual art/model-editor work before
+it's even worth wiring.
 
 Also fixed a few rounds ago: same culling fix as Rathian/Great Izuchi.
 
