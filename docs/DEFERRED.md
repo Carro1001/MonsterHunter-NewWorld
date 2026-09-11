@@ -34,6 +34,20 @@ already touching it.
 
 ## Deferred to the polishing phase
 
+### A02 — actual save/quit/reload cycle
+**Status:** the part of A02 that is this mod's own responsibility is GameTest-covered
+(`reloadCancelsTransientCombatState`); a genuine disk save-quit-reload-reconnect cycle is not, and
+cannot be exercised from inside a GameTest structure.
+
+What is checked: `addAdditionalSaveData`/`readAdditionalSaveData` round-trip a mid-fight monster
+through NBT and the resulting fresh entity starts idle with a cooldown, matching runtime contract
+section 4.3 rule 7 (reload cancels transient combat rather than resuming it), and it ends up with
+the same part count it started with, guarding against the previous implementation's part-list bug.
+
+What is not checked: an actual world save, process restart, and rejoin; whether generated resources
+or other saved data survive that cycle; multiple entities across a real chunk unload/reload. That
+needs a real client/server session, same as A08/A09 below.
+
 ### A08 / A09 — two-client and dedicated-server agreement
 **Status:** the server-side half is covered; the multi-client half is not, and cannot be from
 this environment.

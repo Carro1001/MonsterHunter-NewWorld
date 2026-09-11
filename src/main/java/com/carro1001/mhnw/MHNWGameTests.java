@@ -4,6 +4,7 @@ import com.carro1001.mhnw.entity.GreatIzuchi;
 import com.carro1001.mhnw.entity.AttackProfile;
 import com.carro1001.mhnw.entity.GreatIzuchiCombatGoal;
 import com.carro1001.mhnw.entity.MonsterPart;
+import net.minecraft.nbt.CompoundTag;
 import com.carro1001.mhnw.registry.ModEntities;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -358,6 +359,54 @@ public class MHNWGameTests {
                 "the monster closes to " + GreatIzuchiCombatGoal.CLOSE_RANGE
                         + " blocks but no attack covers that distance, so it would stand there");
         helper.succeed();
+    }
+
+    /**
+     * A02: a reload cancels transient combat instead of resuming it.
+     *
+     * <p>This cannot exercise an actual save-quit-reload of the world; a GameTest structure has no
+     * such cycle to trigger. What it does exercise is the exact code path a real reload goes
+     * through for this entity: {@code addAdditionalSaveData} writing NBT from a live, mid-fight
+     * monster, and {@code readAdditionalSaveData} reading it back into a freshly constructed one,
+     * which is what disk persistence actually calls. Section 4.3 rule 7 says loading a creature
+     * must cancel any transient combat and impose a short cooldown rather than replaying an
+     * interrupted attack; this is that promise, checked at the boundary this mod owns.
+     *
+     * <p>Also checks that the reloaded entity has exactly as many parts as it started with. Parts
+     * are always rebuilt fresh in the constructor rather than read from NBT, so a genuine part-list
+     * bug (the previous implementation's parts list that only ever appended, never replaced, a
+     * later part of the same type) would show up here as an unexpected count.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void reloadCancelsTransientCombatState(GameTestHelper helper) {
+        GreatIzuchi original = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 10);
+        victim.setNoAi(true);
+
+        original.setTarget(victim);
+        original.attackCooldown = 0;
+        int originalPartCount = original.monsterParts().length;
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(
+                        original.getAttackId() != GreatIzuchi.ATTACK_NONE, "waiting for an attack to start"))
+                .thenExecute(() -> {
+                    CompoundTag saved = new CompoundTag();
+                    original.addAdditionalSaveData(saved);
+
+                    GreatIzuchi reloaded = new GreatIzuchi(ModEntities.GREAT_IZUCHI.get(), helper.getLevel());
+                    reloaded.readAdditionalSaveData(saved);
+
+                    helper.assertTrue(reloaded.getAttackId() == GreatIzuchi.ATTACK_NONE,
+                            "a reloaded monster resumed attack id " + reloaded.getAttackId()
+                                    + " instead of starting idle");
+                    helper.assertTrue(reloaded.attackCooldown > 0,
+                            "a reloaded monster had no cooldown at all, so it could attack instantly");
+                    helper.assertTrue(reloaded.monsterParts().length == originalPartCount,
+                            "reload produced " + reloaded.monsterParts().length + " parts, expected "
+                                    + originalPartCount);
+                })
+                .thenSucceed();
     }
 
     /** A02/A13: death removes the creature and every one of its parts, exactly once. */
