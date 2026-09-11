@@ -126,15 +126,38 @@ public class GreatIzuchi extends Monster implements GeoEntity {
     /** Client-only: the action sequence currently being presented. */
     private int presentedSeq = -1;
 
+    /**
+     * Body yaw the combat goal wants held, or null when nothing is committed.
+     *
+     * <p>Applied in {@link #tick()} after {@code super.tick()} rather than inside the goal,
+     * because the vanilla body-rotation control runs during the AI step and would otherwise
+     * overwrite it. Whatever is applied here is what the part offsets and the claw volume are
+     * rotated by, so aim, hurtboxes and attack geometry cannot disagree.
+     */
+    private Float committedBodyYaw;
+
+    void setCommittedBodyYaw(Float yaw) {
+        this.committedBodyYaw = yaw;
+    }
+
+    Float getCommittedBodyYaw() {
+        return this.committedBodyYaw;
+    }
+
     public GreatIzuchi(EntityType<? extends Monster> type, Level level) {
         super(type, level);
+        // Four tail segments rather than three: the tail is 4.8 blocks long and tapers, so three
+        // boxes either left a gap or made the tip box far bigger than the tip. Each segment
+        // overlaps its neighbour slightly so there is no seam to slip a hit through. The hip gap
+        // between the torso box and tail_1 is covered by the root envelope, which is also hittable.
         this.parts = new MonsterPart[] {
-                //              name           width height  left    up      forward
-                new MonsterPart(this, "torso",     1.6F, 1.9F, 0.00D, 2.15D,  0.80D),
-                new MonsterPart(this, "head",      1.3F, 1.2F, 0.00D, 2.35D,  3.05D),
-                new MonsterPart(this, "tail_base", 1.3F, 1.2F, 0.00D, 2.30D, -1.50D),
-                new MonsterPart(this, "tail_mid",  1.3F, 1.2F, 0.00D, 2.35D, -3.50D),
-                new MonsterPart(this, "tail_end",  1.4F, 1.6F, 0.00D, 2.10D, -4.80D),
+                //              name          width height  left    up      forward
+                new MonsterPart(this, "torso",  1.6F, 1.9F, 0.00D, 2.15D,  0.80D),
+                new MonsterPart(this, "head",   1.3F, 1.2F, 0.00D, 2.35D,  3.05D),
+                new MonsterPart(this, "tail_1", 1.4F, 1.3F, 0.00D, 2.30D, -1.30D),
+                new MonsterPart(this, "tail_2", 1.3F, 1.2F, 0.00D, 2.35D, -2.55D),
+                new MonsterPart(this, "tail_3", 1.2F, 1.1F, 0.00D, 2.40D, -3.75D),
+                new MonsterPart(this, "tail_4", 1.1F, 1.2F, 0.00D, 2.30D, -4.85D),
         };
         this.xpReward = 20;
     }
@@ -294,6 +317,10 @@ public class GreatIzuchi extends Monster implements GeoEntity {
         // it twice would collapse xOld onto x and make correctly placed parts render as though
         // they were lagging the body.
         super.tick();
+        if (!level().isClientSide && this.committedBodyYaw != null) {
+            this.yBodyRot = this.committedBodyYaw;
+            setYRot(this.committedBodyYaw);
+        }
         positionParts();
         if (!level().isClientSide && this.attackCooldown > 0) {
             this.attackCooldown--;

@@ -45,6 +45,7 @@ public final class MHNWClient {
                            int packedLight) {
             super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
             BoneProbe.maybeLog(entity, getGeoModel());
+            AttackVolumeOverlay.render(entity, poseStack, bufferSource, partialTick);
         }
 
         /**
