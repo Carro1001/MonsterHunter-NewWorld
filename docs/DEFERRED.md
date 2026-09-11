@@ -63,8 +63,7 @@ constructor comment for the exact numbers and how they were derived.
 
 The lesson this leaves behind: a hand-corrected guess in the right *direction* was still off by
 close to a full block on `up` — "closer" is not the same as "correct," and only a real measurement
-closed the actual gap. Don't repeat the eyeball-correction pattern for Rathalos below; wait for (or
-prompt for) a real `BoneProbe` session instead.
+closed the actual gap.
 
 Flight is out of scope for this pass by the handoff's own text for this species ("bounded flight
 later in its packet"); nothing flight-related (takeoff/landing states, a flying navigation mode)
@@ -99,14 +98,16 @@ same-size-class approximation, not Rathian-specific, until someone reports a box
 wrong size rather than the wrong place.
 
 ### Rathalos — flight, and the attack timeline (worse off than Rathian's)
-**Status:** ground-only, genuinely hostile via ordinary vanilla melee, six hurtboxes still on the
-offline-solved-then-hand-corrected guess (see Rathian's entry above for why that's now known to be
-meaningfully wrong, not just "not yet confirmed right"). Unlike Rathian, this species has not had a
-`BoneProbe` session yet — no `[rathalos]` lines appeared in the maintainer's log this round, only
-`[rathian]`, `[aptonoth]` and `[great_izuchi]`. `BoneProbe` is already wired into its renderer
-(`RathalosRenderer`, `BoneProbe.WYVERN_BONES` — the same bone list as Rathian's, since they share the
-skeleton layout) and ready to log the moment someone stands near a live Rathalos with `debugCombat`
-on; this is now genuinely just waiting on that one play session, not further code work.
+**Status:** ground-only, genuinely hostile via ordinary vanilla melee, six hurtboxes now using
+Rathian's own real `BoneProbe` measurements as a proxy, on the maintainer's own call ("rathalos and
+rathian are almost identical, you can use the numbers for one on the other") rather than waiting for
+a Rathalos-specific session — no `[rathalos]` lines have appeared in a log yet, only `[rathian]`,
+`[aptonoth]` and `[great_izuchi]`. The two species share the same base skeleton layout
+(`BoneProbe.WYVERN_BONES` lists identical bone names for both) and closely similar idle-pose
+proportions, so a real measurement for one is a materially better estimate for the other than another
+offline solve or hand-eyeballed guess. `BoneProbe` is already wired into `RathalosRenderer` too, so
+if a live session ever shows a specific part meaningfully off from this borrowed baseline, that
+part's own measured value should replace the borrowed one.
 
 Flight deferred for the same reason as Rathian's, though it undersells this species more: Rathalos
 is the more archetypally airborne of the two.

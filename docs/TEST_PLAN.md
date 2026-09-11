@@ -24,9 +24,10 @@ specifically — draws the live attack volume with F3+B.
 actual runtime bone positions to the game log every ~2 seconds (or every tick for Great Izuchi
 while it's mid-attack), in the same left/up/forward frame the hurtbox offsets use. This is what
 actually fixed Rathian's and Aptonoth's hurtboxes this round (see their sections below) — real
-measurements read straight from a play session, not another guess. Rathalos hasn't had a session
-yet; same offer stands: stand near one with `debugCombat` on for a few seconds and send me
-`logs/latest.log`, and I can fix its offsets exactly the same way.
+measurements read straight from a play session, not another guess. Rathalos is borrowing Rathian's
+measured numbers as a proxy for now (same skeleton, similar proportions); if you ever want it
+measured for real, stand near one with `debugCombat` on for a few seconds and send me
+`logs/latest.log`.
 
 ---
 
@@ -201,20 +202,23 @@ measured rather than guessed, this is worth revisiting.
 
 ## Rathalos (P4 ground wyvern, ground-only)
 
-**Still on the hand-corrected guess, not yet measured** — no `[rathalos]` bone-probe lines showed up
-in the last log, meaning this species hasn't had a play session with `debugCombat` on yet. Same fix
-as Rathian just got is available the moment you spend a few seconds near one with `debugCombat` on
-and send me the log. Its attack clips are further blocked regardless: they reference bones that don't
-exist anywhere in this species' model at all, confirmed by checking, not guessed — see
-`docs/DEFERRED.md`. That needs actual art/model-editor work before it's even worth wiring.
+**Now using Rathian's real measurements as a proxy**, per your call ("rathalos and rathian are
+almost identical, you can use the numbers for one on the other"): no `[rathalos]` bone-probe lines
+have shown up in a log yet, but the two species share the same base skeleton and closely similar
+proportions, so Rathian's measured offsets are plugged in directly rather than waiting on a
+Rathalos-specific session. Should be far closer than the old offline-solved/hand-corrected guess,
+though not guaranteed pixel-perfect the way an actual Rathalos measurement would be — if any one
+part still looks off, that's the part worth a real session for. Its attack clips are blocked
+regardless: they reference bones that don't exist anywhere in this species' model at all, confirmed
+by checking, not guessed — see `docs/DEFERRED.md`. That needs actual art/model-editor work before
+it's even worth wiring.
 
-Also fixed two rounds ago: same culling fix as Rathian/Great Izuchi.
+Also fixed a few rounds ago: same culling fix as Rathian/Great Izuchi.
 
 - [ ] Renders, spawns via egg, idles/walks/runs (walk uses `walk_normal`/`walk_aggro`, no separate
       "run" clip exists for this species — expected, not a bug)
-- [ ] **F3+B: still floating out of place?** Expected yes — this one hasn't been measured yet, only
-      hand-corrected. Spend a few seconds near one with `debugCombat` on if you want this fixed the
-      same way Rathian's just got
+- [ ] **F3+B: closer now, using Rathian's numbers?** Flag any part that's still clearly off — that's
+      the one worth a live measurement session for
 - [ ] Turning away no longer makes the head/neck suddenly vanish while still on screen
 - [ ] Hitting a hurtbox reduces health
 - [ ] Attacks and damages a nearby player using ordinary melee

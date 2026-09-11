@@ -79,22 +79,22 @@ public class Rathalos extends Monster implements GeoEntity {
 
     public Rathalos(EntityType<? extends Monster> type, Level level) {
         super(type, level);
-        // Offline-solved from idle_normal; sizes from the archived hitbox profile genuinely
-        // authored for this species. See the class doc for what is and is not verified.
-        //
-        // Same hand correction as Rathian's (see that class's constructor comment): the original
-        // `up` values climbed toward the tail tip and read as a bit high on the head, screenshots
-        // showed the tail actually drooping and the head sitting too high, so both are nudged down
-        // here. Eyeballed from the direction of the feedback, not measured; still needs an actual
-        // bone-probe session (docs/DEFERRED.md).
+        // Rathian's own real BoneProbe measurements (see that class's constructor comment), reused
+        // here as-is on the maintainer's own call ("rathalos and rathian are almost identical, you
+        // can use the numbers for one on the other"): these two share the same base skeleton layout
+        // (BoneProbe.WYVERN_BONES lists the same bone names for both) and the same idle-pose
+        // proportions closely enough that a real measurement for one is a far better estimate for
+        // the other than another offline solve or hand-eyeballed guess would be. Still a proxy, not
+        // a Rathalos-specific measurement -- if a live session ever shows a specific part
+        // meaningfully off, that part's own measured value should win over this borrowed one.
         this.parts = new MonsterPart[] {
-                //              name          width height  left    up      forward
-                new MonsterPart(this, "torso",  2.1F, 2.1F,  0.08D, 2.35D,  2.31D),
-                new MonsterPart(this, "neck",   1.75F, 1.75F, 0.03D, 2.90D,  4.94D),
-                new MonsterPart(this, "head",   2.0F, 2.0F,  0.32D, 3.05D,  7.49D),
-                new MonsterPart(this, "tail_base", 1.75F, 1.6F, 0.00D, 2.95D, -2.24D),
-                new MonsterPart(this, "tail_mid",  1.6F, 1.3F, -0.11D, 3.00D, -4.31D),
-                new MonsterPart(this, "tail_end",  2.0F, 2.0F, -0.50D, 2.50D, -6.26D),
+                //              name          width height  left  up      forward
+                new MonsterPart(this, "torso",  2.1F, 2.1F, 0.00D, 2.20D,  2.08D),
+                new MonsterPart(this, "neck",   1.75F, 1.75F, 0.00D, 1.75D,  4.50D),
+                new MonsterPart(this, "head",   2.0F, 2.0F, 0.00D, 1.60D,  7.20D),
+                new MonsterPart(this, "tail_base", 1.75F, 1.6F, 0.00D, 1.95D, -1.62D),
+                new MonsterPart(this, "tail_mid",  1.6F, 1.3F, 0.00D, 1.60D, -3.90D),
+                new MonsterPart(this, "tail_end",  2.0F, 2.0F, 0.00D, 1.10D, -6.05D),
         };
     }
 
