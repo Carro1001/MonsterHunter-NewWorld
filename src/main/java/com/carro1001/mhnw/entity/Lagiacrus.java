@@ -6,6 +6,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.control.SmoothSwimmingLookControl;
 import net.minecraft.world.entity.ai.control.SmoothSwimmingMoveControl;
 import net.minecraft.world.entity.ai.navigation.AmphibiousPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
@@ -59,6 +60,8 @@ public class Lagiacrus extends Monster implements GeoEntity {
         // One controller/navigation pair on both sides of a shoreline. Native axolotl arrangement,
         // with land speed at the species attribute and no automatic upward buoyancy while idle.
         this.moveControl = new SmoothSwimmingMoveControl(this, 85, 10, 0.1F, 1.0F, false);
+        // Match the native swimming controls: ordinary LookControl resets swim pitch every tick.
+        this.lookControl = new SmoothSwimmingLookControl(this, 20);
 
         // ponytail: provisional fixed envelopes; replace with live range-midpoint measurements
         // when fitting the model. These are design estimates, NOT raw pivots or solved bones.

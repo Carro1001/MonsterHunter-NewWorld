@@ -83,7 +83,9 @@ public class LagiacrusPursuitGoal extends Goal {
             stop();
             return;
         }
-        this.monster.getLookControl().setLookAt(this.pursuedTarget, 30.0F, 30.0F);
+        // Swim pitch steers vertical movement toward path nodes, not the target's eyes.
+        this.monster.getLookControl().setLookAt(this.pursuedTarget, 30.0F,
+                this.monster.isInWater() ? 0.0F : 30.0F);
         if (this.monster.distanceToSqr(this.pursuedTarget) <= CLOSE_RANGE * CLOSE_RANGE
                 && this.monster.hasLineOfSight(this.pursuedTarget)) {
             this.monster.getNavigation().stop();

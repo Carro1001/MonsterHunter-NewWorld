@@ -8,7 +8,9 @@ Acceptance IDs refer to the matrix in `REVIVAL_HANDOFF.md` section 4.6.
 ## Deferred to the pre-release / survival phase
 
 ### Lagiacrus — remaining P5 after the P5a movement baseline (2026-09-11)
-**Status:** P5a implemented, with 12 new headless tests not yet run (implementation-only packet).
+**Status:** P5a implemented; maintainer reported build success and 62/63 tests passing, with the
+bidirectional shoreline test failing. The narrowed shoreline test and compilation passed after
+the correction; no full-suite rerun. See `TEST_PLAN.md` for the native bank-exit limitation.
 Spawn egg/summon, ordinary parent health/damage/death, seven native parts, preserved rendering and
 land/swim clips, underwater breathing, one native amphibious navigation/control pair and bounded
 server pursuit are wired. Pursuit has no outgoing damage, retries at most once per 20 ticks,
@@ -20,7 +22,11 @@ seven locator names are `jawHitbox`, `neckMidHitbox`, `neckBaseHitbox`, `tailBas
 `tailMidHitbox`, `tailLastHitbox`, `tailEndHitbox`. `BoneProbe` is wired for a live range-midpoint
 fitting pass across land/swim poses and cardinal headings. No gameplay positions come from bones
 or raw pivots. Model alignment, client picking, locomotion playback and shoreline behavior need
-live acceptance; the new headless shoreline/breathing/pursuit tests also still need execution.
+live acceptance. Reliable water-to-land bank traversal remains unsupported: with a properly
+contained one-deep pool and native swimming look/move controls, the two-block-wide floating root
+still stalls at a one-block bank until bounded pursuit expires. Native swimming control has no
+jump handling. The shoreline test now requires land-to-water approach and bounded bank-exit
+cleanup, not successful bidirectional traversal; no custom movement workaround was added.
 Further A10/A12 terrain cases, blocked shorelines and multiplayer/soak gates remain pending.
 
 No named attack or death clip exists. A P5 attack needs newly authored art or explicit approval

@@ -2,11 +2,10 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, currently 63 tests. The previous 51
-were recorded passing; the 12 P5a tests added on 2026-09-11 have not been run. This packet was
-explicitly limited to implementation and narrow compilation, without broad validation.
-`gradlew --no-daemon compileJava` passed against the pinned APIs on 2026-09-11; no full build,
-GameTest execution or client launch was performed for P5a.
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, currently 63 tests. The maintainer's
+P5a build passed, with 62/63 GameTests passing; the bidirectional Lagiacrus shoreline test failed.
+The 2026-09-11 correction is limited to native controls and that shoreline scenario (see below);
+the full suite and client acceptance have not been rerun for this correction.
 
 This file is updated as features land. Checked items were confirmed by the maintainer; unchecked
 items are open. When you find a problem, say what you saw and I'll fix it and update this file.
@@ -41,8 +40,8 @@ Implemented spawn egg/summon registration, parent health/damage, seven native `M
 hurtboxes, the preserved GeckoLib model/texture and six land/swim locomotion clips. No outgoing
 attacks or natural spawning. There is no death clip; vanilla death presentation remains enabled.
 
-Movement uses one `AmphibiousPathNavigation`/`SmoothSwimmingMoveControl` pair throughout land,
-water and shoreline travel, with collision-aware native axolotl-style water travel and underwater
+Movement uses one `AmphibiousPathNavigation` with `SmoothSwimmingMoveControl` and
+`SmoothSwimmingLookControl` throughout land and water, with collision-aware native axolotl-style water travel and underwater
 breathing. The species goal acquires visible survival/adventure players (or follows an explicitly
 assigned valid living target), retries paths every 20 ticks, abandons after three failed/partial
 paths or 200 ticks total, then prevents pursuit for 100 ticks. Target loss, goal stop, death,
@@ -53,13 +52,33 @@ measurements or converted raw pivots. The root covers the body; parts use the pr
 names in head-to-tail order. Both land and swim use the same feet-origin left/up/forward frame,
 in blocks, rotated only by body yaw. Live fitting remains pending, including the different poses.
 
-Twelve focused tests were added, not executed: registration/egg/part shape and lookup; root-first
+Twelve focused tests were added: registration/egg/part shape and lookup; root-first
 and part-first damage deduplication; distinct attackers and attribution; death cleanup; discard
 cleanup; land pursuit without damage; submerged movement/breathing without damage; shoreline
-crossing in both directions using the same navigation/control instances; sealed-target abandonment
+entry into water and bounded bank-exit pursuit using the same navigation/control instances; sealed-target abandonment
 and retry suppression; an absolute deadline for a stalled but reachable path; target-loss cleanup;
 and NBT health/parts/pursuit cleanup with a reload cooldown. These exercise server contracts, not
 client picking, visual alignment or full P5 acceptance.
+
+**Shoreline correction (2026-09-11):** decoded `arena.nbt`: its floor is at y=0. The original
+water and bank began at y=2, leaving an undercut at y=1; removing the bank instead flooded the
+intended dry side. The corrected fixture supplies a continuous floor at y=1, source water at y=2,
+and a solid one-block bank with its walking surface at y=3. Native swimming look control avoids
+ordinary `LookControl`'s per-tick pitch reset; while submerged, pursuit requests yaw only so
+path-node movement owns pitch instead of competing with eye-target tracking.
+
+Even with that pairing and valid geometry, the two-block-wide root stalled at the bank (x=7,
+feet approximately y=2.17) until the existing pursuit deadline cleared the target. The native
+swimming controller has no jump handling, and collision stepping requires ground contact (or a
+downward vertical collision); a floating body cannot rely on that to climb the bank. P5a therefore
+does **not** claim reliable water-to-land bank traversal. The renamed
+`lagiacrusEntersWaterAndBoundsBankExit` requires actual land-to-water target approach, then starts
+bank-exit pursuit and requires cleanup within the unchanged 200-tick bound. It also checks control
+identity and both targets' health. No other test was removed or disabled; the count remains 63.
+`compileJava` passed. A temporary native GameTest wrapper ran only this final shoreline method
+against the same arena: **1/1 passed**. The wrapper was removed afterward; no broad validation or
+client run was performed. The earlier targeted bidirectional attempts still failed at the bank,
+which is why the limitation is explicit rather than marked fixed.
 
 - [ ] Spawn via creative egg and `/summon mhnw:lagiacrus`; confirm texture and model render
 - [ ] Observe idle/walk/run and swim_idle/swim/swim_fast, including shallow-water transitions

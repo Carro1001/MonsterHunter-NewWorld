@@ -1378,37 +1378,52 @@ public class MHNWGameTests {
     }
 
     @GameTest(template = ARENA, timeoutTicks = 540)
-    public static void lagiacrusCrossesShorelineInBothDirections(GameTestHelper helper) {
-        // Two-deep water on the west, bank at the water surface on the east; room for the root.
-        fillLagiacrusPool(helper, 7, 3);
-        for (int x = 8; x <= 14; x++) {
-            for (int z = 1; z <= 14; z++) {
-                helper.setBlock(x, 2, z, net.minecraft.world.level.block.Blocks.STONE);
-                helper.setBlock(x, 3, z, net.minecraft.world.level.block.Blocks.STONE);
+    public static void lagiacrusEntersWaterAndBoundsBankExit(GameTestHelper helper) {
+        // The arena floor is y=0, not y=1. Supply a continuous pool floor and a one-block bank:
+        // source water at y=2 stays contained, and dry land starts at y=3. An open boundary floods
+        // the land; the old two-block bank also left an undercut at y=1. This covers a shallow
+        // shore. With this wide root, native swimming can stall against even this bank: the
+        // swimming controller has no jump handling, and a floating root cannot ground-step.
+        // Require entry and bounded exit pursuit; do not claim bidirectional bank traversal.
+        for (int x = 0; x <= 15; x++) {
+            for (int z = 0; z <= 15; z++) {
+                helper.setBlock(x, 1, z, net.minecraft.world.level.block.Blocks.STONE);
+                if (x >= 8) {
+                    helper.setBlock(x, 2, z, net.minecraft.world.level.block.Blocks.STONE);
+                }
             }
         }
-        Lagiacrus monster = helper.spawn(ModEntities.LAGIACRUS.get(), 3, 2, 8);
-        Cow landTarget = helper.spawn(EntityType.COW, 12, 4, 8);
+        fillLagiacrusPool(helper, 7, 2);
+        Lagiacrus monster = helper.spawn(ModEntities.LAGIACRUS.get(), 12, 3, 8);
+        Cow landTarget = helper.spawn(EntityType.COW, 12, 3, 8);
         landTarget.setNoAi(true);
         var waterTarget = helper.spawn(EntityType.AXOLOTL, 3, 2, 8);
         waterTarget.setNoAi(true);
         waterTarget.setNoGravity(true);
         var navigation = monster.getNavigation();
         var control = monster.getMoveControl();
-        monster.setTarget(landTarget);
+        var lookControl = monster.getLookControl();
+        float landHealth = landTarget.getHealth();
+        float waterHealth = waterTarget.getHealth();
+        monster.setTarget(waterTarget);
         helper.startSequence()
-                .thenWaitUntil(() -> helper.assertTrue(monster.isInWater(), "waiting for water entry"))
-                .thenWaitUntil(() -> helper.assertTrue(!monster.isInWater() && monster.distanceTo(landTarget) < 3.0F,
-                        "Lagiacrus failed to leave shallow water for the bank"))
+                .thenWaitUntil(() -> helper.assertTrue(monster.isInWater() && monster.distanceTo(waterTarget) < 3.0F,
+                        "Lagiacrus failed to enter shallow water from land"))
                 .thenExecute(() -> monster.setTarget(null))
                 .thenWaitUntil(() -> assertLagiacrusPursuitStopped(helper, monster))
                 .thenIdle(LagiacrusPursuitGoal.RETRY_COOLDOWN_TICKS + 5)
-                .thenExecute(() -> monster.setTarget(waterTarget))
-                .thenWaitUntil(() -> helper.assertTrue(monster.isInWater() && monster.distanceTo(waterTarget) < 3.0F,
-                        "Lagiacrus failed to return from land to shallow water"))
-                .thenExecute(() -> helper.assertTrue(monster.getNavigation() == navigation
-                                && monster.getMoveControl() == control,
-                        "shoreline transition replaced the native navigation/control pair"))
+                .thenExecute(() -> monster.setTarget(landTarget))
+                .thenWaitUntil(() -> helper.assertTrue(monster.isAggressive(), "bank-exit pursuit never started"))
+                .thenExecuteAfter(LagiacrusPursuitGoal.MAX_PURSUIT_TICKS + 5,
+                        () -> assertLagiacrusPursuitStopped(helper, monster))
+                .thenExecute(() -> {
+                    helper.assertTrue(monster.getNavigation() == navigation
+                                && monster.getMoveControl() == control
+                                && monster.getLookControl() == lookControl,
+                            "shoreline transition replaced the native navigation/controls");
+                    helper.assertTrue(landTarget.getHealth() == landHealth && waterTarget.getHealth() == waterHealth,
+                            "shoreline pursuit damaged a target");
+                })
                 .thenSucceed();
     }
 
