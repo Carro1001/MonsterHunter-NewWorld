@@ -93,15 +93,24 @@ public class Rathian extends Monster implements GeoEntity {
         // named for this species (itself actually pointing at Rathalos's assets, a leftover
         // copy-paste bug in that old file), so treat them as a same-size-class approximation, not
         // Rathian-specific measurement, until they can be checked visually.
+        //
+        // The `up` values below for the tail and head were hand-corrected on a second round of
+        // screenshot feedback: the original offline solve had the tail's `up` value climbing the
+        // further back each segment sits (tail_base 3.18 -> tail_mid 3.99 -> tail_end 4.49 ->
+        // stinger 4.44), i.e. rising toward the tip, but in game the tail visibly droops downward
+        // instead, and the head read a bit too high as well. This is a manual, eyeballed correction
+        // in the direction the screenshots pointed, not a fresh measurement -- still not a
+        // substitute for an actual bone-probe session (see docs/DEFERRED.md), just less wrong than
+        // before it while that session hasn't happened yet.
         this.parts = new MonsterPart[] {
                 //              name          width height  left    up      forward
                 new MonsterPart(this, "torso",  2.1F, 2.1F, -0.08D, 2.47D,  2.12D),
-                new MonsterPart(this, "neck",   1.75F, 1.75F, 0.00D, 3.48D,  5.13D),
-                new MonsterPart(this, "head",   2.0F, 2.0F, -0.26D, 3.73D,  6.96D),
-                new MonsterPart(this, "tail_base", 1.75F, 1.6F, 0.00D, 3.18D, -2.06D),
-                new MonsterPart(this, "tail_mid",  1.6F, 1.3F, 0.10D, 3.99D, -4.23D),
-                new MonsterPart(this, "tail_end",  2.0F, 2.0F, 0.47D, 4.49D, -6.24D),
-                new MonsterPart(this, "stinger",   1.75F, 1.6F, 1.28D, 4.44D, -9.19D),
+                new MonsterPart(this, "neck",   1.75F, 1.75F, 0.00D, 3.15D,  5.13D),
+                new MonsterPart(this, "head",   2.0F, 2.0F, -0.26D, 3.25D,  6.96D),
+                new MonsterPart(this, "tail_base", 1.75F, 1.6F, 0.00D, 3.00D, -2.06D),
+                new MonsterPart(this, "tail_mid",  1.6F, 1.3F, 0.10D, 3.10D, -4.23D),
+                new MonsterPart(this, "tail_end",  2.0F, 2.0F, 0.47D, 2.60D, -6.24D),
+                new MonsterPart(this, "stinger",   1.75F, 1.6F, 1.28D, 2.20D, -9.19D),
         };
     }
 

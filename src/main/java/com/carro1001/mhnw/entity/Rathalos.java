@@ -81,14 +81,20 @@ public class Rathalos extends Monster implements GeoEntity {
         super(type, level);
         // Offline-solved from idle_normal; sizes from the archived hitbox profile genuinely
         // authored for this species. See the class doc for what is and is not verified.
+        //
+        // Same hand correction as Rathian's (see that class's constructor comment): the original
+        // `up` values climbed toward the tail tip and read as a bit high on the head, screenshots
+        // showed the tail actually drooping and the head sitting too high, so both are nudged down
+        // here. Eyeballed from the direction of the feedback, not measured; still needs an actual
+        // bone-probe session (docs/DEFERRED.md).
         this.parts = new MonsterPart[] {
                 //              name          width height  left    up      forward
                 new MonsterPart(this, "torso",  2.1F, 2.1F,  0.08D, 2.35D,  2.31D),
-                new MonsterPart(this, "neck",   1.75F, 1.75F, 0.03D, 3.14D,  4.94D),
-                new MonsterPart(this, "head",   2.0F, 2.0F,  0.32D, 3.59D,  7.49D),
-                new MonsterPart(this, "tail_base", 1.75F, 1.6F, 0.00D, 3.13D, -2.24D),
-                new MonsterPart(this, "tail_mid",  1.6F, 1.3F, -0.11D, 3.88D, -4.31D),
-                new MonsterPart(this, "tail_end",  2.0F, 2.0F, -0.50D, 4.05D, -6.26D),
+                new MonsterPart(this, "neck",   1.75F, 1.75F, 0.03D, 2.90D,  4.94D),
+                new MonsterPart(this, "head",   2.0F, 2.0F,  0.32D, 3.05D,  7.49D),
+                new MonsterPart(this, "tail_base", 1.75F, 1.6F, 0.00D, 2.95D, -2.24D),
+                new MonsterPart(this, "tail_mid",  1.6F, 1.3F, -0.11D, 3.00D, -4.31D),
+                new MonsterPart(this, "tail_end",  2.0F, 2.0F, -0.50D, 2.50D, -6.26D),
         };
     }
 
