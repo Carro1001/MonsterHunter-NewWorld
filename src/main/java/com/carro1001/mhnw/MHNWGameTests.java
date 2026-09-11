@@ -1,6 +1,7 @@
 package com.carro1001.mhnw;
 
 import com.carro1001.mhnw.entity.GreatIzuchi;
+import com.carro1001.mhnw.entity.AttackProfile;
 import com.carro1001.mhnw.entity.GreatIzuchiCombatGoal;
 import com.carro1001.mhnw.entity.MonsterPart;
 import com.carro1001.mhnw.registry.ModEntities;
@@ -128,12 +129,12 @@ public class MHNWGameTests {
                 .thenExecute(() -> {
                     helper.assertTrue(ageAtFirstHit[0] != Integer.MIN_VALUE,
                             "the scratch never connected with a target standing in front of it");
-                    helper.assertTrue(ageAtFirstHit[0] >= GreatIzuchiCombatGoal.ACTIVE_START
-                                    && ageAtFirstHit[0] <= GreatIzuchiCombatGoal.ACTIVE_END,
+                    helper.assertTrue(ageAtFirstHit[0] >= AttackProfile.SCRATCH.activeStart()
+                                    && ageAtFirstHit[0] <= AttackProfile.SCRATCH.activeEnd(),
                             "damage landed at action age " + ageAtFirstHit[0]
                                     + ", outside the active window "
-                                    + GreatIzuchiCombatGoal.ACTIVE_START + ".."
-                                    + GreatIzuchiCombatGoal.ACTIVE_END);
+                                    + AttackProfile.SCRATCH.activeStart() + ".."
+                                    + AttackProfile.SCRATCH.activeEnd());
                 })
                 .thenSucceed();
     }
@@ -159,9 +160,9 @@ public class MHNWGameTests {
         helper.runAtTickTime(85, () -> {
             float lost = startingHealth - victim.getHealth();
             helper.assertTrue(lost > 0.0F, "the scratch never connected");
-            helper.assertTrue(lost <= strike * GreatIzuchiCombatGoal.STRIKES + EPSILON,
+            helper.assertTrue(lost <= strike * AttackProfile.SCRATCH.strikes() + EPSILON,
                     "one swing cost the victim " + lost + " health, more than the "
-                            + GreatIzuchiCombatGoal.STRIKES + " strikes of " + strike
+                            + AttackProfile.SCRATCH.strikes() + " strikes of " + strike
                             + " it is designed to deal");
             helper.succeed();
         });

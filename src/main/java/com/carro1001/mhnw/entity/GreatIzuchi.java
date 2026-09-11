@@ -91,6 +91,10 @@ public class GreatIzuchi extends Monster implements GeoEntity {
     public static final byte ATTACK_NONE = 0;
     /** Plays {@code animation.great_izuchi.attack_scratch}. */
     public static final byte ATTACK_SCRATCH = 1;
+    /** Plays {@code animation.great_izuchi.attack_tailswipe}. */
+    public static final byte ATTACK_TAIL_SWIPE = 2;
+    /** Plays {@code animation.great_izuchi.attack_tailslam}. */
+    public static final byte ATTACK_TAIL_SLAM = 3;
 
     private static final EntityDataAccessor<Byte> DATA_ATTACK_ID =
             SynchedEntityData.defineId(GreatIzuchi.class, EntityDataSerializers.BYTE);
@@ -111,6 +115,8 @@ public class GreatIzuchi extends Monster implements GeoEntity {
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.great_izuchi.walk");
     private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.great_izuchi.run");
     private static final RawAnimation SCRATCH = RawAnimation.begin().thenPlay("animation.great_izuchi.attack_scratch");
+    private static final RawAnimation TAIL_SWIPE = RawAnimation.begin().thenPlay("animation.great_izuchi.attack_tailswipe");
+    private static final RawAnimation TAIL_SLAM = RawAnimation.begin().thenPlay("animation.great_izuchi.attack_tailslam");
     private static final RawAnimation DEATH = RawAnimation.begin().thenPlayAndHold("animation.great_izuchi.death");
 
     private final AnimatableInstanceCache animCache = GeckoLibUtil.createInstanceCache(this);
@@ -429,12 +435,17 @@ public class GreatIzuchi extends Monster implements GeoEntity {
         if (isDeadOrDying()) {
             return state.setAndContinue(DEATH);
         }
-        if (getAttackId() != ATTACK_NONE) {
+        byte attack = getAttackId();
+        if (attack != ATTACK_NONE) {
             if (this.presentedSeq != getActionSequence()) {
                 this.presentedSeq = getActionSequence();
                 state.getController().forceAnimationReset();
             }
-            return state.setAndContinue(SCRATCH);
+            return state.setAndContinue(switch (attack) {
+                case ATTACK_TAIL_SWIPE -> TAIL_SWIPE;
+                case ATTACK_TAIL_SLAM -> TAIL_SLAM;
+                default -> SCRATCH;
+            });
         }
         if (state.isMoving()) {
             // isAggressive() rides the synched mob flags, so it is readable here. getTarget() is

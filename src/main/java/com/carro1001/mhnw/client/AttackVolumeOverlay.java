@@ -2,6 +2,7 @@ package com.carro1001.mhnw.client;
 
 import com.carro1001.mhnw.MHNWConfig;
 import com.carro1001.mhnw.entity.GreatIzuchi;
+import com.carro1001.mhnw.entity.AttackProfile;
 import com.carro1001.mhnw.entity.GreatIzuchiCombatGoal;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -37,19 +38,23 @@ final class AttackVolumeOverlay {
         if (!MHNWConfig.DEBUG_COMBAT.get() || entity.getAttackId() == GreatIzuchi.ATTACK_NONE) {
             return;
         }
+        AttackProfile profile = AttackProfile.byId(entity.getAttackId());
+        if (profile == null) {
+            return;
+        }
         int age = entity.getAttackAge();
-        if (age < 0 || age > GreatIzuchiCombatGoal.ACTION_END) {
+        if (age < 0 || age > profile.actionEnd()) {
             return;
         }
 
         float r;
         float g;
         float b;
-        if (age < GreatIzuchiCombatGoal.ACTIVE_START) {
+        if (age < profile.activeStart()) {
             r = 1.0F;
             g = 0.85F;
             b = 0.1F;
-        } else if (age <= GreatIzuchiCombatGoal.ACTIVE_END) {
+        } else if (age <= profile.activeEnd()) {
             r = 1.0F;
             g = 0.15F;
             b = 0.1F;
@@ -59,7 +64,10 @@ final class AttackVolumeOverlay {
             b = 1.0F;
         }
 
-        AABB volume = GreatIzuchiCombatGoal.clawVolume(entity, age);
+        AABB volume = GreatIzuchiCombatGoal.attackVolume(entity, age);
+        if (volume == null) {
+            return;
+        }
 
         // The pose stack arrives translated to the entity's interpolated position, unrotated, so
         // the world-space volume is rebased onto that origin.
