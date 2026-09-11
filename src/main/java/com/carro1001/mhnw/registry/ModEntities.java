@@ -2,6 +2,7 @@ package com.carro1001.mhnw.registry;
 
 import com.carro1001.mhnw.MHNW;
 import com.carro1001.mhnw.entity.Aptonoth;
+import com.carro1001.mhnw.entity.Bug;
 import com.carro1001.mhnw.entity.Flashbug;
 import com.carro1001.mhnw.entity.GreatIzuchi;
 import com.carro1001.mhnw.entity.Toad;
@@ -85,6 +86,22 @@ public final class ModEntities {
     public static final DeferredHolder<Item, Item> FLASHBUG_SPAWN_EGG =
             ITEMS.register("flashbug_spawn_egg", () -> new DeferredSpawnEggItem(
                     FLASHBUG, 0x2E2A1F, 0xE8E13A, new Item.Properties()));
+
+    /**
+     * The last P3 species, and the odd one out: a hand-modeled Java mesh, not a GeckoLib asset.
+     * See {@link Bug}.
+     */
+    public static final DeferredHolder<EntityType<?>, EntityType<Bug>> BUG =
+            ENTITY_TYPES.register("bug", () -> EntityType.Builder
+                    .of(Bug::new, MobCategory.AMBIENT)
+                    .sized(Bug.BODY_WIDTH, Bug.BODY_HEIGHT)
+                    .clientTrackingRange(6)
+                    .updateInterval(3)
+                    .build("bug"));
+
+    public static final DeferredHolder<Item, Item> BUG_SPAWN_EGG =
+            ITEMS.register("bug_spawn_egg", () -> new DeferredSpawnEggItem(
+                    BUG, 0x8A6B3D, 0xC9A54A, new Item.Properties()));
 
     /** Where natural spawn placement is anchored. Referenced by the spawn placement registration. */
     public static final Heightmap.Types SPAWN_HEIGHTMAP = Heightmap.Types.MOTION_BLOCKING_NO_LEAVES;

@@ -1,6 +1,7 @@
 package com.carro1001.mhnw;
 
 import com.carro1001.mhnw.entity.Aptonoth;
+import com.carro1001.mhnw.entity.Bug;
 import com.carro1001.mhnw.entity.Flashbug;
 import com.carro1001.mhnw.entity.GreatIzuchi;
 import com.carro1001.mhnw.entity.Toad;
@@ -40,6 +41,7 @@ public class MHNW {
         event.put(ModEntities.APTONOTH.get(), Aptonoth.createAttributes().build());
         event.put(ModEntities.TOAD.get(), Toad.createAttributes().build());
         event.put(ModEntities.FLASHBUG.get(), Flashbug.createAttributes().build());
+        event.put(ModEntities.BUG.get(), Bug.createAttributes().build());
     }
 
     @SubscribeEvent
@@ -66,6 +68,7 @@ public class MHNW {
             event.accept(ModEntities.APTONOTH_SPAWN_EGG.get());
             event.accept(ModEntities.TOAD_SPAWN_EGG.get());
             event.accept(ModEntities.FLASHBUG_SPAWN_EGG.get());
+            event.accept(ModEntities.BUG_SPAWN_EGG.get());
         }
     }
 }

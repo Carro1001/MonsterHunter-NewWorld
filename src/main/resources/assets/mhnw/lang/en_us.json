@@ -6,5 +6,7 @@
   "entity.mhnw.toad": "Toad",
   "item.mhnw.toad_spawn_egg": "Toad Spawn Egg",
   "entity.mhnw.flashbug": "Flashbug",
-  "item.mhnw.flashbug_spawn_egg": "Flashbug Spawn Egg"
+  "item.mhnw.flashbug_spawn_egg": "Flashbug Spawn Egg",
+  "entity.mhnw.bug": "Bitterbug",
+  "item.mhnw.bug_spawn_egg": "Bitterbug Spawn Egg"
 }

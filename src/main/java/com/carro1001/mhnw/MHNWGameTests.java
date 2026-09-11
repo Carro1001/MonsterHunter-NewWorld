@@ -609,4 +609,35 @@ public class MHNWGameTests {
                         "the flashbug flashed again while still on cooldown from the first"))
                 .thenSucceed();
     }
+
+    // ---------------------------------------------------------------- Bug (P3, ambient life)
+
+    /** A02: the variant is a saved gameplay fact and must survive the same NBT round trip a real
+     * reload goes through, same as the toad's. */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void bugVariantPersistsAcrossReload(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Bug original = helper.spawn(ModEntities.BUG.get(), 8, 2, 8);
+        original.setVariant(com.carro1001.mhnw.entity.Bug.Variant.GODBUG);
+
+        CompoundTag saved = new CompoundTag();
+        original.addAdditionalSaveData(saved);
+
+        com.carro1001.mhnw.entity.Bug reloaded =
+                new com.carro1001.mhnw.entity.Bug(ModEntities.BUG.get(), helper.getLevel());
+        reloaded.readAdditionalSaveData(saved);
+
+        helper.assertTrue(reloaded.getVariant() == com.carro1001.mhnw.entity.Bug.Variant.GODBUG,
+                "reloaded bug had variant " + reloaded.getVariant() + ", expected GODBUG");
+        helper.succeed();
+    }
+
+    /** A13: an ordinary ambient mob death removes it, exactly once. */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void bugDeathRemovesIt(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Bug bug = helper.spawn(ModEntities.BUG.get(), 8, 2, 8);
+        bug.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
+
+        helper.succeedWhen(() -> helper.assertTrue(
+                bug.isRemoved(), "the bug was not removed after dying"));
+    }
 }

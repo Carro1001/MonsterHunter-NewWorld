@@ -1,12 +1,15 @@
 package com.carro1001.mhnw.client;
 
 import com.carro1001.mhnw.MHNW;
+import com.carro1001.mhnw.client.models.BugModel;
 import com.carro1001.mhnw.entity.Aptonoth;
+import com.carro1001.mhnw.entity.Bug;
 import com.carro1001.mhnw.entity.Flashbug;
 import com.carro1001.mhnw.entity.GreatIzuchi;
 import com.carro1001.mhnw.entity.Toad;
 import com.carro1001.mhnw.registry.ModEntities;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -29,6 +32,17 @@ public final class MHNWClient {
         event.registerEntityRenderer(ModEntities.APTONOTH.get(), AptonothRenderer::new);
         event.registerEntityRenderer(ModEntities.TOAD.get(), ToadRenderer::new);
         event.registerEntityRenderer(ModEntities.FLASHBUG.get(), FlashbugRenderer::new);
+        event.registerEntityRenderer(ModEntities.BUG.get(), BugRenderer::new);
+    }
+
+    /**
+     * The layer definition {@link BugModel} bakes its {@code ModelPart} tree from. Vanilla-style
+     * hand-modeled entities register this separately from the renderer itself, unlike the GeckoLib
+     * species above, which resolve their geometry straight from the preserved {@code .geo.json}.
+     */
+    @SubscribeEvent
+    private static void onRegisterLayers(EntityRenderersEvent.RegisterLayerDefinitions event) {
+        event.registerLayerDefinition(BugModel.LAYER_LOCATION, BugModel::createBodyLayer);
     }
 
     /**
@@ -104,6 +118,24 @@ public final class MHNWClient {
             super(context, new DefaultedEntityGeoModel<>(
                     ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, "flashbug")));
             this.shadowRadius = 0.15F;
+        }
+    }
+
+    /**
+     * The one hand-modeled species. {@link BugModel} bakes from {@link BugModel#LAYER_LOCATION}
+     * (registered above), and the texture is picked per entity from its {@link Bug.Variant} the
+     * same way {@link ToadGeoModel} does for the toad, just through the vanilla renderer API
+     * ({@code getTextureLocation}) instead of GeckoLib's.
+     */
+    public static class BugRenderer extends MobRenderer<Bug, BugModel<Bug>> {
+        public BugRenderer(EntityRendererProvider.Context context) {
+            super(context, new BugModel<>(context.bakeLayer(BugModel.LAYER_LOCATION)), 0.2F);
+        }
+
+        @Override
+        public ResourceLocation getTextureLocation(Bug entity) {
+            return ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID,
+                    "textures/entity/" + entity.getVariant().textureName + ".png");
         }
     }
 
