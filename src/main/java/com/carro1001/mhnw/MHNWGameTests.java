@@ -169,6 +169,129 @@ public class MHNWGameTests {
     }
 
     /**
+     * A05: whichever attack lands a hit, that hit falls within that attack's own active window,
+     * no matter which of the three attacks the selector happened to choose.
+     *
+     * <p>This deliberately does not isolate one attack by distance. The swipe's range band
+     * (2.0-4.6) sits entirely inside the slam's (2.0-5.2), so no distance selects one without the
+     * other being equally eligible; attack choice among eligible candidates has a random
+     * component, and an early version of this test that tried to force the slam via distance was
+     * flaky for exactly that reason, sometimes observing the swipe instead. Checking the invariant
+     * against whichever attack actually fires sidesteps that: it is the regression test for the
+     * bug the swipe shipped with, an active window that did not match where its limb path landed,
+     * and it would have caught that bug on the very first hit, whichever attack landed it.
+     *
+     * <p>The victim sits where all three attacks' bands overlap (about 2.25 blocks of box
+     * distance), so every action the monster takes is a real attempt to land one, and the test
+     * also confirms more than one distinct attack was actually observed rather than trivially
+     * passing on zero hits. The overlap band is only 0.6 block wide, so the victim is re-pinned to
+     * that offset every tick rather than left to drift: knockback from a landed hit or the
+     * monster's own lunge is enough to push the real distance outside the shared band and lock the
+     * rest of the fight onto whichever wider-banded attack that drift lands in.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 500)
+    public static void everyAttackOnlyDamagesWithinItsOwnActiveWindow(GameTestHelper helper) {
+        GreatIzuchi monster = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8.0F, 2.0F, 10.7F);
+        victim.setNoAi(true);
+        victim.setInvulnerable(false);
+        victim.setHealth(victim.getMaxHealth() * 30.0F);
+
+        monster.setTarget(victim);
+        monster.attackCooldown = 0;
+
+        final float[] lastHealth = {victim.getHealth()};
+        final java.util.Set<Byte> observedIds = new java.util.HashSet<>();
+
+        helper.startSequence()
+                .thenExecuteFor(450, () -> {
+                    victim.teleportTo(monster.getX(), monster.getY(), monster.getZ() + 2.7);
+                    victim.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+                    float health = victim.getHealth();
+                    if (health < lastHealth[0]) {
+                        byte id = monster.getAttackId();
+                        int age = monster.getAttackAge();
+                        AttackProfile profile = AttackProfile.byId(id);
+                        helper.assertTrue(profile != null,
+                                "damage landed with attack id " + id + ", which has no profile");
+                        helper.assertTrue(age >= profile.activeStart() && age <= profile.activeEnd(),
+                                "attack id " + id + " dealt damage at action age " + age
+                                        + ", outside its own active window " + profile.activeStart()
+                                        + ".." + profile.activeEnd());
+                        observedIds.add(id);
+                    }
+                    lastHealth[0] = health;
+                })
+                .thenExecute(() -> helper.assertTrue(observedIds.size() >= 2,
+                        "only observed damage from " + observedIds.size()
+                                + " distinct attack(s) in 450 ticks; this test needs to see more than"
+                                + " one kind of attack to be checking anything"))
+                .thenSucceed();
+    }
+
+    /**
+     * A07: losing the target mid-action must not wedge the state machine. The action already
+     * committed is allowed to finish, but it must end on its own and release the goal into a normal
+     * cooldown rather than looping or leaving the attack id stuck forever.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 220)
+    public static void losingTargetDuringActionEndsItCleanly(GameTestHelper helper) {
+        GreatIzuchi monster = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 10);
+        victim.setNoAi(true);
+
+        monster.setTarget(victim);
+        monster.attackCooldown = 0;
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(
+                        monster.getAttackId() != GreatIzuchi.ATTACK_NONE, "waiting for an attack to start"))
+                .thenExecute(() -> monster.setTarget(null))
+                .thenIdle(150)
+                .thenExecute(() -> helper.assertTrue(monster.getAttackId() == GreatIzuchi.ATTACK_NONE,
+                        "the attack never ended after its target vanished; the goal is wedged"))
+                .thenSucceed();
+    }
+
+    /**
+     * A07: repeating an attack must allocate a new action sequence each time, not reuse the one
+     * from the previous action. This is the exact bug that shipped earlier: a read-modify-write of
+     * the synced sequence value always reported 1, so a repeated attack dealt its damage without
+     * ever restarting its swing animation, and every attack after the first looked like nothing was
+     * happening even though the log showed hits landing.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 400)
+    public static void repeatedAttacksGetNewSequenceNumbers(GameTestHelper helper) {
+        GreatIzuchi monster = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 10);
+        victim.setNoAi(true);
+        victim.setInvulnerable(false);
+        victim.setHealth(victim.getMaxHealth() * 4);
+
+        monster.setTarget(victim);
+        monster.attackCooldown = 0;
+
+        final int[] firstSequence = {-1};
+        final int[] seenSecondSequence = {-1};
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(
+                        monster.getAttackId() != GreatIzuchi.ATTACK_NONE, "waiting for the first attack"))
+                .thenExecute(() -> firstSequence[0] = monster.getActionSequence())
+                .thenWaitUntil(() -> helper.assertTrue(
+                        monster.getAttackId() == GreatIzuchi.ATTACK_NONE, "waiting for it to end"))
+                .thenWaitUntil(() -> helper.assertTrue(
+                        monster.getAttackId() != GreatIzuchi.ATTACK_NONE, "waiting for a second attack"))
+                .thenExecute(() -> seenSecondSequence[0] = monster.getActionSequence())
+                .thenExecute(() -> helper.assertTrue(firstSequence[0] >= 0 && seenSecondSequence[0] >= 0,
+                        "never observed two separate actions"))
+                .thenExecute(() -> helper.assertTrue(seenSecondSequence[0] != firstSequence[0],
+                        "the second attack reused sequence " + firstSequence[0]
+                                + " instead of allocating a new one"))
+                .thenSucceed();
+    }
+
+    /**
      * Every attack's limb path must span its own active window.
      *
      * <p>This is a pure data check, but it is the cheapest guard against the exact bug that shipped
