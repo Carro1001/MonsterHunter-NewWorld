@@ -20,13 +20,13 @@ Combat/behaviour diagnostics: run `/mhnw debugcombat` in-game to toggle (op-only
 Either way it logs attack transitions and contact accepted/rejected, and — for Great Izuchi
 specifically — draws the live attack volume with F3+B.
 
-**Bone probe** (new): with `debugCombat` on, Great Izuchi, Rathian, Rathalos and Aptonoth all now log
-their actual runtime bone positions to the game log every ~2 seconds (or every tick for Great Izuchi
-while it's mid-attack), in the same left/up/forward frame the hurtbox offsets use. If Rathian's or
-Rathalos's hurtboxes still look wrong after a look, the fastest real fix is: turn `debugCombat` on,
-stand near one for a few seconds, and send me the log (or the relevant lines from
-`logs/latest.log`) — I can read the measured numbers directly and correct the offsets exactly,
-instead of nudging blind again.
+**Bone probe**: with `debugCombat` on, Great Izuchi, Rathian, Rathalos and Aptonoth all log their
+actual runtime bone positions to the game log every ~2 seconds (or every tick for Great Izuchi
+while it's mid-attack), in the same left/up/forward frame the hurtbox offsets use. This is what
+actually fixed Rathian's and Aptonoth's hurtboxes this round (see their sections below) — real
+measurements read straight from a play session, not another guess. Rathalos hasn't had a session
+yet; same offer stands: stand near one with `debugCombat` on for a few seconds and send me
+`logs/latest.log`, and I can fix its offsets exactly the same way.
 
 ---
 
@@ -57,17 +57,27 @@ under Rathian/Rathalos below, same fix applies here too.
 
 ## Aptonoth (P3 passive herbivore)
 
-Second round this pass, on top of last round's fixes:
+Third round this pass, and the real fix:
 
-- **Hurtbox reshape** (from "boxes are not greatly placed" + your ask to make the body box bigger
-  and centred, and split the tail into two): now 4 parts — a bigger, centred body box, the head
-  box (unchanged), and the tail split into two tapering, overlapping segments instead of one uniform
-  box. Still offline-solved, **not measured live** — same caveat as Rathian/Rathalos below.
-- Flee duration from last round unchanged (still a sustained flee after a hit, not one short dash).
+- **Hurtboxes now measured, not guessed.** Ran a BoneProbe session against your own log (found the
+  `[aptonoth]` lines in `logs/latest.log`) and plugged the actual head/tail1/tail2 bone positions in
+  directly. Both earlier attempts (the offline solve, then the "bigger centred body box" reshape)
+  were still off, most visibly on the head (was pointed backward off the body, `forward=1.30`;
+  measured `forward=2.85`, over a block further out).
+- **Dropped the separate green "body" box entirely**, per your own question ("not sure why we need
+  2 body boxes"). You're right: Aptonoth never fights back, so there is no combat precision a
+  separate torso hurtbox buys over what the plain root hitbox already gives any vanilla animal for
+  free. Only head and tail get real parts now, since those are what actually reach outside the root
+  box; body hits just land on the whole creature the ordinary way.
+- Flee duration from two rounds ago unchanged (still a sustained flee after a hit, not one short
+  dash).
 
 - [ ] Renders, spawns via egg, idles/walks with correct animation
-- [ ] **New: F3+B — do the four green hurtboxes (body/head/tail_1/tail_2) fit the body better now?**
-      Still offline-solved, not measured
+- [ ] **F3+B: does the head box actually sit on the head now** (it was visibly detached/backward
+      before), **and do the two tail boxes track the tail?** These are real measurements now, so
+      this should be a much closer fit than the last two rounds
+- [ ] **New: no green box floating where the old "body" box used to be** — only head and two tail
+      segments, body damage should come from the plain white hitbox like any other animal
 - [ ] **Re-check:** when hurt, flees for a real sustained duration, not just one short hop
 - [ ] Eats grass occasionally (the `eat` animation should play when it's actually eating, not just
       standing still) — grass must be nearby (short/tall grass on a grass block) for this to trigger
@@ -163,25 +173,25 @@ That is the current, deliberate state, not a bug to report.
 
 ## Rathian (P4 ground wyvern, ground-only)
 
-Your screenshots showed the seven hurtboxes misplaced in a specific, describable way: the tail
-visibly drooped downward while its boxes climbed upward the further back they sat, and the head sat
-a bit too high. Rather than wait on a full bone-probe measurement session, you said this isn't
-released and we can experiment — so this pass **hand-corrects the `up` values in the direction your
-screenshots pointed** (tail and head nudged down), not a fresh measurement. Expect this to be
-closer, not necessarily right; keep reporting what you see and I'll keep nudging, or we do the real
-measurement session whenever you'd rather (see `docs/DEFERRED.md` for what that would take).
+**Hurtboxes are now real BoneProbe measurements**, not a guess. Your `logs/latest.log` had
+`[rathian]` bone-probe lines from a session with `debugCombat` on; the measured left/up/forward for
+each `*Hitbox`-named bone is plugged in directly. This is a strictly better fix than the two earlier
+attempts (offline FK solve, then a hand-eyeballed "nudge it down" correction) — and it turned out the
+hand correction, while pointed the right direction, still hadn't gone nearly far enough: the neck and
+head `up` values were still off by close to a full block even after that pass.
 
-Also fixed last round: the entity no longer stops rendering (head/neck suddenly disappearing) when
-the root hitbox leaves the camera frustum while the model still visibly extends into frame.
+Also fixed two rounds ago: the entity no longer stops rendering (head/neck suddenly disappearing)
+when the root hitbox leaves the camera frustum while the model still visibly extends into frame.
 
 **No dedicated attack animation.** Like Izuchi, it fights using ordinary melee with no custom swing;
 real attack clips exist (charge, bite, tailwhip, fireball) but wiring them needs the hurtbox
-placement settled first, or a swing could land or miss for the wrong reason.
+placement settled first, or a swing could land or miss for the wrong reason. Now that placement is
+measured rather than guessed, this is worth revisiting.
 
 - [ ] Renders, spawns via egg, idles/walks/runs with correct animation
-- [ ] **F3+B: closer than last round?** Specifically: does the tail sag downward with its boxes now,
-      instead of the boxes climbing up while the tail drops? Does the head sit lower, closer to
-      where it visually is?
+- [ ] **F3+B: do the seven boxes actually sit on the body now?** This was measured directly from a
+      real play session, so it should be a much closer fit than either earlier round — flag anything
+      that still looks off and I'll re-measure that specific part
 - [ ] Turning away no longer makes the head/neck suddenly vanish while still on screen
 - [ ] Hitting a hurtbox (try the head, then the tail tip) reduces health
 - [ ] Attacks and damages a nearby player using ordinary melee (no special swing — this is expected
@@ -191,17 +201,20 @@ placement settled first, or a swing could land or miss for the wrong reason.
 
 ## Rathalos (P4 ground wyvern, ground-only)
 
-Same situation and same hand-correction as Rathian's (tail/head `up` values nudged down in the
-direction your screenshots pointed, not a fresh measurement). Its attack clips are further blocked:
-they reference bones that don't exist anywhere in this species' model at all, confirmed by checking,
-not guessed — see `docs/DEFERRED.md`. That needs actual art/model-editor work before it's even worth
-wiring, unlike the hurtbox placement, which is just numbers to keep tuning.
+**Still on the hand-corrected guess, not yet measured** — no `[rathalos]` bone-probe lines showed up
+in the last log, meaning this species hasn't had a play session with `debugCombat` on yet. Same fix
+as Rathian just got is available the moment you spend a few seconds near one with `debugCombat` on
+and send me the log. Its attack clips are further blocked regardless: they reference bones that don't
+exist anywhere in this species' model at all, confirmed by checking, not guessed — see
+`docs/DEFERRED.md`. That needs actual art/model-editor work before it's even worth wiring.
 
-Also fixed last round: same culling fix as Rathian/Great Izuchi.
+Also fixed two rounds ago: same culling fix as Rathian/Great Izuchi.
 
 - [ ] Renders, spawns via egg, idles/walks/runs (walk uses `walk_normal`/`walk_aggro`, no separate
       "run" clip exists for this species — expected, not a bug)
-- [ ] **F3+B: closer than last round?** Same question as Rathian's row
+- [ ] **F3+B: still floating out of place?** Expected yes — this one hasn't been measured yet, only
+      hand-corrected. Spend a few seconds near one with `debugCombat` on if you want this fixed the
+      same way Rathian's just got
 - [ ] Turning away no longer makes the head/neck suddenly vanish while still on screen
 - [ ] Hitting a hurtbox reduces health
 - [ ] Attacks and damages a nearby player using ordinary melee

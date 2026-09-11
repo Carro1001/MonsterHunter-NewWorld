@@ -51,31 +51,20 @@ needs `getDeathMaxRotation` zeroed the way Great Izuchi's does (only add that ov
 clip actually fights vanilla's flop the way Great Izuchi's did).
 
 ### Rathian — flight, and the real charge/bite/tailwhip/fireball timeline
-**Status:** ground-only, genuinely hostile via ordinary vanilla melee (no custom attack volume),
-seven hurtboxes offline-solved from the idle pose, then hand-corrected once against screenshot
-feedback (see below). **Confirmed wrong twice now** by two rounds of screenshots: round one showed
-the green hurtboxes floating above/in front of the wings; round two's specific complaint (tail
-visibly drooping while its boxes climbed upward the further back they sat, head sitting a bit high)
-pointed at a concrete, describable direction, not just "off."
+**Status:** ground-only, genuinely hostile via ordinary vanilla melee (no custom attack volume).
+**Hurtbox placement is now resolved**, not deferred: the offline FK solve was confirmed wrong by
+screenshots (round one), a hand-eyeballed correction was confirmed still meaningfully wrong by
+`BoneProbe` measurement (round two — the neck/head `up` values were still off by close to a full
+block even after "nudging in the right direction"), and round three replaced the constructor's
+offsets with real measured values read from the maintainer's own `logs/latest.log` (`[rathian]`
+bone-probe lines, `debugCombat` on). `BoneProbe` was generalized from Great-Izuchi-only to any
+`GeoEntity` to make this possible (`client/BoneProbe.java`); see its class doc and `Rathian`'s own
+constructor comment for the exact numbers and how they were derived.
 
-The offline FK solve was trusted here on the theory that a simple constant/single-sine-wave
-idle-pose channel is a safe category (it solved Great Izuchi's tail to within 0.05 block); that
-theory has failed for both Rathian and Rathalos.
-
-**Current approach:** the maintainer has explicitly said this build is unreleased and not going
-public soon, so blind iteration is an acceptable cost here — the "attempting that blind risks
-shipping something worse than not having it" caution from earlier in this doc was written for a
-different risk tolerance than the one actually in play. Round two's fix is a hand-eyeballed
-correction of the `up` values in the direction the screenshots pointed (tail and head nudged down),
-not a measurement. Expect to keep nudging on more screenshot rounds rather than getting it right in
-one more guess.
-
-**The actually-precise fix, still available whenever wanted:** the runtime `BoneProbe`
-(`client/BoneProbe.java`) that validated Great Izuchi's claw is hardcoded to that one species. It
-needs generalizing to work against any `GeoEntity` so a real measurement session can be run against
-Rathian (and Rathalos) directly, the same "measure, don't guess" loop that produced Great Izuchi's
-trustworthy numbers. Worth doing once the hand-corrections stop converging, or whenever the
-maintainer wants to stop guessing and just measure it.
+The lesson this leaves behind: a hand-corrected guess in the right *direction* was still off by
+close to a full block on `up` — "closer" is not the same as "correct," and only a real measurement
+closed the actual gap. Don't repeat the eyeball-correction pattern for Rathalos below; wait for (or
+prompt for) a real `BoneProbe` session instead.
 
 Flight is out of scope for this pass by the handoff's own text for this species ("bounded flight
 later in its packet"); nothing flight-related (takeoff/landing states, a flying navigation mode)
@@ -103,19 +92,21 @@ Given Rathian likely wants more than one attack eventually, consider whether `At
 from the toad to the flashbug, once a second large-monster attack timeline actually exists to compare
 against, not before.
 
-Also unconfirmed: the seven hurtbox offsets and part sizes. Sizes are borrowed from the archived
-hitbox profile nominally named for this species, which itself points at Rathalos's model/texture
-files (a copy-paste bug in that old file), so treat them as a same-size-class approximation, not
-Rathian-specific measurement. The vertical (`up`) values in particular are unverified: the idle
-pose's feet solve to about -0.75 to -0.80 rather than the near-zero Great Izuchi's did, which could
-mean this model's origin genuinely sits higher above its feet, or could mean the offsets need a
-downward nudge once someone can actually look at it in game.
+The seven hurtbox *offsets* are now measured (see above), but the part *sizes* (width/height) are
+still borrowed from the archived hitbox profile nominally named for this species, which itself
+points at Rathalos's model/texture files (a copy-paste bug in that old file) — treat sizes as a
+same-size-class approximation, not Rathian-specific, until someone reports a box that's clearly the
+wrong size rather than the wrong place.
 
 ### Rathalos — flight, and the attack timeline (worse off than Rathian's)
-**Status:** ground-only, genuinely hostile via ordinary vanilla melee, six hurtboxes offline-solved
-from the idle pose, then hand-corrected the same way and for the same reason as Rathian's (see that
-entry) — same droop pattern in the numbers, same direction of correction, same "still a guess, not a
-measurement" caveat.
+**Status:** ground-only, genuinely hostile via ordinary vanilla melee, six hurtboxes still on the
+offline-solved-then-hand-corrected guess (see Rathian's entry above for why that's now known to be
+meaningfully wrong, not just "not yet confirmed right"). Unlike Rathian, this species has not had a
+`BoneProbe` session yet — no `[rathalos]` lines appeared in the maintainer's log this round, only
+`[rathian]`, `[aptonoth]` and `[great_izuchi]`. `BoneProbe` is already wired into its renderer
+(`RathalosRenderer`, `BoneProbe.WYVERN_BONES` — the same bone list as Rathian's, since they share the
+skeleton layout) and ready to log the moment someone stands near a live Rathalos with `debugCombat`
+on; this is now genuinely just waiting on that one play session, not further code work.
 
 Flight deferred for the same reason as Rathian's, though it undersells this species more: Rathalos
 is the more archetypally airborne of the two.
