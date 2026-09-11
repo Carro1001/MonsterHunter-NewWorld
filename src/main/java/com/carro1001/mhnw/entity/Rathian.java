@@ -134,27 +134,32 @@ public class Rathian extends Monster implements GeoEntity {
         // Rathian-specific), and `left` is set to 0 for every part: the measured samples oscillate
         // both sides of zero as the idle animation sways, with no consistent bias either way.
         //
-        // Refreshed against a tighter, near-zero-variance capture of the actual *Hitbox locator bones
-        // (torsoHitbox, neckHitbox, headHitbox, baseTailHitbox, midTailHitbox, tailEndHitbox,
-        // stingerHitbox) -- these are dedicated placement bones the model already ships, not mesh
-        // bones being inferred from, so they're a strictly better source than the wider-variance
-        // capture the previous round's numbers came from. `head` barely moved (already almost exact),
-        // confirming the earlier numbers were on the right track; `torso`/`tail_base`/`tail_mid` moved
-        // up and `tail_end`/`stinger` moved down and inward, which is what was actually reported as
-        // "still too low" -- the front of the chain had drifted low, and the back had drifted both low
-        // and too far out. `throat`/`tail_tip` recomputed as the midpoint of their own now-updated
-        // neighbours; widths recomputed the same "exact distance to each neighbour" way as before.
+        // Refreshed against a capture of the actual *Hitbox locator bones (torsoHitbox, neckHitbox,
+        // headHitbox, baseTailHitbox, midTailHitbox, tailEndHitbox, stingerHitbox) -- dedicated
+        // placement bones the model already ships, not mesh bones being inferred from. The first such
+        // capture read as near-zero-variance and was plugged in directly; a follow-up screenshot
+        // showed the tail chain reading *worse*, moved further down than before, which is exactly
+        // what happened: a second capture, taken during the part of the idle loop that actually sways,
+        // showed these locator bones swing just as much as any mesh bone (`stingerHitbox` alone spans
+        // roughly -0.46 to 1.24, a 1.7-block range) -- the first capture had simply caught a narrow,
+        // low slice of that range and been mistaken for a stable value, the exact mistake range-
+        // midpoint was adopted to avoid in the first place, just one level down the bone hierarchy.
+        //
+        // Fixed by combining both captures' observed min/max per bone and taking the midpoint of the
+        // combined range, same range-midpoint methodology as before, just applied to the locator bones
+        // instead of the mesh bones. `throat`/`tail_tip` recomputed as the midpoint of their own
+        // updated neighbours; widths recomputed the same exact-touch-distance way as before.
         this.parts = new MonsterPart[] {
                 //              name          width height  left  up      forward
-                new MonsterPart(this, "torso",  2.4F, 2.3F, 0.00D, 2.42D,  2.09D),
-                new MonsterPart(this, "neck",   2.4F, 2.3F, 0.00D, 1.78D,  4.38D),
-                new MonsterPart(this, "throat", 1.4F, 1.4F, 0.00D, 1.70D,  5.80D),
-                new MonsterPart(this, "head",   2.0F, 2.0F, 0.00D, 1.61D,  7.22D),
-                new MonsterPart(this, "tail_base", 2.3F, 1.9F, 0.00D, 2.18D, -1.54D),
-                new MonsterPart(this, "tail_mid",  2.3F, 1.7F, 0.00D, 1.52D, -3.75D),
-                new MonsterPart(this, "tail_end",  2.2F, 2.0F, 0.00D, 0.76D, -5.81D),
-                new MonsterPart(this, "tail_tip",  1.55F, 1.9F, 0.00D, 0.15D, -7.22D),
-                new MonsterPart(this, "stinger",   1.55F, 1.9F, 0.00D, -0.46D, -8.63D),
+                new MonsterPart(this, "torso",  2.4F, 2.3F, 0.00D, 2.34D,  2.15D),
+                new MonsterPart(this, "neck",   2.4F, 2.3F, 0.00D, 1.80D,  4.51D),
+                new MonsterPart(this, "throat", 1.4F, 1.4F, 0.00D, 1.71D,  5.91D),
+                new MonsterPart(this, "head",   2.0F, 2.0F, 0.00D, 1.61D,  7.30D),
+                new MonsterPart(this, "tail_base", 2.3F, 1.9F, 0.00D, 2.12D, -1.56D),
+                new MonsterPart(this, "tail_mid",  2.3F, 1.7F, 0.00D, 1.64D, -3.83D),
+                new MonsterPart(this, "tail_end",  2.2F, 2.0F, 0.00D, 1.18D, -5.99D),
+                new MonsterPart(this, "tail_tip",  1.55F, 1.9F, 0.00D, 0.79D, -7.49D),
+                new MonsterPart(this, "stinger",   1.55F, 1.9F, 0.00D, 0.39D, -8.98D),
         };
     }
 

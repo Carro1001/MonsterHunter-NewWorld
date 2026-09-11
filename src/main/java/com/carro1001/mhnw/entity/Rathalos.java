@@ -104,17 +104,18 @@ public class Rathalos extends Monster implements GeoEntity {
         // actual swing.
         //
         // Refreshed again to match Rathian's latest numbers, now sourced from the model's own
-        // *Hitbox locator bones rather than inferred from mesh-bone sway (see that class's
-        // constructor comment) -- still a borrowed proxy, not a Rathalos-specific capture.
+        // *Hitbox locator bones, range-midpointed across two captures after the first capture's
+        // narrow slice of their real sway made things worse (see that class's constructor comment)
+        // -- still a borrowed proxy, not a Rathalos-specific capture.
         this.parts = new MonsterPart[] {
                 //              name          width height  left  up      forward
-                new MonsterPart(this, "torso",  2.4F, 2.3F, 0.00D, 2.42D,  2.09D),
-                new MonsterPart(this, "neck",   2.4F, 2.3F, 0.00D, 1.78D,  4.38D),
-                new MonsterPart(this, "throat", 1.4F, 1.4F, 0.00D, 1.70D,  5.80D),
-                new MonsterPart(this, "head",   2.0F, 2.0F, 0.00D, 1.61D,  7.22D),
-                new MonsterPart(this, "tail_base", 2.3F, 1.9F, 0.00D, 2.18D, -1.54D),
-                new MonsterPart(this, "tail_mid",  2.3F, 1.7F, 0.00D, 1.52D, -3.75D),
-                new MonsterPart(this, "tail_end",  2.2F, 2.0F, 0.00D, 0.76D, -5.81D),
+                new MonsterPart(this, "torso",  2.4F, 2.3F, 0.00D, 2.34D,  2.15D),
+                new MonsterPart(this, "neck",   2.4F, 2.3F, 0.00D, 1.80D,  4.51D),
+                new MonsterPart(this, "throat", 1.4F, 1.4F, 0.00D, 1.71D,  5.91D),
+                new MonsterPart(this, "head",   2.0F, 2.0F, 0.00D, 1.61D,  7.30D),
+                new MonsterPart(this, "tail_base", 2.3F, 1.9F, 0.00D, 2.12D, -1.56D),
+                new MonsterPart(this, "tail_mid",  2.3F, 1.7F, 0.00D, 1.64D, -3.83D),
+                new MonsterPart(this, "tail_end",  2.2F, 2.0F, 0.00D, 1.18D, -5.99D),
         };
     }
 

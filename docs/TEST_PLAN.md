@@ -242,6 +242,19 @@ out and were pulled in and down further. `throat`/`tail_tip` recomputed as the m
 updated neighbours, and every width recomputed the same "exact distance to each neighbour" way as
 round three — barely changed, confirming that part of the methodology already held up.
 
+**Round six: round five's locator-bone capture was itself a narrow, non-representative slice.** A
+follow-up screenshot showed the tail chain reading worse — moved further down than before. A second
+capture, taken during the part of the idle loop that actually sways, showed the `*Hitbox` locator
+bones swing just as much as any mesh bone (`stingerHitbox` alone spans roughly -0.46 to 1.24, a
+1.7-block range) — round five's capture had simply caught a narrow, low slice of that range and
+mistaken it for a stable value, the same mistake range-midpoint was adopted to avoid in the first
+place, just one level down the bone hierarchy. Fixed by combining both captures' observed min/max per
+bone and range-midpointing the combined span, same methodology as always, applied one level deeper.
+**Deferred, per your call, to the polishing pass** rather than continuing to chase this live — we're
+spending real time on a system that may keep needing a wider capture each round; worth a proper
+multi-minute capture across a full idle cycle (or several) when polishing, rather than another
+short live-tweak loop now.
+
 **No dedicated attack animation.** Like Izuchi, it fights using ordinary melee with no custom swing;
 real attack clips exist (charge, bite, tailwhip, fireball) but wiring them needs the hurtbox
 placement settled first, or a swing could land or miss for the wrong reason. Now that placement is
