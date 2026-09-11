@@ -227,10 +227,20 @@ when the root hitbox leaves the camera frustum while the model still visibly ext
 
 **"Boxes aren't updating at all" report, round four:** checked the on-disk file directly — it already
 has the reverted, range-midpoint values (`torso up=2.23`, not the old +0.35-boosted `2.58`), so the
-source is correct. The commit landed only ~1 minute before that session's screenshots, which is
-plausibly too little time for `runClient` to have rebuilt and relaunched. **If boxes still look
-unchanged after a full stop + restart of `runClient` (not just re-toggling F3+B), that's a real bug
-worth a fresh report** — but a code fix isn't warranted from this alone.
+source was correct at the time. Turned out moot either way: the *next* capture (round five, below)
+came from the model's own dedicated locator bones and moved most of these numbers again regardless.
+
+**Round five: switched from inferring off mesh bones to reading the model's own locator bones
+directly.** A fresh capture showed the bone probe logging `torsoHitbox`, `neckHitbox`, `headHitbox`,
+`baseTailHitbox`, `midTailHitbox`, `tailEndHitbox`, `stingerHitbox` — dedicated placement bones the
+model already ships, not mesh bones being inferred from — with near-zero variance across samples
+(unlike the wider-variance mesh-bone captures earlier rounds used). `head` barely moved, confirming
+the earlier numbers were on the right track for that part; but per this round's screenshot the chain
+was "still in the same place, too low" — and indeed `torso`/`tail_base`/`tail_mid` had drifted low
+against these locators and were raised, while `tail_end`/`stinger` had drifted both low and too far
+out and were pulled in and down further. `throat`/`tail_tip` recomputed as the midpoint of their own
+updated neighbours, and every width recomputed the same "exact distance to each neighbour" way as
+round three — barely changed, confirming that part of the methodology already held up.
 
 **No dedicated attack animation.** Like Izuchi, it fights using ordinary melee with no custom swing;
 real attack clips exist (charge, bite, tailwhip, fireball) but wiring them needs the hurtbox
@@ -254,8 +264,8 @@ measured rather than guessed, this is worth revisiting.
 identical, you can use the numbers for one on the other"): no `[rathalos]` bone-probe lines have
 shown up in a log yet, but the two species share the same base skeleton and closely similar
 proportions, so Rathian's offsets are plugged in directly rather than waiting on a Rathalos-specific
-session — including this round's revert of the +0.35 raise back to plain range-midpoint, with the
-tail chain's `height` widened instead. Should be far closer than the old offline-solved/hand-corrected
+session — refreshed again this round to match Rathian's round-five numbers (the model's own
+`*Hitbox` locator bones, not inferred mesh-bone positions). Should be far closer than the old offline-solved/hand-corrected
 guess, though not guaranteed pixel-perfect the way an actual Rathalos measurement would be — if any
 one part still looks off, that's the part worth a real session for. Its attack clips are blocked
 regardless: they reference bones that don't exist anywhere in this species' model at all, confirmed

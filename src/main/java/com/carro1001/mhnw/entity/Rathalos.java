@@ -102,15 +102,19 @@ public class Rathalos extends Monster implements GeoEntity {
         // real idle sway, whichever moment a screenshot catches). Back to plain range-midpoint
         // centres here too, with `height` widened on the tail chain instead so the box spans the
         // actual swing.
+        //
+        // Refreshed again to match Rathian's latest numbers, now sourced from the model's own
+        // *Hitbox locator bones rather than inferred from mesh-bone sway (see that class's
+        // constructor comment) -- still a borrowed proxy, not a Rathalos-specific capture.
         this.parts = new MonsterPart[] {
                 //              name          width height  left  up      forward
-                new MonsterPart(this, "torso",  2.3F, 2.3F, 0.00D, 2.23D,  2.05D),
-                new MonsterPart(this, "neck",   2.3F, 2.3F, 0.00D, 1.76D,  4.46D),
-                new MonsterPart(this, "throat", 1.4F, 1.4F, 0.00D, 1.69D,  5.83D),
-                new MonsterPart(this, "head",   2.0F, 2.0F, 0.00D, 1.61D,  7.20D),
-                new MonsterPart(this, "tail_base", 2.2F, 1.9F, 0.00D, 1.99D, -1.65D),
-                new MonsterPart(this, "tail_mid",  2.2F, 1.7F, 0.00D, 1.48D, -3.91D),
-                new MonsterPart(this, "tail_end",  2.1F, 2.0F, 0.00D, 0.97D, -6.07D),
+                new MonsterPart(this, "torso",  2.4F, 2.3F, 0.00D, 2.42D,  2.09D),
+                new MonsterPart(this, "neck",   2.4F, 2.3F, 0.00D, 1.78D,  4.38D),
+                new MonsterPart(this, "throat", 1.4F, 1.4F, 0.00D, 1.70D,  5.80D),
+                new MonsterPart(this, "head",   2.0F, 2.0F, 0.00D, 1.61D,  7.22D),
+                new MonsterPart(this, "tail_base", 2.3F, 1.9F, 0.00D, 2.18D, -1.54D),
+                new MonsterPart(this, "tail_mid",  2.3F, 1.7F, 0.00D, 1.52D, -3.75D),
+                new MonsterPart(this, "tail_end",  2.2F, 2.0F, 0.00D, 0.76D, -5.81D),
         };
     }
 
