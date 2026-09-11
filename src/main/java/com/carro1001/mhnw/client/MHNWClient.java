@@ -7,6 +7,7 @@ import com.carro1001.mhnw.entity.Bug;
 import com.carro1001.mhnw.entity.Flashbug;
 import com.carro1001.mhnw.entity.GreatIzuchi;
 import com.carro1001.mhnw.entity.Izuchi;
+import com.carro1001.mhnw.entity.Lagiacrus;
 import com.carro1001.mhnw.entity.Rathian;
 import com.carro1001.mhnw.entity.Rathalos;
 import com.carro1001.mhnw.entity.Toad;
@@ -39,6 +40,7 @@ public final class MHNWClient {
         event.registerEntityRenderer(ModEntities.IZUCHI.get(), IzuchiRenderer::new);
         event.registerEntityRenderer(ModEntities.RATHIAN.get(), RathianRenderer::new);
         event.registerEntityRenderer(ModEntities.RATHALOS.get(), RathalosRenderer::new);
+        event.registerEntityRenderer(ModEntities.LAGIACRUS.get(), LagiacrusRenderer::new);
     }
 
     /**
@@ -225,6 +227,24 @@ public final class MHNWClient {
         @Override
         protected float getDeathMaxRotation(Rathalos entity) {
             return 0.0F;
+        }
+    }
+
+    /** Preserved assets and vanilla death rotation; no authored death clip exists. */
+    public static class LagiacrusRenderer extends GeoEntityRenderer<Lagiacrus> {
+        public LagiacrusRenderer(EntityRendererProvider.Context context) {
+            super(context, new DefaultedEntityGeoModel<>(
+                    ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, "lagiacrus")));
+            this.shadowRadius = 1.0F;
+        }
+
+        @Override
+        public void render(Lagiacrus entity, float entityYaw, float partialTick,
+                           com.mojang.blaze3d.vertex.PoseStack poseStack,
+                           net.minecraft.client.renderer.MultiBufferSource bufferSource,
+                           int packedLight) {
+            super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
+            BoneProbe.maybeLog("lagiacrus", entity, getGeoModel(), BoneProbe.LAGIACRUS_BONES, false);
         }
     }
 

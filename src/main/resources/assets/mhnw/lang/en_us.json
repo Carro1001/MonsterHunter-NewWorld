@@ -14,5 +14,7 @@
   "entity.mhnw.rathian": "Rathian",
   "item.mhnw.rathian_spawn_egg": "Rathian Spawn Egg",
   "entity.mhnw.rathalos": "Rathalos",
-  "item.mhnw.rathalos_spawn_egg": "Rathalos Spawn Egg"
+  "item.mhnw.rathalos_spawn_egg": "Rathalos Spawn Egg",
+  "entity.mhnw.lagiacrus": "Lagiacrus",
+  "item.mhnw.lagiacrus_spawn_egg": "Lagiacrus Spawn Egg"
 }

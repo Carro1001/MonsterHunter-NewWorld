@@ -55,6 +55,12 @@ final class BoneProbe {
             "body", "neck", "head", "hips", "tail1", "tail2",
     };
 
+    /** P5a fixed hurtboxes await a live land/swim range-midpoint fitting pass. */
+    static final String[] LAGIACRUS_BONES = {
+            "jawHitbox", "neckMidHitbox", "neckBaseHitbox", "tailBaseHitbox",
+            "tailMidHitbox", "tailLastHitbox", "tailEndHitbox",
+    };
+
     private static final int IDLE_INTERVAL_TICKS = 40;
 
     /** Guards against logging the same tick twice for the same species in one rendered frame. */

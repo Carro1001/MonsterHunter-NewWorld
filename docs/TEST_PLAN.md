@@ -1,8 +1,12 @@
 # Manual test plan
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
-state-machine wedging, save/reload of gameplay facts, navigation) has a GameTest and runs headless
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, currently 51 tests, all passing.
+state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, currently 63 tests. The previous 51
+were recorded passing; the 12 P5a tests added on 2026-09-11 have not been run. This packet was
+explicitly limited to implementation and narrow compilation, without broad validation.
+`gradlew --no-daemon compileJava` passed against the pinned APIs on 2026-09-11; no full build,
+GameTest execution or client launch was performed for P5a.
 
 This file is updated as features land. Checked items were confirmed by the maintainer; unchecked
 items are open. When you find a problem, say what you saw and I'll fix it and update this file.
@@ -20,7 +24,7 @@ Combat/behaviour diagnostics: run `/mhnw debugcombat` in-game to toggle (op-only
 Either way it logs attack transitions and contact accepted/rejected, and — for Great Izuchi
 specifically — draws the live attack volume with F3+B.
 
-**Bone probe**: with `debugCombat` on, Great Izuchi, Rathian, Rathalos and Aptonoth all log their
+**Bone probe**: with `debugCombat` on, Great Izuchi, Rathian, Rathalos, Aptonoth and Lagiacrus log their
 actual runtime bone positions to the game log every ~2 seconds (or every tick for Great Izuchi
 while it's mid-attack), in the same left/up/forward frame the hurtbox offsets use. This is what
 actually fixed Rathian's and Aptonoth's hurtboxes this round (see their sections below) — real
@@ -30,6 +34,41 @@ measured for real, stand near one with `debugCombat` on for a few seconds and se
 `logs/latest.log`.
 
 ---
+
+## Lagiacrus (P5a movement baseline, 2026-09-11)
+
+Implemented spawn egg/summon registration, parent health/damage, seven native `MonsterPart`
+hurtboxes, the preserved GeckoLib model/texture and six land/swim locomotion clips. No outgoing
+attacks or natural spawning. There is no death clip; vanilla death presentation remains enabled.
+
+Movement uses one `AmphibiousPathNavigation`/`SmoothSwimmingMoveControl` pair throughout land,
+water and shoreline travel, with collision-aware native axolotl-style water travel and underwater
+breathing. The species goal acquires visible survival/adventure players (or follows an explicitly
+assigned valid living target), retries paths every 20 ticks, abandons after three failed/partial
+paths or 200 ticks total, then prevents pursuit for 100 ticks. Target loss, goal stop, death,
+removal and NBT load clear pursuit. No separate target goal can bypass the retry cooldown.
+
+Root dimensions, health/speed and seven static offsets are provisional design estimates, not live
+measurements or converted raw pivots. The root covers the body; parts use the preserved locator
+names in head-to-tail order. Both land and swim use the same feet-origin left/up/forward frame,
+in blocks, rotated only by body yaw. Live fitting remains pending, including the different poses.
+
+Twelve focused tests were added, not executed: registration/egg/part shape and lookup; root-first
+and part-first damage deduplication; distinct attackers and attribution; death cleanup; discard
+cleanup; land pursuit without damage; submerged movement/breathing without damage; shoreline
+crossing in both directions using the same navigation/control instances; sealed-target abandonment
+and retry suppression; an absolute deadline for a stalled but reachable path; target-loss cleanup;
+and NBT health/parts/pursuit cleanup with a reload cooldown. These exercise server contracts, not
+client picking, visual alignment or full P5 acceptance.
+
+- [ ] Spawn via creative egg and `/summon mhnw:lagiacrus`; confirm texture and model render
+- [ ] Observe idle/walk/run and swim_idle/swim/swim_fast, including shallow-water transitions
+- [ ] With F3+B and `/mhnw debugcombat`, capture the seven locators through full land/swim loops
+      at four cardinal headings; fit static envelopes from live ranges, not a narrow sample
+- [ ] Confirm melee/projectile picking on jaw and tail, ordinary damage and vanilla death/removal
+- [ ] Observe open and obstructed shorelines, shallow water, and movement against solid terrain
+- [ ] Dedicated server/two-client agreement, save/quit/reload, natural spawning and P5 combat remain
+      pending; this packet does not close A01-A14 or the release species baseline
 
 ## Great Izuchi (P2 combat slice)
 

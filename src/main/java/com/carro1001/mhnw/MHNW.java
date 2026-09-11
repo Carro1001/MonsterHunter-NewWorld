@@ -5,6 +5,7 @@ import com.carro1001.mhnw.entity.Bug;
 import com.carro1001.mhnw.entity.Flashbug;
 import com.carro1001.mhnw.entity.GreatIzuchi;
 import com.carro1001.mhnw.entity.Izuchi;
+import com.carro1001.mhnw.entity.Lagiacrus;
 import com.carro1001.mhnw.entity.Rathian;
 import com.carro1001.mhnw.entity.Rathalos;
 import com.carro1001.mhnw.entity.Toad;
@@ -51,6 +52,7 @@ public class MHNW {
         event.put(ModEntities.IZUCHI.get(), Izuchi.createAttributes().build());
         event.put(ModEntities.RATHIAN.get(), Rathian.createAttributes().build());
         event.put(ModEntities.RATHALOS.get(), Rathalos.createAttributes().build());
+        event.put(ModEntities.LAGIACRUS.get(), Lagiacrus.createAttributes().build());
     }
 
     @SubscribeEvent
@@ -81,6 +83,7 @@ public class MHNW {
             event.accept(ModEntities.IZUCHI_SPAWN_EGG.get());
             event.accept(ModEntities.RATHIAN_SPAWN_EGG.get());
             event.accept(ModEntities.RATHALOS_SPAWN_EGG.get());
+            event.accept(ModEntities.LAGIACRUS_SPAWN_EGG.get());
         }
     }
 }

@@ -7,6 +7,28 @@ Acceptance IDs refer to the matrix in `REVIVAL_HANDOFF.md` section 4.6.
 
 ## Deferred to the pre-release / survival phase
 
+### Lagiacrus — remaining P5 after the P5a movement baseline (2026-09-11)
+**Status:** P5a implemented, with 12 new headless tests not yet run (implementation-only packet).
+Spawn egg/summon, ordinary parent health/damage/death, seven native parts, preserved rendering and
+land/swim clips, underwater breathing, one native amphibious navigation/control pair and bounded
+server pursuit are wired. Pursuit has no outgoing damage, retries at most once per 20 ticks,
+abandons after three failed/partial paths or 200 ticks, and waits 100 ticks before retrying.
+Target loss, goal stop, death, removal and reload cancel transient pursuit.
+
+The root footprint and seven static hurtboxes are unmeasured provisional design estimates. The
+seven locator names are `jawHitbox`, `neckMidHitbox`, `neckBaseHitbox`, `tailBaseHitbox`,
+`tailMidHitbox`, `tailLastHitbox`, `tailEndHitbox`. `BoneProbe` is wired for a live range-midpoint
+fitting pass across land/swim poses and cardinal headings. No gameplay positions come from bones
+or raw pivots. Model alignment, client picking, locomotion playback and shoreline behavior need
+live acceptance; the new headless shoreline/breathing/pursuit tests also still need execution.
+Further A10/A12 terrain cases, blocked shorelines and multiplayer/soak gates remain pending.
+
+No named attack or death clip exists. A P5 attack needs newly authored art or explicit approval
+for a labelled temporary presentation before a server timeline/volume is implemented. Roar is
+not an attack substitute. Vanilla death presentation remains; cosmetic neck/tail smoothing and
+balance tuning are later work. Natural spawning is still deferred under A11; no Lagiacrus biome
+modifier or spawn placement was added. This packet is not full P5 or release acceptance.
+
 ### A11 — natural spawning
 **Status:** wired but never observed.
 

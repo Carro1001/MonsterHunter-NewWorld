@@ -4,6 +4,8 @@ import com.carro1001.mhnw.entity.Aptonoth;
 import com.carro1001.mhnw.entity.AttackProfile;
 import com.carro1001.mhnw.entity.GreatIzuchi;
 import com.carro1001.mhnw.entity.GreatIzuchiCombatGoal;
+import com.carro1001.mhnw.entity.Lagiacrus;
+import com.carro1001.mhnw.entity.LagiacrusPursuitGoal;
 import com.carro1001.mhnw.entity.MonsterPart;
 import com.carro1001.mhnw.entity.Toad;
 import com.carro1001.mhnw.registry.ModEntities;
@@ -1224,5 +1226,316 @@ public class MHNWGameTests {
         helper.assertTrue(!goal.canUse(),
                 "the sleep goal was willing to start while Izuchi already had a target");
         helper.succeed();
+    }
+
+    // ---------------------------------------------------------------- Lagiacrus (P5a, movement only)
+
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void lagiacrusRegistersWithSevenStaticPartsAndAnEgg(GameTestHelper helper) {
+        Lagiacrus monster = helper.spawn(ModEntities.LAGIACRUS.get(), 8, 2, 8);
+        monster.setNoAi(true);
+        helper.assertTrue(monster.getBbWidth() == Lagiacrus.BODY_WIDTH
+                        && monster.getBbHeight() == Lagiacrus.BODY_HEIGHT,
+                "Lagiacrus root dimensions differ from the declared adult footprint");
+        helper.assertTrue(Math.abs(monster.getMaxHealth() - Lagiacrus.MAX_HEALTH) < EPSILON,
+                "Lagiacrus attributes were not registered");
+        var egg = (net.minecraft.world.item.SpawnEggItem) ModEntities.LAGIACRUS_SPAWN_EGG.get();
+        helper.assertTrue(egg.getType(egg.getDefaultInstance()) == ModEntities.LAGIACRUS.get(),
+                "Lagiacrus egg points at a different entity type");
+        String[] names = { "jawHitbox", "neckMidHitbox", "neckBaseHitbox", "tailBaseHitbox",
+                "tailMidHitbox", "tailLastHitbox", "tailEndHitbox" };
+        helper.assertTrue(monster.isMultipartEntity() && monster.getParts().length == names.length,
+                "Lagiacrus must have exactly seven parts");
+        for (int i = 0; i < names.length; i++) {
+            MonsterPart part = monster.monsterParts()[i];
+            helper.assertTrue(part.partName.equals(names[i]) && part.getParent() == monster,
+                    "wrong part order or owner at " + i);
+            helper.assertTrue(helper.getLevel().getPartEntities().contains(part),
+                    "part missing from NeoForge lookup: " + part.partName);
+            var centre = monster.localToWorld(part.localLeft, part.localUp, part.localForward);
+            helper.assertTrue(part.getBoundingBox().getCenter().distanceTo(centre) < EPSILON,
+                    "part was not positioned on spawn: " + part.partName);
+        }
+        helper.succeed();
+    }
+
+    /** Both root-first and part-first enumeration must cost the parent one ordinary hit. */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void lagiacrusRootAndPartsCountOneSourceOnce(GameTestHelper helper) {
+        for (boolean rootFirst : new boolean[] { true, false }) {
+            Lagiacrus monster = helper.spawn(ModEntities.LAGIACRUS.get(), rootFirst ? 4 : 12, 2, 8);
+            monster.setNoAi(true);
+            float before = monster.getHealth();
+            DamageSource source = helper.getLevel().damageSources().generic();
+            if (rootFirst) {
+                helper.assertTrue(monster.hurt(source, PROBE_DAMAGE), "root rejected an ordinary hit");
+            } else {
+                helper.assertTrue(monster.monsterParts()[0].hurt(source, PROBE_DAMAGE),
+                        "jaw rejected an ordinary hit");
+            }
+            for (MonsterPart part : monster.monsterParts()) {
+                part.hurt(source, PROBE_DAMAGE);
+            }
+            monster.hurt(source, PROBE_DAMAGE);
+            helper.assertTrue(Math.abs(before - monster.getHealth() - PROBE_DAMAGE) < EPSILON,
+                    "root/parts multiplied one damage source (rootFirst=" + rootFirst + ")");
+        }
+        helper.succeed();
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void lagiacrusDistinctAttackersRetainParentDamage(GameTestHelper helper) {
+        Lagiacrus monster = helper.spawn(ModEntities.LAGIACRUS.get(), 8, 2, 8);
+        monster.setNoAi(true);
+        Cow first = helper.spawn(EntityType.COW, 2, 2, 2);
+        Cow second = helper.spawn(EntityType.COW, 13, 2, 13);
+        first.setNoAi(true);
+        second.setNoAi(true);
+        float before = monster.getHealth();
+        monster.monsterParts()[0].hurt(helper.getLevel().damageSources().mobAttack(first), PROBE_DAMAGE * 2);
+        monster.monsterParts()[6].hurt(helper.getLevel().damageSources().mobAttack(second), PROBE_DAMAGE);
+        helper.assertTrue(Math.abs(before - monster.getHealth() - PROBE_DAMAGE * 3) < EPSILON,
+                "the smaller second attack did not reach parent health in full");
+        helper.assertTrue(monster.getLastHurtByMob() == second, "parent lost damage attribution");
+        helper.succeed();
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 80)
+    public static void lagiacrusDeathStopsPursuitAndUnregistersParts(GameTestHelper helper) {
+        Lagiacrus monster = helper.spawn(ModEntities.LAGIACRUS.get(), 3, 2, 8);
+        Cow target = helper.spawn(EntityType.COW, 13, 2, 8);
+        target.setNoAi(true);
+        monster.setTarget(target);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(monster.isAggressive(), "waiting for pursuit"))
+                .thenExecute(() -> {
+                    monster.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
+                    assertLagiacrusPursuitStopped(helper, monster);
+                })
+                .thenWaitUntil(() -> {
+                    helper.assertTrue(monster.isRemoved(), "vanilla death did not remove Lagiacrus");
+                    assertLagiacrusPartsUnregistered(helper, monster);
+                })
+                .thenSucceed();
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void lagiacrusDiscardStopsPursuitAndUnregistersParts(GameTestHelper helper) {
+        Lagiacrus monster = helper.spawn(ModEntities.LAGIACRUS.get(), 3, 2, 8);
+        Cow target = helper.spawn(EntityType.COW, 13, 2, 8);
+        target.setNoAi(true);
+        monster.setTarget(target);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(monster.isAggressive(), "waiting for pursuit"))
+                .thenExecute(() -> {
+                    monster.discard();
+                    assertLagiacrusPursuitStopped(helper, monster);
+                    assertLagiacrusPartsUnregistered(helper, monster);
+                })
+                .thenSucceed();
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 220)
+    public static void lagiacrusPursuesOnLandWithoutOutgoingDamage(GameTestHelper helper) {
+        Lagiacrus monster = helper.spawn(ModEntities.LAGIACRUS.get(), 3, 2, 8);
+        Cow target = helper.spawn(EntityType.COW, 13, 2, 8);
+        target.setNoAi(true);
+        float health = target.getHealth();
+        monster.setTarget(target);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(monster.distanceTo(target) < 3.0F,
+                        "Lagiacrus did not close on its land target"))
+                .thenExecuteFor(40, () -> helper.assertTrue(target.getHealth() == health,
+                        "movement-only Lagiacrus dealt outgoing damage"))
+                .thenSucceed();
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void lagiacrusSwimsAndBreathesUnderwater(GameTestHelper helper) {
+        // A contained source-water pool: no currents or random terrain to affect the assertion.
+        fillLagiacrusPool(helper, 14, 5);
+        Lagiacrus monster = helper.spawn(ModEntities.LAGIACRUS.get(), 3, 2, 8);
+        var target = helper.spawn(EntityType.AXOLOTL, 12, 3, 8);
+        target.setNoAi(true);
+        target.setNoGravity(true);
+        monster.setAirSupply(1);
+        float health = monster.getHealth();
+        float targetHealth = target.getHealth();
+        monster.setTarget(target);
+        var start = monster.position();
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(monster.isUnderWater()
+                                && monster.position().distanceTo(start) > 2.0D
+                                && monster.distanceTo(target) < 3.0F,
+                        "Lagiacrus did not swim toward its submerged target"))
+                .thenExecuteFor(40, () -> {
+                    helper.assertTrue(monster.isUnderWater() && monster.getAirSupply() > 0
+                                    && monster.getHealth() == health,
+                            "submerged Lagiacrus lost air or health");
+                    helper.assertTrue(target.getHealth() == targetHealth, "swim pursuit damaged its target");
+                })
+                .thenSucceed();
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 540)
+    public static void lagiacrusCrossesShorelineInBothDirections(GameTestHelper helper) {
+        // Two-deep water on the west, bank at the water surface on the east; room for the root.
+        fillLagiacrusPool(helper, 7, 3);
+        for (int x = 8; x <= 14; x++) {
+            for (int z = 1; z <= 14; z++) {
+                helper.setBlock(x, 2, z, net.minecraft.world.level.block.Blocks.STONE);
+                helper.setBlock(x, 3, z, net.minecraft.world.level.block.Blocks.STONE);
+            }
+        }
+        Lagiacrus monster = helper.spawn(ModEntities.LAGIACRUS.get(), 3, 2, 8);
+        Cow landTarget = helper.spawn(EntityType.COW, 12, 4, 8);
+        landTarget.setNoAi(true);
+        var waterTarget = helper.spawn(EntityType.AXOLOTL, 3, 2, 8);
+        waterTarget.setNoAi(true);
+        waterTarget.setNoGravity(true);
+        var navigation = monster.getNavigation();
+        var control = monster.getMoveControl();
+        monster.setTarget(landTarget);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(monster.isInWater(), "waiting for water entry"))
+                .thenWaitUntil(() -> helper.assertTrue(!monster.isInWater() && monster.distanceTo(landTarget) < 3.0F,
+                        "Lagiacrus failed to leave shallow water for the bank"))
+                .thenExecute(() -> monster.setTarget(null))
+                .thenWaitUntil(() -> assertLagiacrusPursuitStopped(helper, monster))
+                .thenIdle(LagiacrusPursuitGoal.RETRY_COOLDOWN_TICKS + 5)
+                .thenExecute(() -> monster.setTarget(waterTarget))
+                .thenWaitUntil(() -> helper.assertTrue(monster.isInWater() && monster.distanceTo(waterTarget) < 3.0F,
+                        "Lagiacrus failed to return from land to shallow water"))
+                .thenExecute(() -> helper.assertTrue(monster.getNavigation() == navigation
+                                && monster.getMoveControl() == control,
+                        "shoreline transition replaced the native navigation/control pair"))
+                .thenSucceed();
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 180)
+    public static void lagiacrusAbandonsSealedTargetAndHonorsRetryCooldown(GameTestHelper helper) {
+        Lagiacrus monster = helper.spawn(ModEntities.LAGIACRUS.get(), 3, 2, 8);
+        Cow target = helper.spawn(EntityType.COW, 12, 2, 8);
+        target.setNoAi(true);
+        for (int x = 11; x <= 13; x++) {
+            for (int y = 1; y <= 5; y++) {
+                for (int z = 7; z <= 9; z++) {
+                    if (x == 11 || x == 13 || y == 1 || y == 5 || z == 7 || z == 9) {
+                        helper.setBlock(x, y, z, net.minecraft.world.level.block.Blocks.STONE);
+                    }
+                }
+            }
+        }
+        monster.setTarget(target);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(monster.isAggressive(), "waiting for pursuit"))
+                .thenExecuteAfter(LagiacrusPursuitGoal.REPATH_INTERVAL_TICKS
+                        * LagiacrusPursuitGoal.MAX_FAILED_PATHS + 5, () -> {
+                    assertLagiacrusPursuitStopped(helper, monster);
+                    // Simulate a new target assignment during the cooldown; it must not restart.
+                    monster.setTarget(target);
+                })
+                .thenExecuteAfter(5, () -> assertLagiacrusPursuitStopped(helper, monster))
+                .thenExecuteFor(20, () -> assertLagiacrusPursuitStopped(helper, monster))
+                .thenSucceed();
+    }
+
+    /** A valid path that never advances still has an absolute deadline, independent of failures. */
+    @GameTest(template = ARENA, timeoutTicks = 240)
+    public static void lagiacrusStalledReachablePursuitHasAHardDeadline(GameTestHelper helper) {
+        Lagiacrus monster = helper.spawn(ModEntities.LAGIACRUS.get(), 3, 2, 8);
+        monster.setNoAi(true);
+        Cow target = helper.spawn(EntityType.COW, 12, 2, 8);
+        target.setNoAi(true);
+        monster.setTarget(target);
+        // Drive just the real goal; disabling AI deliberately prevents the navigator moving it.
+        LagiacrusPursuitGoal goal = new LagiacrusPursuitGoal(monster);
+        helper.startSequence().thenIdle(2).thenExecute(() -> {
+                    helper.assertTrue(goal.canUse(), "goal rejected the valid target");
+                    goal.start();
+                    goal.tick();
+                    helper.assertTrue(!monster.getNavigation().isDone()
+                                    && monster.getNavigation().getPath().canReach(),
+                            "deadline fixture must start with a reachable path");
+                })
+                .thenExecuteFor(LagiacrusPursuitGoal.MAX_PURSUIT_TICKS + 1, goal::tick)
+                .thenExecute(() -> {
+                    assertLagiacrusPursuitStopped(helper, monster);
+                    monster.setTarget(target);
+                    helper.assertTrue(!goal.canUse(), "expired pursuit immediately restarted");
+                }).thenSucceed();
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 80)
+    public static void lagiacrusTargetLossClearsMovement(GameTestHelper helper) {
+        Lagiacrus monster = helper.spawn(ModEntities.LAGIACRUS.get(), 3, 2, 8);
+        Cow target = helper.spawn(EntityType.COW, 13, 2, 8);
+        target.setNoAi(true);
+        monster.setTarget(target);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(monster.isAggressive(), "waiting for pursuit"))
+                .thenExecute(target::discard)
+                .thenExecuteAfter(5, () -> assertLagiacrusPursuitStopped(helper, monster))
+                .thenExecuteFor(20, () -> assertLagiacrusPursuitStopped(helper, monster))
+                .thenSucceed();
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 80)
+    public static void lagiacrusReloadCancelsPursuitAndPreservesHealth(GameTestHelper helper) {
+        Lagiacrus original = helper.spawn(ModEntities.LAGIACRUS.get(), 3, 2, 8);
+        Cow target = helper.spawn(EntityType.COW, 13, 2, 8);
+        target.setNoAi(true);
+        original.setHealth(37.0F);
+        original.setTarget(target);
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(original.isAggressive(), "waiting for pursuit"))
+                .thenExecute(() -> {
+                    CompoundTag saved = original.saveWithoutId(new CompoundTag());
+                    original.discard();
+                    Lagiacrus reloaded = new Lagiacrus(ModEntities.LAGIACRUS.get(), helper.getLevel());
+                    reloaded.load(saved);
+                    helper.getLevel().addFreshEntity(reloaded);
+                    assertLagiacrusPursuitStopped(helper, reloaded);
+                    helper.assertTrue(reloaded.getHealth() == 37.0F && reloaded.getParts().length == 7,
+                            "reload lost parent health or changed the part count");
+                    assertLagiacrusPartsUnregistered(helper, original);
+                    for (MonsterPart part : reloaded.monsterParts()) {
+                        helper.assertTrue(helper.getLevel().getPartEntities().contains(part),
+                                "reloaded part missing from NeoForge lookup");
+                    }
+                    reloaded.setTarget(target);
+                    helper.runAfterDelay(10, () -> {
+                        assertLagiacrusPursuitStopped(helper, reloaded);
+                        helper.succeed();
+                    });
+                });
+    }
+
+    private static void assertLagiacrusPursuitStopped(GameTestHelper helper, Lagiacrus monster) {
+        helper.assertTrue(monster.getTarget() == null && !monster.isAggressive()
+                        && monster.getNavigation().isDone() && monster.getSpeed() == 0.0F
+                        && monster.xxa == 0.0F && monster.yya == 0.0F && monster.zza == 0.0F,
+                "Lagiacrus retained target, aggression, path or movement input after pursuit ended");
+    }
+
+    private static void assertLagiacrusPartsUnregistered(GameTestHelper helper, Lagiacrus monster) {
+        for (MonsterPart part : monster.monsterParts()) {
+            helper.assertTrue(!helper.getLevel().getPartEntities().contains(part),
+                    "part outlived its parent in NeoForge lookup: " + part.partName);
+        }
+    }
+
+    private static void fillLagiacrusPool(GameTestHelper helper, int waterMaxX, int topY) {
+        for (int x = 0; x <= 15; x++) {
+            for (int z = 0; z <= 15; z++) {
+                for (int y = 2; y <= topY; y++) {
+                    if (x == 0 || x == 15 || z == 0 || z == 15) {
+                        helper.setBlock(x, y, z, net.minecraft.world.level.block.Blocks.STONE);
+                    } else if (x <= waterMaxX) {
+                        helper.setBlock(x, y, z, net.minecraft.world.level.block.Blocks.WATER);
+                    }
+                }
+            }
+        }
     }
 }

@@ -6,6 +6,7 @@ import com.carro1001.mhnw.entity.Bug;
 import com.carro1001.mhnw.entity.Flashbug;
 import com.carro1001.mhnw.entity.GreatIzuchi;
 import com.carro1001.mhnw.entity.Izuchi;
+import com.carro1001.mhnw.entity.Lagiacrus;
 import com.carro1001.mhnw.entity.Rathian;
 import com.carro1001.mhnw.entity.Rathalos;
 import com.carro1001.mhnw.entity.Toad;
@@ -150,6 +151,20 @@ public final class ModEntities {
     public static final DeferredHolder<Item, Item> RATHALOS_SPAWN_EGG =
             ITEMS.register("rathalos_spawn_egg", () -> new DeferredSpawnEggItem(
                     RATHALOS, 0xB03A2E, 0x2E2A6B, new Item.Properties()));
+
+    /** P5a amphibious movement baseline; no natural spawning or outgoing attacks. */
+    public static final DeferredHolder<EntityType<?>, EntityType<Lagiacrus>> LAGIACRUS =
+            ENTITY_TYPES.register("lagiacrus", () -> EntityType.Builder
+                    .of(Lagiacrus::new, MobCategory.MONSTER)
+                    .sized(Lagiacrus.BODY_WIDTH, Lagiacrus.BODY_HEIGHT)
+                    .eyeHeight(1.2F)
+                    .clientTrackingRange(12)
+                    .updateInterval(1)
+                    .build("lagiacrus"));
+
+    public static final DeferredHolder<Item, Item> LAGIACRUS_SPAWN_EGG =
+            ITEMS.register("lagiacrus_spawn_egg", () -> new DeferredSpawnEggItem(
+                    LAGIACRUS, 0x4A91A6, 0xC9B077, new Item.Properties()));
 
     /** Where natural spawn placement is anchored. Referenced by the spawn placement registration. */
     public static final Heightmap.Types SPAWN_HEIGHTMAP = Heightmap.Types.MOTION_BLOCKING_NO_LEAVES;
