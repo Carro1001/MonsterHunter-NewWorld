@@ -168,6 +168,47 @@ public class MHNWGameTests {
         });
     }
 
+    /**
+     * Every attack's limb path must span its own active window.
+     *
+     * <p>This is a pure data check, but it is the cheapest guard against the exact bug that shipped
+     * in the tail swipe: its active window was ticks 6 to 13 while its path keyframes covered a
+     * different range entirely. Outside its keyframes the path clamps to an endpoint, so the volume
+     * sat frozen at the end of its arc for most of the action and could not hit anything. Any
+     * future attack whose window and path disagree fails here instead of in a play session.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void everyAttackPathCoversItsActiveWindow(GameTestHelper helper) {
+        for (AttackProfile profile : AttackProfile.all()) {
+            String name = "attack id " + profile.id();
+            double[][] path = profile.path();
+
+            helper.assertTrue(path.length >= 2, name + " needs at least two path keyframes");
+            helper.assertTrue(profile.windupEnd() < profile.activeStart(),
+                    name + " has a windup that overlaps its active window");
+            helper.assertTrue(profile.activeStart() <= profile.activeEnd(),
+                    name + " has an empty active window");
+            helper.assertTrue(profile.activeEnd() <= profile.actionEnd(),
+                    name + " keeps hitting after the action has ended");
+            helper.assertTrue(profile.strikes() >= 1, name + " cannot strike at all");
+            helper.assertTrue(profile.minRange() < profile.maxRange(),
+                    name + " has an empty range band");
+
+            helper.assertTrue(path[0][0] <= profile.activeStart(),
+                    name + " starts hitting at tick " + profile.activeStart()
+                            + " but its path does not begin until " + path[0][0]);
+            helper.assertTrue(path[path.length - 1][0] >= profile.activeEnd(),
+                    name + " hits until tick " + profile.activeEnd()
+                            + " but its path ends at " + path[path.length - 1][0]);
+
+            for (int i = 1; i < path.length; i++) {
+                helper.assertTrue(path[i][0] > path[i - 1][0],
+                        name + " has out-of-order path keyframes at index " + i);
+            }
+        }
+        helper.succeed();
+    }
+
     /** A02/A13: death removes the creature and every one of its parts, exactly once. */
     @GameTest(template = ARENA, timeoutTicks = 200)
     public static void deathRemovesTheWholeCreature(GameTestHelper helper) {

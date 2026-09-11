@@ -74,56 +74,74 @@ public record AttackProfile(
             });
 
     /**
-     * Tail swipe. 2.375 s clip, 48 ticks. PATH IS PROVISIONAL, pending runtime measurement.
+     * Tail swipe. 2.375 s clip, 48 ticks. Path measured with the runtime bone probe.
      *
-     * <p>The speed profile shows one coherent burst over ticks 6 to 13: the tail tip sweeps at
-     * ground height through a radius of about 4 blocks, from behind the monster around to its
-     * front. That is a long-reach, low, horizontal sweep, so the range band is wider than the
-     * claw's and the volume is bigger.
+     * <p>A wide, low sweep. The tail first arcs up and over the monster through ticks 7 to 25,
+     * peaking above 5 blocks where it can hit nothing, pauses, and only then comes down and
+     * scythes around the body: that descent, ticks 28 to 43, is the part that can actually strike
+     * something standing on the ground, at 0.4 to 1.4 blocks up and a radius of 3.4 to 4.9.
      *
-     * <p>The numbers below come from an offline solve of the clip, which is known unreliable for a
-     * heavily rotated chain: it puts the tail tip slightly below ground here, and produces frank
-     * nonsense for the later part of this clip (tip 5.7 blocks in the air). Only the ticks whose
-     * output is physically plausible are used, and they must be replaced with probe measurements.
+     * <p>The sweep covers nearly a full circle around the monster, so unlike the claw there is no
+     * aim offset to apply. It also has a minimum range: a victim standing underneath the body is
+     * inside the arc and will not be touched.
+     *
+     * <p>An earlier offline solve put this window at ticks 6 to 13, when the tail is in fact still
+     * behind the monster and rising. That is why the volume appeared frozen at the end of its path
+     * for most of the action and hit nothing.
      */
     public static final AttackProfile TAIL_SWIPE = new AttackProfile(
             GreatIzuchi.ATTACK_TAIL_SWIPE,
-            5, 6, 13, 47,
+            27, 28, 43, 47,
             40, 1, 1.3D, 4.0D, 0.0F, 0.0D,
-            0.0D, 4.5D,
+            2.0D, 4.6D,
             new double[][] {
                     // age    left      up   forward
-                    {6, -0.33D, 1.85D, -4.16D},
-                    {7, -1.17D, 0.80D, -3.60D},
-                    {8, -2.09D, 0.30D, -2.93D},
-                    {9, -3.13D, 0.25D, -1.92D},
-                    {10, -3.82D, 0.25D, -0.60D},
-                    {11, -3.99D, 0.36D, 0.87D},
-                    {12, -3.05D, 0.34D, 2.24D},
-                    {13, -1.99D, 0.31D, 2.66D},
+                    {28, -2.62D, 1.81D, 0.52D},
+                    {29, -2.72D, 1.35D, -1.20D},
+                    {30, -1.63D, 1.01D, -2.91D},
+                    {31, 0.21D, 0.52D, -3.43D},
+                    {32, 2.65D, 0.43D, -2.95D},
+                    {33, 4.11D, 0.68D, -1.60D},
+                    {34, 4.62D, 0.66D, -0.45D},
+                    {35, 4.78D, 0.77D, 1.07D},
+                    {36, 4.36D, 0.99D, 2.52D},
+                    {37, 3.38D, 1.25D, 3.65D},
+                    {38, 2.15D, 1.37D, 4.33D},
+                    {39, 0.95D, 1.30D, 4.51D},
+                    {40, -0.30D, 1.07D, 4.26D},
+                    {41, -1.06D, 0.92D, 3.80D},
+                    {42, -1.37D, 1.05D, 3.36D},
+                    {43, -1.57D, 1.09D, 2.62D},
             });
 
     /**
-     * Tail slam. 4.375 s clip, 88 ticks. PATH IS PROVISIONAL, pending runtime measurement.
+     * Tail slam. 4.375 s clip, 88 ticks. Path measured with the runtime bone probe.
      *
-     * <p>A long commitment: the tail rears overhead through a long windup and comes down in front.
-     * The offline solve of the slam itself is erratic enough that these keys should be treated as
-     * placeholders that merely put the volume roughly where the tail goes, not as calibration.
-     * Measure with the bone probe before trusting the contact.
+     * <p>The longest commitment in the set: the tail rears overhead and hangs there for most of two
+     * seconds, whips through a fast arc, and drives into the ground 4.4 blocks directly in front.
+     * Only that impact can hurt anything, ticks 42 to 48, where the tip passes 0.2 to 0.7 up.
+     *
+     * <p>The whip from ticks 34 to 41 moves at three to four blocks per tick and reaches seven
+     * blocks up. It is deliberately excluded: a volume moving that fast would teleport through a
+     * victim between ticks, and it is above head height regardless.
+     *
+     * <p>Measured from one clean instance rather than an average of three. Averaging several
+     * actions smeared the fast section, because the runs are not frame-aligned with each other.
      */
     public static final AttackProfile TAIL_SLAM = new AttackProfile(
             GreatIzuchi.ATTACK_TAIL_SLAM,
-            28, 29, 40, 87,
-            60, 1, 1.5D, 6.0D, 0.0F, 0.02D,
-            0.0D, 4.0D,
+            41, 42, 48, 87,
+            60, 1, 1.5D, 6.0D, 0.0F, 0.0D,
+            3.0D, 5.2D,
             new double[][] {
                     // age    left      up   forward
-                    {29, -1.36D, 1.18D, 1.10D},
-                    {32, 1.97D, 3.50D, -0.50D},
-                    {35, 0.07D, 2.90D, 3.00D},
-                    {36, 0.39D, 0.40D, 1.99D},
-                    {38, 0.00D, 1.20D, 3.00D},
-                    {40, 0.00D, 1.00D, 3.00D},
+                    {42, 0.73D, 5.10D, 2.52D},
+                    {43, 0.85D, 2.49D, 4.33D},
+                    {44, 0.14D, 0.23D, 4.42D},
+                    {45, 0.01D, 0.70D, 4.59D},
+                    {46, -0.18D, 0.71D, 4.59D},
+                    {47, -0.18D, 0.54D, 4.52D},
+                    {48, -0.10D, 0.50D, 4.50D},
             });
 
     private static final AttackProfile[] ALL = {SCRATCH, TAIL_SWIPE, TAIL_SLAM};

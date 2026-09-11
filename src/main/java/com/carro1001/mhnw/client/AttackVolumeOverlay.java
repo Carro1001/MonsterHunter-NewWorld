@@ -18,16 +18,11 @@ import net.minecraft.world.phys.AABB;
  * The claw volume is not an entity: it is a body-local path evaluated for the current action age.
  * Without this, the one thing you cannot see is the thing that decides whether an attack connects.
  *
- * <p>It deliberately calls {@link GreatIzuchiCombatGoal#clawVolume} rather than recomputing the
+ * <p>It deliberately calls {@link GreatIzuchiCombatGoal#attackVolume} rather than recomputing the
  * geometry, so the box drawn here is the box the server hits with; if they ever disagreed, the
- * overlay would be lying about exactly the thing it exists to show. The colour is the phase, which
- * makes the windup/active/recovery boundaries directly observable (handoff A08):
- *
- * <pre>
- *   yellow  windup    telegraphing, no contact is evaluated
- *   red     active    the only ticks that can hit
- *   blue    recovery  committed, no contact
- * </pre>
+ * overlay would be lying about exactly the thing it exists to show. It appears exactly on the ticks
+ * that can deal damage and at no other time, so the active window is directly observable and a
+ * visible box is always a box that can hit (handoff A08).
  *
  * <p>Presentation only. It reads server-driven state and never feeds anything back.
  */
@@ -42,26 +37,13 @@ final class AttackVolumeOverlay {
         if (profile == null) {
             return;
         }
+        // Drawn only while contact is actually being evaluated. Outside the active window the limb
+        // path has no value to show: it clamps to its first or last keyframe, so the box would sit
+        // frozen somewhere plausible-looking for the rest of the action and read as a volume that
+        // is present but inexplicably not hitting anything. Box visible means box can hit.
         int age = entity.getAttackAge();
-        if (age < 0 || age > profile.actionEnd()) {
+        if (age < profile.activeStart() || age > profile.activeEnd()) {
             return;
-        }
-
-        float r;
-        float g;
-        float b;
-        if (age < profile.activeStart()) {
-            r = 1.0F;
-            g = 0.85F;
-            b = 0.1F;
-        } else if (age <= profile.activeEnd()) {
-            r = 1.0F;
-            g = 0.15F;
-            b = 0.1F;
-        } else {
-            r = 0.3F;
-            g = 0.6F;
-            b = 1.0F;
         }
 
         AABB volume = GreatIzuchiCombatGoal.attackVolume(entity, age);
@@ -76,7 +58,7 @@ final class AttackVolumeOverlay {
         double oz = net.minecraft.util.Mth.lerp(partialTick, entity.zOld, entity.getZ());
 
         VertexConsumer lines = bufferSource.getBuffer(RenderType.lines());
-        LevelRenderer.renderLineBox(poseStack, lines, volume.move(-ox, -oy, -oz), r, g, b, 1.0F);
+        LevelRenderer.renderLineBox(poseStack, lines, volume.move(-ox, -oy, -oz), 1.0F, 0.15F, 0.1F, 1.0F);
     }
 
     private AttackVolumeOverlay() {}
