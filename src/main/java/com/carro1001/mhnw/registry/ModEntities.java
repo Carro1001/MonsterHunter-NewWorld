@@ -1,6 +1,7 @@
 package com.carro1001.mhnw.registry;
 
 import com.carro1001.mhnw.MHNW;
+import com.carro1001.mhnw.entity.Aptonoth;
 import com.carro1001.mhnw.entity.GreatIzuchi;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.EntityType;
@@ -34,6 +35,22 @@ public final class ModEntities {
     public static final DeferredHolder<Item, Item> GREAT_IZUCHI_SPAWN_EGG =
             ITEMS.register("great_izuchi_spawn_egg", () -> new DeferredSpawnEggItem(
                     GREAT_IZUCHI, 0x6B5B45, 0xB03A2E, new Item.Properties()));
+
+    /**
+     * The P3 proof of reuse: a passive herbivore, not another combat monster (see {@link Aptonoth}).
+     * A single, whole-entity hurtbox; no multipart machinery.
+     */
+    public static final DeferredHolder<EntityType<?>, EntityType<Aptonoth>> APTONOTH =
+            ENTITY_TYPES.register("aptonoth", () -> EntityType.Builder
+                    .of(Aptonoth::new, MobCategory.CREATURE)
+                    .sized(Aptonoth.BODY_WIDTH, Aptonoth.BODY_HEIGHT)
+                    .clientTrackingRange(10)
+                    .updateInterval(3)
+                    .build("aptonoth"));
+
+    public static final DeferredHolder<Item, Item> APTONOTH_SPAWN_EGG =
+            ITEMS.register("aptonoth_spawn_egg", () -> new DeferredSpawnEggItem(
+                    APTONOTH, 0xC9A876, 0x6E5842, new Item.Properties()));
 
     /** Where natural spawn placement is anchored. Referenced by the spawn placement registration. */
     public static final Heightmap.Types SPAWN_HEIGHTMAP = Heightmap.Types.MOTION_BLOCKING_NO_LEAVES;

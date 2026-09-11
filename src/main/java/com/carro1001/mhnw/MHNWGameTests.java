@@ -1,11 +1,12 @@
 package com.carro1001.mhnw;
 
-import com.carro1001.mhnw.entity.GreatIzuchi;
+import com.carro1001.mhnw.entity.Aptonoth;
 import com.carro1001.mhnw.entity.AttackProfile;
+import com.carro1001.mhnw.entity.GreatIzuchi;
 import com.carro1001.mhnw.entity.GreatIzuchiCombatGoal;
 import com.carro1001.mhnw.entity.MonsterPart;
-import net.minecraft.nbt.CompoundTag;
 import com.carro1001.mhnw.registry.ModEntities;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.damagesource.DamageSource;
@@ -15,7 +16,8 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
 /**
- * Server-side acceptance tests for the Great Izuchi slice.
+ * Server-side acceptance tests for the Great Izuchi slice, and (from the {@code aptonoth*}
+ * methods on) the P3 passive-herbivore slice.
  *
  * <p>These cover the invariants a human at a screen cannot reliably check and that would regress
  * silently the next time the hurtbox geometry moves: that damage through a part reaches the parent
@@ -425,5 +427,61 @@ public class MHNWGameTests {
                         "part " + part.partName + " outlived its parent");
             }
         });
+    }
+
+    // ---------------------------------------------------------------- Aptonoth (P3)
+
+    /**
+     * Aptonoth must not be a hostile boss wearing a herbivore's texture: with nothing having hurt
+     * it, it must never acquire a target purely from a nearby living entity being present. Only
+     * {@link net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal} is registered on its
+     * target selector, so this is really just confirming that registration is what it appears to
+     * be, but it is the one automatable check of the "passive" half of "passive herbivore."
+     */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void aptonothIsNotHostileByDefault(GameTestHelper helper) {
+        Aptonoth aptonoth = helper.spawn(ModEntities.APTONOTH.get(), 8, 2, 8);
+        Cow bystander = helper.spawn(EntityType.COW, 8, 2, 9);
+        bystander.setNoAi(true);
+
+        helper.startSequence()
+                .thenExecuteFor(100, () -> helper.assertTrue(aptonoth.getTarget() == null,
+                        "an unprovoked Aptonoth acquired a target of its own accord"))
+                .thenSucceed();
+    }
+
+    /**
+     * When hurt by another entity, Aptonoth moves away from where that happened rather than
+     * standing its ground. This is the automatable half of "flee when provoked"; whether the rare
+     * defend-instead-of-flee fallback ever actually triggers is not asserted, since {@link Aptonoth}
+     * itself documents that Panic dominates in practice and does not promise otherwise.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void aptonothFleesWhenHurtByAnEntity(GameTestHelper helper) {
+        Aptonoth aptonoth = helper.spawn(ModEntities.APTONOTH.get(), 8, 2, 8);
+        Cow attacker = helper.spawn(EntityType.COW, 8, 2, 9);
+        attacker.setNoAi(true);
+
+        double startX = aptonoth.getX();
+        double startZ = aptonoth.getZ();
+        aptonoth.hurt(helper.getLevel().damageSources().mobAttack(attacker), 1.0F);
+
+        helper.succeedWhen(() -> {
+            double dx = aptonoth.getX() - startX;
+            double dz = aptonoth.getZ() - startZ;
+            double moved = Math.sqrt(dx * dx + dz * dz);
+            helper.assertTrue(moved > 1.5D,
+                    "a hurt Aptonoth only moved " + moved + " blocks from where it was attacked");
+        });
+    }
+
+    /** A13: an ordinary passive mob death removes it, exactly once, same as any vanilla animal. */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void aptonothDeathRemovesIt(GameTestHelper helper) {
+        Aptonoth aptonoth = helper.spawn(ModEntities.APTONOTH.get(), 8, 2, 8);
+        aptonoth.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
+
+        helper.succeedWhen(() -> helper.assertTrue(
+                aptonoth.isRemoved(), "the Aptonoth was not removed after dying"));
     }
 }

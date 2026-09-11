@@ -1,6 +1,7 @@
 package com.carro1001.mhnw.client;
 
 import com.carro1001.mhnw.MHNW;
+import com.carro1001.mhnw.entity.Aptonoth;
 import com.carro1001.mhnw.entity.GreatIzuchi;
 import com.carro1001.mhnw.registry.ModEntities;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -23,6 +24,7 @@ public final class MHNWClient {
     @SubscribeEvent
     private static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ModEntities.GREAT_IZUCHI.get(), GreatIzuchiRenderer::new);
+        event.registerEntityRenderer(ModEntities.APTONOTH.get(), AptonothRenderer::new);
     }
 
     /**
@@ -56,6 +58,15 @@ public final class MHNWClient {
         @Override
         protected float getDeathMaxRotation(GreatIzuchi entity) {
             return 0.0F;
+        }
+    }
+
+    /** Plain reuse of the preserved geometry/animations/texture; nothing species-specific to add. */
+    public static class AptonothRenderer extends GeoEntityRenderer<Aptonoth> {
+        public AptonothRenderer(EntityRendererProvider.Context context) {
+            super(context, new DefaultedEntityGeoModel<>(
+                    ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, "aptonoth")));
+            this.shadowRadius = 0.6F;
         }
     }
 

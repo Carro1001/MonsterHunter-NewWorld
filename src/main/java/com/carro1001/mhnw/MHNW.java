@@ -1,5 +1,6 @@
 package com.carro1001.mhnw;
 
+import com.carro1001.mhnw.entity.Aptonoth;
 import com.carro1001.mhnw.entity.GreatIzuchi;
 import com.carro1001.mhnw.registry.ModEntities;
 import net.minecraft.world.entity.SpawnPlacementTypes;
@@ -34,6 +35,7 @@ public class MHNW {
     @SubscribeEvent
     private static void onAttributeCreation(EntityAttributeCreationEvent event) {
         event.put(ModEntities.GREAT_IZUCHI.get(), GreatIzuchi.createAttributes().build());
+        event.put(ModEntities.APTONOTH.get(), Aptonoth.createAttributes().build());
     }
 
     @SubscribeEvent
@@ -43,6 +45,9 @@ public class MHNW {
                 ModEntities.SPAWN_HEIGHTMAP,
                 GreatIzuchi::checkSpawnRules,
                 RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        // Aptonoth natural spawn placement is deferred with the rest of A11 (docs/DEFERRED.md):
+        // spawn egg only for now, per the maintainer's decision not to worry about natural
+        // spawning until closer to release.
     }
 
     @SubscribeEvent
@@ -54,6 +59,7 @@ public class MHNW {
     private static void onBuildCreativeTabs(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS) {
             event.accept(ModEntities.GREAT_IZUCHI_SPAWN_EGG.get());
+            event.accept(ModEntities.APTONOTH_SPAWN_EGG.get());
         }
     }
 }
