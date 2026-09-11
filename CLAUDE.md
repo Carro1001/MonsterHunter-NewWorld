@@ -1,251 +1,192 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this
+repository.
+
+## Read this first if you're picking this up cold
+
+This is a from-scratch revival of an older Forge 1.20.1 mod, in progress on the
+`revival/neoforge-1.21.1` branch. **`master` is the old, larger, Forge/MultiHitBoxLib/SmartBrainLib
+codebase and is not what you are working on** — everything below describes the revival branch only.
+The full plan, rationale, and phase-by-phase runbook live in `docs/REVIVAL_HANDOFF.md`; read that
+before starting new feature work, not just this file.
+
+For "where exactly did we leave off": `docs/TEST_PLAN.md` has a dated, round-by-round history under
+each species' section (what changed, why, and what's still an open checklist item) and states the
+current GameTest count at the top. `docs/DEFERRED.md` lists everything consciously postponed, with
+enough context to pick each item up without needing this conversation's history. Both are updated
+every round of work, not just at milestones — treat a stale-looking entry as a sign something was
+missed, not as the current source of truth.
+
+**Standing constraints that apply to any future work on this branch, unless told otherwise:**
+- `revival/neoforge-1.21.1` stays **local-only, never pushed**, until the maintainer explicitly says
+  otherwise.
+- Commits end with `Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>` (PRs additionally with
+  `🤖 Generated with [Claude Code]`).
+- KISS/YAGNI: this rewrite is deliberately much smaller than the old `master` codebase (see below) —
+  don't reintroduce abstraction layers (a Brain-AI framework, a third-party multipart library, a
+  Model/Renderer split per entity) that the port already decided not to carry over, unless a real
+  need shows up, not a hypothetical one.
+- Prefer a GameTest over a manual test whenever the behaviour is server-side and verifiable
+  headlessly (damage, timing, state machines, save/reload, navigation). Anything visual (does a
+  hurtbox sit on the model, does an animation look right) needs a human at a screen — see
+  `docs/TEST_PLAN.md`'s own framing of that split.
+- After any code change: rebuild and run the full GameTest suite (see below), update
+  `docs/TEST_PLAN.md`/`docs/DEFERRED.md` as needed, then commit.
 
 ## What this is
 
-A Minecraft Forge mod ("Monster Hunter: New World", mod id `mhnw`) that adds Monster Hunter-style
-large monsters (Rathalos, Rathian, Zinogre, Deviljho, Lagiacrus, Izuchi/Great Izuchi, etc.), with
-GeckoLib-animated models, part-breaking hitboxes, and MH-style AI (aggression states, rage/exhaust
-buildup, rally mechanics).
-
-Build tooling is Gradle via ForgeGradle. There is no CMake in this repo despite the name similarity.
+A Minecraft NeoForge mod (`mhnw`, "Monster Hunter: New World") adding Monster Hunter-style
+creatures — currently Great Izuchi, Izuchi (small), Rathian, Rathalos, Aptonoth, Toad, Flashbug, Bug —
+with GeckoLib-animated models and, for the large monsters, part-based hurtboxes. More species
+(Zinogre, Deviljho, Lagiacrus, Blango, Blangonga) are planned per the handoff's runbook but not yet
+ported.
 
 ## Build & run
 
-Standard ForgeGradle project. Use the wrapper (`./gradlew` on bash, `gradlew.bat` on plain
-PowerShell/cmd):
+Standard NeoForge ModDevGradle project (`net.neoforged.moddev` plugin, not classic ForgeGradle). Use
+the wrapper:
 
 - `./gradlew build`: compile and build the mod jar.
 - `./gradlew runClient`: launch a dev client with the mod loaded.
 - `./gradlew runServer`: launch a dev dedicated server.
-- `./gradlew runData`: run Forge data generators; output goes to `src/generated/resources/`
-  (declared as an extra resources source dir in `build.gradle`, so generated data ships with the mod).
-- `./gradlew runGameTestServer`: run the gametest server run config.
+- `./gradlew runData`: run data generators; output goes to `src/generated/resources/`.
+- `./gradlew runGameTestServer`: run every registered GameTest headlessly and exit non-zero on
+  failure. This is the test suite — there is no separate unit test framework.
 
-There are no lint or test tasks configured beyond the standard Gradle/ForgeGradle ones; this repo
-has no unit test suite.
+**JDK note:** the project compiles to Java 21 (`java.toolchain.languageVersion`, since Mojang ships
+Java 21 to end users on 1.21.1). Gradle itself (wrapper pinned to `9.2.1`) also needs a JDK it can
+run on; if the machine's default `java`/`JAVA_HOME` doesn't work for Gradle's own startup, point
+`JAVA_HOME` at one that does for `gradlew` invocations. The working invocation used throughout this
+branch's own session history on this machine:
+`JAVA_HOME="C:\Program Files\Java\jdk-22" ./gradlew.bat --no-daemon build runGameTestServer`
+(bash-style quoting; adjust the path if the local JDK 21/22 install lives elsewhere). A build/test
+round on this machine takes roughly 30 seconds.
 
-**JDK note:** the project *compiles* to Java 17 (`java.toolchain.languageVersion`), but Gradle itself
-(8.8, via the wrapper) must also *run* on a JDK it supports, and it cannot run on JDK 21+ builds like
-25. If the machine's default `java`/`JAVA_HOME` is newer (check with `java -version`), point
-`JAVA_HOME` at a JDK 17 install for `gradlew` invocations, e.g. on this machine:
-`JAVA_HOME="C:\Program Files\Eclipse Adoptium\jdk-17.0.11.9-hotspot" ./gradlew build`. Symptom of
-getting this wrong: `Unsupported class file major version 69` (that's JDK 25) during Gradle's own
-startup, before any project compilation happens.
+Combat/behaviour diagnostics: `/mhnw debugcombat` toggles logging in-game (op-only) — see
+`MHNWCommands`/`MHNWConfig`. With it on, `BoneProbe` (client-only) logs every named GeckoLib bone's
+measured world position, converted into the same left/up/forward local frame every species'
+`localToWorld` uses, and `AttackVolumeOverlay` draws Great Izuchi's live attack volume with F3+B.
+This is the only sane way to get real hurtbox/attack numbers — see "Hurtboxes are static offsets"
+below for why guessing offline doesn't work.
 
-Key versions (`gradle.properties`): Minecraft 1.20.1, Forge 47.3.22, Java 17, Parchment mappings
-(`2023.09.03-1.20.1`). Mod group/package is `com.carro1001.mhnw`.
-
-### Dependencies (all embedded/deobfuscated via `fg.deobf`)
-
-- **GeckoLib**: animated entity models/renderers.
-- **MultiHitBoxLib (MHLib)**: per-part hitboxes for monsters (breakable parts like tails, heads);
-  hitbox layouts are JSON profiles under `src/main/resources/data/mhnw/multihitboxlib/hitbox_profiles/`.
-- **SmartBrainLib (SBL)** + `mixin-booster`: brain/AI framework used alongside vanilla `Goal`s.
-- **JEI**: compile/runtime only, for recipe viewing integration.
-- **Jade** (via CurseMaven): waila/tooltip integration.
-
-Custom repos are declared in `build.gradle` for each of these (Cloudsmith for GeckoLib/SBL,
-CurseMaven for Jade, a custom Ivy pattern for GitHub Releases-hosted deps). If a dependency version
-bump 404s, check whether the artifact moved between these repo patterns.
+Key versions (`gradle.properties`): Minecraft 1.21.1, NeoForge 21.1.248, Java 21, Parchment mappings
+`2024.11.17`, GeckoLib 4.9.2, Gradle wrapper 9.2.1. Mod group/package is `com.carro1001.mhnw`. These
+are deliberate, sourced pins (handoff section 7.3) — don't float them to "latest" without checking
+that section first. **GeckoLib is the only external dependency**; the old codebase's MultiHitBoxLib,
+SmartBrainLib, mixin-booster, JEI, and Jade integrations were not carried over (see Architecture).
 
 ## Architecture
 
-### Entity class hierarchy
+This is a much smaller codebase than the old `master` branch (roughly 5,000 lines across everything
+under `src/main/java/com/carro1001/mhnw/`, GameTests included) — there is no `NewWorldEntity`
+hierarchy, no Brain-AI framework, no third-party multipart or hitbox-profile-JSON system. Entities
+extend a vanilla base (`Monster`, `Animal`) directly and implement GeckoLib's `GeoEntity` directly;
+each large monster hand-rolls its own small amount of shared logic (`localToWorld`, `positionParts`,
+the fairness-corrected `hurt` guard) rather than inheriting it, and the repeated doc comments across
+`Rathian`/`Rathalos`/`Aptonoth`/`GreatIzuchi` note this as a real, acknowledged duplication —
+described in each class as "a genuine extraction candidate once enough of this is common to justify
+the risk of restructuring already-shipped code," not an oversight.
 
-Monsters build up through a layered abstract hierarchy in `entities/`:
+### Package layout
 
-- `NewWorldEntity`: base for all mod mobs: GeckoLib `GeoEntity` wiring, home position tracking,
-  shared attribute defaults (`prepareAttributes()`), extended render distance.
-- `NewWorldGrowingEntity`: adds growth/aging (`IGrows`).
-- `NewWorldMonsterEntity`: the "large monster" base: implements `IMultipartEntity` (MultiHitBoxLib)
-  for breakable parts, `IAttributes`, and `Enemy`. Carries synced state for aggression state, death
-  state (multi-stage carving after death), limping, rally state, sleeping, tail-cut, rage
-  buildup/exhaustion buildup, and current attack animation id. Concrete monsters (`RathalosEntity`,
-  `RathianEntity`, `ZinogreEntity`, `DeviljhoEntity`, `LagiacrusEntity`, `IzuchiEntity`,
-  `GreatIzuchiEntity`, ...) extend this and mostly configure attributes, goals, and animations.
-- Smaller fauna (`AptonothEntity`, `BugEntity`, `ToadEntity`, `BlangoEntity`, `BlangongaEntity`,
-  `FlashBugEntity`) extend `NewWorldEntity`/`NewWorldGrowingEntity` directly without the monster
-  machinery.
-- `MonsterBreakablePartEntity` (in `entities/helpers/`) is the MHLib sub-part entity representing a
-  single breakable hitbox (e.g. a tail or head segment); `IMonsterBreakablePart.PART` enumerates part
-  types. `TailEntity` is a standalone entity used both as a droppable tail and as a growing sub-model.
+- `com.carro1001.mhnw`: `MHNW` (the `@Mod` entry point — registers entities, attributes, spawn
+  placements, creative tab contents, GameTests, and the `/mhnw` command), `MHNWCommands`,
+  `MHNWConfig` (client/server config, including `debugCombat`), `MHNWGameTests` (the entire GameTest
+  suite, one file).
+- `com.carro1001.mhnw.entity`: every entity class, its species-specific `Goal`s, and the shared
+  `MonsterPart`/`AttackProfile` helpers — flat, not nested under per-species subpackages.
+- `com.carro1001.mhnw.client`: `MHNWClient` (renderer registration; each renderer is a small nested
+  static class in this one file, not a separate `*Renderer.java` per entity — e.g.
+  `MHNWClient.RathianRenderer extends GeoEntityRenderer<Rathian>`), `BoneProbe` (the measurement
+  tool described above), `AttackVolumeOverlay` (F3+B attack-volume drawing).
+- `com.carro1001.mhnw.registry`: `ModEntities`, the one `DeferredRegister` holder for entity types
+  and their spawn eggs.
 
-Custom AI lives in `entities/ai/`: a mix of vanilla `Goal` subclasses (`HitboxMeeleeAttackGoal`,
-`MonsterAggressionStateGoal`, `RallyGoal`, `SleepGoal`, `ExhaustedStallGoal`, per-monster attack/stroll
-goals), a `entities/ai/brain/` package for SmartBrainLib Brain behaviours, and pathing helpers in
-`entities/ai/util/` (`MMPathFinder`, `MMPathNavigatorGround`, `SmartBodyHelper`). Check an individual
-entity's `registerGoals()`/`getFightTasks()` before assuming which framework it uses; see next.
+### Multipart hurtboxes: native NeoForge, not a library
 
-### AI: Goal system vs. Brain system
+Large monsters (`GreatIzuchi`, `Rathian`, `Rathalos`, and the passive `Aptonoth`) use `MonsterPart`
+(`entity/MonsterPart.java`), which extends NeoForge's own `net.neoforged.neoforge.entity.PartEntity`
+directly — **no MultiHitBoxLib or other third-party multipart dependency**, unlike the old `master`
+branch. A part has no health of its own; `MonsterPart.hurt` forwards to the parent, which owns
+health/mitigation/death, and the parent de-duplicates so one area effect touching several parts
+still costs exactly one hit. Each owning entity keeps its own `MonsterPart[]`, its own
+`localToWorld(left, up, forward)` (a yaw-only rotation of a local offset around the entity's
+position), and calls `positionParts()` exactly once per tick, from `tick()` after `super.tick()`
+returns (a real, fixed bug: calling it a second time from `aiStep()` as well corrupted an
+interpolation "old" value, not just wasted work — see any of these classes' own `tick()` doc
+comment if touching this again).
 
-Minecraft/Forge has two parallel mob-AI frameworks; this mod has monsters on both, one at a time per
-monster (Brain and Goals *can* coexist on the same entity, see below, but no monster mixes Brain-driven
-and Goal-driven combat for the same behaviour):
+**Hurtboxes are static offsets, not live bone tracking — this is a load-bearing architectural fact,
+not a limitation to "fix":** the dedicated server never runs GeckoLib's animation system at all,
+only the client renders/animates bones, so a `MonsterPart`'s position must be a fixed number the
+server can rely on unconditionally every tick; it can never literally track a currently-animating
+bone. In practice this means every species' hurtbox constants are **measured** (via `BoneProbe`,
+live, with `debugCombat` on) rather than computed from the model's animation data, and the
+measurement methodology itself went through several rounds documented in `docs/TEST_PLAN.md`:
+plain averaging over a few samples proved unstable (whichever slice of an idle sway got sampled more
+biased the mean); range-midpoint (midpoint of observed min/max over ~25 samples) was adopted instead
+as the robust-to-sampling-bias fix; and even the model's own dedicated `*Hitbox`-suffixed locator
+bones (present in Great Izuchi's, Rathian's, and Rathalos's `.geo.json` files, e.g. `torsoHitbox`,
+`headHitbox`) still sway with the idle animation just like any mesh bone, so a *narrow* capture of
+even those needs the same range-midpoint treatment, not a single trusted sample. Read the current
+Rathian/Rathalos constructor comments before changing any hurtbox number — they carry the exact
+lesson-by-lesson history of what was tried and why it was wrong, and repeating an already-disproved
+approach (a single mean, a flat directional nudge) wastes a full test round.
 
-- **Goal system** (vanilla, `net.minecraft.world.entity.ai.goal.Goal` + `GoalSelector`): what every
-  monster except Great Izuchi uses. `DragonEntity.registerGoals()` is the fullest example
-  (`NearestAttackableTargetGoal`, `MonsterAggressionStateGoal`, `DragonMeleeAttackGoal`,
-  `DragonShootFireballGoal`, stroll/fly goals), and `RathalosEntity`/`RathianEntity` inherit it
-  wholesale. `IzuchiEntity` still layers `HitboxMeeleeAttackGoal` on top of the
-  `NewWorldMonsterEntity` base goals.
-- **Brain system** (`net.minecraft.world.entity.ai.Brain`, driven via SmartBrainLib's
-  `SmartBrainOwner`/`BrainActivityGroup`/`ExtendedSensor`/`ExtendedBehaviour` wrappers):
-  **`GreatIzuchiEntity` runs on this now** (rewritten 2026-08-22, from scratch; see below, not from
-  the stale `origin/brain` branch). `NewWorldMonsterEntity.serverAiStep()` (vanilla, `final`) always
-  ticks `goalSelector` regardless of Brain use, so a Brain-based monster still keeps small Goals for
-  behaviour the Brain doesn't own (`GreatIzuchiEntity.registerGoals()` keeps `FloatGoal`,
-  `MonsterAggressionStateGoal`, `ExhaustedStallGoal`, `RallyGoal`, `SleepGoal`, deliberately *not*
-  `super.registerGoals()`, since that also adds `NearestAttackableTargetGoal` and
-  `WaterAvoidingRandomStrollGoal`, which would fight the Brain for targeting/movement each tick).
-  `customServerAiStep()` calls `tickBrain(this)` and mirrors the Brain's attack-target memory onto
-  vanilla `Mob#setTarget()`, since `MonsterAggressionStateGoal` (kept as a Goal) still reads that
-  field directly rather than the Brain memory.
-  `mixin-booster` (`org.sinytra.mixinbooster`) is pulled in specifically to make SmartBrainLib's mixins
-  play with Forge on 1.20.1.
+### Attack timeline: Great Izuchi only, so far
 
-There's a stale `origin/brain` remote branch (forked before several `master` commits, including the
-scaling fix) with a half-baked, never-finished SmartBrainLib migration of the small `IzuchiEntity`
-(not Great Izuchi). It's superseded by the from-scratch `GreatIzuchiEntity` rewrite and not worth
-merging; useful only as historical reference for what didn't work (it called
-`.useMemory(NEAREST_ATTACKABLE)` on `TargetOrRetaliate` without ever registering the sensor that
-populates that memory, among other things; the rewrite doesn't call `.useMemory()` at all and lets
-`TargetOrRetaliate` fall back to its `NEAREST_VISIBLE_LIVING_ENTITIES` + `attackablePredicate` path,
-which only needs `NearbyLivingEntitySensor`).
+`GreatIzuchiCombatGoal` (a vanilla `Goal`, not a Brain-system behaviour — there is no SmartBrainLib
+dependency on this branch) is the sole owner of Great Izuchi's combat: target approach, orientation,
+attack selection, and the attack's phase timeline (`WINDUP` → `ACTIVE` → `RECOVERY`, derived from a
+single "action age" counter rather than several counters that could disagree). Everything that
+differs between individual attacks (range band, damage, active window, which part(s) act as the
+attack volume) lives in `AttackProfile`, a small data-only class this goal reads from — see either
+file's own doc comment for the phase table and the exact contract.
 
-**Porting another monster to Brain:** follow `GreatIzuchiEntity` as the template (sensors, core/idle/
-fight task groups, the `registerGoals()`-without-`super` pattern, the `customServerAiStep()` target
-mirror). Reuse `HitboxAnimationAttack<E extends NewWorldMonsterEntity>`
-(`entities/ai/brain/HitboxAnimationAttack.java`) for hitbox-based melee attacks instead of writing a
-new one per monster; it's generic over any `NewWorldMonsterEntity` and replaces
-`HitboxMeeleeAttackGoal` for Brain-based monsters (see next section). SmartBrainLib ships its own
-`AnimatableMeleeAttack`, but that's a single instantaneous `doHurtTarget` hit after a delay: it does
-not do the part-hitbox overlap checking this mod's combat model needs, so it doesn't replace
-`HitboxAnimationAttack`.
+Every other current monster (`Izuchi`, `Rathian`, `Rathalos`) fights with ordinary vanilla
+`MeleeAttackGoal`/`Mob.doHurtTarget` and has **no custom attack presentation yet** — this is a
+deliberate, documented P4 gap (`docs/DEFERRED.md`), not an oversight:
+- Rathian's and Rathalos's real attack clips exist in their `.geo.json`/animation files but aren't
+  wired to any attack volume; Rathalos's four melee clips reference 14-17 bone names each that don't
+  exist anywhere in its own geometry (confirmed, not assumed — a model-editor retarget or a new
+  clip is needed before those can play correctly at all).
+- Izuchi (small) has no attack or death clip in its own preserved asset at all (idle/sleep/walk/run
+  only). A candidate attack/death set exists on the archived `origin/brain` branch
+  (`legacy/candidate-art-brain-branch/izuchi.*`), but every attack/death/roar/rally clip in it
+  references bones (`left_shoulder`, `right_shoulder`, `left_ankle`, `right_ankle`, `mane`,
+  `tailblade`, `left_hand`, `right_hand`) that belong to Great Izuchi's richer skeleton, not
+  Izuchi's own — confirmed directly by diffing each clip's referenced bones against Izuchi's own
+  `.geo.json`. This needs either a real retarget, a newly authored clip, or explicit approval to
+  reuse an existing clip as a labelled placeholder — a decision left to the maintainer, not made
+  unilaterally.
 
-### Hitbox-based hurt system
+### Registration and client wiring
 
-Monsters do **not** use Minecraft's normal single-bounding-box hurt/attack flow. Instead:
-
-- Each `NewWorldMonsterEntity` implements MultiHitBoxLib's `IMultipartEntity`, and each monster has a
-  hitbox profile JSON at `data/mhnw/multihitboxlib/hitbox_profiles/<name>.json` declaring `parts[]`
-  (own AABB, whether it's `collidable`/`can-receive-damage`, a `damage-modifier`) and a
-  `synched-bones` list; MHLib syncs each named part's world position every tick to the pivot of the
-  matching GeckoLib bone in the monster's `.geo.json` model (`"sync-with-model": true`). Parts using
-  the custom `mhnw:breakable` box type (registered in `ModHitboxTypes`/`BreakablePartHitboxType`) get
-  wrapped as `MonsterBreakablePartEntity`, a real sub-entity with its own `hp`, `PART` type
-  (`TAIL`/`HEAD`/`WING`/`CLAW`/`OTHER`), and `will_cut` behavior (e.g. severed tails spawn a
-  standalone `TailEntity`, see `MonsterBreakablePartEntity.hurt`).
-- Actual attack damage is dealt by walking these part hitboxes, not `Mob.doHurtTarget`:
-  `HitboxMeeleeAttackGoal` (the `Goal`-system version) triggers a GeckoLib animation via
-  `triggerAnim`, waits `tickForAttackChecksToBegin` ticks, then each tick during the active window
-  inflates the *attacking* monster's named part hitbox (e.g. the claw) and checks overlap against
-  nearby `LivingEntity`s, hurting them directly with a custom `DamageSource` (`ModDamageTypes.RAW`,
-  bypasses armor/resistances, aka "raw damage"). `AnimatableHitboxMeleeAttack` on the `brain` branch
-  is the same idea reimplemented as an SBL `DelayedBehaviour`. Player damage to monsters instead goes
-  through each part's own `MonsterBreakablePartEntity.hurt()` (players hit whichever part hitbox their
-  weapon actually intersects), which is how part-breaking/tail-cutting works.
-- **Great Izuchi's attacks are on the Brain system now, see below** for how the hitbox-check design
-  and the growth-scale sync question actually got resolved.
-
-### Great Izuchi's Brain migration (done, 2026-08-23)
-
-Great Izuchi's combat runs on SmartBrainLib now, rewritten from scratch (not from `origin/brain`, see
-above). It's confirmed working live: claw, tailslam, and tailswipe all land real hits and can kill a
-target. Getting there took several wrong turns worth knowing about before touching this code again:
-
-- **`HitboxAnimationAttack`** (`entities/ai/brain/HitboxAnimationAttack.java`) replaced the old
-  hand-picked hit-check tick window entirely. It checks the bone-synced part hitbox for real overlap
-  every tick for the whole swing, hitting each target at most once. No animation-specific frame
-  numbers to tune by hand; the hitbox is wherever the animation actually put it.
-- A real, confirmed bug (not the growth-scale theory below) was a countdown seeded wrong in
-  `start()`, which meant the hit-check code never ran at all regardless of hitbox position. If a fix
-  has zero effect, check whether the code is even executing before tuning it further.
-- Vanilla `Behavior`'s default duration is hardcoded to 60 ticks and SmartBrainLib's
-  `.runFor(...)` doesn't override it in this version; `HitboxAnimationAttack` overrides `timedOut()`
-  directly with its own tick counter instead.
-- The growth-scale hitbox correction described in an earlier version of this doc (re-applying
-  `getMonsterScale()` to the synced part position in `MonsterBreakablePartEntity`) was tried and
-  reverted: it pulled every part hitbox toward the entity's center on any monster below max scale
-  roll (which is most of them, since the roll is always <=1.0), confirmed by watching it live.
-  `MonsterBreakablePartEntity` now trusts MHLib's raw sync as-is.
-- `clawHitbox` and `tailEndHitbox` in `great_izuchi.geo.json` had real rigging bugs (wrong bone
-  parent, wrong pivot) that looked like code bugs until the bone data was actually dumped and
-  checked. Any monster's hitbox that "won't reach" or "sits in the wrong spot" no matter what the
-  Java-side tuning does is worth checking at the model level first.
-
-Full write-up of every bug and fix lives in the `great-izuchi-brain-migration` project memory.
-
-### Dependency versions (bumped 2026-08-22, MC stays 1.20.1)
-
-`gradle.properties` versions were audited and updated to the latest available for MC 1.20.1 (verified
-with a clean `./gradlew build`, see JDK note above):
-
-- **Forge** `47.3.22` → `47.4.23` (latest for 1.20.1).
-- **GeckoLib** `4.7` → `4.8.4` (latest).
-- **JEI** `15.2.0.27` → `15.20.0.116` (latest).
-- **Jade** (CurseMaven file id) `4711195` → `6855440` (11.13.2, latest).
-- **mixin-booster** `0.1.1` → `0.1.3` (latest).
-- **SmartBrainLib** `1.15`: already latest for `SmartBrainLib-forge-1.20.1` on Cloudsmith (SBL's
-  1.20.1 line stops there; newer SBL releases target 1.20.4/1.21+). Unchanged.
-- **MultiHitBoxLib** `1.8.1`: already the latest MC1.20.1 release. Unchanged, but **its repo
-  location moved**, see below.
-- The `brain` branch's `gradle.properties` still points at older versions across the board, another
-  reason not to merge it wholesale; re-check/re-bump versions after rebasing it onto `master`.
-
-**MultiHitBoxLib's GitHub-releases host disappeared.** `build.gradle` originally fetched it via a
-custom Ivy pattern hitting `github.com/dertoaster98/multihitboxlib/releases/...`, but that repo is
-gone (the project, per its Modrinth listing "MultiHitboxLib (DISCONTINUED)", has been forked to
-`github.com/ZigyTheBird/MultiHitBoxLib`, which has no releases published). A clean build with no
-pre-warmed Gradle cache would fail to resolve it at all, independent of any version bump. Fixed by
-adding a Modrinth maven repo (`https://api.modrinth.com/maven`) and switching the dependency
-coordinate to `maven.modrinth:multihitboxlib:${multihitbox_version}` (Modrinth's maven uses its own
-project slug/id as the artifact id and its own plain version string, e.g. `1.8.1`, not the
-`<mc_version>-<lib_version>` string used in the old Ivy pattern). If this dependency needs bumping
-again, get the version number from Modrinth (`api.modrinth.com/v2/project/multihitboxlib/version`),
-not from GitHub.
-
-No decompiled/mapped vanilla Minecraft source is cached locally yet (`~/.gradle/caches/forge_gradle`
-has no `joined`/`client`-sources jar). Opening the project in an IDE with the Forge/ForgeGradle and
-"Minecraft Development" plugins (or running the IDE-sync Gradle task) will trigger the decompile +
-Parchment-mapping step and make vanilla MC classes (e.g. `Brain`, `Mob`, `LivingEntity`) readable
-with real names, which is useful for Brain-system work since SmartBrainLib wraps vanilla `Brain`
-fairly thinly.
-
-### Registration
-
-All Forge `DeferredRegister`s live under `registration/` (`ModEntities`, `ModItems`, `ModBlocks`,
-`ModParticle`, `ModDamageTypes`, `ModHitboxTypes`, `ModTabs`, `ModRenderTypes`, plus feature/placed
-feature registries). `ModEntities.registerEntity(...)` is the common helper for defining an
-`EntityType` + spawn egg together; entity attribute suppliers are wired centrally in
-`RegistrationHelper.onAttributeCreate`, not on each entity class's own registration line; when
-adding a new monster, both `ModEntities` and `RegistrationHelper` need updating.
-
-Mod-wide constants (mod id, entity/item name strings) are in `utils/MHNWReferences`. Registration
-and setup are split across `MHNW` (main `@Mod` class, wires event bus + registries),
-`setup/CommonSetup`, `setup/ClientSetup` (`DistExecutor`-gated), and `setup/ModConfig`
-(client/server TOML configs). `ModelLayerLocation`-shaped helpers live in `ClientSetup` specifically,
-not the shared `RegistrationHelper`; that type doesn't exist on a dedicated server.
-
-### Client rendering
-
-Per-entity GeckoLib model + renderer pairs live in `client/models/entities/` and
-`client/renderers/entities/`, following the vanilla `EntityModel`/`EntityRenderer` naming pattern
-(`RathalosModel`/`RathalosRenderer`, etc.), with `NewWorldGrowingEntityModel`/
-`NewWorldGrowingEntityRenderer` and `NewWorldMonsterEntityModel` as shared bases (renderer has a
-`scaleModelForRender` hook for growth scaling). GeckoLib animation/geometry assets are under
-`src/main/resources/assets/mhnw/{animations,geo}/`, textures under `.../textures/`. Custom particles
-(ice, poison, sleep, thunder) each have a paired `*Particle`/`*ParticleType` class under
-`client/particles/`.
+`ModEntities` is the one `DeferredRegister` holder (entity types + spawn eggs together); attribute
+suppliers are wired centrally in `MHNW.onAttributeCreation`, not per entity class. `MHNWClient`
+(gated to the client dist by NeoForge's own event timing, not a `DistExecutor` split) registers one
+renderer per entity as a small nested static class — most `extends GeoEntityRenderer<T>` directly
+(GeckoLib 4.x needs no separate `EntityModel` class the way the old renderer pattern did); `Bug` is
+the one exception, a plain `MobRenderer`/`BugModel` pair, since it isn't GeoLib-animated.
 
 ### Data
 
-Static datapack-style data (loot tables, damage types, recipes, hitbox profiles) lives under
-`src/main/resources/data/mhnw/`. Anything reproducible by the data generators instead lives in
-`datagen/` (currently loot table providers) and is emitted to `src/generated/resources/` by
-`runData`. Don't hand-edit generated files under `src/generated/`; change the generator and rerun.
+Static datapack-style data (loot tables, spawn placement biome modifiers) lives under
+`src/main/resources/data/mhnw/`. Generated data goes to `src/generated/resources/` via `runData` —
+don't hand-edit files there. GeckoLib assets (`.geo.json`, `.animation.json`, textures) live under
+`src/main/resources/assets/mhnw/{geo,animations,textures}/`.
 
-MultiHitBoxLib hitbox profiles (`data/mhnw/multihitboxlib/hitbox_profiles/*.json`) define the
-breakable-part layout per monster and must stay in sync with the `PART` handling in each entity's
-Java code.
+## Testing
+
+`MHNWGameTests.java` (one file, `@GameTestHolder(MHNW.MOD_ID)`) is the entire automated suite, run
+via `./gradlew runGameTestServer`. It deliberately covers only what a human at a screen cannot
+reliably check and what would regress silently — damage semantics (one hit through a part costs
+the parent exactly one hit, distinct attackers aren't conflated, damage only lands inside an
+attack's active window), state-machine edges (reload cancels transient combat, death removes every
+part exactly once), and — as of the A10 navigation work — ground pathing across open terrain, an
+outside corner, a body-width passage, a too-narrow passage, a single-block step, and a fully sealed
+unreachable target. It deliberately does **not** cover whether a texture renders, an animation looks
+right, or a hurtbox visually sits on the body — those need `docs/TEST_PLAN.md`'s human checklist.
+Current test count and pass status are stated at the top of `docs/TEST_PLAN.md`; keep that number in
+sync when adding tests.
