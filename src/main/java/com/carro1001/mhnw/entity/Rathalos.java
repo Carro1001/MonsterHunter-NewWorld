@@ -205,6 +205,12 @@ public class Rathalos extends Monster implements GeoEntity {
         return distance < 16384.0D;
     }
 
+    /** Same fix, same reason, as {@link Rathian#getBoundingBoxForCulling}. */
+    @Override
+    public net.minecraft.world.phys.AABB getBoundingBoxForCulling() {
+        return getBoundingBox().inflate(9.0D, 5.0D, 9.0D);
+    }
+
     @Override
     protected boolean shouldDespawnInPeaceful() {
         return false;

@@ -426,6 +426,20 @@ public class GreatIzuchi extends Monster implements GeoEntity {
         return distance < 16384.0D;
     }
 
+    /**
+     * Vanilla's default culling box is the collision hitbox inflated by a flat 0.5 block
+     * ({@code EntityRenderer.shouldRender}), which is correct for a normal mob but not for one
+     * whose visible model reaches well outside its own hitbox: the tail alone reaches 4.9 blocks
+     * behind the 1.6-wide root box. Without this, the game stops rendering the whole entity the
+     * moment that small root box leaves the camera frustum, which reads as the head or tail
+     * abruptly vanishing while clearly still on screen, well before the body itself is off camera.
+     * This is the same hook vanilla's own long/large entities use for the same reason.
+     */
+    @Override
+    public net.minecraft.world.phys.AABB getBoundingBoxForCulling() {
+        return getBoundingBox().inflate(6.0D, 4.0D, 6.0D);
+    }
+
     @Override
     protected boolean shouldDespawnInPeaceful() {
         return false;

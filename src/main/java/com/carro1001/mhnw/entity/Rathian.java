@@ -234,6 +234,20 @@ public class Rathian extends Monster implements GeoEntity {
         return distance < 16384.0D;
     }
 
+    /**
+     * Vanilla's default culling box is the hitbox inflated by a flat 0.5 block, correct for a
+     * normal mob but not one whose visible model reaches well outside its own hitbox: the neck and
+     * head alone reach nearly 7.5 blocks forward, the tail 6.2 back, and the wings spread several
+     * blocks up. Without this, the game stops rendering the whole entity as soon as that small root
+     * box leaves the camera frustum, which reads as the head vanishing mid-turn well before the
+     * body is actually off screen. Same hook vanilla's own large/long entities use for the same
+     * reason; see {@link GreatIzuchi#getBoundingBoxForCulling} for the smaller-scale version of it.
+     */
+    @Override
+    public net.minecraft.world.phys.AABB getBoundingBoxForCulling() {
+        return getBoundingBox().inflate(9.0D, 5.0D, 9.0D);
+    }
+
     @Override
     protected boolean shouldDespawnInPeaceful() {
         return false;
