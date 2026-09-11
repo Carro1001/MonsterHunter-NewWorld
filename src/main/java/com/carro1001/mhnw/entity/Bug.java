@@ -31,7 +31,9 @@ import net.minecraft.world.level.Level;
  */
 public class Bug extends PathfinderMob {
 
-    public static final double MAX_HEALTH = 4.0D;
+    /** Low enough that any hit, including a bare-handed punch, kills it in one: it's meant to be
+     * collected for future item crafting, not fought. */
+    public static final double MAX_HEALTH = 1.0D;
     public static final float BODY_WIDTH = 0.4F;
     public static final float BODY_HEIGHT = 0.4F;
 

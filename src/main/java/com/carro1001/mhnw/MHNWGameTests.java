@@ -786,6 +786,19 @@ public class MHNWGameTests {
                 bug.isRemoved(), "the bug was not removed after dying"));
     }
 
+    /**
+     * A bitterbug/godbug is meant to be collected, not fought: a single point of any damage, even a
+     * bare-handed punch, must be enough to kill it (handoff feedback: "should be a 1 tap kill").
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void bugDiesToASinglePointOfDamage(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Bug bug = helper.spawn(ModEntities.BUG.get(), 8, 2, 8);
+        bug.hurt(helper.getLevel().damageSources().generic(), 1.0F);
+
+        helper.succeedWhen(() -> helper.assertTrue(
+                bug.isRemoved(), "a bug survived a single point of damage; it should be a one-hit kill"));
+    }
+
     // ---------------------------------------------------------------- Izuchi (P4, small monster)
 
     /**
