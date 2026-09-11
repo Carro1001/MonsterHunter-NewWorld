@@ -8,6 +8,7 @@ import com.carro1001.mhnw.entity.Flashbug;
 import com.carro1001.mhnw.entity.GreatIzuchi;
 import com.carro1001.mhnw.entity.Izuchi;
 import com.carro1001.mhnw.entity.Rathian;
+import com.carro1001.mhnw.entity.Rathalos;
 import com.carro1001.mhnw.entity.Toad;
 import com.carro1001.mhnw.registry.ModEntities;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -37,6 +38,7 @@ public final class MHNWClient {
         event.registerEntityRenderer(ModEntities.BUG.get(), BugRenderer::new);
         event.registerEntityRenderer(ModEntities.IZUCHI.get(), IzuchiRenderer::new);
         event.registerEntityRenderer(ModEntities.RATHIAN.get(), RathianRenderer::new);
+        event.registerEntityRenderer(ModEntities.RATHALOS.get(), RathalosRenderer::new);
     }
 
     /**
@@ -167,6 +169,20 @@ public final class MHNWClient {
 
         @Override
         protected float getDeathMaxRotation(Rathian entity) {
+            return 0.0F;
+        }
+    }
+
+    /** Same treatment as {@link RathianRenderer}: authored death clip, vanilla flop disabled. */
+    public static class RathalosRenderer extends GeoEntityRenderer<Rathalos> {
+        public RathalosRenderer(EntityRendererProvider.Context context) {
+            super(context, new DefaultedEntityGeoModel<>(
+                    ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, "rathalos")));
+            this.shadowRadius = 1.4F;
+        }
+
+        @Override
+        protected float getDeathMaxRotation(Rathalos entity) {
             return 0.0F;
         }
     }

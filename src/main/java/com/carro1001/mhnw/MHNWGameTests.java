@@ -815,6 +815,79 @@ public class MHNWGameTests {
         });
     }
 
+    // ---------------------------------------------------------------- Rathalos (P4, ground wyvern)
+
+    /** A03: the shared multipart contract, checked for a third independently constructed owner. */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void rathalosPartDamageReachesParent(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Rathalos rathalos = helper.spawn(ModEntities.RATHALOS.get(), 8, 2, 8);
+        rathalos.setNoAi(true);
+        float before = rathalos.getHealth();
+
+        MonsterPart head = rathalos.part("head");
+        head.hurt(helper.getLevel().damageSources().generic(), PROBE_DAMAGE);
+
+        float lost = before - rathalos.getHealth();
+        helper.assertTrue(Math.abs(lost - PROBE_DAMAGE) < EPSILON,
+                "hitting Rathalos's head should cost the parent exactly " + PROBE_DAMAGE
+                        + " health, but it lost " + lost);
+        helper.succeed();
+    }
+
+    /**
+     * A03/A06: the same fairness case Rathian's version guards, with the second hit again the
+     * smaller of the two so the test actually discriminates the fix from vanilla's default.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void rathalosDistinctSourcesAreNotConflated(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Rathalos rathalos = helper.spawn(ModEntities.RATHALOS.get(), 8, 2, 8);
+        rathalos.setNoAi(true);
+        float before = rathalos.getHealth();
+
+        rathalos.part("torso").hurt(helper.getLevel().damageSources().generic(), PROBE_DAMAGE * 2);
+        rathalos.part("head").hurt(helper.getLevel().damageSources().magic(), PROBE_DAMAGE);
+
+        float lost = before - rathalos.getHealth();
+        float expected = PROBE_DAMAGE * 2 + PROBE_DAMAGE;
+        helper.assertTrue(Math.abs(lost - expected) < EPSILON,
+                "two distinct attackers, the second dealing less than the first, should both land in"
+                        + " full for " + expected + " total, but Rathalos lost " + lost);
+        helper.succeed();
+    }
+
+    /** A05: genuinely hostile using ordinary vanilla melee, same interim Rathian and Izuchi use. */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void rathalosAttacksAndDamagesTarget(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Rathalos rathalos = helper.spawn(ModEntities.RATHALOS.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
+        victim.setNoAi(true);
+
+        rathalos.setTarget(victim);
+        float startingHealth = victim.getHealth();
+
+        helper.succeedWhen(() -> helper.assertTrue(victim.getHealth() < startingHealth,
+                "Rathalos never damaged a target standing right next to it"));
+    }
+
+    /** A02/A13: death removes Rathalos and every one of its six parts, exactly once. */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void rathalosDeathRemovesTheWholeCreature(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Rathalos rathalos = helper.spawn(ModEntities.RATHALOS.get(), 8, 2, 8);
+        rathalos.setNoAi(true);
+        int partCount = rathalos.getParts().length;
+        helper.assertTrue(partCount == 6, "Rathalos registered " + partCount + " parts, expected 6");
+
+        rathalos.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
+
+        helper.succeedWhen(() -> {
+            helper.assertTrue(rathalos.isRemoved(), "Rathalos was not removed after dying");
+            for (MonsterPart part : rathalos.monsterParts()) {
+                helper.assertTrue(part.isRemoved() || !part.isAddedToLevel(),
+                        "part " + part.partName + " outlived its parent");
+            }
+        });
+    }
+
     @GameTest(template = ARENA, timeoutTicks = 40)
     public static void izuchiWontStartSleepingWithATarget(GameTestHelper helper) {
         com.carro1001.mhnw.entity.Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);

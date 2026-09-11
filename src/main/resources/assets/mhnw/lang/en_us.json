@@ -12,5 +12,7 @@
   "entity.mhnw.izuchi": "Izuchi",
   "item.mhnw.izuchi_spawn_egg": "Izuchi Spawn Egg",
   "entity.mhnw.rathian": "Rathian",
-  "item.mhnw.rathian_spawn_egg": "Rathian Spawn Egg"
+  "item.mhnw.rathian_spawn_egg": "Rathian Spawn Egg",
+  "entity.mhnw.rathalos": "Rathalos",
+  "item.mhnw.rathalos_spawn_egg": "Rathalos Spawn Egg"
 }

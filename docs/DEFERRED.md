@@ -88,6 +88,29 @@ pose's feet solve to about -0.75 to -0.80 rather than the near-zero Great Izuchi
 mean this model's origin genuinely sits higher above its feet, or could mean the offsets need a
 downward nudge once someone can actually look at it in game.
 
+### Rathalos — flight, and the attack timeline (worse off than Rathian's)
+**Status:** ground-only, genuinely hostile via ordinary vanilla melee, six hurtboxes offline-solved
+from the idle pose (same caveats as Rathian's) and not yet visually confirmed.
+
+Flight deferred for the same reason as Rathian's, though it undersells this species more: Rathalos
+is the more archetypally airborne of the two.
+
+The attack situation is worse than Rathian's, confirmed directly rather than assumed: all four
+melee attack clips (`attack_claw_scratch`, `attack_bite`, `attack_airsweep`, `attack_air_fireball`)
+reference 14 to 17 bone names each (wing membrane and talon bones, mostly) that do not exist
+anywhere in this species' own geometry at all. This is exactly the example the handoff's own audit
+named (section 6.1: `rightwinglimb1`, `leftFoot2`). It is not a measurement problem the runtime bone
+probe can solve the way Great Izuchi's claw path was fixed — there is no bone to measure, only one
+that was never added to the model or was renamed and never reconciled with the animation file. It
+needs an actual retargeting pass in a model editor, or a newly authored clip, before any attack
+presentation is possible for this species.
+
+To close it: open the geometry and the attack clips together in a model editor, find out whether
+the referenced bones were simply renamed (in which case a rename-back or a data patch on the
+animation file might fully fix it) or never existed at all (in which case retargeting each clip's
+keyframes onto the real skeleton is real authoring work). Only after that is done would a
+bone-probe measurement pass make sense, the same order Great Izuchi's attacks were done in.
+
 ## Deferred to the polishing phase
 
 ### A02 — actual save/quit/reload cycle

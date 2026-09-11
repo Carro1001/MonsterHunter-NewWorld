@@ -118,3 +118,19 @@ having it.
       for now, not a bug)
 - [ ] Death removes the whole creature and all seven parts
 - [ ] No flight yet — it should behave as a purely ground-bound creature; this is expected, not a bug
+
+## Rathalos (P4 ground wyvern, ground-only)
+
+Same situation as Rathian (offline-solved hurtboxes, no dedicated attack, ordinary melee combat),
+but its attack clips are further blocked: they reference bones that don't exist anywhere in this
+species' model at all, confirmed by checking, not guessed — see `docs/DEFERRED.md`. That needs
+actual art/model-editor work before it's even worth a bone-probe pass, unlike Rathian's, which
+just needs measuring.
+
+- [ ] Renders, spawns via egg, idles/walks/runs (walk uses `walk_normal`/`walk_aggro`, no separate
+      "run" clip exists for this species — expected, not a bug)
+- [ ] **F3+B: do the six green hurtboxes sit on the body?** Same importance as Rathian's row
+- [ ] Hitting a hurtbox reduces health
+- [ ] Attacks and damages a nearby player using ordinary melee
+- [ ] Death removes the whole creature and all six parts
+- [ ] No flight yet — ground-bound only; expected, not a bug
