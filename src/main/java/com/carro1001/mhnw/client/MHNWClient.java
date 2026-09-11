@@ -70,7 +70,8 @@ public final class MHNWClient {
                            net.minecraft.client.renderer.MultiBufferSource bufferSource,
                            int packedLight) {
             super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
-            BoneProbe.maybeLog(entity, getGeoModel());
+            boolean attacking = entity.getAttackId() != GreatIzuchi.ATTACK_NONE;
+            BoneProbe.maybeLog("great_izuchi", entity, getGeoModel(), BoneProbe.GREAT_IZUCHI_BONES, attacking);
             AttackVolumeOverlay.render(entity, poseStack, bufferSource, partialTick);
         }
 
@@ -85,12 +86,23 @@ public final class MHNWClient {
         }
     }
 
-    /** Plain reuse of the preserved geometry/animations/texture; nothing species-specific to add. */
+    /** Reuses the preserved geometry/animations/texture; the bone probe hook is the only addition,
+     * added once Aptonoth's own offline-solved part offsets needed the same "measure it" check its
+     * multipart siblings get. */
     public static class AptonothRenderer extends GeoEntityRenderer<Aptonoth> {
         public AptonothRenderer(EntityRendererProvider.Context context) {
             super(context, new DefaultedEntityGeoModel<>(
                     ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, "aptonoth")));
             this.shadowRadius = 0.6F;
+        }
+
+        @Override
+        public void render(Aptonoth entity, float entityYaw, float partialTick,
+                           com.mojang.blaze3d.vertex.PoseStack poseStack,
+                           net.minecraft.client.renderer.MultiBufferSource bufferSource,
+                           int packedLight) {
+            super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
+            BoneProbe.maybeLog("aptonoth", entity, getGeoModel(), BoneProbe.APTONOTH_BONES, false);
         }
     }
 
@@ -179,6 +191,15 @@ public final class MHNWClient {
         }
 
         @Override
+        public void render(Rathian entity, float entityYaw, float partialTick,
+                           com.mojang.blaze3d.vertex.PoseStack poseStack,
+                           net.minecraft.client.renderer.MultiBufferSource bufferSource,
+                           int packedLight) {
+            super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
+            BoneProbe.maybeLog("rathian", entity, getGeoModel(), BoneProbe.WYVERN_BONES, false);
+        }
+
+        @Override
         protected float getDeathMaxRotation(Rathian entity) {
             return 0.0F;
         }
@@ -190,6 +211,15 @@ public final class MHNWClient {
             super(context, new DefaultedEntityGeoModel<>(
                     ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, "rathalos")));
             this.shadowRadius = 1.4F;
+        }
+
+        @Override
+        public void render(Rathalos entity, float entityYaw, float partialTick,
+                           com.mojang.blaze3d.vertex.PoseStack poseStack,
+                           net.minecraft.client.renderer.MultiBufferSource bufferSource,
+                           int packedLight) {
+            super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
+            BoneProbe.maybeLog("rathalos", entity, getGeoModel(), BoneProbe.WYVERN_BONES, false);
         }
 
         @Override

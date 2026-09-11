@@ -20,6 +20,14 @@ Combat/behaviour diagnostics: run `/mhnw debugcombat` in-game to toggle (op-only
 Either way it logs attack transitions and contact accepted/rejected, and — for Great Izuchi
 specifically — draws the live attack volume with F3+B.
 
+**Bone probe** (new): with `debugCombat` on, Great Izuchi, Rathian, Rathalos and Aptonoth all now log
+their actual runtime bone positions to the game log every ~2 seconds (or every tick for Great Izuchi
+while it's mid-attack), in the same left/up/forward frame the hurtbox offsets use. If Rathian's or
+Rathalos's hurtboxes still look wrong after a look, the fastest real fix is: turn `debugCombat` on,
+stand near one for a few seconds, and send me the log (or the relevant lines from
+`logs/latest.log`) — I can read the measured numbers directly and correct the offsets exactly,
+instead of nudging blind again.
+
 ---
 
 ## Great Izuchi (P2 combat slice)
