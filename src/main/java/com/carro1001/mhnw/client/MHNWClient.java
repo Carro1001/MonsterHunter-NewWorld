@@ -118,12 +118,23 @@ public final class MHNWClient {
         }
     }
 
-    /** Plain reuse of the preserved geometry/animations/texture; nothing species-specific to add. */
+    /**
+     * A bioluminescent creature, not a plain reuse: the legacy runtime's own renderer forced a
+     * minimum block light level of 12 so its glowing yellow segments actually read as glowing
+     * rather than going dark in normal ambient light, which this port had dropped (the reported
+     * "kinda darker than intended, like a dark yellow" is exactly what ordinary diffuse lighting
+     * does to this texture without that floor).
+     */
     public static class FlashbugRenderer extends GeoEntityRenderer<Flashbug> {
         public FlashbugRenderer(EntityRendererProvider.Context context) {
             super(context, new DefaultedEntityGeoModel<>(
                     ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, "flashbug")));
             this.shadowRadius = 0.15F;
+        }
+
+        @Override
+        protected int getBlockLightLevel(Flashbug entity, net.minecraft.core.BlockPos pos) {
+            return Math.max(12, super.getBlockLightLevel(entity, pos));
         }
     }
 

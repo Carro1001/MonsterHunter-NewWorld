@@ -20,6 +20,13 @@ import java.util.List;
  * that could blind the person playing would be a punishing surprise, not a readable hazard), and
  * a non-player victim is only blinded if it is actually looking toward the bug, not merely able to
  * see it — the flash is a startle reaction to something in view, not an omnidirectional pulse.
+ *
+ * <p>Like the toad, this only ever triggers from being hit/interacted with, never from mere
+ * proximity ({@link #allowsProximityTrigger} overridden false): the default proximity trigger with
+ * a short fuse and a 5-second cooldown meant anything simply standing near it saw it flash over and
+ * over the whole time, which read as constant flashing rather than a deliberate reaction. And, also
+ * like the toad, releasing now ends the flashbug's life: a smoke-poof burst and
+ * {@link Flashbug#discard()}, not a cooldown it recovers from.
  */
 public class FlashbugFlashGoal extends EndemicAreaEffectGoal {
 
@@ -55,6 +62,12 @@ public class FlashbugFlashGoal extends EndemicAreaEffectGoal {
         this.flashbug.setFlashing(presenting);
     }
 
+    /** Only a hit provokes a flashbug now; proximity alone must not (see the class doc). */
+    @Override
+    protected boolean allowsProximityTrigger() {
+        return false;
+    }
+
     @Override
     protected void release() {
         if (this.flashbug.level().isClientSide) {
@@ -72,7 +85,10 @@ public class FlashbugFlashGoal extends EndemicAreaEffectGoal {
         if (this.flashbug.level() instanceof ServerLevelAccessor serverLevel) {
             serverLevel.getLevel().sendParticles(ParticleTypes.FLASH,
                     this.flashbug.getX(), this.flashbug.getY(), this.flashbug.getZ(), 1, 0.0, 0.0, 0.0, 0.0);
+            serverLevel.getLevel().sendParticles(ParticleTypes.POOF,
+                    this.flashbug.getX(), this.flashbug.getY() + 0.15, this.flashbug.getZ(), 12, 0.25, 0.25, 0.25, 0.04);
         }
+        this.flashbug.discard();
     }
 
     /**
