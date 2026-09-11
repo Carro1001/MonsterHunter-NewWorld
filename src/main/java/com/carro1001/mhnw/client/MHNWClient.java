@@ -38,6 +38,15 @@ public final class MHNWClient {
             this.shadowRadius = 1.0F;
         }
 
+        @Override
+        public void render(GreatIzuchi entity, float entityYaw, float partialTick,
+                           com.mojang.blaze3d.vertex.PoseStack poseStack,
+                           net.minecraft.client.renderer.MultiBufferSource bufferSource,
+                           int packedLight) {
+            super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
+            BoneProbe.maybeLog(entity, getGeoModel());
+        }
+
         /**
          * Vanilla flops a corpse 90 degrees onto its side while it dies. This creature has an
          * authored death clip that already lays it down, so the vanilla rotation fought it and

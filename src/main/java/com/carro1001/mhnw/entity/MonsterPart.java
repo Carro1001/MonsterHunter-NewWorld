@@ -53,6 +53,23 @@ public class MonsterPart extends PartEntity<GreatIzuchi> {
     }
 
     /**
+     * Makes the body and tail solid to walk into, rather than something players stroll through.
+     *
+     * <p>This is the one place a hurtbox is allowed to do collision work. It stays strictly
+     * separate from the movement bounds: the monster's own navigation and block collision use the
+     * root envelope only, so making these solid changes what happens to <em>other</em> entities,
+     * never how this monster paths (handoff section 4.2).
+     *
+     * <p>Known roughness: these boxes are swept envelopes covering the tail's full range of motion
+     * during locomotion, so collision reads slightly larger than the tail looks at any instant,
+     * and a part that sweeps into a player will push them. Revisit if that proves annoying.
+     */
+    @Override
+    public boolean canBeCollidedWith() {
+        return !isRemoved();
+    }
+
+    /**
      * Damage dealt to a part is the parent's damage. The parent applies its own de-duplication so
      * that one area effect touching several parts still costs exactly one hit (handoff A03/A06).
      */
