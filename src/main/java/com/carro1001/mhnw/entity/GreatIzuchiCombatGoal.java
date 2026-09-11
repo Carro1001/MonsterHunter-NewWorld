@@ -149,17 +149,22 @@ public class GreatIzuchiCombatGoal extends Goal {
     private static final float WINDUP_TURN_RATE = 9.0F;
 
     /**
-     * Horizontal speed retained each windup tick. Below one, so any run-up bleeds off and the
-     * monster visibly plants itself to swing rather than gliding into the attack.
+     * Horizontal speed retained each windup tick. Low enough that a run-up is gone within about
+     * three ticks, so the monster plants and waits out the telegraph rather than drifting.
      */
-    private static final double WINDUP_DAMPING = 0.6D;
+    private static final double WINDUP_DAMPING = 0.35D;
 
     /**
-     * Blocks per tick the monster drives forward on the first active tick, tapering to nothing by
-     * the end of the swing. Around 1.5 blocks of travel over the whole window: enough that the
-     * claw carries weight behind it, not so much that it barges through its target.
+     * Blocks per tick the monster paces forward while clawing.
+     *
+     * <p>Sustained for the whole active window rather than decaying: the monster should keep
+     * walking the target down as it swings, not shove once and coast. Held for roughly 27 of the
+     * 30 active ticks, which is about 2.9 blocks of ground covered.
      */
     private static final double LUNGE_SPEED = 0.11D;
+
+    /** Ticks spent easing into the pace, so the first active tick is not a jolt. */
+    private static final int LUNGE_RAMP_TICKS = 6;
 
     private final GreatIzuchi monster;
     /** Entity ids already hit by the current action. Cleared per action, so it cannot grow. */
@@ -341,7 +346,8 @@ public class GreatIzuchiCombatGoal extends Goal {
      * <p>The direction is captured once, on the first active tick, and then held. Re-aiming it
      * every tick would let a committed strike home onto a target that has since moved, which the
      * runtime contract forbids (rule 6): once the strike is under way it travels where it was
-     * launched, and missing a target that dodged is the correct outcome.
+     * launched, and missing a target that dodged is the correct outcome. The body yaw is likewise
+     * locked after windup, so the claw arc cannot swing onto someone new mid-strike.
      */
     private void lunge(int age, LivingEntity target) {
         if (age == ACTIVE_START && target != null) {
@@ -352,8 +358,8 @@ public class GreatIzuchiCombatGoal extends Goal {
         if (this.lungeDirection.lengthSqr() <= 0.0D) {
             return;
         }
-        double progress = (double) (age - ACTIVE_START) / (ACTIVE_END - ACTIVE_START);
-        double speed = LUNGE_SPEED * (1.0D - progress);
+        double easeIn = Math.min(1.0D, (age - ACTIVE_START + 1.0D) / LUNGE_RAMP_TICKS);
+        double speed = LUNGE_SPEED * easeIn;
         Vec3 velocity = this.monster.getDeltaMovement();
         this.monster.setDeltaMovement(
                 this.lungeDirection.x * speed, velocity.y, this.lungeDirection.z * speed);
