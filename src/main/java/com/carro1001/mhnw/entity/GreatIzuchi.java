@@ -378,12 +378,29 @@ public class GreatIzuchi extends Monster implements GeoEntity {
      * exactly one hit, but two different attackers in the same tick must both land. The key is
      * therefore the {@link DamageSource} instance, which vanilla allocates per attack, rather than
      * the tick alone (handoff section 4.1, A03/A06).
+     *
+     * <h2>A correction to that claim</h2>
+     * The early-return guard below only ever fires for the literal same source object, so on its
+     * own it does nothing for two genuinely different attackers; the fairness half of that claim
+     * was not actually true until the {@code invulnerableTime} reset was added. Vanilla's own
+     * invulnerability check compares only the raw damage amount to the previous hit
+     * ({@code amount <= this.lastHurt} in {@code LivingEntity.hurt}), not which source dealt it, so
+     * without the reset, a second distinct attacker in the same tick whose damage happened to be
+     * equal to or smaller than the first would have been silently dropped by vanilla's own logic,
+     * underneath this override, regardless of the source-identity guard. Resetting
+     * {@code invulnerableTime} before delegating to a genuinely new source forces vanilla to treat
+     * it as a fresh hit. This was caught by a test that made the second hit strictly larger than
+     * the first, which passes either way and therefore never actually exercised the gap; see the
+     * corrected version in {@code MHNWGameTests}.
      */
     @Override
     public boolean hurt(DamageSource source, float amount) {
         if (!level().isClientSide) {
             if (source == this.lastDamageSource && this.tickCount == this.lastDamageTick) {
                 return false;
+            }
+            if (source != this.lastDamageSource) {
+                this.invulnerableTime = 0;
             }
             this.lastDamageSource = source;
             this.lastDamageTick = this.tickCount;

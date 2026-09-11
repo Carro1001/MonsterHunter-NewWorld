@@ -1,5 +1,6 @@
 package com.carro1001.mhnw.entity;
 
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -72,6 +73,18 @@ public class Rathian extends Monster implements GeoEntity {
 
     private final AnimatableInstanceCache animCache = GeckoLibUtil.createInstanceCache(this);
     private final MonsterPart[] parts;
+
+    /**
+     * De-duplicates one damage source that enumerates several parts within a single tick, the same
+     * guard {@link GreatIzuchi} carries; see its own copy of this field for why vanilla's own
+     * invulnerability window is not enough on its own. Duplicated rather than shared through a base
+     * class for now: a genuine extraction candidate once enough of {@code MultipartMonster}'s
+     * boilerplate is common to two species to be worth the risk of restructuring already-shipped,
+     * player-visible code without the ability to test the result interactively. See
+     * {@code docs/DEFERRED.md}.
+     */
+    private DamageSource lastDamageSource;
+    private int lastDamageTick = -1;
 
     public Rathian(EntityType<? extends Monster> type, Level level) {
         super(type, level);
@@ -187,6 +200,31 @@ public class Rathian extends Monster implements GeoEntity {
     public void aiStep() {
         super.aiStep();
         positionParts();
+    }
+
+    /**
+     * Single damage entry point for the whole creature, same contract as {@link GreatIzuchi#hurt},
+     * including the same correction: the source-identity guard alone stops a repeat from the exact
+     * same source object, but does nothing for two genuinely different attackers, since vanilla's
+     * own invulnerability check underneath compares only raw damage amount to the previous hit
+     * ({@code amount <= this.lastHurt}), not source identity. Without resetting
+     * {@code invulnerableTime} whenever the incoming source is a new one, a second distinct
+     * attacker in the same tick dealing equal or smaller damage would have been silently dropped by
+     * vanilla's own logic regardless of this override, the actual A06 fairness case.
+     */
+    @Override
+    public boolean hurt(DamageSource source, float amount) {
+        if (!level().isClientSide) {
+            if (source == this.lastDamageSource && this.tickCount == this.lastDamageTick) {
+                return false;
+            }
+            if (source != this.lastDamageSource) {
+                this.invulnerableTime = 0;
+            }
+            this.lastDamageSource = source;
+            this.lastDamageTick = this.tickCount;
+        }
+        return super.hurt(source, amount);
     }
 
     // ---------------------------------------------------------------- presentation

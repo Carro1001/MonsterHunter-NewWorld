@@ -88,22 +88,28 @@ public class MHNWGameTests {
     /**
      * A03: the de-duplication must key on the damage source, not merely the tick. Two different
      * attackers in the same tick are two legitimate hits and must not be collapsed into one.
+     *
+     * <p>The second hit is deliberately the SMALLER of the two, not larger. An earlier version of
+     * this test made it larger, which passes whether or not source identity is actually honoured:
+     * vanilla's own invulnerability lets a larger second hit through as the difference regardless
+     * of who dealt it, so that version never actually exercised the fairness guarantee it claimed
+     * to check. A smaller second hit from a genuinely different source is the case vanilla's own
+     * amount-only comparison gets wrong on its own ({@code amount <= lastHurt} silently drops it),
+     * which is what {@code GreatIzuchi.hurt}'s {@code invulnerableTime} reset exists to fix.
      */
     @GameTest(template = ARENA, timeoutTicks = 120)
     public static void distinctSourcesAreNotConflated(GameTestHelper helper) {
         GreatIzuchi monster = spawnInert(helper);
         float before = monster.getHealth();
 
-        // Vanilla invulnerability lets a larger second hit through as the difference, so a second
-        // distinct source costs more health overall. If the guard keyed on the tick alone, the
-        // second would be dropped entirely and the parent would lose only the first amount.
-        monster.part("torso").hurt(helper.getLevel().damageSources().generic(), PROBE_DAMAGE);
-        monster.part("head").hurt(helper.getLevel().damageSources().magic(), PROBE_DAMAGE * 2);
+        monster.part("torso").hurt(helper.getLevel().damageSources().generic(), PROBE_DAMAGE * 2);
+        monster.part("head").hurt(helper.getLevel().damageSources().magic(), PROBE_DAMAGE);
 
         float lost = before - monster.getHealth();
-        helper.assertTrue(lost > PROBE_DAMAGE + EPSILON,
-                "a second, distinct damage source in the same tick was swallowed: the parent lost "
-                        + lost + ", no more than the first hit alone");
+        float expected = PROBE_DAMAGE * 2 + PROBE_DAMAGE;
+        helper.assertTrue(Math.abs(lost - expected) < EPSILON,
+                "two distinct attackers, the second dealing less than the first, should both land in"
+                        + " full for " + expected + " total, but the parent lost " + lost);
         helper.succeed();
     }
 
@@ -747,6 +753,32 @@ public class MHNWGameTests {
         helper.assertTrue(Math.abs(lost - PROBE_DAMAGE) < EPSILON,
                 "one source touching four of Rathian's parts should cost " + PROBE_DAMAGE
                         + " health once, but the parent lost " + lost);
+        helper.succeed();
+    }
+
+    /**
+     * A03/A06: this is the regression test for a real gap found on review, not a hypothetical, and
+     * the second hit is deliberately the smaller one for the same reason the Great Izuchi version
+     * of this test now is: a larger second hit passes regardless of whether source identity is
+     * honoured, since vanilla's own invulnerability lets the difference through either way. A
+     * smaller second hit from a genuinely different attacker is the case vanilla's own amount-only
+     * comparison silently drops on its own, which {@code Rathian.hurt}'s {@code invulnerableTime}
+     * reset exists to fix.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void rathianDistinctSourcesAreNotConflated(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Rathian rathian = helper.spawn(ModEntities.RATHIAN.get(), 8, 2, 8);
+        rathian.setNoAi(true);
+        float before = rathian.getHealth();
+
+        rathian.part("torso").hurt(helper.getLevel().damageSources().generic(), PROBE_DAMAGE * 2);
+        rathian.part("head").hurt(helper.getLevel().damageSources().magic(), PROBE_DAMAGE);
+
+        float lost = before - rathian.getHealth();
+        float expected = PROBE_DAMAGE * 2 + PROBE_DAMAGE;
+        helper.assertTrue(Math.abs(lost - expected) < EPSILON,
+                "two distinct attackers, the second dealing less than the first, should both land in"
+                        + " full for " + expected + " total, but Rathian lost " + lost);
         helper.succeed();
     }
 
