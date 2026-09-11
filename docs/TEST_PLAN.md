@@ -58,7 +58,19 @@ under Rathian/Rathalos below, same fix applies here too.
 
 ## Aptonoth (P3 passive herbivore)
 
-Eighth round this pass, from a top-down screenshot showing the tail visibly continuing past the
+Ninth round this pass, from a screenshot showing the eighth round's new `tail_4` sitting too high
+and too big:
+
+- **`tail_4` recomputed from a tighter trend.** The previous extrapolation had drifted from the
+  tail_1-to-tail_3 two-step delta rather than the tighter tail_2-to-tail_3 one-step delta, compounding
+  the overshoot (`up` 3.18, `forward` -5.15, sized 2.0x1.0). Recomputed from the tighter delta and
+  shrunk toward `tail_3`'s own size (`up` 2.85, `forward` -4.20, sized 1.3x0.8).
+- **Whole tail chain (`tail_1`-`tail_4`) nudged down and given more height**, per "a little lower and
+  a bit taller in the Y axis" — same principle as Rathian's tail: idle sway means no single centre
+  value reads right against every frame, so widen the box to cover the swing instead of chasing a
+  perfect centre.
+
+Eighth round (previous), from a top-down screenshot showing the tail visibly continuing past the
 last box:
 
 - **Root box raised again**: `BODY_HEIGHT` 2.0 → 2.4. Still an eyeballed nudge, not a direct
@@ -81,6 +93,8 @@ last box:
 - [ ] **F3+B: is the chest box clearly visible, separate from the white box, and close to the face?**
 - [ ] **F3+B: does the tail's fourth box now reach the actual tail tip**, instead of the tail
       continuing past the last box?
+- [ ] **F3+B: is `tail_4` no longer oversized/floating too high**, and does the whole tail chain read
+      as centred on the tail rather than sitting slightly above it?
 - [ ] **Re-check:** when hurt, flees for a real sustained duration, not just one short hop
 - [ ] Eats grass occasionally (the `eat` animation should play when it's actually eating, not just
       standing still) — grass must be nearby (short/tall grass on a grass block) for this to trigger
@@ -210,6 +224,13 @@ rather than "perfectly centred in some frames, visibly off in others."
 
 Also fixed a few rounds ago: the entity no longer stops rendering (head/neck suddenly disappearing)
 when the root hitbox leaves the camera frustum while the model still visibly extends into frame.
+
+**"Boxes aren't updating at all" report, round four:** checked the on-disk file directly — it already
+has the reverted, range-midpoint values (`torso up=2.23`, not the old +0.35-boosted `2.58`), so the
+source is correct. The commit landed only ~1 minute before that session's screenshots, which is
+plausibly too little time for `runClient` to have rebuilt and relaunched. **If boxes still look
+unchanged after a full stop + restart of `runClient` (not just re-toggling F3+B), that's a real bug
+worth a fresh report** — but a code fix isn't warranted from this alone.
 
 **No dedicated attack animation.** Like Izuchi, it fights using ordinary melee with no custom swing;
 real attack clips exist (charge, bite, tailwhip, fireball) but wiring them needs the hurtbox

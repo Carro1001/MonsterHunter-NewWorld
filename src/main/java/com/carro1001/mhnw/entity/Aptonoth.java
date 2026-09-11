@@ -131,17 +131,25 @@ public class Aptonoth extends Animal implements GeoEntity {
         // extends a further ~2 blocks beyond its pivot before the visible tail actually ends -- a
         // screenshot confirmed the model's tail physically continues past the last box. There is no
         // bone to measure out there (tail1/tail2 are the only two tail bones that exist), so tail_4 is
-        // extrapolated by continuing the tail_1-to-tail_3 trend one more step of the same size (same
-        // delta in both up and forward), which at least tracks the one real trend actually observed
-        // rather than a fresh guess. Sized generously since it's now purely an estimate.
+        // extrapolated by continuing the tail_2-to-tail_3 trend (delta ~0.14 up, ~-0.96 forward) one
+        // more step from tail_3.
+        //
+        // The first pass at that extrapolation (up=3.18, forward=-5.15, sized 2.0x1.0) came back too
+        // high and too big per a screenshot -- it had drifted from the tail_1-to-tail_3 two-step delta
+        // rather than the tighter one-step tail_2-to-tail_3 delta, compounding the overshoot. Recomputed
+        // from the tighter delta and shrunk to sit closer to tail_3's own size.
+        //
+        // Whole tail chain (tail_1 through tail_4) also nudged down slightly and given more height,
+        // same principle as Rathian/Rathalos's tail: idle sway means no single centre value reads right
+        // against every frame, so widen the box to cover the swing instead of chasing a perfect centre.
         this.parts = new MonsterPart[] {
                 //              name          width height  left    up      forward
                 new MonsterPart(this, "chest",  1.4F, 1.4F, 0.00D, 1.95D,  1.60D),
                 new MonsterPart(this, "head",   0.9F, 0.9F, 0.00D, 2.25D,  2.85D),
-                new MonsterPart(this, "tail_1", 0.96F, 0.6F, 0.00D, 2.60D, -1.31D),
-                new MonsterPart(this, "tail_2", 0.96F, 0.6F, 0.00D, 2.75D, -2.27D),
-                new MonsterPart(this, "tail_3", 1.3F, 0.9F, 0.00D, 2.89D, -3.23D),
-                new MonsterPart(this, "tail_4", 2.0F, 1.0F, 0.00D, 3.18D, -5.15D),
+                new MonsterPart(this, "tail_1", 0.96F, 0.8F, 0.00D, 2.45D, -1.31D),
+                new MonsterPart(this, "tail_2", 0.96F, 0.85F, 0.00D, 2.55D, -2.27D),
+                new MonsterPart(this, "tail_3", 1.3F, 1.05F, 0.00D, 2.65D, -3.23D),
+                new MonsterPart(this, "tail_4", 1.3F, 0.8F, 0.00D, 2.85D, -4.20D),
         };
     }
 
