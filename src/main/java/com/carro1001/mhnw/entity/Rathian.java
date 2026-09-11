@@ -88,29 +88,26 @@ public class Rathian extends Monster implements GeoEntity {
 
     public Rathian(EntityType<? extends Monster> type, Level level) {
         super(type, level);
-        // Offline-solved from idle_normal; see the class doc for what that trustworthiness claim
-        // does and does not cover. Sizes are borrowed from the archived hitbox profile nominally
-        // named for this species (itself actually pointing at Rathalos's assets, a leftover
-        // copy-paste bug in that old file), so treat them as a same-size-class approximation, not
-        // Rathian-specific measurement, until they can be checked visually.
-        //
-        // The `up` values below for the tail and head were hand-corrected on a second round of
-        // screenshot feedback: the original offline solve had the tail's `up` value climbing the
-        // further back each segment sits (tail_base 3.18 -> tail_mid 3.99 -> tail_end 4.49 ->
-        // stinger 4.44), i.e. rising toward the tip, but in game the tail visibly droops downward
-        // instead, and the head read a bit too high as well. This is a manual, eyeballed correction
-        // in the direction the screenshots pointed, not a fresh measurement -- still not a
-        // substitute for an actual bone-probe session (see docs/DEFERRED.md), just less wrong than
-        // before it while that session hasn't happened yet.
+        // These offsets are real BoneProbe measurements (see docs/TEST_PLAN.md), not offline-solved
+        // or eyeballed: the maintainer ran with debugCombat on and stood near a live Rathian, and
+        // the *Hitbox-named bones' logged left/up/forward values were averaged across several idle
+        // samples and plugged in directly. This replaced two earlier, both-wrong attempts: an
+        // offline FK solve (confirmed wrong by screenshots showing the boxes floating above/in
+        // front of the wings) and a hand-eyeballed "nudge it down" correction on top of that
+        // (confirmed by these same measurements to still be off by roughly a full block on `up`
+        // for the neck/head/tail chain -- guessing a direction was right, but not nearly enough).
+        // Sizes are still borrowed from the archived hitbox profile (same caveat as before, not
+        // Rathian-specific), and `left` is set to 0 for every part: the measured samples oscillate
+        // both sides of zero as the idle animation sways, with no consistent bias either way.
         this.parts = new MonsterPart[] {
-                //              name          width height  left    up      forward
-                new MonsterPart(this, "torso",  2.1F, 2.1F, -0.08D, 2.47D,  2.12D),
-                new MonsterPart(this, "neck",   1.75F, 1.75F, 0.00D, 3.15D,  5.13D),
-                new MonsterPart(this, "head",   2.0F, 2.0F, -0.26D, 3.25D,  6.96D),
-                new MonsterPart(this, "tail_base", 1.75F, 1.6F, 0.00D, 3.00D, -2.06D),
-                new MonsterPart(this, "tail_mid",  1.6F, 1.3F, 0.10D, 3.10D, -4.23D),
-                new MonsterPart(this, "tail_end",  2.0F, 2.0F, 0.47D, 2.60D, -6.24D),
-                new MonsterPart(this, "stinger",   1.75F, 1.6F, 1.28D, 2.20D, -9.19D),
+                //              name          width height  left  up      forward
+                new MonsterPart(this, "torso",  2.1F, 2.1F, 0.00D, 2.20D,  2.08D),
+                new MonsterPart(this, "neck",   1.75F, 1.75F, 0.00D, 1.75D,  4.50D),
+                new MonsterPart(this, "head",   2.0F, 2.0F, 0.00D, 1.60D,  7.20D),
+                new MonsterPart(this, "tail_base", 1.75F, 1.6F, 0.00D, 1.95D, -1.62D),
+                new MonsterPart(this, "tail_mid",  1.6F, 1.3F, 0.00D, 1.60D, -3.90D),
+                new MonsterPart(this, "tail_end",  2.0F, 2.0F, 0.00D, 1.10D, -6.05D),
+                new MonsterPart(this, "stinger",   1.75F, 1.6F, 0.00D, 0.40D, -9.05D),
         };
     }
 
