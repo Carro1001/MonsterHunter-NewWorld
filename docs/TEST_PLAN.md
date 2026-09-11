@@ -15,9 +15,10 @@ Branch: `revival/neoforge-1.21.1` (local only, not pushed).
 .\gradlew.bat runClient
 ```
 
-Combat/behaviour diagnostics can be turned on by editing `run/config/mhnw-common.toml` and setting
-`debugCombat = true` before launching (logs attack transitions, contact accepted/rejected, and — for
-Great Izuchi specifically — draws the live attack volume with F3+B).
+Combat/behaviour diagnostics: run `/mhnw debugcombat` in-game to toggle (op-only), or set
+`debugCombat = true` in `run/config/mhnw-common.toml` before launching if you'd rather it start on.
+Either way it logs attack transitions and contact accepted/rejected, and — for Great Izuchi
+specifically — draws the live attack volume with F3+B.
 
 ---
 
