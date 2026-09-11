@@ -595,25 +595,54 @@ public class MHNWGameTests {
     }
 
     /**
-     * The release is bounded: it cannot happen again immediately. Re-provoking right after a
-     * release must not restart the fuse until the cooldown has elapsed, or the cloud could fire
-     * every tick indefinitely (handoff P3 exit: "effects cannot trigger indefinitely").
+     * Release is a one-way trip, not a cooldown: {@link ToadFuseGoal#release} discards the toad the
+     * same tick it applies its effect, "blowing up" metaphorically rather than going quiet and
+     * eventually firing again (that was the old cooldown design; a released toad no longer exists to
+     * refire at all).
      */
     @GameTest(template = ARENA, timeoutTicks = 140)
-    public static void toadCannotRefireDuringCooldown(GameTestHelper helper) {
+    public static void toadDiscardsItselfAfterReleasing(GameTestHelper helper) {
         Toad toad = helper.spawn(ModEntities.TOAD.get(), 8, 2, 8);
         toad.setVariant(Toad.Variant.POISON);
 
         toad.hurt(helper.getLevel().damageSources().generic(), 1.0F);
 
+        helper.succeedWhen(() -> helper.assertTrue(
+                toad.isRemoved(), "the toad was not discarded after releasing its cloud"));
+    }
+
+    /**
+     * A toad cannot be killed by being hit: {@link Toad#hurt} always forwards at zero damage, so
+     * ordinary damage never drops its health, only its own release ever removes it. This is the
+     * regression test for "invincible except to its own explosion" (handoff feedback: make toads
+     * un-killable by hitting them, only their release "kills" them).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void toadIsNotKilledByBeingHit(GameTestHelper helper) {
+        Toad toad = helper.spawn(ModEntities.TOAD.get(), 8, 2, 8);
+        float before = toad.getHealth();
+
+        toad.hurt(helper.getLevel().damageSources().generic(), 1000.0F);
+
+        helper.assertTrue(toad.getHealth() == before,
+                "a toad's health dropped from being hit; it should be invulnerable to that damage");
+        helper.succeed();
+    }
+
+    /**
+     * Proximity alone must not provoke a toad any more (handoff feedback: only interacting with or
+     * hitting it should). {@link EndemicAreaEffectGoal#allowsProximityTrigger} is overridden false
+     * for this reason; this is the regression test that override actually reaches {@code canUse()}.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void toadDoesNotFuseFromProximityAlone(GameTestHelper helper) {
+        Toad toad = helper.spawn(ModEntities.TOAD.get(), 8, 2, 8);
+        Cow bystander = helper.spawn(EntityType.COW, 8, 2, 9);
+        bystander.setNoAi(true);
+
         helper.startSequence()
-                .thenWaitUntil(() -> helper.assertTrue(
-                        toad.isFusing(), "waiting for the first fuse to actually start"))
-                .thenWaitUntil(() -> helper.assertTrue(
-                        !toad.isFusing(), "waiting for the first fuse to finish releasing"))
-                .thenExecute(() -> toad.hurt(helper.getLevel().damageSources().generic(), 1.0F))
-                .thenExecuteFor(60, () -> helper.assertTrue(!toad.isFusing(),
-                        "the toad started a second fuse while still on cooldown from the first"))
+                .thenExecuteFor(80, () -> helper.assertTrue(!toad.isFusing(),
+                        "a toad started fusing from mere proximity, with nothing hitting it"))
                 .thenSucceed();
     }
 
@@ -636,34 +665,6 @@ public class MHNWGameTests {
                     "a victim behind a wall received the toad's cloud effect anyway");
             helper.succeed();
         });
-    }
-
-    /**
-     * The cooldown must actually expire, not just hold for a while. This is the regression test
-     * for a real bug: the cooldown was originally a counter decremented inside the goal's own
-     * {@code tick()}, but {@code tick()} only ever runs while the goal selector considers the goal
-     * running, which is precisely the window a cooldown is not active in. That counter would sit
-     * at its starting value forever, and every toad would permanently go quiet after its first
-     * release. {@code toadCannotRefireDuringCooldown} alone would never have caught this: it only
-     * asserts the negative (no refire too soon), never that a refire eventually happens at all.
-     */
-    @GameTest(template = ARENA, timeoutTicks = 340)
-    public static void toadCanFireAgainAfterCooldownElapses(GameTestHelper helper) {
-        Toad toad = helper.spawn(ModEntities.TOAD.get(), 8, 2, 8);
-        toad.setVariant(Toad.Variant.POISON);
-
-        toad.hurt(helper.getLevel().damageSources().generic(), 1.0F);
-
-        helper.startSequence()
-                .thenWaitUntil(() -> helper.assertTrue(
-                        toad.isFusing(), "waiting for the first fuse to actually start"))
-                .thenWaitUntil(() -> helper.assertTrue(
-                        !toad.isFusing(), "waiting for the first fuse to finish releasing"))
-                .thenIdle(210)
-                .thenExecute(() -> toad.hurt(helper.getLevel().damageSources().generic(), 1.0F))
-                .thenWaitUntil(() -> helper.assertTrue(toad.isFusing(),
-                        "the toad never fused a second time once its cooldown had actually elapsed"))
-                .thenSucceed();
     }
 
     // ---------------------------------------------------------------- Flashbug (P3, endemic life)

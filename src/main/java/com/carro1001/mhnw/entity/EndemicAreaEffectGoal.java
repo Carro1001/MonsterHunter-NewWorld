@@ -68,6 +68,16 @@ public abstract class EndemicAreaEffectGoal extends Goal {
     /** Applies the actual effect. Called exactly once, at the end of the fuse. */
     protected abstract void release();
 
+    /**
+     * Whether merely getting close (no hit needed) can also start the fuse. True by default,
+     * matching the flashbug, which should go off before something walks right into it. The toad
+     * overrides this to false: it should only ever go off from being interacted with or hit, not
+     * proximity alone.
+     */
+    protected boolean allowsProximityTrigger() {
+        return true;
+    }
+
     /** True while the fuse is burning. Exposed for tests and for subclasses' own presentation. */
     public final boolean isActive() {
         return this.fuseTicksLeft > 0;
@@ -78,7 +88,7 @@ public abstract class EndemicAreaEffectGoal extends Goal {
         if (this.owner.level().getGameTime() < this.cooldownUntil) {
             return false;
         }
-        return isProvoked() || nearestTrigger() != null;
+        return isProvoked() || (allowsProximityTrigger() && nearestTrigger() != null);
     }
 
     @Override

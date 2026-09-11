@@ -133,14 +133,19 @@ public class Toad extends PathfinderMob implements GeoEntity {
         this.entityData.set(DATA_FUSING, fusing);
     }
 
-    /** Being hit counts as provocation, same as proximity; either can start the fuse. */
+    /**
+     * The only way to provoke a toad: unlike the flashbug, it does not react to mere proximity (see
+     * {@link ToadFuseGoal#allowsProximityTrigger}). It cannot be killed by being hit, only by its
+     * own release, which discards it directly rather than by taking damage: the hit still lands
+     * (real vanilla feedback, sound and knockback included) but at zero damage, so health never
+     * drops and there is nothing for a player to grind down for no reason.
+     */
     @Override
     public boolean hurt(DamageSource source, float amount) {
-        boolean hurt = super.hurt(source, amount);
-        if (hurt && !level().isClientSide) {
+        if (!level().isClientSide) {
             this.provoked = true;
         }
-        return hurt;
+        return super.hurt(source, 0.0F);
     }
 
     @Override

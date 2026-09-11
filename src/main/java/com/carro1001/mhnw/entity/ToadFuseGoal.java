@@ -47,6 +47,12 @@ public class ToadFuseGoal extends EndemicAreaEffectGoal {
         this.toad = toad;
     }
 
+    /** Only a hit provokes a toad (see {@link Toad#hurt}); proximity alone must not. */
+    @Override
+    protected boolean allowsProximityTrigger() {
+        return false;
+    }
+
     @Override
     protected boolean isProvoked() {
         return this.toad.provoked;
@@ -62,7 +68,13 @@ public class ToadFuseGoal extends EndemicAreaEffectGoal {
         this.toad.setFusing(presenting);
     }
 
-    /** One intentional application, to whatever is in range at the moment of release, once each. */
+    /**
+     * One intentional application, to whatever is in range at the moment of release, once each. The
+     * toad itself never fights back and never runs; releasing IS its death, metaphorically
+     * "blowing up" regardless of variant, so every branch ends the same way: a smoke poof, then
+     * {@link Toad#discard()}. It is invulnerable to being killed by being hit (see {@link Toad#hurt}),
+     * so this is the only path that ever removes one.
+     */
     @Override
     protected void release() {
         if (this.toad.level().isClientSide) {
@@ -72,32 +84,36 @@ public class ToadFuseGoal extends EndemicAreaEffectGoal {
         Level level = this.toad.level();
 
         if (variant == Toad.Variant.BLAST) {
+            // Only the blast variant deals real explosion damage; the others are status-only.
             level.explode(this.toad, this.toad.getX(), this.toad.getY(), this.toad.getZ(),
                     (float) CLOUD_RADIUS * 0.6F, false, Level.ExplosionInteraction.NONE);
-            return;
+        } else {
+            AABB cloud = this.toad.getBoundingBox().inflate(CLOUD_RADIUS);
+            List<LivingEntity> victims = level.getEntitiesOfClass(LivingEntity.class, cloud,
+                    e -> e != this.toad && e.isAlive());
+            for (LivingEntity victim : victims) {
+                // A cloud must not reach through a wall any more than a melee swing may (section 4.2).
+                if (!this.toad.hasLineOfSight(victim)) {
+                    continue;
+                }
+                switch (variant) {
+                    case POISON -> victim.addEffect(new MobEffectInstance(MobEffects.POISON, 100, 0));
+                    case PARALYSIS -> victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 3));
+                    case SLEEP -> {
+                        victim.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 100, 0));
+                        victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 1));
+                    }
+                    case BLAST -> throw new IllegalStateException("handled above");
+                }
+            }
         }
 
-        AABB cloud = this.toad.getBoundingBox().inflate(CLOUD_RADIUS);
-        List<LivingEntity> victims = level.getEntitiesOfClass(LivingEntity.class, cloud,
-                e -> e != this.toad && e.isAlive());
-        for (LivingEntity victim : victims) {
-            // A cloud must not reach through a wall any more than a melee swing may (section 4.2).
-            if (!this.toad.hasLineOfSight(victim)) {
-                continue;
-            }
-            switch (variant) {
-                case POISON -> victim.addEffect(new MobEffectInstance(MobEffects.POISON, 100, 0));
-                case PARALYSIS -> victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 3));
-                case SLEEP -> {
-                    victim.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 100, 0));
-                    victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 1));
-                }
-                case BLAST -> throw new IllegalStateException("handled above");
-            }
-        }
         if (level instanceof ServerLevelAccessor serverLevel) {
             serverLevel.getLevel().sendParticles(ParticleTypes.CLOUD,
                     this.toad.getX(), this.toad.getY() + 0.2, this.toad.getZ(), 12, 0.6, 0.2, 0.6, 0.01);
+            serverLevel.getLevel().sendParticles(ParticleTypes.POOF,
+                    this.toad.getX(), this.toad.getY() + 0.3, this.toad.getZ(), 15, 0.3, 0.3, 0.3, 0.05);
         }
+        this.toad.discard();
     }
 }
