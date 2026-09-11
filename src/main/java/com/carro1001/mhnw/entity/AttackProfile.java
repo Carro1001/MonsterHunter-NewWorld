@@ -148,24 +148,41 @@ public record AttackProfile(
      * blocks up. It is deliberately excluded: a volume moving that fast would teleport through a
      * victim between ticks, and it is above head height regardless.
      *
-     * <p>Measured from one clean instance rather than an average of three. Averaging several
-     * actions smeared the fast section, because the runs are not frame-aligned with each other.
+     * <p>Two volumes for the same reason the swipe needs them: the tail is not a point. The mid
+     * tail lands at radius 2.5-2.8 while the tip lands at 4.3-4.6, so a victim standing under the
+     * middle of the impact rather than at its far end would be missed by a tip-only volume, the
+     * same dead zone the swipe originally had.
+     *
+     * <p>Both tracks come from one clean instance rather than an average of three; averaging
+     * smeared the fast section, because the runs are not frame-aligned with each other.
      */
     public static final AttackProfile TAIL_SLAM = new AttackProfile(
             GreatIzuchi.ATTACK_TAIL_SLAM,
             41, 42, 48, 87,
             60, 1, 1.5D, 6.0D, 0.0F, 0.0D,
-            3.0D, 5.2D,
-            new double[][][] {{
-                    // age    left      up   forward
-                    {42, 0.73D, 5.10D, 2.52D},
-                    {43, 0.85D, 2.49D, 4.33D},
-                    {44, 0.14D, 0.23D, 4.42D},
-                    {45, 0.01D, 0.70D, 4.59D},
-                    {46, -0.18D, 0.71D, 4.59D},
-                    {47, -0.18D, 0.54D, 4.52D},
-                    {48, -0.10D, 0.50D, 4.50D},
-            }});
+            2.0D, 5.2D,
+            new double[][][] {
+                    { // mid tail, landing at a radius of about 2.5 to 2.8
+                            // age   left      up   forward
+                            {42, 0.47D, 3.12D, 2.75D},
+                            {43, 0.63D, 1.34D, 2.70D},
+                            {44, 0.32D, 0.55D, 2.44D},
+                            {45, 0.11D, 0.84D, 2.59D},
+                            {46, -0.13D, 0.85D, 2.59D},
+                            {47, -0.23D, 0.76D, 2.52D},
+                            {48, -0.20D, 0.75D, 2.51D},
+                    },
+                    { // tail tip, landing at a radius of about 4.3 to 4.6
+                            // age   left      up   forward
+                            {42, 0.73D, 5.10D, 2.52D},
+                            {43, 0.85D, 2.49D, 4.33D},
+                            {44, 0.14D, 0.23D, 4.42D},
+                            {45, 0.01D, 0.70D, 4.59D},
+                            {46, -0.18D, 0.71D, 4.59D},
+                            {47, -0.18D, 0.54D, 4.52D},
+                            {48, -0.10D, 0.50D, 4.50D},
+                    },
+            });
 
     private static final AttackProfile[] ALL = {SCRATCH, TAIL_SWIPE, TAIL_SLAM};
 
