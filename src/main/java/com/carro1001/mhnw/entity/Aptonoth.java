@@ -1,7 +1,6 @@
 package com.carro1001.mhnw.entity;
 
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -37,8 +36,9 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  *
  * <p>{@link Animal} rather than {@link PathfinderMob} directly, purely so {@link EatBlockGoal}
  * (used for the grass-eating flavour the {@code eat} clip was authored for) has the convenience
- * base it expects. Breeding is not implemented: {@link #getBreedOffspring} throws, and nothing
- * calls it, because {@link #isFood} always returns false.
+ * base it expects. Breeding is not implemented: {@link #isFood} always returns false, so normal
+ * play can never enter love mode, and {@link #getBreedOffspring} returns null for the rare edge
+ * case (a data command, another mod) that forces it anyway.
  *
  * <h2>Behaviour: roam, flee, defend</h2>
  * {@link PanicGoal} and the retaliation goal both react to being hurt, and Panic sits at a higher
@@ -107,10 +107,18 @@ public class Aptonoth extends Animal implements GeoEntity {
         return false;
     }
 
+    /**
+     * No offspring, since breeding is not implemented. {@code null}, not an exception: normal
+     * player interaction can never reach this (love mode requires {@link #isFood} to accept an
+     * item first, and that always returns false), but {@code Animal.spawnChildFromBreeding}
+     * already treats a null result as "no child" and resets both animals' love state cleanly, so
+     * that is what an edge case that forces love mode some other way (a data command, another mod)
+     * gets, rather than an uncaught exception out of goal ticking.
+     */
     @Override
     public net.minecraft.world.entity.AgeableMob getBreedOffspring(
             net.minecraft.server.level.ServerLevel level, net.minecraft.world.entity.AgeableMob other) {
-        throw new UnsupportedOperationException("Aptonoth does not breed");
+        return null;
     }
 
     @Override
@@ -128,6 +136,19 @@ public class Aptonoth extends Animal implements GeoEntity {
             this.eatAnimationTicks--;
         }
         super.aiStep();
+    }
+
+    /**
+     * {@code getTarget()} and {@code getLastHurtByMob()} are plain server-side fields, never synced
+     * to the client (unlike, say, an {@code EntityDataAccessor}); reading either one in client
+     * presentation code is always null there. Driving vanilla's own already-synced aggressive flag
+     * here, the same fix {@code GreatIzuchi} needed for the same reason, is what actually lets
+     * {@link #mainAnim} tell a fleeing or retaliating Aptonoth from one that is merely wandering.
+     */
+    @Override
+    protected void customServerAiStep() {
+        super.customServerAiStep();
+        setAggressive(getTarget() != null || getLastHurtByMob() != null);
     }
 
     @Override
@@ -148,9 +169,7 @@ public class Aptonoth extends Animal implements GeoEntity {
             return state.setAndContinue(EAT);
         }
         if (state.isMoving()) {
-            LivingEntity target = getTarget();
-            boolean fleeingOrChasing = target != null || getLastHurtByMob() != null;
-            return state.setAndContinue(fleeingOrChasing ? RUN : WALK);
+            return state.setAndContinue(isAggressive() ? RUN : WALK);
         }
         return state.setAndContinue(IDLE);
     }

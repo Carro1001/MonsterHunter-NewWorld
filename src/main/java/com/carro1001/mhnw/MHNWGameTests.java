@@ -573,6 +573,34 @@ public class MHNWGameTests {
         });
     }
 
+    /**
+     * The cooldown must actually expire, not just hold for a while. This is the regression test
+     * for a real bug: the cooldown was originally a counter decremented inside the goal's own
+     * {@code tick()}, but {@code tick()} only ever runs while the goal selector considers the goal
+     * running, which is precisely the window a cooldown is not active in. That counter would sit
+     * at its starting value forever, and every toad would permanently go quiet after its first
+     * release. {@code toadCannotRefireDuringCooldown} alone would never have caught this: it only
+     * asserts the negative (no refire too soon), never that a refire eventually happens at all.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 340)
+    public static void toadCanFireAgainAfterCooldownElapses(GameTestHelper helper) {
+        Toad toad = helper.spawn(ModEntities.TOAD.get(), 8, 2, 8);
+        toad.setVariant(Toad.Variant.POISON);
+
+        toad.hurt(helper.getLevel().damageSources().generic(), 1.0F);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(
+                        toad.isFusing(), "waiting for the first fuse to actually start"))
+                .thenWaitUntil(() -> helper.assertTrue(
+                        !toad.isFusing(), "waiting for the first fuse to finish releasing"))
+                .thenIdle(210)
+                .thenExecute(() -> toad.hurt(helper.getLevel().damageSources().generic(), 1.0F))
+                .thenWaitUntil(() -> helper.assertTrue(toad.isFusing(),
+                        "the toad never fused a second time once its cooldown had actually elapsed"))
+                .thenSucceed();
+    }
+
     // ---------------------------------------------------------------- Flashbug (P3, endemic life)
 
     /**

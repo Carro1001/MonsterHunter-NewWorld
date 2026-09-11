@@ -33,7 +33,16 @@ public abstract class EndemicAreaEffectGoal extends Goal {
     private final int cooldownTicks;
 
     private int fuseTicksLeft = -1;
-    private int cooldown;
+    /**
+     * Game time the cooldown ends, not a countdown decremented in {@link #tick()}. That was the
+     * bug this replaced: {@code tick()} only ever runs while {@code GoalSelector} considers this
+     * goal running, which is exactly the window a cooldown is NOT active in, so a manually
+     * decremented counter set in {@link #stop()} would sit at its starting value forever and the
+     * goal could never be selected again after its first release. {@link #canUse()} is polled on
+     * its own cadence regardless of whether this goal is running, so comparing against a stored
+     * target time here works where decrementing inside {@code tick()} could not.
+     */
+    private long cooldownUntil = Long.MIN_VALUE;
 
     protected EndemicAreaEffectGoal(PathfinderMob owner, double triggerRange, int fuseTicks, int cooldownTicks) {
         this.owner = owner;
@@ -66,7 +75,7 @@ public abstract class EndemicAreaEffectGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        if (this.cooldown > 0) {
+        if (this.owner.level().getGameTime() < this.cooldownUntil) {
             return false;
         }
         return isProvoked() || nearestTrigger() != null;
@@ -115,14 +124,11 @@ public abstract class EndemicAreaEffectGoal extends Goal {
     public void stop() {
         setPresenting(false);
         this.fuseTicksLeft = -1;
-        this.cooldown = this.cooldownTicks;
+        this.cooldownUntil = this.owner.level().getGameTime() + this.cooldownTicks;
     }
 
     @Override
     public void tick() {
-        if (this.cooldown > 0) {
-            this.cooldown--;
-        }
         if (this.fuseTicksLeft <= 0) {
             return;
         }
