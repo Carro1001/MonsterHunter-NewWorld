@@ -37,9 +37,10 @@ public class Bug extends PathfinderMob {
     public static final float BODY_WIDTH = 0.4F;
     public static final float BODY_HEIGHT = 0.4F;
 
-    /** How rare the golden variant is. Old code had this as a config option; kept a plain constant
-     * here for now, matching every other P3 species' balance constants. */
-    public static final float GODBUG_CHANCE = 0.02F;
+    /** How often the golden variant rolls. Was 2%; feedback asked for an even 50/50 so testing
+     * doesn't need dozens of spawn-egg uses to see one. Old code had this as a config option; kept a
+     * plain constant here for now, matching every other P3 species' balance constants. */
+    public static final float GODBUG_CHANCE = 0.5F;
 
     public enum Variant {
         BITTERBUG("bitterbug"),
