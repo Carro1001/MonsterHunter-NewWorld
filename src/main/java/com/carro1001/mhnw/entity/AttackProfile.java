@@ -25,7 +25,9 @@ package com.carro1001.mhnw.entity;
  * @param lungeSpeed     blocks per tick the monster paces forward through the active window
  * @param minRange       closest distance at which this attack may be chosen
  * @param maxRange       furthest distance at which this attack may be chosen
- * @param path           {tick, left, up, forward} keyframes of the damaging limb, interpolated
+ * @param paths          one or more {tick, left, up, forward} keyframe tracks, each producing its
+ *                       own volume. A claw needs one; a sweeping tail needs several along its
+ *                       length, or only the tip can hurt anyone.
  */
 public record AttackProfile(
         byte id,
@@ -41,7 +43,7 @@ public record AttackProfile(
         double lungeSpeed,
         double minRange,
         double maxRange,
-        double[][] path) {
+        double[][][] paths) {
 
     /**
      * Claw scratch. 3.25 s clip, 65 ticks.
@@ -58,7 +60,7 @@ public record AttackProfile(
             17, 18, 47, 64,
             30, 3, 0.9D, 2.5D, 25.4F, 0.11D,
             0.0D, 2.6D,
-            new double[][] {
+            new double[][][] {{
                     // age    left      up   forward
                     {18, -1.17D, 1.29D, 2.18D},
                     {21, -1.30D, 1.39D, 2.33D},
@@ -71,7 +73,7 @@ public record AttackProfile(
                     {42, -1.52D, 2.02D, 2.86D},
                     {45, -1.32D, 1.34D, 2.39D},
                     {47, -1.55D, 1.30D, 1.72D},
-            });
+            }});
 
     /**
      * Tail swipe. 2.375 s clip, 48 ticks. Path measured with the runtime bone probe.
@@ -94,24 +96,45 @@ public record AttackProfile(
             27, 28, 43, 47,
             40, 1, 1.3D, 4.0D, 0.0F, 0.0D,
             2.0D, 4.6D,
-            new double[][] {
-                    // age    left      up   forward
-                    {28, -2.62D, 1.81D, 0.52D},
-                    {29, -2.72D, 1.35D, -1.20D},
-                    {30, -1.63D, 1.01D, -2.91D},
-                    {31, 0.21D, 0.52D, -3.43D},
-                    {32, 2.65D, 0.43D, -2.95D},
-                    {33, 4.11D, 0.68D, -1.60D},
-                    {34, 4.62D, 0.66D, -0.45D},
-                    {35, 4.78D, 0.77D, 1.07D},
-                    {36, 4.36D, 0.99D, 2.52D},
-                    {37, 3.38D, 1.25D, 3.65D},
-                    {38, 2.15D, 1.37D, 4.33D},
-                    {39, 0.95D, 1.30D, 4.51D},
-                    {40, -0.30D, 1.07D, 4.26D},
-                    {41, -1.06D, 0.92D, 3.80D},
-                    {42, -1.37D, 1.05D, 3.36D},
-                    {43, -1.57D, 1.09D, 2.62D},
+            new double[][][] {
+                    { // mid tail, sweeping a radius of about 2.0 to 2.9
+                            // age   left      up   forward
+                            {28, -1.85D, 2.27D, -1.41D},
+                            {29, -0.94D, 2.23D, -2.12D},
+                            {30, 0.21D, 1.99D, -2.35D},
+                            {31, 1.33D, 1.52D, -1.93D},
+                            {32, 2.21D, 1.32D, -1.08D},
+                            {33, 2.56D, 1.21D, -0.25D},
+                            {34, 2.68D, 1.24D, 0.25D},
+                            {35, 2.70D, 1.30D, 0.86D},
+                            {36, 2.53D, 1.36D, 1.45D},
+                            {37, 2.17D, 1.40D, 1.96D},
+                            {38, 1.67D, 1.44D, 2.37D},
+                            {39, 1.16D, 1.43D, 2.57D},
+                            {40, 0.58D, 1.34D, 2.59D},
+                            {41, 0.21D, 1.26D, 2.51D},
+                            {42, 0.17D, 1.31D, 2.49D},
+                            {43, 0.13D, 1.35D, 2.47D},
+                    },
+                    { // tail tip, sweeping a radius of about 3.4 to 4.9
+                            // age   left      up   forward
+                            {28, -2.62D, 1.81D, 0.52D},
+                            {29, -2.72D, 1.35D, -1.20D},
+                            {30, -1.63D, 1.01D, -2.91D},
+                            {31, 0.21D, 0.52D, -3.43D},
+                            {32, 2.65D, 0.43D, -2.95D},
+                            {33, 4.11D, 0.68D, -1.60D},
+                            {34, 4.62D, 0.66D, -0.45D},
+                            {35, 4.78D, 0.77D, 1.07D},
+                            {36, 4.36D, 0.99D, 2.52D},
+                            {37, 3.38D, 1.25D, 3.65D},
+                            {38, 2.15D, 1.37D, 4.33D},
+                            {39, 0.95D, 1.30D, 4.51D},
+                            {40, -0.30D, 1.07D, 4.26D},
+                            {41, -1.06D, 0.92D, 3.80D},
+                            {42, -1.37D, 1.05D, 3.36D},
+                            {43, -1.57D, 1.09D, 2.62D},
+                    },
             });
 
     /**
@@ -133,7 +156,7 @@ public record AttackProfile(
             41, 42, 48, 87,
             60, 1, 1.5D, 6.0D, 0.0F, 0.0D,
             3.0D, 5.2D,
-            new double[][] {
+            new double[][][] {{
                     // age    left      up   forward
                     {42, 0.73D, 5.10D, 2.52D},
                     {43, 0.85D, 2.49D, 4.33D},
@@ -142,7 +165,7 @@ public record AttackProfile(
                     {46, -0.18D, 0.71D, 4.59D},
                     {47, -0.18D, 0.54D, 4.52D},
                     {48, -0.10D, 0.50D, 4.50D},
-            });
+            }});
 
     private static final AttackProfile[] ALL = {SCRATCH, TAIL_SWIPE, TAIL_SLAM};
 
@@ -172,19 +195,25 @@ public record AttackProfile(
         return Math.max(0, Math.min(this.strikes - 1, index));
     }
 
-    /** Interpolates the limb path at this action age, in the local frame. */
-    public double[] limbLocalAt(int age) {
-        double[] first = this.path[0];
+    /** How many separate volumes this attack sweeps. */
+    public int volumeCount() {
+        return this.paths.length;
+    }
+
+    /** Interpolates one of the limb paths at this action age, in the local frame. */
+    public double[] limbLocalAt(int pathIndex, int age) {
+        double[][] path = this.paths[pathIndex];
+        double[] first = path[0];
         if (age <= first[0]) {
             return new double[] {first[1], first[2], first[3]};
         }
-        double[] last = this.path[this.path.length - 1];
+        double[] last = path[path.length - 1];
         if (age >= last[0]) {
             return new double[] {last[1], last[2], last[3]};
         }
-        for (int i = 0; i < this.path.length - 1; i++) {
-            double[] a = this.path[i];
-            double[] b = this.path[i + 1];
+        for (int i = 0; i < path.length - 1; i++) {
+            double[] a = path[i];
+            double[] b = path[i + 1];
             if (age >= a[0] && age <= b[0]) {
                 double f = (age - a[0]) / (b[0] - a[0]);
                 return new double[] {

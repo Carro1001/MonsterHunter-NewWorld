@@ -181,9 +181,7 @@ public class MHNWGameTests {
     public static void everyAttackPathCoversItsActiveWindow(GameTestHelper helper) {
         for (AttackProfile profile : AttackProfile.all()) {
             String name = "attack id " + profile.id();
-            double[][] path = profile.path();
-
-            helper.assertTrue(path.length >= 2, name + " needs at least two path keyframes");
+            helper.assertTrue(profile.volumeCount() >= 1, name + " has no damage volume at all");
             helper.assertTrue(profile.windupEnd() < profile.activeStart(),
                     name + " has a windup that overlaps its active window");
             helper.assertTrue(profile.activeStart() <= profile.activeEnd(),
@@ -194,18 +192,48 @@ public class MHNWGameTests {
             helper.assertTrue(profile.minRange() < profile.maxRange(),
                     name + " has an empty range band");
 
-            helper.assertTrue(path[0][0] <= profile.activeStart(),
-                    name + " starts hitting at tick " + profile.activeStart()
-                            + " but its path does not begin until " + path[0][0]);
-            helper.assertTrue(path[path.length - 1][0] >= profile.activeEnd(),
-                    name + " hits until tick " + profile.activeEnd()
-                            + " but its path ends at " + path[path.length - 1][0]);
+            for (int v = 0; v < profile.volumeCount(); v++) {
+                double[][] path = profile.paths()[v];
+                String track = name + " volume " + v;
 
-            for (int i = 1; i < path.length; i++) {
-                helper.assertTrue(path[i][0] > path[i - 1][0],
-                        name + " has out-of-order path keyframes at index " + i);
+                helper.assertTrue(path.length >= 2, track + " needs at least two path keyframes");
+                helper.assertTrue(path[0][0] <= profile.activeStart(),
+                        track + " starts hitting at tick " + profile.activeStart()
+                                + " but its path does not begin until " + path[0][0]);
+                helper.assertTrue(path[path.length - 1][0] >= profile.activeEnd(),
+                        track + " hits until tick " + profile.activeEnd()
+                                + " but its path ends at " + path[path.length - 1][0]);
+
+                for (int i = 1; i < path.length; i++) {
+                    helper.assertTrue(path[i][0] > path[i - 1][0],
+                            track + " has out-of-order path keyframes at index " + i);
+                }
             }
         }
+        helper.succeed();
+    }
+
+    /**
+     * Once the monster has closed the distance, something must be usable.
+     *
+     * <p>A monster that walks to its preferred range and then finds no attack whose band contains
+     * that distance stands there forever. That deadlock has already happened once here, when the
+     * collidable torso held victims just outside a too-small reach, and it is invisible in a build
+     * that compiles perfectly. Asserting that at least one attack covers the distance the approach
+     * actually stops at turns it into a test failure.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void somethingIsUsableAtClosingRange(GameTestHelper helper) {
+        boolean any = false;
+        for (AttackProfile profile : AttackProfile.all()) {
+            if (profile.inRange(GreatIzuchiCombatGoal.CLOSE_RANGE)) {
+                any = true;
+                break;
+            }
+        }
+        helper.assertTrue(any,
+                "the monster closes to " + GreatIzuchiCombatGoal.CLOSE_RANGE
+                        + " blocks but no attack covers that distance, so it would stand there");
         helper.succeed();
     }
 

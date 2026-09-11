@@ -18,7 +18,7 @@ import net.minecraft.world.phys.AABB;
  * The claw volume is not an entity: it is a body-local path evaluated for the current action age.
  * Without this, the one thing you cannot see is the thing that decides whether an attack connects.
  *
- * <p>It deliberately calls {@link GreatIzuchiCombatGoal#attackVolume} rather than recomputing the
+ * <p>It deliberately calls {@link GreatIzuchiCombatGoal#attackVolumes} rather than recomputing the
  * geometry, so the box drawn here is the box the server hits with; if they ever disagreed, the
  * overlay would be lying about exactly the thing it exists to show. It appears exactly on the ticks
  * that can deal damage and at no other time, so the active window is directly observable and a
@@ -46,11 +46,6 @@ final class AttackVolumeOverlay {
             return;
         }
 
-        AABB volume = GreatIzuchiCombatGoal.attackVolume(entity, age);
-        if (volume == null) {
-            return;
-        }
-
         // The pose stack arrives translated to the entity's interpolated position, unrotated, so
         // the world-space volume is rebased onto that origin.
         double ox = net.minecraft.util.Mth.lerp(partialTick, entity.xOld, entity.getX());
@@ -58,7 +53,10 @@ final class AttackVolumeOverlay {
         double oz = net.minecraft.util.Mth.lerp(partialTick, entity.zOld, entity.getZ());
 
         VertexConsumer lines = bufferSource.getBuffer(RenderType.lines());
-        LevelRenderer.renderLineBox(poseStack, lines, volume.move(-ox, -oy, -oz), 1.0F, 0.15F, 0.1F, 1.0F);
+        for (AABB volume : GreatIzuchiCombatGoal.attackVolumes(entity, age)) {
+            LevelRenderer.renderLineBox(
+                    poseStack, lines, volume.move(-ox, -oy, -oz), 1.0F, 0.15F, 0.1F, 1.0F);
+        }
     }
 
     private AttackVolumeOverlay() {}

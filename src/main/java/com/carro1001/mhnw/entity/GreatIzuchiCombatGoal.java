@@ -37,8 +37,15 @@ public class GreatIzuchiCombatGoal extends Goal {
     /** Seeds the entity's attack damage attribute. Per-attack scaling lives in the profile. */
     public static final double SCRATCH_DAMAGE = 2.5D;
 
-    /** Distance beyond which no attack is in range; the approach runs until inside it. */
-    public static final double REACH = 2.6D;
+    /**
+     * How close the monster tries to get when nothing is in range yet.
+     *
+     * <p>Not a gate on attacking. Each attack has its own range band, and the long-reach tail
+     * attacks are deliberately usable further out than this, so the monster can open with one
+     * while it is still closing. Gating selection on a single global reach made the tail slam,
+     * whose band starts at 3.0, permanently unselectable.
+     */
+    public static final double CLOSE_RANGE = 2.6D;
 
     private static final int REPATH_INTERVAL = 10;
 
@@ -147,7 +154,19 @@ public class GreatIzuchiCombatGoal extends Goal {
         this.monster.setAggressive(true);
 
         double distance = distanceToBox(target);
-        if (distance > REACH) {
+
+        // Attack the moment anything is in range, even mid-approach: that is what lets a
+        // long-reach tail attack open the engagement instead of only ever trading claw swipes.
+        if (this.monster.attackCooldown <= 0 && this.monster.hasLineOfSight(target)) {
+            AttackProfile chosen = chooseAttack(distance);
+            if (chosen != null) {
+                this.monster.getNavigation().stop();
+                beginAttack(chosen, target, distance);
+                return;
+            }
+        }
+
+        if (distance > CLOSE_RANGE) {
             if (--this.repathCooldown <= 0) {
                 this.repathCooldown = REPATH_INTERVAL;
                 // Bounded re-pathing: a failed path abandons the approach for this interval
@@ -159,22 +178,7 @@ public class GreatIzuchiCombatGoal extends Goal {
             }
             return;
         }
-
         this.monster.getNavigation().stop();
-        if (this.monster.attackCooldown > 0) {
-            return;
-        }
-        if (!this.monster.hasLineOfSight(target)) {
-            debug("attack rejected: no line of sight to {}", target.getName().getString());
-            return;
-        }
-
-        AttackProfile chosen = chooseAttack(distance);
-        if (chosen == null) {
-            debug("attack rejected: nothing in range at {} blocks", String.format("%.2f", distance));
-            return;
-        }
-        beginAttack(chosen, target, distance);
     }
 
     /**
@@ -324,25 +328,34 @@ public class GreatIzuchiCombatGoal extends Goal {
      * <p>Static and public so the developer overlay draws the very same geometry the server hits
      * with, rather than a second approximation of it that could drift out of agreement.
      */
-    public static AABB attackVolume(GreatIzuchi monster, int age) {
+    public static AABB[] attackVolumes(GreatIzuchi monster, int age) {
         AttackProfile profile = AttackProfile.byId(monster.getAttackId());
         if (profile == null) {
-            return null;
+            return new AABB[0];
         }
-        double[] local = profile.limbLocalAt(age);
-        Vec3 centre = monster.localToWorld(local[0], local[1], local[2]);
-        return AABB.ofSize(centre, profile.volumeSize(), profile.volumeSize(), profile.volumeSize());
+        AABB[] volumes = new AABB[profile.volumeCount()];
+        for (int i = 0; i < volumes.length; i++) {
+            double[] local = profile.limbLocalAt(i, age);
+            Vec3 centre = monster.localToWorld(local[0], local[1], local[2]);
+            volumes[i] = AABB.ofSize(
+                    centre, profile.volumeSize(), profile.volumeSize(), profile.volumeSize());
+        }
+        return volumes;
     }
 
     private void applyContact(AttackProfile profile, int age) {
         if (this.monster.level().isClientSide) {
             return;
         }
-        AABB volume = attackVolume(this.monster, age);
-        if (volume == null) {
-            return;
+        // A sweeping tail carries a volume at several points along its length, so a victim beside
+        // the mid tail is struck even though the tip passes well outside them. The per-strike key
+        // below is shared across volumes, so overlapping two of them is still one hit.
+        for (AABB volume : attackVolumes(this.monster, age)) {
+            applyContactIn(profile, age, volume);
         }
+    }
 
+    private void applyContactIn(AttackProfile profile, int age, AABB volume) {
         // Intersect real bounding boxes, not centres. getEntities also returns PartEntity objects,
         // so victims are normalized to their parent before de-duplication (rule 3).
         for (Entity candidate : this.monster.level().getEntities(this.monster, volume)) {
