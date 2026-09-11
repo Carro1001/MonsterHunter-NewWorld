@@ -150,14 +150,26 @@ public class GreatIzuchi extends Monster implements GeoEntity {
         // boxes either left a gap or made the tip box far bigger than the tip. Each segment
         // overlaps its neighbour slightly so there is no seam to slip a hit through. The hip gap
         // between the torso box and tail_1 is covered by the root envelope, which is also hittable.
+        // Every box overlaps its neighbour along the body axis. A seam between two boxes is a
+        // strip of the creature that cannot be hit, which reads in game as the attack randomly
+        // failing; the spans below are written out so the overlaps stay checkable by eye.
+        //
+        //   torso   0.00 ..  1.60       tail_1  -0.45 .. -1.85
+        //   neck    1.45 ..  2.55       tail_2  -1.70 .. -3.00
+        //   head    2.40 ..  3.70       tail_3  -2.90 .. -4.10
+        //                               tail_4  -4.00 .. -5.10
+        //
+        // The hips, between the torso box and tail_1, are covered by the root envelope, which is
+        // hittable in its own right.
         this.parts = new MonsterPart[] {
                 //              name          width height  left    up      forward
                 new MonsterPart(this, "torso",  1.6F, 1.9F, 0.00D, 2.15D,  0.80D),
+                new MonsterPart(this, "neck",   1.1F, 1.3F, 0.00D, 2.25D,  2.00D),
                 new MonsterPart(this, "head",   1.3F, 1.2F, 0.00D, 2.35D,  3.05D),
-                new MonsterPart(this, "tail_1", 1.4F, 1.3F, 0.00D, 2.30D, -1.30D),
-                new MonsterPart(this, "tail_2", 1.3F, 1.2F, 0.00D, 2.35D, -2.55D),
-                new MonsterPart(this, "tail_3", 1.2F, 1.1F, 0.00D, 2.40D, -3.75D),
-                new MonsterPart(this, "tail_4", 1.1F, 1.2F, 0.00D, 2.30D, -4.85D),
+                new MonsterPart(this, "tail_1", 1.4F, 1.3F, 0.00D, 2.15D, -1.15D),
+                new MonsterPart(this, "tail_2", 1.3F, 1.2F, 0.00D, 2.10D, -2.35D),
+                new MonsterPart(this, "tail_3", 1.2F, 1.1F, 0.00D, 2.00D, -3.50D),
+                new MonsterPart(this, "tail_4", 1.1F, 1.2F, 0.00D, 1.85D, -4.55D),
         };
         this.xpReward = 20;
     }
