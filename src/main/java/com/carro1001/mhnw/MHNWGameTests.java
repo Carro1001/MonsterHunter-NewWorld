@@ -551,7 +551,7 @@ public class MHNWGameTests {
         helper.succeed();
     }
 
-    /** A03/A06: one source touching several of Aptonoth's five parts is still one hit. */
+    /** A03/A06: one source touching several of Aptonoth's eight parts is still one hit. */
     @GameTest(template = ARENA, timeoutTicks = 40)
     public static void aptonothOneSourceAcrossManyPartsCountsOnce(GameTestHelper helper) {
         Aptonoth aptonoth = helper.spawn(ModEntities.APTONOTH.get(), 8, 2, 8);
@@ -559,27 +559,27 @@ public class MHNWGameTests {
         float before = aptonoth.getHealth();
 
         DamageSource source = helper.getLevel().damageSources().generic();
+        aptonoth.part("chest").hurt(source, PROBE_DAMAGE);
         aptonoth.part("head").hurt(source, PROBE_DAMAGE);
         aptonoth.part("tail_1").hurt(source, PROBE_DAMAGE);
-        aptonoth.part("tail_2").hurt(source, PROBE_DAMAGE);
         aptonoth.part("tail_3").hurt(source, PROBE_DAMAGE);
-        aptonoth.part("tail_4").hurt(source, PROBE_DAMAGE);
+        aptonoth.part("tail_6").hurt(source, PROBE_DAMAGE);
 
         float lost = before - aptonoth.getHealth();
         helper.assertTrue(Math.abs(lost - PROBE_DAMAGE) < EPSILON,
-                "one source touching all five of Aptonoth's parts should cost " + PROBE_DAMAGE
+                "one source touching several of Aptonoth's parts should cost " + PROBE_DAMAGE
                         + " health once, but the parent lost " + lost);
         helper.succeed();
     }
 
-    /** A02/A13: death removes Aptonoth and every one of its five parts, exactly once. There is
-     * deliberately no "body" part (see the class doc), so this is head + a four-segment tail. */
+    /** A02/A13: death removes Aptonoth and every one of its eight parts, exactly once: chest, head,
+     * and a six-segment tail. */
     @GameTest(template = ARENA, timeoutTicks = 200)
     public static void aptonothDeathRemovesTheWholeCreature(GameTestHelper helper) {
         Aptonoth aptonoth = helper.spawn(ModEntities.APTONOTH.get(), 8, 2, 8);
         aptonoth.setNoAi(true);
         int partCount = aptonoth.getParts().length;
-        helper.assertTrue(partCount == 5, "Aptonoth registered " + partCount + " parts, expected 5");
+        helper.assertTrue(partCount == 8, "Aptonoth registered " + partCount + " parts, expected 8");
 
         aptonoth.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
 

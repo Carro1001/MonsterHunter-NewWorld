@@ -31,22 +31,22 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 /**
  * The P3 proof of reuse: a passive herbivore, not another combat monster.
  *
- * <p>Ordinary in every way except one: it is {@link MonsterPart} multipart for the head and a
- * four-segment tail (reach the root hitbox can't cover), because a single vanilla AABB
- * genuinely cannot fit a long-necked, long-tailed quadruped any better than it can a wyvern's tail.
- * This was originally single-hurtbox on the theory that section 4.2's "a single fitted region is
- * fine for a small creature" applied; a screenshot of the actual shape made clear that theory did
- * not survive contact with this particular body plan, and {@link MonsterPart} generalizing to any
- * {@link net.minecraft.world.entity.Mob} rather than only hostile {@code Monster}s is what made
- * fixing that possible without a parallel class hierarchy.
+ * <p>Ordinary in every way except one: it is {@link MonsterPart} multipart for the chest, head, and
+ * a six-segment tail, because a single vanilla AABB genuinely cannot fit a long-necked, long-tailed
+ * quadruped any better than it can a wyvern's tail. This was originally single-hurtbox on the theory
+ * that section 4.2's "a single fitted region is fine for a small creature" applied; a screenshot of
+ * the actual shape made clear that theory did not survive contact with this particular body plan,
+ * and {@link MonsterPart} generalizing to any {@link net.minecraft.world.entity.Mob} rather than
+ * only hostile {@code Monster}s is what made fixing that possible without a parallel class
+ * hierarchy.
  *
- * <p>Deliberately has no "body" part, unlike the large monsters' torso: this creature never fights
- * back, so there is no combat precision that a separate torso hurtbox would buy over what the plain
- * root hitbox ({@link #BODY_WIDTH}/{@link #BODY_HEIGHT}) already gives for free (a passive animal
- * with no parts at all still takes damage on its whole body exactly like any vanilla animal). Adding
- * one anyway would just be a second, redundant "body box" duplicating what the root box already
- * does. Head and tail get real parts because they physically reach well outside the root box; the
- * torso does not need to.
+ * <p>A "chest" part was tried and dropped once already on the theory that a passive animal has no
+ * combat precision to gain from one over the plain root hitbox ({@link #BODY_WIDTH}/
+ * {@link #BODY_HEIGHT}) -- but even after enlarging the root box to reach the measured chest height,
+ * feedback from a screenshot was that the torso still needed its own volume, so it is back. The
+ * lesson: "this creature doesn't fight, so precision doesn't matter" turned out to be true for combat
+ * but not for how the F3+B debug view reads visually; the root box alone still looked wrong even once
+ * correctly sized.
  *
  * <p>None of Great Izuchi's attack-timeline or attack-profile machinery is used here; only the part
  * positioning, which is a different, smaller piece of that infrastructure.
@@ -110,27 +110,32 @@ public class Aptonoth extends Animal implements GeoEntity {
 
     public Aptonoth(EntityType<? extends Animal> type, Level level) {
         super(type, level);
-        // Real BoneProbe measurements (see docs/TEST_PLAN.md and Rathian's constructor for the same
-        // change) for head/tail_1/tail_4: the maintainer ran with debugCombat on and stood near a
-        // live Aptonoth twice, and the head/tail1/tail2 bones' logged positions came back the same
-        // both times, confirming these specific numbers. No "body" part: see the class doc for why
-        // the plain root hitbox already covers the torso without one.
+        // Real BoneProbe measurements for chest/head/tail_1/tail_6 (see docs/TEST_PLAN.md and
+        // Rathian's constructor for the same change): the maintainer stood near a live Aptonoth
+        // across three separate sessions, and the body/head/tail1/tail2 bones' logged positions came
+        // back the same each time, confirming these specific numbers. `chest` is back after being
+        // dropped once (see the class doc for why); its `up`/`forward` are the measured "body" bone
+        // position directly.
         //
-        // The tail needed a second round: aptonoth.geo.json's own tail1/tail2 cubes are each about
-        // 1.9-2.0 blocks long, but small boxes at only the two measured bone positions leave real,
-        // calculable gaps of bare tail with no hurtbox at all. Round one added one interpolated
-        // midpoint (tail_2); the follow-up screenshot still read as a bit gappy/undersized, so this
-        // adds a second interpolated segment (tail_3, between tail_2 and the measured tail end) and
-        // bumps every tail box's size up modestly. tail_2 and tail_3 are interpolated, not
-        // themselves measured; the same "several overlapping boxes along a long axis" fix the large
-        // monsters' tails already use for the identical reason.
+        // The tail is now six evenly-spaced points between the two measured endpoints (tail_1 at the
+        // measured tail1 bone, tail_6 at the measured tail2 bone) instead of a chain of one-off
+        // interpolations: aptonoth.geo.json's own tail1/tail2 cubes are each about 1.9-2.0 blocks
+        // long, and two rounds of adding one patch segment at a time to a growing gap kept leaving
+        // the middle under-covered. Straight linear interpolation between the two measured `up`
+        // values would keep climbing monotonically toward the tip, which read as the tail rising
+        // rather than the gentle droop it actually has; a small sag (a sine dip, low a few segments
+        // in and rising back to the measured tip) is applied on top of the straight line instead, per
+        // feedback that the middle needed to read a little lower, not higher.
         this.parts = new MonsterPart[] {
                 //              name          width height  left    up      forward
+                new MonsterPart(this, "chest",  1.4F, 1.4F, 0.00D, 1.87D,  0.00D),
                 new MonsterPart(this, "head",   0.9F, 0.9F, 0.00D, 2.25D,  2.85D),
-                new MonsterPart(this, "tail_1", 0.9F, 0.9F, 0.00D, 2.60D, -1.31D),
-                new MonsterPart(this, "tail_2", 0.85F, 0.85F, 0.00D, 2.75D, -2.27D),
-                new MonsterPart(this, "tail_3", 0.8F, 0.8F, 0.00D, 2.82D, -2.75D),
-                new MonsterPart(this, "tail_4", 0.7F, 0.7F, 0.00D, 2.90D, -3.22D),
+                new MonsterPart(this, "tail_1", 0.9F, 0.9F,  0.00D, 2.60D, -1.31D),
+                new MonsterPart(this, "tail_2", 0.85F, 0.85F, 0.00D, 2.59D, -1.69D),
+                new MonsterPart(this, "tail_3", 0.8F, 0.8F,  0.00D, 2.60D, -2.08D),
+                new MonsterPart(this, "tail_4", 0.75F, 0.75F, 0.00D, 2.66D, -2.46D),
+                new MonsterPart(this, "tail_5", 0.7F, 0.7F,  0.00D, 2.76D, -2.85D),
+                new MonsterPart(this, "tail_6", 0.65F, 0.65F, 0.00D, 2.89D, -3.23D),
         };
     }
 
