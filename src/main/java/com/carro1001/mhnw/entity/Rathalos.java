@@ -87,17 +87,19 @@ public class Rathalos extends Monster implements GeoEntity {
         // the other than another offline solve or hand-eyeballed guess would be. Still a proxy, not
         // a Rathalos-specific measurement -- if a live session ever shows a specific part
         // meaningfully off, that part's own measured value should win over this borrowed one.
-        // Re-averaged along with Rathian's own (see that class's constructor comment): the first
-        // pass leaned low for the tail/neck/head chain, most visibly on tail_end; this pass averages
-        // twelve idle samples per bone instead of a handful.
+        //
+        // Switched from plain averaging to range-midpoint (see Rathian's constructor comment for
+        // why), and added `throat` between neck and head to close a real, measured gap -- no
+        // stinger chain here, so no tail_tip analog is needed.
         this.parts = new MonsterPart[] {
                 //              name          width height  left  up      forward
-                new MonsterPart(this, "torso",  2.1F, 2.1F, 0.00D, 2.30D,  2.15D),
-                new MonsterPart(this, "neck",   1.75F, 1.75F, 0.00D, 1.81D,  4.52D),
-                new MonsterPart(this, "head",   2.0F, 2.0F, 0.00D, 1.61D,  7.25D),
-                new MonsterPart(this, "tail_base", 1.75F, 1.6F, 0.00D, 2.03D, -1.61D),
-                new MonsterPart(this, "tail_mid",  1.6F, 1.3F, 0.00D, 1.68D, -3.93D),
-                new MonsterPart(this, "tail_end",  2.0F, 2.0F, 0.00D, 1.43D, -6.17D),
+                new MonsterPart(this, "torso",  2.1F, 2.1F, 0.00D, 2.23D,  2.05D),
+                new MonsterPart(this, "neck",   1.75F, 1.75F, 0.00D, 1.76D,  4.46D),
+                new MonsterPart(this, "throat", 1.85F, 1.85F, 0.00D, 1.69D,  5.83D),
+                new MonsterPart(this, "head",   2.0F, 2.0F, 0.00D, 1.61D,  7.20D),
+                new MonsterPart(this, "tail_base", 1.75F, 1.6F, 0.00D, 1.99D, -1.65D),
+                new MonsterPart(this, "tail_mid",  1.6F, 1.3F, 0.00D, 1.48D, -3.91D),
+                new MonsterPart(this, "tail_end",  2.0F, 2.0F, 0.00D, 0.97D, -6.07D),
         };
     }
 

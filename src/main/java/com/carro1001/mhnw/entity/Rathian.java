@@ -31,12 +31,13 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * own packet ("bounded flight later in its packet"), and this class only covers the ground half.
  *
  * <h2>What is genuinely measured, and what is not</h2>
- * The seven hurtbox offsets below come from solving the geometry's {@code idle_normal} pose
- * offline, the same forward-kinematics technique used for Great Izuchi, and for the same reason it
- * is trustworthy here: the idle pose's rotation channels are plain constants and single sine waves,
- * the class of channel that solved Great Izuchi's tail to within 0.05 block of the runtime-measured
- * truth. This has not itself been checked against a live client, unlike Great Izuchi's numbers,
- * which were; treat these as a good first estimate pending that check, not as calibrated.
+ * The nine hurtbox offsets below (seven measured, two interpolated) come from real {@code BoneProbe}
+ * measurements read from the maintainer's own play sessions, not an offline solve: an early offline
+ * FK attempt and a hand-eyeballed correction on top of it were both confirmed wrong by screenshots,
+ * and even a first round of live measurement still needed a second, larger capture and a switch from
+ * plain averaging to range-midpoint (see the constructor for why). {@code throat} and {@code tail_tip}
+ * are interpolated between measured neighbours to close two gaps the measured positions alone left
+ * open, not themselves measurements.
  *
  * <p>The attack clips ({@code attack_charge_bite_left/right}, {@code attack_tailwhip}, the fireball
  * clips, and so on) are deliberately NOT wired to any custom attack volume. Investigating why
@@ -52,8 +53,8 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  *
  * <p>Until then, this fights with ordinary vanilla {@link MeleeAttackGoal}, damage through
  * {@code Mob.doHurtTarget}, no custom timeline: the same honest interim {@link Izuchi} uses for the
- * same reason (no attack clip it can currently trust), rather than leaving a seven-part multipart
- * monster with no combat behaviour at all.
+ * same reason (no attack clip it can currently trust), rather than leaving a multipart monster with
+ * no combat behaviour at all.
  */
 public class Rathian extends Monster implements GeoEntity {
 
@@ -90,34 +91,40 @@ public class Rathian extends Monster implements GeoEntity {
         super(type, level);
         // These offsets are real BoneProbe measurements (see docs/TEST_PLAN.md), not offline-solved
         // or eyeballed: the maintainer ran with debugCombat on and stood near a live Rathian, and
-        // the *Hitbox-named bones' logged left/up/forward values were averaged across several idle
+        // the *Hitbox-named bones' logged left/up/forward values were captured across many idle
         // samples and plugged in directly. This replaced two earlier, both-wrong attempts: an
         // offline FK solve (confirmed wrong by screenshots showing the boxes floating above/in
-        // front of the wings) and a hand-eyeballed "nudge it down" correction on top of that
-        // (confirmed by these same measurements to still be off by roughly a full block on `up`
-        // for the neck/head/tail chain -- guessing a direction was right, but not nearly enough).
+        // front of the wings) and a hand-eyeballed "nudge it down" correction on top of that.
         //
-        // Re-averaged once more from a second, larger capture: the first pass's average leaned on
-        // the low end of the idle sway for the tail/neck/head chain (the idle animation swings the
-        // tail through a real range, and that range is not symmetric around the first small sample),
-        // which read as "boxes too low" against a screenshot from later in the sway. This second
-        // pass averages twelve samples per bone from a fresh capture instead of a handful, landing
-        // closer to the middle of the observed range rather than near one edge of it -- most visible
-        // on stinger (0.40 -> 1.00) and tail_end (1.10 -> 1.43), the parts furthest down the chain
-        // and so the most exaggerated by any bias in which slice of the sway got sampled.
+        // Two rounds of plain averaging still weren't stable (each capture's mean leaned toward
+        // whichever slice of the idle sway happened to get sampled more, so successive fixes kept
+        // overshooting past each other -- 0.40, then 1.00, for stinger's `up` alone). Switched
+        // methodology instead of guessing a third average: for a bone that sways through a real
+        // range every idle loop, the *midpoint of the observed min/max* is robust to sampling bias
+        // in a way an arithmetic mean isn't, as long as both extremes were seen at least once across
+        // enough samples -- which ~25 samples per bone from a single capture reliably does. Every
+        // value below is that range midpoint, computed once from one capture, not re-tuned by eye.
+        //
+        // The neck-head and tail_end-stinger gaps were also large enough (0.87 and 1.1 blocks, once
+        // computed from these same measured centres and part widths) to leave real, visible empty
+        // space between boxes even at the correct positions -- confirmed by screenshot. `throat` and
+        // `tail_tip` below are interpolated at each gap's midpoint (not themselves measured) to close
+        // that space, the same "more segments," not "fatter boxes," fix used elsewhere in this file.
         //
         // Sizes are still borrowed from the archived hitbox profile (same caveat as before, not
         // Rathian-specific), and `left` is set to 0 for every part: the measured samples oscillate
         // both sides of zero as the idle animation sways, with no consistent bias either way.
         this.parts = new MonsterPart[] {
                 //              name          width height  left  up      forward
-                new MonsterPart(this, "torso",  2.1F, 2.1F, 0.00D, 2.30D,  2.15D),
-                new MonsterPart(this, "neck",   1.75F, 1.75F, 0.00D, 1.81D,  4.52D),
-                new MonsterPart(this, "head",   2.0F, 2.0F, 0.00D, 1.61D,  7.25D),
-                new MonsterPart(this, "tail_base", 1.75F, 1.6F, 0.00D, 2.03D, -1.61D),
-                new MonsterPart(this, "tail_mid",  1.6F, 1.3F, 0.00D, 1.68D, -3.93D),
-                new MonsterPart(this, "tail_end",  2.0F, 2.0F, 0.00D, 1.43D, -6.17D),
-                new MonsterPart(this, "stinger",   1.75F, 1.6F, 0.00D, 1.00D, -9.31D),
+                new MonsterPart(this, "torso",  2.1F, 2.1F, 0.00D, 2.23D,  2.05D),
+                new MonsterPart(this, "neck",   1.75F, 1.75F, 0.00D, 1.76D,  4.46D),
+                new MonsterPart(this, "throat", 1.85F, 1.85F, 0.00D, 1.69D,  5.83D),
+                new MonsterPart(this, "head",   2.0F, 2.0F, 0.00D, 1.61D,  7.20D),
+                new MonsterPart(this, "tail_base", 1.75F, 1.6F, 0.00D, 1.99D, -1.65D),
+                new MonsterPart(this, "tail_mid",  1.6F, 1.3F, 0.00D, 1.48D, -3.91D),
+                new MonsterPart(this, "tail_end",  2.0F, 2.0F, 0.00D, 0.97D, -6.07D),
+                new MonsterPart(this, "tail_tip",  1.9F, 1.9F, 0.00D, 0.64D, -7.56D),
+                new MonsterPart(this, "stinger",   1.75F, 1.6F, 0.00D, 0.30D, -9.05D),
         };
     }
 

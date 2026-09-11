@@ -955,7 +955,7 @@ public class MHNWGameTests {
         com.carro1001.mhnw.entity.Rathian rathian = helper.spawn(ModEntities.RATHIAN.get(), 8, 2, 8);
         rathian.setNoAi(true);
         int partCount = rathian.getParts().length;
-        helper.assertTrue(partCount == 7, "Rathian registered " + partCount + " parts, expected 7");
+        helper.assertTrue(partCount == 9, "Rathian registered " + partCount + " parts, expected 9");
 
         rathian.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
 
@@ -1028,7 +1028,7 @@ public class MHNWGameTests {
         com.carro1001.mhnw.entity.Rathalos rathalos = helper.spawn(ModEntities.RATHALOS.get(), 8, 2, 8);
         rathalos.setNoAi(true);
         int partCount = rathalos.getParts().length;
-        helper.assertTrue(partCount == 6, "Rathalos registered " + partCount + " parts, expected 6");
+        helper.assertTrue(partCount == 7, "Rathalos registered " + partCount + " parts, expected 7");
 
         rathalos.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
 
