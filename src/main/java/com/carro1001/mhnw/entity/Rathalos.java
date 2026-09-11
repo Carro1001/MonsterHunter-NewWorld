@@ -93,18 +93,24 @@ public class Rathalos extends Monster implements GeoEntity {
         // stinger chain here, so no tail_tip analog is needed.
         //
         // Widths re-sized to the exact distance to each neighbour (touching, not gapping or
-        // overlapping) and the tail chain's `up` raised +0.35, matching Rathian's identical follow-up
-        // fix (see that class's constructor comment) -- reused here for the same reason as the
-        // original numbers: same skeleton, same proportions, no Rathalos-specific capture yet.
+        // overlapping), matching Rathian's identical follow-up fix (see that class's constructor
+        // comment) -- reused here for the same reason as the original numbers: same skeleton, same
+        // proportions, no Rathalos-specific capture yet.
+        //
+        // A flat +0.35 raise on the tail chain was tried and reverted in Rathian (see that class's
+        // constructor comment for why: no single centre value reads right against a full block of
+        // real idle sway, whichever moment a screenshot catches). Back to plain range-midpoint
+        // centres here too, with `height` widened on the tail chain instead so the box spans the
+        // actual swing.
         this.parts = new MonsterPart[] {
                 //              name          width height  left  up      forward
                 new MonsterPart(this, "torso",  2.3F, 2.3F, 0.00D, 2.23D,  2.05D),
                 new MonsterPart(this, "neck",   2.3F, 2.3F, 0.00D, 1.76D,  4.46D),
                 new MonsterPart(this, "throat", 1.4F, 1.4F, 0.00D, 1.69D,  5.83D),
                 new MonsterPart(this, "head",   2.0F, 2.0F, 0.00D, 1.61D,  7.20D),
-                new MonsterPart(this, "tail_base", 2.2F, 1.6F, 0.00D, 2.34D, -1.65D),
-                new MonsterPart(this, "tail_mid",  2.2F, 1.3F, 0.00D, 1.83D, -3.91D),
-                new MonsterPart(this, "tail_end",  2.1F, 2.0F, 0.00D, 1.32D, -6.07D),
+                new MonsterPart(this, "tail_base", 2.2F, 1.9F, 0.00D, 1.99D, -1.65D),
+                new MonsterPart(this, "tail_mid",  2.2F, 1.7F, 0.00D, 1.48D, -3.91D),
+                new MonsterPart(this, "tail_end",  2.1F, 2.0F, 0.00D, 0.97D, -6.07D),
         };
     }
 
