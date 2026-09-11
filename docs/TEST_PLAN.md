@@ -78,3 +78,19 @@ like it was walking even at full panic speed). Please recheck the fled-animation
 - [ ] Two variants: common bitterbug, rare golden godbug (~2% of spawns) — may need several spawn-egg
       uses to see a godbug
 - [ ] Wanders passively, never attacks, never flees
+
+## Izuchi (P4 small monster)
+
+Genuinely hostile, unlike everything in P3 — this is the first thing since Great Izuchi that
+actually attacks the player on sight. **It has no attack or death animation on purpose** — see
+`docs/DEFERRED.md` for why (the only candidate clips reference bones missing from their own
+geometry) — so expect it to fight using its walk/run clip and die with vanilla's plain corpse flop.
+That is the current, deliberate state, not a bug to report.
+
+- [ ] Renders, spawns via egg, idles/walks/runs with correct animation
+- [ ] Notices and attacks a nearby player, dealing real damage
+- [ ] Naps occasionally when nothing is around (uses the `sleep` clip) — this is a rare, roughly
+      1-in-20-minutes-of-idle-time random event per goal-selection check, so may take a while to
+      observe; not urgent to confirm
+- [ ] Wakes immediately and attacks if hit or approached while sleeping
+- [ ] Does not get stuck permanently asleep or permanently passive

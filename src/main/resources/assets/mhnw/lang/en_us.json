@@ -8,5 +8,7 @@
   "entity.mhnw.flashbug": "Flashbug",
   "item.mhnw.flashbug_spawn_egg": "Flashbug Spawn Egg",
   "entity.mhnw.bug": "Bitterbug",
-  "item.mhnw.bug_spawn_egg": "Bitterbug Spawn Egg"
+  "item.mhnw.bug_spawn_egg": "Bitterbug Spawn Egg",
+  "entity.mhnw.izuchi": "Izuchi",
+  "item.mhnw.izuchi_spawn_egg": "Izuchi Spawn Egg"
 }

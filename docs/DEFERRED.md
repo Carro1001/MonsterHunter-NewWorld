@@ -32,6 +32,24 @@ One concrete hint that this matters: during combat testing the log showed a burs
 deadlock is fixed, but it showed vanilla pathing does struggle to route this body to a target
 already touching it.
 
+### Izuchi (small) — attack and death animation
+**Status:** genuinely hostile and damaging (ordinary vanilla `MeleeAttackGoal`/`Mob.doHurtTarget`,
+no custom timeline), but with no dedicated attack or death clip to present. This is a P4 decision
+point per the handoff, not an oversight: the preserved master-branch asset has only idle/sleep/
+walk/run. A candidate attack/death set exists on the archived `brain` branch
+(`legacy/candidate-art-brain-branch/izuchi.animation.json`), but the handoff's own audit (section
+6.1) found those clips reference bone names (`left_shoulder`, `left_ankle`, `mane`, `tailblade`)
+absent even from their own paired geometry — they need an actual retargeting pass in a model
+editor, not code, before they would play correctly at all.
+
+To close it: either retarget those brain-branch clips against the current geometry (visual review
+required, not something to do blind), or obtain a newly authored attack/death clip, or get explicit
+approval to reuse an existing clip (e.g. a lunge using `run`) as a labelled temporary presentation.
+Whichever is chosen, wire it the same way `GreatIzuchi`/`Toad`/`Flashbug` already do: add the
+`RawAnimation`, branch on it in `mainAnim`, and if a real death clip is added, check whether it
+needs `getDeathMaxRotation` zeroed the way Great Izuchi's does (only add that override if the new
+clip actually fights vanilla's flop the way Great Izuchi's did).
+
 ## Deferred to the polishing phase
 
 ### A02 — actual save/quit/reload cycle

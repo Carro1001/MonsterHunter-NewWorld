@@ -668,4 +668,55 @@ public class MHNWGameTests {
         helper.succeedWhen(() -> helper.assertTrue(
                 bug.isRemoved(), "the bug was not removed after dying"));
     }
+
+    // ---------------------------------------------------------------- Izuchi (P4, small monster)
+
+    /**
+     * A03/A05: unlike every P3 species, Izuchi is genuinely hostile: ordinary vanilla
+     * {@code MeleeAttackGoal} against a player-shaped target, dealing damage through
+     * {@code Mob.doHurtTarget}, no custom timeline. This is the one concrete proof that "simple
+     * independent targeting" actually connects.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void izuchiAttacksAndDamagesTarget(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
+        victim.setNoAi(true);
+
+        izuchi.setTarget(victim);
+        float startingHealth = victim.getHealth();
+
+        helper.succeedWhen(() -> helper.assertTrue(victim.getHealth() < startingHealth,
+                "Izuchi never damaged a target standing right next to it"));
+    }
+
+    /** A13: death removes it, same as every other species. */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void izuchiDeathRemovesIt(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        izuchi.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
+
+        helper.succeedWhen(() -> helper.assertTrue(
+                izuchi.isRemoved(), "Izuchi was not removed after dying"));
+    }
+
+    /**
+     * The sleep goal's precondition, checked directly rather than waiting on its 1-in-1200 random
+     * trigger to fire inside a bounded test: it must never offer to start while a target already
+     * exists, which is what lets ordinary goal-selector preemption wake a sleeping Izuchi the
+     * moment {@code NearestAttackableTargetGoal} or {@code HurtByTargetGoal} sets one, with no
+     * custom "check for threats" logic of its own (see the goal's own doc comment).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void izuchiWontStartSleepingWithATarget(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
+        izuchi.setTarget(victim);
+
+        com.carro1001.mhnw.entity.IzuchiSleepGoal goal =
+                new com.carro1001.mhnw.entity.IzuchiSleepGoal(izuchi);
+        helper.assertTrue(!goal.canUse(),
+                "the sleep goal was willing to start while Izuchi already had a target");
+        helper.succeed();
+    }
 }

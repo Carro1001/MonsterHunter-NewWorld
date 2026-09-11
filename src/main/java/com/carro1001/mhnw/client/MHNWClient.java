@@ -6,6 +6,7 @@ import com.carro1001.mhnw.entity.Aptonoth;
 import com.carro1001.mhnw.entity.Bug;
 import com.carro1001.mhnw.entity.Flashbug;
 import com.carro1001.mhnw.entity.GreatIzuchi;
+import com.carro1001.mhnw.entity.Izuchi;
 import com.carro1001.mhnw.entity.Toad;
 import com.carro1001.mhnw.registry.ModEntities;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -33,6 +34,7 @@ public final class MHNWClient {
         event.registerEntityRenderer(ModEntities.TOAD.get(), ToadRenderer::new);
         event.registerEntityRenderer(ModEntities.FLASHBUG.get(), FlashbugRenderer::new);
         event.registerEntityRenderer(ModEntities.BUG.get(), BugRenderer::new);
+        event.registerEntityRenderer(ModEntities.IZUCHI.get(), IzuchiRenderer::new);
     }
 
     /**
@@ -136,6 +138,16 @@ public final class MHNWClient {
         public ResourceLocation getTextureLocation(Bug entity) {
             return ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID,
                     "textures/entity/" + entity.getVariant().textureName + ".png");
+        }
+    }
+
+    /** Plain reuse of the preserved geometry/animations/texture; no death rotation override needed
+     * since this species has no authored death clip for vanilla's own flop to fight. */
+    public static class IzuchiRenderer extends GeoEntityRenderer<Izuchi> {
+        public IzuchiRenderer(EntityRendererProvider.Context context) {
+            super(context, new DefaultedEntityGeoModel<>(
+                    ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, "izuchi")));
+            this.shadowRadius = 0.5F;
         }
     }
 

@@ -5,6 +5,7 @@ import com.carro1001.mhnw.entity.Aptonoth;
 import com.carro1001.mhnw.entity.Bug;
 import com.carro1001.mhnw.entity.Flashbug;
 import com.carro1001.mhnw.entity.GreatIzuchi;
+import com.carro1001.mhnw.entity.Izuchi;
 import com.carro1001.mhnw.entity.Toad;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.EntityType;
@@ -102,6 +103,22 @@ public final class ModEntities {
     public static final DeferredHolder<Item, Item> BUG_SPAWN_EGG =
             ITEMS.register("bug_spawn_egg", () -> new DeferredSpawnEggItem(
                     BUG, 0x8A6B3D, 0xC9A54A, new Item.Properties()));
+
+    /**
+     * The P4 small monster: genuinely hostile, single fitted hurtbox, no multipart. See
+     * {@link Izuchi}.
+     */
+    public static final DeferredHolder<EntityType<?>, EntityType<Izuchi>> IZUCHI =
+            ENTITY_TYPES.register("izuchi", () -> EntityType.Builder
+                    .of(Izuchi::new, MobCategory.MONSTER)
+                    .sized(Izuchi.BODY_WIDTH, Izuchi.BODY_HEIGHT)
+                    .clientTrackingRange(10)
+                    .updateInterval(2)
+                    .build("izuchi"));
+
+    public static final DeferredHolder<Item, Item> IZUCHI_SPAWN_EGG =
+            ITEMS.register("izuchi_spawn_egg", () -> new DeferredSpawnEggItem(
+                    IZUCHI, 0x8B7355, 0x4A3B2A, new Item.Properties()));
 
     /** Where natural spawn placement is anchored. Referenced by the spawn placement registration. */
     public static final Heightmap.Types SPAWN_HEIGHTMAP = Heightmap.Types.MOTION_BLOCKING_NO_LEAVES;
