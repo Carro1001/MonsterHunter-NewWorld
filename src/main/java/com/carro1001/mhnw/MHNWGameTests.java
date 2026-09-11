@@ -551,7 +551,7 @@ public class MHNWGameTests {
         helper.succeed();
     }
 
-    /** A03/A06: one source touching several of Aptonoth's five parts is still one hit. */
+    /** A03/A06: one source touching several of Aptonoth's six parts is still one hit. */
     @GameTest(template = ARENA, timeoutTicks = 40)
     public static void aptonothOneSourceAcrossManyPartsCountsOnce(GameTestHelper helper) {
         Aptonoth aptonoth = helper.spawn(ModEntities.APTONOTH.get(), 8, 2, 8);
@@ -562,8 +562,8 @@ public class MHNWGameTests {
         aptonoth.part("chest").hurt(source, PROBE_DAMAGE);
         aptonoth.part("head").hurt(source, PROBE_DAMAGE);
         aptonoth.part("tail_1").hurt(source, PROBE_DAMAGE);
-        aptonoth.part("tail_2").hurt(source, PROBE_DAMAGE);
         aptonoth.part("tail_3").hurt(source, PROBE_DAMAGE);
+        aptonoth.part("tail_4").hurt(source, PROBE_DAMAGE);
 
         float lost = before - aptonoth.getHealth();
         helper.assertTrue(Math.abs(lost - PROBE_DAMAGE) < EPSILON,
@@ -572,14 +572,14 @@ public class MHNWGameTests {
         helper.succeed();
     }
 
-    /** A02/A13: death removes Aptonoth and every one of its five parts, exactly once: chest, head,
-     * and a three-segment tail. */
+    /** A02/A13: death removes Aptonoth and every one of its six parts, exactly once: chest, head,
+     * and a four-segment tail. */
     @GameTest(template = ARENA, timeoutTicks = 200)
     public static void aptonothDeathRemovesTheWholeCreature(GameTestHelper helper) {
         Aptonoth aptonoth = helper.spawn(ModEntities.APTONOTH.get(), 8, 2, 8);
         aptonoth.setNoAi(true);
         int partCount = aptonoth.getParts().length;
-        helper.assertTrue(partCount == 5, "Aptonoth registered " + partCount + " parts, expected 5");
+        helper.assertTrue(partCount == 6, "Aptonoth registered " + partCount + " parts, expected 6");
 
         aptonoth.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
 
