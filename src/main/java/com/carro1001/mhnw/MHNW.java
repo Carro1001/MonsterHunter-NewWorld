@@ -2,6 +2,7 @@ package com.carro1001.mhnw;
 
 import com.carro1001.mhnw.entity.Aptonoth;
 import com.carro1001.mhnw.entity.GreatIzuchi;
+import com.carro1001.mhnw.entity.Toad;
 import com.carro1001.mhnw.registry.ModEntities;
 import net.minecraft.world.entity.SpawnPlacementTypes;
 import net.minecraft.world.item.CreativeModeTabs;
@@ -36,6 +37,7 @@ public class MHNW {
     private static void onAttributeCreation(EntityAttributeCreationEvent event) {
         event.put(ModEntities.GREAT_IZUCHI.get(), GreatIzuchi.createAttributes().build());
         event.put(ModEntities.APTONOTH.get(), Aptonoth.createAttributes().build());
+        event.put(ModEntities.TOAD.get(), Toad.createAttributes().build());
     }
 
     @SubscribeEvent
@@ -60,6 +62,7 @@ public class MHNW {
         if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS) {
             event.accept(ModEntities.GREAT_IZUCHI_SPAWN_EGG.get());
             event.accept(ModEntities.APTONOTH_SPAWN_EGG.get());
+            event.accept(ModEntities.TOAD_SPAWN_EGG.get());
         }
     }
 }

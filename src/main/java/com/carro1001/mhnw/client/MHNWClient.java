@@ -3,6 +3,7 @@ package com.carro1001.mhnw.client;
 import com.carro1001.mhnw.MHNW;
 import com.carro1001.mhnw.entity.Aptonoth;
 import com.carro1001.mhnw.entity.GreatIzuchi;
+import com.carro1001.mhnw.entity.Toad;
 import com.carro1001.mhnw.registry.ModEntities;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.resources.ResourceLocation;
@@ -25,6 +26,7 @@ public final class MHNWClient {
     private static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ModEntities.GREAT_IZUCHI.get(), GreatIzuchiRenderer::new);
         event.registerEntityRenderer(ModEntities.APTONOTH.get(), AptonothRenderer::new);
+        event.registerEntityRenderer(ModEntities.TOAD.get(), ToadRenderer::new);
     }
 
     /**
@@ -67,6 +69,30 @@ public final class MHNWClient {
             super(context, new DefaultedEntityGeoModel<>(
                     ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, "aptonoth")));
             this.shadowRadius = 0.6F;
+        }
+    }
+
+    /**
+     * Toad has no single base texture: only the four variant skins were preserved
+     * ({@code poisontoad.png}, {@code sleeptoad.png}, {@code paratoad.png}, {@code blastoad.png}).
+     * {@link ToadGeoModel} picks the right one per entity; the geometry and animation are shared.
+     */
+    public static class ToadRenderer extends GeoEntityRenderer<Toad> {
+        public ToadRenderer(EntityRendererProvider.Context context) {
+            super(context, new ToadGeoModel());
+            this.shadowRadius = 0.3F;
+        }
+    }
+
+    private static class ToadGeoModel extends DefaultedEntityGeoModel<Toad> {
+        ToadGeoModel() {
+            super(ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, "toad"));
+        }
+
+        @Override
+        public ResourceLocation getTextureResource(Toad animatable) {
+            return ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID,
+                    "textures/entity/" + animatable.getVariant().textureName + ".png");
         }
     }
 

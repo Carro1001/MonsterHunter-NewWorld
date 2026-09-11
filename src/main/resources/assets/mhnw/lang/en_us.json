@@ -2,5 +2,7 @@
   "entity.mhnw.great_izuchi": "Great Izuchi",
   "item.mhnw.great_izuchi_spawn_egg": "Great Izuchi Spawn Egg",
   "entity.mhnw.aptonoth": "Aptonoth",
-  "item.mhnw.aptonoth_spawn_egg": "Aptonoth Spawn Egg"
+  "item.mhnw.aptonoth_spawn_egg": "Aptonoth Spawn Egg",
+  "entity.mhnw.toad": "Toad",
+  "item.mhnw.toad_spawn_egg": "Toad Spawn Egg"
 }

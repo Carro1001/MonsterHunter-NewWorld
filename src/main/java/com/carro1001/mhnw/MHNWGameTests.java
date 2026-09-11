@@ -5,6 +5,7 @@ import com.carro1001.mhnw.entity.AttackProfile;
 import com.carro1001.mhnw.entity.GreatIzuchi;
 import com.carro1001.mhnw.entity.GreatIzuchiCombatGoal;
 import com.carro1001.mhnw.entity.MonsterPart;
+import com.carro1001.mhnw.entity.Toad;
 import com.carro1001.mhnw.registry.ModEntities;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.gametest.framework.GameTest;
@@ -483,5 +484,92 @@ public class MHNWGameTests {
 
         helper.succeedWhen(() -> helper.assertTrue(
                 aptonoth.isRemoved(), "the Aptonoth was not removed after dying"));
+    }
+
+    // ---------------------------------------------------------------- Toad (P3, endemic life)
+
+    /**
+     * A02: the variant is a saved gameplay fact, unlike Great Izuchi's transient combat state, so
+     * it must survive the same NBT round trip that a real reload goes through, not be reset by it.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void toadVariantPersistsAcrossReload(GameTestHelper helper) {
+        Toad original = helper.spawn(ModEntities.TOAD.get(), 8, 2, 8);
+        original.setVariant(Toad.Variant.BLAST);
+
+        CompoundTag saved = new CompoundTag();
+        original.addAdditionalSaveData(saved);
+
+        Toad reloaded = new Toad(ModEntities.TOAD.get(), helper.getLevel());
+        reloaded.readAdditionalSaveData(saved);
+
+        helper.assertTrue(reloaded.getVariant() == Toad.Variant.BLAST,
+                "reloaded toad had variant " + reloaded.getVariant() + ", expected BLAST");
+        helper.succeed();
+    }
+
+    /**
+     * Provocation (being hurt) starts the fuse, and the fuse eventually releases the variant's
+     * effect on a nearby victim. This is the one concrete, deterministic check that the whole
+     * chain, trigger through release, actually delivers what it promises for one variant; the
+     * other three variants share the same trigger and release path and differ only in which
+     * {@code MobEffectInstance} or explosion is applied, which is not worth re-testing per variant.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void toadReleasesPoisonWhenProvoked(GameTestHelper helper) {
+        Toad toad = helper.spawn(ModEntities.TOAD.get(), 8, 2, 8);
+        toad.setVariant(Toad.Variant.POISON);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
+        victim.setNoAi(true);
+
+        toad.hurt(helper.getLevel().damageSources().generic(), 1.0F);
+
+        helper.succeedWhen(() -> helper.assertTrue(
+                victim.hasEffect(net.minecraft.world.effect.MobEffects.POISON),
+                "a nearby victim never received poison after the toad was provoked"));
+    }
+
+    /**
+     * The release is bounded: it cannot happen again immediately. Re-provoking right after a
+     * release must not restart the fuse until the cooldown has elapsed, or the cloud could fire
+     * every tick indefinitely (handoff P3 exit: "effects cannot trigger indefinitely").
+     */
+    @GameTest(template = ARENA, timeoutTicks = 140)
+    public static void toadCannotRefireDuringCooldown(GameTestHelper helper) {
+        Toad toad = helper.spawn(ModEntities.TOAD.get(), 8, 2, 8);
+        toad.setVariant(Toad.Variant.POISON);
+
+        toad.hurt(helper.getLevel().damageSources().generic(), 1.0F);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(
+                        toad.isFusing(), "waiting for the first fuse to actually start"))
+                .thenWaitUntil(() -> helper.assertTrue(
+                        !toad.isFusing(), "waiting for the first fuse to finish releasing"))
+                .thenExecute(() -> toad.hurt(helper.getLevel().damageSources().generic(), 1.0F))
+                .thenExecuteFor(60, () -> helper.assertTrue(!toad.isFusing(),
+                        "the toad started a second fuse while still on cooldown from the first"))
+                .thenSucceed();
+    }
+
+    /** A cloud must not reach through a wall any more than a melee swing may (section 4.2). */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void toadCloudDoesNotReachThroughWalls(GameTestHelper helper) {
+        Toad toad = helper.spawn(ModEntities.TOAD.get(), 8, 2, 8);
+        toad.setVariant(Toad.Variant.POISON);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 10);
+        victim.setNoAi(true);
+
+        for (int y = 2; y <= 5; y++) {
+            helper.setBlock(8, y, 9, net.minecraft.world.level.block.Blocks.STONE);
+        }
+
+        toad.hurt(helper.getLevel().damageSources().generic(), 1.0F);
+
+        helper.runAtTickTime(90, () -> {
+            helper.assertTrue(!victim.hasEffect(net.minecraft.world.effect.MobEffects.POISON),
+                    "a victim behind a wall received the toad's cloud effect anyway");
+            helper.succeed();
+        });
     }
 }

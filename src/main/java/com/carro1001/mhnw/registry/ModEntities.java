@@ -3,6 +3,7 @@ package com.carro1001.mhnw.registry;
 import com.carro1001.mhnw.MHNW;
 import com.carro1001.mhnw.entity.Aptonoth;
 import com.carro1001.mhnw.entity.GreatIzuchi;
+import com.carro1001.mhnw.entity.Toad;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
@@ -51,6 +52,22 @@ public final class ModEntities {
     public static final DeferredHolder<Item, Item> APTONOTH_SPAWN_EGG =
             ITEMS.register("aptonoth_spawn_egg", () -> new DeferredSpawnEggItem(
                     APTONOTH, 0xC9A876, 0x6E5842, new Item.Properties()));
+
+    /**
+     * Endemic life, not a monster: one entity type, four preserved variant textures chosen
+     * randomly at spawn (see {@link Toad}). No multipart, no attack timeline.
+     */
+    public static final DeferredHolder<EntityType<?>, EntityType<Toad>> TOAD =
+            ENTITY_TYPES.register("toad", () -> EntityType.Builder
+                    .of(Toad::new, MobCategory.CREATURE)
+                    .sized(Toad.BODY_WIDTH, Toad.BODY_HEIGHT)
+                    .clientTrackingRange(8)
+                    .updateInterval(3)
+                    .build("toad"));
+
+    public static final DeferredHolder<Item, Item> TOAD_SPAWN_EGG =
+            ITEMS.register("toad_spawn_egg", () -> new DeferredSpawnEggItem(
+                    TOAD, 0x4C7A3D, 0xD8C77A, new Item.Properties()));
 
     /** Where natural spawn placement is anchored. Referenced by the spawn placement registration. */
     public static final Heightmap.Types SPAWN_HEIGHTMAP = Heightmap.Types.MOTION_BLOCKING_NO_LEAVES;
