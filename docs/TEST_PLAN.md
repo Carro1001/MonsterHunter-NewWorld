@@ -58,27 +58,30 @@ under Rathian/Rathalos below, same fix applies here too.
 
 ## Aptonoth (P3 passive herbivore)
 
-Third round this pass, and the real fix:
+Fourth round this pass:
 
-- **Hurtboxes now measured, not guessed.** Ran a BoneProbe session against your own log (found the
-  `[aptonoth]` lines in `logs/latest.log`) and plugged the actual head/tail1/tail2 bone positions in
-  directly. Both earlier attempts (the offline solve, then the "bigger centred body box" reshape)
-  were still off, most visibly on the head (was pointed backward off the body, `forward=1.30`;
-  measured `forward=2.85`, over a block further out).
-- **Dropped the separate green "body" box entirely**, per your own question ("not sure why we need
-  2 body boxes"). You're right: Aptonoth never fights back, so there is no combat precision a
-  separate torso hurtbox buys over what the plain root hitbox already gives any vanilla animal for
-  free. Only head and tail get real parts now, since those are what actually reach outside the root
-  box; body hits just land on the whole creature the ordinary way.
-- Flee duration from two rounds ago unchanged (still a sustained flee after a hit, not one short
-  dash).
+- **Hurtboxes measured, not guessed** (previous round). Ran a BoneProbe session against your own
+  log and plugged the actual head/tail1/tail2 bone positions in directly. Confirmed by a second log
+  capture this round: the measured numbers came back essentially identical to what was already in
+  the code, so the *positions* were already right — the "proportions off" feedback this round was
+  about something else (below).
+- **New: added a third tail segment to close a real coverage gap.** `aptonoth.geo.json`'s own
+  tail1/tail2 meshes are each about 1.9-2.0 blocks long, but the two hurtboxes at the measured bone
+  positions only had small (0.6-0.8 block) boxes at each end, leaving roughly 1.9 blocks of visible
+  tail in the middle with no hurtbox at all — almost certainly what read as disconnected, floating
+  green boxes rather than a tail that's actually covered. Added `tail_2` at the interpolated
+  midpoint between the two measured points, the same overlapping-segments idea the large monsters'
+  tails already use for the identical reason. Not itself a fresh measurement, but grounded in the
+  real authored mesh length, not a guess about proportions.
+- Dropped the separate green "body" box (previous round, unchanged): Aptonoth never fights back, so
+  the plain root hitbox already covers the torso without a redundant duplicate.
+- Flee duration unchanged (still a sustained flee after a hit, not one short hop).
 
 - [ ] Renders, spawns via egg, idles/walks with correct animation
-- [ ] **F3+B: does the head box actually sit on the head now** (it was visibly detached/backward
-      before), **and do the two tail boxes track the tail?** These are real measurements now, so
-      this should be a much closer fit than the last two rounds
-- [ ] **New: no green box floating where the old "body" box used to be** — only head and two tail
-      segments, body damage should come from the plain white hitbox like any other animal
+- [ ] **F3+B: does the tail now read as continuously covered** rather than two small floating boxes
+      with a gap between them? Head box should still sit right on the head as before
+- [ ] **New: no green box floating where the old "body" box used to be** — only head and a
+      three-segment tail, body damage should come from the plain white hitbox like any other animal
 - [ ] **Re-check:** when hurt, flees for a real sustained duration, not just one short hop
 - [ ] Eats grass occasionally (the `eat` animation should play when it's actually eating, not just
       standing still) — grass must be nearby (short/tall grass on a grass block) for this to trigger

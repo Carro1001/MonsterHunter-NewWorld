@@ -31,8 +31,8 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 /**
  * The P3 proof of reuse: a passive herbivore, not another combat monster.
  *
- * <p>Ordinary in every way except one: it is {@link MonsterPart} multipart for the head and tail
- * (three segments' worth of reach the root hitbox can't cover), because a single vanilla AABB
+ * <p>Ordinary in every way except one: it is {@link MonsterPart} multipart for the head and a
+ * three-segment tail (reach the root hitbox can't cover), because a single vanilla AABB
  * genuinely cannot fit a long-necked, long-tailed quadruped any better than it can a wyvern's tail.
  * This was originally single-hurtbox on the theory that section 4.2's "a single fitted region is
  * fine for a small creature" applied; a screenshot of the actual shape made clear that theory did
@@ -106,15 +106,23 @@ public class Aptonoth extends Animal implements GeoEntity {
     public Aptonoth(EntityType<? extends Animal> type, Level level) {
         super(type, level);
         // Real BoneProbe measurements (see docs/TEST_PLAN.md and Rathian's constructor for the same
-        // change): the maintainer ran with debugCombat on and stood near a live Aptonoth, and the
-        // head/tail1/tail2 bones' logged positions are plugged in directly, replacing the earlier
-        // offline-solved-then-reshaped guess. No "body" part: see the class doc for why the plain
-        // root hitbox already covers the torso without one.
+        // change) for head/tail_1/tail_3: the maintainer ran with debugCombat on and stood near a
+        // live Aptonoth, and the head/tail1/tail2 bones' logged positions are plugged in directly.
+        // No "body" part: see the class doc for why the plain root hitbox already covers the torso
+        // without one.
+        //
+        // A middle tail_2 was added on top of the two measured segments: aptonoth.geo.json's own
+        // tail1/tail2 cubes are each about 1.9-2.0 blocks long, but two small boxes at the measured
+        // bone positions alone leave roughly 1.9 blocks of tail in between with no hurtbox at all --
+        // a real, calculable gap, not a guess. tail_2 is interpolated at the midpoint of the two
+        // measured points (still not itself measured), the same "several overlapping boxes along a
+        // long axis" fix the large monsters' tails already use for the identical reason.
         this.parts = new MonsterPart[] {
                 //              name          width height  left    up      forward
                 new MonsterPart(this, "head",   0.9F, 0.9F, 0.00D, 2.25D,  2.85D),
                 new MonsterPart(this, "tail_1", 0.8F, 0.8F, 0.00D, 2.60D, -1.31D),
-                new MonsterPart(this, "tail_2", 0.6F, 0.6F, 0.00D, 2.90D, -3.22D),
+                new MonsterPart(this, "tail_2", 0.75F, 0.75F, 0.00D, 2.75D, -2.27D),
+                new MonsterPart(this, "tail_3", 0.6F, 0.6F, 0.00D, 2.90D, -3.22D),
         };
     }
 
