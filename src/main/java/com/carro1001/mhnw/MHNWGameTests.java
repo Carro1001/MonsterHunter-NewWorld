@@ -47,6 +47,44 @@ public class MHNWGameTests {
         return monster;
     }
 
+    /**
+     * A Great Izuchi is a pack leader (handoff feedback: "spawns with 1-4 izuchis around it").
+     * {@code helper.spawn} does not itself call {@code finalizeSpawn} the way a real world spawn
+     * does, so this drives it directly with {@code MobSpawnType.NATURAL} to exercise the same path
+     * {@link GreatIzuchi#finalizeSpawn} guards on.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void greatIzuchiNaturalSpawnBringsAnEscort(GameTestHelper helper) {
+        GreatIzuchi monster = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
+        monster.finalizeSpawn(helper.getLevel(),
+                helper.getLevel().getCurrentDifficultyAt(monster.blockPosition()),
+                net.minecraft.world.entity.MobSpawnType.NATURAL, null);
+
+        java.util.List<com.carro1001.mhnw.entity.Izuchi> escorts = helper.getLevel().getEntitiesOfClass(
+                com.carro1001.mhnw.entity.Izuchi.class, monster.getBoundingBox().inflate(8.0D));
+        helper.assertTrue(escorts.size() >= 1 && escorts.size() <= 4,
+                "expected 1-4 escort Izuchi after a natural Great Izuchi spawn, got " + escorts.size());
+        helper.succeed();
+    }
+
+    /**
+     * A summoned Great Izuchi (spawn egg, {@code /summon}) does not drag escorts along; only a
+     * genuine wild spawn does (see {@link GreatIzuchi#finalizeSpawn}).
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void greatIzuchiMobSummonedSpawnBringsNoEscort(GameTestHelper helper) {
+        GreatIzuchi monster = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
+        monster.finalizeSpawn(helper.getLevel(),
+                helper.getLevel().getCurrentDifficultyAt(monster.blockPosition()),
+                net.minecraft.world.entity.MobSpawnType.MOB_SUMMONED, null);
+
+        java.util.List<com.carro1001.mhnw.entity.Izuchi> escorts = helper.getLevel().getEntitiesOfClass(
+                com.carro1001.mhnw.entity.Izuchi.class, monster.getBoundingBox().inflate(8.0D));
+        helper.assertTrue(escorts.isEmpty(),
+                "a spawn-egg/summoned Great Izuchi brought " + escorts.size() + " escorts along");
+        helper.succeed();
+    }
+
     /** A03: a hit on a named part reduces the parent's health, once. */
     @GameTest(template = ARENA, timeoutTicks = 120)
     public static void partDamageReachesParent(GameTestHelper helper) {

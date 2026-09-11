@@ -52,7 +52,18 @@ clip actually fights vanilla's flop the way Great Izuchi's did).
 
 ### Rathian — flight, and the real charge/bite/tailwhip/fireball timeline
 **Status:** ground-only, genuinely hostile via ordinary vanilla melee (no custom attack volume),
-seven hurtboxes offline-solved from the idle pose and not yet visually confirmed.
+seven hurtboxes offline-solved from the idle pose. **Now visually confirmed wrong**, not merely
+unconfirmed: screenshots showed the green hurtboxes floating above/in front of the wings, nowhere
+near the actual body. The offline FK solve was trusted here on the theory that a simple
+constant/single-sine-wave idle-pose channel is a safe category (it solved Great Izuchi's tail to
+within 0.05 block); that theory has now failed for both Rathian and Rathalos, so it is not a safe
+assumption for this species and should not be re-attempted blind.
+
+**To actually close it:** the runtime `BoneProbe` (`client/BoneProbe.java`) that validated Great
+Izuchi's claw is currently hardcoded to that one species. It needs generalizing to work against any
+`GeoEntity` so a real measurement session can be run against Rathian (and Rathalos) directly, the
+same "measure, don't guess" loop that produced Great Izuchi's trustworthy numbers — offline-solving
+a third time without that would repeat the same mistake for a third time.
 
 Flight is out of scope for this pass by the handoff's own text for this species ("bounded flight
 later in its packet"); nothing flight-related (takeoff/landing states, a flying navigation mode)
@@ -90,7 +101,9 @@ downward nudge once someone can actually look at it in game.
 
 ### Rathalos — flight, and the attack timeline (worse off than Rathian's)
 **Status:** ground-only, genuinely hostile via ordinary vanilla melee, six hurtboxes offline-solved
-from the idle pose (same caveats as Rathian's) and not yet visually confirmed.
+from the idle pose. **Also visually confirmed wrong**, same as Rathian's (see that entry): the same
+screenshots that caught Rathian's misplaced boxes showed Rathalos's in the same bad state. Needs the
+same generalized-`BoneProbe` live measurement session, not another offline solve.
 
 Flight deferred for the same reason as Rathian's, though it undersells this species more: Rathalos
 is the more archetypally airborne of the two.

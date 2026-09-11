@@ -1,6 +1,7 @@
 package com.carro1001.mhnw.entity;
 
 import com.carro1001.mhnw.MHNWConfig;
+import com.carro1001.mhnw.registry.ModEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -200,6 +201,38 @@ public class GreatIzuchi extends Monster implements GeoEntity {
             return false;
         }
         return Monster.checkMonsterSpawnRules(type, level, spawnType, pos, random);
+    }
+
+    /** How many escort Izuchi spawn alongside a Great Izuchi, inclusive both ends. */
+    private static final int MIN_ESCORTS = 1;
+    private static final int MAX_ESCORTS = 4;
+
+    /** A Great Izuchi is a pack leader: it never appears alone in the wild (section 2, pack mechanic). */
+    @Override
+    public net.minecraft.world.entity.SpawnGroupData finalizeSpawn(
+            ServerLevelAccessor level, net.minecraft.world.DifficultyInstance difficulty,
+            MobSpawnType spawnType, net.minecraft.world.entity.SpawnGroupData groupData) {
+        net.minecraft.world.entity.SpawnGroupData result = super.finalizeSpawn(level, difficulty, spawnType, groupData);
+        if (spawnType != MobSpawnType.NATURAL && spawnType != MobSpawnType.SPAWNER) {
+            // A summoned or otherwise deliberately placed Great Izuchi doesn't drag escorts along;
+            // only genuine wild spawns get the pack.
+            return result;
+        }
+        int count = MIN_ESCORTS + this.random.nextInt(MAX_ESCORTS - MIN_ESCORTS + 1);
+        for (int i = 0; i < count; i++) {
+            Izuchi izuchi = ModEntities.IZUCHI.get().create(level.getLevel());
+            if (izuchi == null) {
+                continue;
+            }
+            double angle = this.random.nextDouble() * Math.PI * 2.0D;
+            double dist = 2.0D + this.random.nextDouble() * 3.0D;
+            double x = getX() + Math.cos(angle) * dist;
+            double z = getZ() + Math.sin(angle) * dist;
+            izuchi.moveTo(x, getY(), z, this.random.nextFloat() * 360.0F, 0.0F);
+            izuchi.finalizeSpawn(level, difficulty, MobSpawnType.MOB_SUMMONED, null);
+            level.addFreshEntity(izuchi);
+        }
+        return result;
     }
 
     @Override
