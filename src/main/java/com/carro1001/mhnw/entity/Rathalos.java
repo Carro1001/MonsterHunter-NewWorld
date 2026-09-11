@@ -176,15 +176,12 @@ public class Rathalos extends Monster implements GeoEntity {
         positionParts();
     }
 
+    /** Position parts exactly ONCE per tick, after super.tick() fully returns; see Rathian's
+     * identical tick() comment for why an aiStep()-level call as well was a real bug, not just
+     * wasted work. */
     @Override
     public void tick() {
         super.tick();
-        positionParts();
-    }
-
-    @Override
-    public void aiStep() {
-        super.aiStep();
         positionParts();
     }
 

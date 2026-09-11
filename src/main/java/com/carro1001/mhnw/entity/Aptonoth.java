@@ -169,7 +169,9 @@ public class Aptonoth extends Animal implements GeoEntity {
             this.eatAnimationTicks--;
         }
         super.aiStep();
-        positionParts();
+        // positionParts() is NOT called here: it belongs in tick(), after super.tick() (which
+        // calls this method) fully returns, since LivingEntity.tick() further smooths yBodyRot via
+        // tickHeadTurn() after aiStep() itself is done. See tick()'s comment.
     }
 
     // ---------------------------------------------------------------- multipart
@@ -232,6 +234,10 @@ public class Aptonoth extends Animal implements GeoEntity {
         positionParts();
     }
 
+    /** Position parts exactly ONCE per tick, here, after super.tick() (and the aiStep() + body-yaw
+     * smoothing it runs) fully returns. See {@link GreatIzuchi#tick()}'s comment for why calling
+     * this a second time from aiStep() as well was a real bug (a corrupted interpolation "old"
+     * value, not just wasted work) rather than harmless redundancy. */
     @Override
     public void tick() {
         super.tick();

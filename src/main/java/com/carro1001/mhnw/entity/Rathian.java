@@ -199,15 +199,19 @@ public class Rathian extends Monster implements GeoEntity {
         positionParts();
     }
 
+    /**
+     * super.tick() runs aiStep(), which is where the body actually moves (and, further inside
+     * LivingEntity.tick() after aiStep() returns, where yBodyRot itself gets smoothed by
+     * tickHeadTurn), so positioning the parts here, after super.tick() fully returns, is the one
+     * point in the tick that reflects the final position and rotation. Do this exactly ONCE per
+     * tick: setOldPosAndRot() is what interpolation renders from, and an earlier aiStep() override
+     * calling positionParts() a second time made that first call's result get immediately
+     * overwritten while corrupting the interpolation's "old" value with an intermediate,
+     * never-rendered position (same bug fixed for Great Izuchi; see that class's tick() comment).
+     */
     @Override
     public void tick() {
         super.tick();
-        positionParts();
-    }
-
-    @Override
-    public void aiStep() {
-        super.aiStep();
         positionParts();
     }
 
