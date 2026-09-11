@@ -17,6 +17,7 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent;
@@ -34,6 +35,8 @@ public class MHNW {
         modBus.addListener(MHNW::onRegisterSpawnPlacements);
         modBus.addListener(MHNW::onBuildCreativeTabs);
         modBus.addListener(MHNW::onRegisterGameTests);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (RegisterCommandsEvent event) -> MHNWCommands.register(event.getDispatcher()));
         container.registerConfig(ModConfig.Type.SERVER, MHNWConfig.SERVER_SPEC);
         container.registerConfig(ModConfig.Type.COMMON, MHNWConfig.COMMON_SPEC);
     }
