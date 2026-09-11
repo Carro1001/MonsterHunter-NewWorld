@@ -67,32 +67,35 @@ public class GreatIzuchiCombatGoal extends Goal {
      * Distance at which the attack may be started, measured from the monster position to the
      * nearest point of the victim bounding box.
      *
-     * <p>Derived from the claw path rather than picked by feel: the claw centre reaches at most
-     * 1.72 blocks forward, and the volume is 0.8 across, so its leading face reaches about 2.12.
-     * Starting an attack beyond that would make the monster stop out of range and swing at air
-     * indefinitely, because approach stops as soon as this threshold is met.
+     * <p>Derived from the measured claw path rather than picked by feel. The hand crosses the
+     * centre line at about 1.78 blocks forward, and the volume is 0.9 across, so the reliably
+     * striking face is near 2.2. Closing to 1.9 leaves margin on both sides of that, since
+     * approach stops as soon as this threshold is met and the monster then commits.
      */
-    public static final double REACH = 2.2D;
+    public static final double REACH = 1.9D;
 
     /**
-     * Sampled claw positions, {tick, left, up, forward} in blocks, across the active window.
+     * Measured {@code right_hand} positions, {tick, left, up, forward} in blocks, across the
+     * active window, logged from the running game by {@code client/BoneProbe}.
      *
-     * <p>These are the centre of the solved {@code right_hand} mesh, frame by frame through the
-     * scratch clip, for the same reason the hurtboxes are fitted to mesh rather than markers: the
-     * {@code clawHitbox} marker bone does not sit on the rendered hand.
+     * <p>An offline solve of this path was wrong by about 1.4 blocks and put the claw on the wrong
+     * side of the body, which is why the attack connected 3 times in 10. See the note on
+     * {@link GreatIzuchi} for why the offline solve is untrustworthy for the arm chain.
+     *
+     * <p>Note the shape this reveals: the hand sits about half a block to a block and a half to the
+     * monster's right for most of the swing, crossing the centre line only around ticks 34 and 44.
+     * The scratch is a cross-body swipe, not a straight lunge, so the attack genuinely does miss a
+     * target that is not where the arc passes. That is the animation being honest, not a bug.
      */
     private static final double[][] CLAW_PATH = {
-            {18, 0.294D, 2.148D, 1.072D},
-            {21, 0.510D, 2.603D, 0.957D},
-            {24, 0.458D, 1.897D, 0.485D},
-            {27, -0.605D, 0.179D, 0.593D},
-            {30, -1.245D, 0.594D, 1.663D},
-            {33, 0.455D, 2.514D, 0.966D},
-            {36, 0.758D, 1.406D, 0.499D},
-            {39, -1.350D, 0.561D, 1.264D},
-            {42, -0.954D, 0.102D, 1.368D},
-            {45, -0.820D, 0.693D, 1.782D},
-            {47, -1.002D, 0.790D, 1.344D},
+            {18, -1.07D, 1.29D, 1.96D},
+            {19, -1.10D, 1.31D, 1.97D},
+            {25, -1.28D, 1.83D, 1.98D},
+            {30, -0.94D, 2.06D, 2.31D},
+            {34, -0.12D, 1.33D, 1.78D},
+            {39, -1.24D, 3.13D, 1.95D},
+            {44, -0.46D, 1.44D, 1.77D},
+            {47, -1.29D, 1.29D, 0.87D},
     };
 
     private static final int REPATH_INTERVAL = 10;

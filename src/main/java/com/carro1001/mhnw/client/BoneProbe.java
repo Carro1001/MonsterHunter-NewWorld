@@ -31,12 +31,25 @@ final class BoneProbe {
             "left_foot", "right_foot",
     };
 
-    private static final int INTERVAL_TICKS = 40;
+    private static final int IDLE_INTERVAL_TICKS = 40;
+
+    /** Guards against logging the same tick once per rendered frame. */
+    private static int lastLoggedTick = Integer.MIN_VALUE;
 
     static void maybeLog(GreatIzuchi entity, GeoModel<GreatIzuchi> model) {
-        if (!MHNWConfig.DEBUG_COMBAT.get() || entity.tickCount % INTERVAL_TICKS != 0) {
+        if (!MHNWConfig.DEBUG_COMBAT.get()) {
             return;
         }
+        // Every tick during an action, so one attack yields the complete swing rather than the
+        // scattered samples a fixed interval produces; sparsely otherwise.
+        boolean attacking = entity.getAttackId() != GreatIzuchi.ATTACK_NONE;
+        if (!attacking && entity.tickCount % IDLE_INTERVAL_TICKS != 0) {
+            return;
+        }
+        if (entity.tickCount == lastLoggedTick) {
+            return;
+        }
+        lastLoggedTick = entity.tickCount;
 
         double rad = Math.toRadians(entity.yBodyRot);
         double sin = Math.sin(rad);

@@ -50,25 +50,26 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * Model Y = 0 is the ground the creature stands on: its feet solve to Y = -0.20 .. 0.10.
  *
  * <h2>Where the part offsets came from</h2>
- * They are fitted to the rendered mesh, NOT to the {@code *Hitbox} marker bones the geometry
- * carries. Those markers were authored for MultiHitboxLib, which positioned them by a different
- * rule, and in-game they sit visibly off the body: the torso marker is about 0.9 block too far
- * forward and the tail markers about 0.45 block too low. They are preserved in the geometry as
- * authoring history and deliberately ignored here.
+ * They are <em>measured</em>, by logging where GeckoLib actually places each bone at runtime and
+ * reading the numbers off in this local frame. See {@code client/BoneProbe}, which produced them.
  *
- * <p>Instead, the eight corners of every cube of each body region were transformed through the
- * full bone chain (bind rotations plus animation channels, with the MoLang sine terms evaluated
- * rather than zeroed) and sampled across the idle, walk and run cycles. Each constant below is the
- * centre of the resulting swept bounding box, and each size is that box rounded down slightly.
+ * <p>Two earlier approaches were wrong and are recorded here so nobody repeats them. First, the
+ * {@code *Hitbox} marker bones in the geometry: authored for MultiHitboxLib, which positioned them
+ * by a different rule, they do not sit on the body under this renderer. Second, solving the
+ * geometry offline by walking the bone chain: that agrees with the runtime to within 0.05 block
+ * for the tail, but diverges badly for chains carrying large bind rotations, by 0.8 block up and
+ * 1.4 forward at the head, and about 1.4 across at the hand. A brute force over all six rotation
+ * orders and every sign convention found none that fixes the head while keeping the torso and feet
+ * right, so the divergence is not a simple axis convention; the likely cause is that an animated
+ * position channel applies in bone-local space rather than parent space. It was not worth chasing
+ * once the runtime could simply be asked.
  *
- * <p>Cross-checks that the transform is right: the feet solve to ground level (Y = -0.14 .. 0.10),
- * the walk cycle solves them symmetrically at +/- 0.49, and the solved body length matches the
- * rendered creature. Nothing here evaluates animation at runtime; the server never runs a
- * skeletal-animation engine and never asks a client where a bone is (handoff section 4.2).
+ * <p>The probe is a development measuring tape only. Nothing here evaluates animation at runtime,
+ * and no gameplay decision reads a client bone position: the numbers below are constants
+ * (handoff section 4.2).
  *
  * <p>Known limitations: a static local offset cannot track a tail that swings sideways during
  * locomotion, so the tail boxes approximate a swept envelope rather than the instantaneous tail.
- * The sign of the local X axis has only the symmetric-feet cross-check, not visual confirmation.
  */
 public class GreatIzuchi extends Monster implements GeoEntity {
 
@@ -129,11 +130,11 @@ public class GreatIzuchi extends Monster implements GeoEntity {
         super(type, level);
         this.parts = new MonsterPart[] {
                 //              name           width height  left    up      forward
-                new MonsterPart(this, "torso",     1.6F, 1.9F, 0.00D, 2.38D,  0.81D),
-                new MonsterPart(this, "head",      1.3F, 1.2F, 0.00D, 3.36D,  1.96D),
-                new MonsterPart(this, "tail_base", 1.3F, 1.1F, 0.00D, 2.25D, -1.37D),
-                new MonsterPart(this, "tail_mid",  1.3F, 1.2F, 0.00D, 2.24D, -3.62D),
-                new MonsterPart(this, "tail_end",  1.4F, 1.6F, 0.00D, 1.69D, -4.33D),
+                new MonsterPart(this, "torso",     1.6F, 1.9F, 0.00D, 2.15D,  0.80D),
+                new MonsterPart(this, "head",      1.3F, 1.2F, 0.00D, 2.35D,  3.05D),
+                new MonsterPart(this, "tail_base", 1.3F, 1.2F, 0.00D, 2.30D, -1.50D),
+                new MonsterPart(this, "tail_mid",  1.3F, 1.2F, 0.00D, 2.35D, -3.50D),
+                new MonsterPart(this, "tail_end",  1.4F, 1.6F, 0.00D, 2.10D, -4.80D),
         };
         this.xpReward = 20;
     }
