@@ -148,12 +148,27 @@ public class GreatIzuchiCombatGoal extends Goal {
     /** Degrees per tick the body may turn while winding up. Keeps the telegraph readable. */
     private static final float WINDUP_TURN_RATE = 9.0F;
 
+    /**
+     * Horizontal speed retained each windup tick. Below one, so any run-up bleeds off and the
+     * monster visibly plants itself to swing rather than gliding into the attack.
+     */
+    private static final double WINDUP_DAMPING = 0.6D;
+
+    /**
+     * Blocks per tick the monster drives forward on the first active tick, tapering to nothing by
+     * the end of the swing. Around 1.5 blocks of travel over the whole window: enough that the
+     * claw carries weight behind it, not so much that it barges through its target.
+     */
+    private static final double LUNGE_SPEED = 0.11D;
+
     private final GreatIzuchi monster;
     /** Entity ids already hit by the current action. Cleared per action, so it cannot grow. */
     private final List<Long> hitThisAction = new ArrayList<>();
 
     private int repathCooldown;
     private boolean attacking;
+    /** Direction of the committed lunge, fixed on the first active tick. */
+    private Vec3 lungeDirection = Vec3.ZERO;
 
     public GreatIzuchiCombatGoal(GreatIzuchi monster) {
         this.monster = monster;
@@ -202,6 +217,7 @@ public class GreatIzuchiCombatGoal extends Goal {
             this.monster.attackCooldown = COOLDOWN;
         }
         this.monster.setCommittedBodyYaw(null);
+        this.lungeDirection = Vec3.ZERO;
         this.hitThisAction.clear();
         this.monster.getNavigation().stop();
         this.monster.setAggressive(false);
@@ -257,6 +273,7 @@ public class GreatIzuchiCombatGoal extends Goal {
     private void beginAttack(LivingEntity target, double distance) {
         this.attacking = true;
         this.hitThisAction.clear();
+        this.lungeDirection = Vec3.ZERO;
         this.monster.setAggressive(true);
         this.monster.getNavigation().stop();
         this.monster.beginAttack(GreatIzuchi.ATTACK_SCRATCH);
@@ -285,6 +302,7 @@ public class GreatIzuchiCombatGoal extends Goal {
             this.monster.endAttack();
             this.monster.attackCooldown = COOLDOWN;
             this.monster.setCommittedBodyYaw(null);
+            this.lungeDirection = Vec3.ZERO;
             this.hitThisAction.clear();
             this.monster.setAggressive(false);
             return;
@@ -293,17 +311,52 @@ public class GreatIzuchiCombatGoal extends Goal {
         this.monster.getNavigation().stop();
 
         LivingEntity target = this.monster.getTarget();
-        if (age <= WINDUP_END && target != null) {
-            // The telegraph tracks, turn-rate limited; after it, facing stays at whatever the
-            // windup committed to, so a swing already under way cannot snap around behind the
-            // monster to follow a dodging player (rule 2).
-            this.monster.getLookControl().setLookAt(target, 20.0F, 20.0F);
-            aimArcAt(target);
+        if (age <= WINDUP_END) {
+            if (target != null) {
+                // The telegraph tracks, turn-rate limited; after it, facing stays at whatever the
+                // windup committed to, so a swing already under way cannot snap around behind the
+                // monster to follow a dodging player (rule 2).
+                this.monster.getLookControl().setLookAt(target, 20.0F, 20.0F);
+                aimArcAt(target);
+            }
+            plantForWindup();
+            return;
         }
 
         if (age >= ACTIVE_START && age <= ACTIVE_END) {
+            lunge(age, target);
             applyContact(age);
         }
+    }
+
+    /** Bleeds off horizontal momentum so the windup reads as planting, not gliding. */
+    private void plantForWindup() {
+        Vec3 velocity = this.monster.getDeltaMovement();
+        this.monster.setDeltaMovement(velocity.x * WINDUP_DAMPING, velocity.y, velocity.z * WINDUP_DAMPING);
+    }
+
+    /**
+     * Drives the monster forward through the swing so the claw carries its weight.
+     *
+     * <p>The direction is captured once, on the first active tick, and then held. Re-aiming it
+     * every tick would let a committed strike home onto a target that has since moved, which the
+     * runtime contract forbids (rule 6): once the strike is under way it travels where it was
+     * launched, and missing a target that dodged is the correct outcome.
+     */
+    private void lunge(int age, LivingEntity target) {
+        if (age == ACTIVE_START && target != null) {
+            Vec3 toTarget = new Vec3(
+                    target.getX() - this.monster.getX(), 0.0D, target.getZ() - this.monster.getZ());
+            this.lungeDirection = toTarget.lengthSqr() > 1.0E-4D ? toTarget.normalize() : Vec3.ZERO;
+        }
+        if (this.lungeDirection.lengthSqr() <= 0.0D) {
+            return;
+        }
+        double progress = (double) (age - ACTIVE_START) / (ACTIVE_END - ACTIVE_START);
+        double speed = LUNGE_SPEED * (1.0D - progress);
+        Vec3 velocity = this.monster.getDeltaMovement();
+        this.monster.setDeltaMovement(
+                this.lungeDirection.x * speed, velocity.y, this.lungeDirection.z * speed);
     }
 
     /** Interpolates the authored claw path at this action age, in the local frame. */
