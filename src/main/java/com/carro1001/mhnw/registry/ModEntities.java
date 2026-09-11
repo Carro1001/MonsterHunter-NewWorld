@@ -2,6 +2,7 @@ package com.carro1001.mhnw.registry;
 
 import com.carro1001.mhnw.MHNW;
 import com.carro1001.mhnw.entity.Aptonoth;
+import com.carro1001.mhnw.entity.Flashbug;
 import com.carro1001.mhnw.entity.GreatIzuchi;
 import com.carro1001.mhnw.entity.Toad;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -68,6 +69,22 @@ public final class ModEntities {
     public static final DeferredHolder<Item, Item> TOAD_SPAWN_EGG =
             ITEMS.register("toad_spawn_egg", () -> new DeferredSpawnEggItem(
                     TOAD, 0x4C7A3D, 0xD8C77A, new Item.Properties()));
+
+    /**
+     * Endemic life, flying: the second caller of {@code EndemicAreaEffectGoal}. See
+     * {@link Flashbug}.
+     */
+    public static final DeferredHolder<EntityType<?>, EntityType<Flashbug>> FLASHBUG =
+            ENTITY_TYPES.register("flashbug", () -> EntityType.Builder
+                    .of(Flashbug::new, MobCategory.CREATURE)
+                    .sized(Flashbug.BODY_WIDTH, Flashbug.BODY_HEIGHT)
+                    .clientTrackingRange(6)
+                    .updateInterval(2)
+                    .build("flashbug"));
+
+    public static final DeferredHolder<Item, Item> FLASHBUG_SPAWN_EGG =
+            ITEMS.register("flashbug_spawn_egg", () -> new DeferredSpawnEggItem(
+                    FLASHBUG, 0x2E2A1F, 0xE8E13A, new Item.Properties()));
 
     /** Where natural spawn placement is anchored. Referenced by the spawn placement registration. */
     public static final Heightmap.Types SPAWN_HEIGHTMAP = Heightmap.Types.MOTION_BLOCKING_NO_LEAVES;

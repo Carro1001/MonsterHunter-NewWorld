@@ -572,4 +572,41 @@ public class MHNWGameTests {
             helper.succeed();
         });
     }
+
+    // ---------------------------------------------------------------- Flashbug (P3, endemic life)
+
+    /**
+     * The second caller of {@code EndemicAreaEffectGoal}: provocation reaches release the same way
+     * it does for the toad, through the shared base rather than a second hand-rolled timeline.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void flashbugBlindsOnProvocation(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Flashbug flashbug = helper.spawn(ModEntities.FLASHBUG.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
+        victim.setNoAi(true);
+
+        flashbug.hurt(helper.getLevel().damageSources().generic(), 1.0F);
+
+        helper.succeedWhen(() -> helper.assertTrue(
+                victim.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS),
+                "a nearby victim never went blind after the flashbug was provoked"));
+    }
+
+    /** Bounded the same way the toad's cloud is: one release, then quiet until the cooldown ends. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void flashbugCannotRefireDuringCooldown(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Flashbug flashbug = helper.spawn(ModEntities.FLASHBUG.get(), 8, 2, 8);
+
+        flashbug.hurt(helper.getLevel().damageSources().generic(), 1.0F);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(
+                        flashbug.isFlashing(), "waiting for the first flash to actually start"))
+                .thenWaitUntil(() -> helper.assertTrue(
+                        !flashbug.isFlashing(), "waiting for the first flash to finish releasing"))
+                .thenExecute(() -> flashbug.hurt(helper.getLevel().damageSources().generic(), 1.0F))
+                .thenExecuteFor(40, () -> helper.assertTrue(!flashbug.isFlashing(),
+                        "the flashbug flashed again while still on cooldown from the first"))
+                .thenSucceed();
+    }
 }

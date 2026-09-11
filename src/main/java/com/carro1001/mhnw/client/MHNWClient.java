@@ -2,6 +2,7 @@ package com.carro1001.mhnw.client;
 
 import com.carro1001.mhnw.MHNW;
 import com.carro1001.mhnw.entity.Aptonoth;
+import com.carro1001.mhnw.entity.Flashbug;
 import com.carro1001.mhnw.entity.GreatIzuchi;
 import com.carro1001.mhnw.entity.Toad;
 import com.carro1001.mhnw.registry.ModEntities;
@@ -27,6 +28,7 @@ public final class MHNWClient {
         event.registerEntityRenderer(ModEntities.GREAT_IZUCHI.get(), GreatIzuchiRenderer::new);
         event.registerEntityRenderer(ModEntities.APTONOTH.get(), AptonothRenderer::new);
         event.registerEntityRenderer(ModEntities.TOAD.get(), ToadRenderer::new);
+        event.registerEntityRenderer(ModEntities.FLASHBUG.get(), FlashbugRenderer::new);
     }
 
     /**
@@ -93,6 +95,15 @@ public final class MHNWClient {
         public ResourceLocation getTextureResource(Toad animatable) {
             return ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID,
                     "textures/entity/" + animatable.getVariant().textureName + ".png");
+        }
+    }
+
+    /** Plain reuse of the preserved geometry/animations/texture; nothing species-specific to add. */
+    public static class FlashbugRenderer extends GeoEntityRenderer<Flashbug> {
+        public FlashbugRenderer(EntityRendererProvider.Context context) {
+            super(context, new DefaultedEntityGeoModel<>(
+                    ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, "flashbug")));
+            this.shadowRadius = 0.15F;
         }
     }
 
