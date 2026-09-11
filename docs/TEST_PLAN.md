@@ -58,30 +58,30 @@ under Rathian/Rathalos below, same fix applies here too.
 
 ## Aptonoth (P3 passive herbivore)
 
-Fourth round this pass:
+Fifth round this pass, from your latest screenshot + log:
 
-- **Hurtboxes measured, not guessed** (previous round). Ran a BoneProbe session against your own
-  log and plugged the actual head/tail1/tail2 bone positions in directly. Confirmed by a second log
-  capture this round: the measured numbers came back essentially identical to what was already in
-  the code, so the *positions* were already right — the "proportions off" feedback this round was
-  about something else (below).
-- **New: added a third tail segment to close a real coverage gap.** `aptonoth.geo.json`'s own
-  tail1/tail2 meshes are each about 1.9-2.0 blocks long, but the two hurtboxes at the measured bone
-  positions only had small (0.6-0.8 block) boxes at each end, leaving roughly 1.9 blocks of visible
-  tail in the middle with no hurtbox at all — almost certainly what read as disconnected, floating
-  green boxes rather than a tail that's actually covered. Added `tail_2` at the interpolated
-  midpoint between the two measured points, the same overlapping-segments idea the large monsters'
-  tails already use for the identical reason. Not itself a fresh measurement, but grounded in the
-  real authored mesh length, not a guess about proportions.
-- Dropped the separate green "body" box (previous round, unchanged): Aptonoth never fights back, so
-  the plain root hitbox already covers the torso without a redundant duplicate.
+- **The white root box was genuinely too short — confirmed, not just suspected.** The measured
+  "body" bone (the torso's own pivot) sits at `up=1.87`, meaning `BODY_HEIGHT=1.0` didn't even reach
+  the *centre* of the chest, let alone its top — exactly matching the screenshot showing the root
+  box sitting well below the visible torso. Raised to 2.0 (from 1.0) and `BODY_WIDTH` nudged to 1.3
+  (from 1.2), the latter matching the real ~1.25-wide main body cube in `aptonoth.geo.json`. This
+  is a bigger jump than earlier rounds' nudges, but it's grounded in a real measurement the old value
+  didn't even reach, not a fresh guess. Still not itself a direct measurement of the box's ideal
+  height (that would need a leg/foot bone in the capture to pin the ground reference exactly) — flag
+  it again if it now reads as too tall, the opposite direction from round one's original complaint.
+- **Tail: added a fourth segment and sized every tail box up a bit**, per your call ("might need an
+  extra volume for the tail, or two"). Now `tail_1`..`tail_4`, the two new ones (`tail_2`, `tail_3`)
+  interpolated between the two measured endpoints, closing the gaps further; each box is roughly
+  10-15% bigger than last round.
+- Head position unchanged (wasn't flagged this round) and dropped "body" box unchanged (previous
+  round).
 - Flee duration unchanged (still a sustained flee after a hit, not one short hop).
 
 - [ ] Renders, spawns via egg, idles/walks with correct animation
-- [ ] **F3+B: does the tail now read as continuously covered** rather than two small floating boxes
-      with a gap between them? Head box should still sit right on the head as before
-- [ ] **New: no green box floating where the old "body" box used to be** — only head and a
-      three-segment tail, body damage should come from the plain white hitbox like any other animal
+- [ ] **F3+B: does the white root box now actually reach the chest**, instead of sitting well below
+      it? (Flag if it now reads as too tall instead — that's the opposite failure mode)
+- [ ] **F3+B: does the tail now read as continuously, snugly covered** by four boxes instead of
+      gappy/undersized? Head box should still sit right on the head as before
 - [ ] **Re-check:** when hurt, flees for a real sustained duration, not just one short hop
 - [ ] Eats grass occasionally (the `eat` animation should play when it's actually eating, not just
       standing still) — grass must be nearby (short/tall grass on a grass block) for this to trigger
@@ -177,14 +177,16 @@ That is the current, deliberate state, not a bug to report.
 
 ## Rathian (P4 ground wyvern, ground-only)
 
-**Hurtboxes are now real BoneProbe measurements**, not a guess. Your `logs/latest.log` had
-`[rathian]` bone-probe lines from a session with `debugCombat` on; the measured left/up/forward for
-each `*Hitbox`-named bone is plugged in directly. This is a strictly better fix than the two earlier
-attempts (offline FK solve, then a hand-eyeballed "nudge it down" correction) — and it turned out the
-hand correction, while pointed the right direction, still hadn't gone nearly far enough: the neck and
-head `up` values were still off by close to a full block even after that pass.
+**Hurtboxes are real BoneProbe measurements**, re-averaged once already. Your first `logs/latest.log`
+had `[rathian]` bone-probe lines with `debugCombat` on, and the measured left/up/forward for each
+`*Hitbox`-named bone was averaged in — a strictly better fix than the two earlier attempts (offline
+FK solve, then a hand-eyeballed "nudge it down" correction). Your follow-up screenshot then showed
+the boxes reading *too low*, and a second, larger capture (twelve samples per bone instead of a
+handful) confirmed why: the first average had landed on the low end of the idle animation's sway,
+most visibly for `stinger` (was `up=0.40`, corrected to `1.00`) and `tail_end` (was `1.10`, corrected
+to `1.43`). Re-averaged from the bigger sample.
 
-Also fixed two rounds ago: the entity no longer stops rendering (head/neck suddenly disappearing)
+Also fixed a few rounds ago: the entity no longer stops rendering (head/neck suddenly disappearing)
 when the root hitbox leaves the camera frustum while the model still visibly extends into frame.
 
 **No dedicated attack animation.** Like Izuchi, it fights using ordinary melee with no custom swing;
@@ -193,9 +195,9 @@ placement settled first, or a swing could land or miss for the wrong reason. Now
 measured rather than guessed, this is worth revisiting.
 
 - [ ] Renders, spawns via egg, idles/walks/runs with correct animation
-- [ ] **F3+B: do the seven boxes actually sit on the body now?** This was measured directly from a
-      real play session, so it should be a much closer fit than either earlier round — flag anything
-      that still looks off and I'll re-measure that specific part
+- [ ] **F3+B: do the seven boxes sit on the body without reading low now**, specifically the tail
+      end and stinger (the two that were re-centred this round)? Flag anything still off and I'll
+      keep re-measuring that specific part
 - [ ] Turning away no longer makes the head/neck suddenly vanish while still on screen
 - [ ] Hitting a hurtbox (try the head, then the tail tip) reduces health
 - [ ] Attacks and damages a nearby player using ordinary melee (no special swing — this is expected
@@ -205,16 +207,17 @@ measured rather than guessed, this is worth revisiting.
 
 ## Rathalos (P4 ground wyvern, ground-only)
 
-**Now using Rathian's real measurements as a proxy**, per your call ("rathalos and rathian are
-almost identical, you can use the numbers for one on the other"): no `[rathalos]` bone-probe lines
-have shown up in a log yet, but the two species share the same base skeleton and closely similar
-proportions, so Rathian's measured offsets are plugged in directly rather than waiting on a
-Rathalos-specific session. Should be far closer than the old offline-solved/hand-corrected guess,
-though not guaranteed pixel-perfect the way an actual Rathalos measurement would be — if any one
-part still looks off, that's the part worth a real session for. Its attack clips are blocked
-regardless: they reference bones that don't exist anywhere in this species' model at all, confirmed
-by checking, not guessed — see `docs/DEFERRED.md`. That needs actual art/model-editor work before
-it's even worth wiring.
+**Using Rathian's real (now re-centred) measurements as a proxy**, per your call ("rathalos and
+rathian are almost identical, you can use the numbers for one on the other"): no `[rathalos]`
+bone-probe lines have shown up in a log yet, but the two species share the same base skeleton and
+closely similar proportions, so Rathian's offsets are plugged in directly rather than waiting on a
+Rathalos-specific session — including this round's re-centring (the `stinger`/`tail_end` fix
+applies here too, since Rathalos borrows the same numbers). Should be far closer than the old
+offline-solved/hand-corrected guess, though not guaranteed pixel-perfect the way an actual Rathalos
+measurement would be — if any one part still looks off, that's the part worth a real session for.
+Its attack clips are blocked regardless: they reference bones that don't exist anywhere in this
+species' model at all, confirmed by checking, not guessed — see `docs/DEFERRED.md`. That needs
+actual art/model-editor work before it's even worth wiring.
 
 Also fixed a few rounds ago: same culling fix as Rathian/Great Izuchi.
 
