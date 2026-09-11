@@ -31,15 +31,24 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 /**
  * The P3 proof of reuse: a passive herbivore, not another combat monster.
  *
- * <p>Ordinary in every way except one: it is {@link MonsterPart} multipart (body, head, two tail
- * segments),
- * because a single vanilla AABB genuinely cannot fit a long-necked, long-tailed quadruped any
- * better than it can a wyvern's tail. This was originally single-hurtbox on the theory that section
- * 4.2's "a single fitted region is fine for a small creature" applied; a screenshot of the actual
- * shape made clear that theory did not survive contact with this particular body plan, and
- * {@link MonsterPart} generalizing to any {@link net.minecraft.world.entity.Mob} rather than only
- * hostile {@code Monster}s is what made fixing that possible without a parallel class hierarchy.
- * None of Great Izuchi's attack-timeline or attack-profile machinery is used here; only the part
+ * <p>Ordinary in every way except one: it is {@link MonsterPart} multipart for the head and tail
+ * (three segments' worth of reach the root hitbox can't cover), because a single vanilla AABB
+ * genuinely cannot fit a long-necked, long-tailed quadruped any better than it can a wyvern's tail.
+ * This was originally single-hurtbox on the theory that section 4.2's "a single fitted region is
+ * fine for a small creature" applied; a screenshot of the actual shape made clear that theory did
+ * not survive contact with this particular body plan, and {@link MonsterPart} generalizing to any
+ * {@link net.minecraft.world.entity.Mob} rather than only hostile {@code Monster}s is what made
+ * fixing that possible without a parallel class hierarchy.
+ *
+ * <p>Deliberately has no "body" part, unlike the large monsters' torso: this creature never fights
+ * back, so there is no combat precision that a separate torso hurtbox would buy over what the plain
+ * root hitbox ({@link #BODY_WIDTH}/{@link #BODY_HEIGHT}) already gives for free (a passive animal
+ * with no parts at all still takes damage on its whole body exactly like any vanilla animal). Adding
+ * one anyway would just be a second, redundant "body box" duplicating what the root box already
+ * does. Head and tail get real parts because they physically reach well outside the root box; the
+ * torso does not need to.
+ *
+ * <p>None of Great Izuchi's attack-timeline or attack-profile machinery is used here; only the part
  * positioning, which is a different, smaller piece of that infrastructure.
  *
  * <p>{@link Animal} rather than {@link PathfinderMob} directly, purely so {@link EatBlockGoal}
@@ -96,20 +105,16 @@ public class Aptonoth extends Animal implements GeoEntity {
 
     public Aptonoth(EntityType<? extends Animal> type, Level level) {
         super(type, level);
-        // Offline-solved from the idle pose (simple constant/sine channels, no combat motion to
-        // get wrong), not yet checked live. Sizes are a first estimate to match, not a measurement.
-        //
-        // Reshaped on a second round of feedback (screenshot): one small, roughly cube-shaped box
-        // per region read as boxy and disconnected from the actual low, elongated body. The body
-        // box is now the biggest and centred on the torso rather than offset toward the tail, and
-        // the tail is two overlapping boxes tapering toward the tip instead of one uniform box, the
-        // same "several boxes along a long axis" idea the large monsters use, just smaller.
+        // Real BoneProbe measurements (see docs/TEST_PLAN.md and Rathian's constructor for the same
+        // change): the maintainer ran with debugCombat on and stood near a live Aptonoth, and the
+        // head/tail1/tail2 bones' logged positions are plugged in directly, replacing the earlier
+        // offline-solved-then-reshaped guess. No "body" part: see the class doc for why the plain
+        // root hitbox already covers the torso without one.
         this.parts = new MonsterPart[] {
                 //              name          width height  left    up      forward
-                new MonsterPart(this, "body",   1.6F, 1.3F, 0.00D, 1.85D,  0.00D),
-                new MonsterPart(this, "head",   0.9F, 0.9F, 0.00D, 3.10D,  1.30D),
-                new MonsterPart(this, "tail_1", 0.8F, 0.8F, 0.00D, 1.85D, -1.90D),
-                new MonsterPart(this, "tail_2", 0.6F, 0.6F, 0.00D, 1.75D, -3.30D),
+                new MonsterPart(this, "head",   0.9F, 0.9F, 0.00D, 2.25D,  2.85D),
+                new MonsterPart(this, "tail_1", 0.8F, 0.8F, 0.00D, 2.60D, -1.31D),
+                new MonsterPart(this, "tail_2", 0.6F, 0.6F, 0.00D, 2.90D, -3.22D),
         };
     }
 
