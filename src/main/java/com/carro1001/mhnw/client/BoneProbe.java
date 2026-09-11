@@ -42,9 +42,11 @@ final class BoneProbe {
     };
 
     /** Rathian's and Rathalos's own hitbox bones plus their unsuffixed neighbours, for comparison;
-     * both species share this skeleton layout (see their .geo.json files). */
+     * both species share this skeleton layout (see their .geo.json files). {@code Chest} is the
+     * bone {@code attack_charge_bite_right} actually animates (distinct from {@code Torso}), worth
+     * having in every capture now that Rathian logs every tick while that clip plays. */
     static final String[] WYVERN_BONES = {
-            "Torso", "torsoHitbox", "Neck1", "Neck2", "neckHitbox", "Head", "headHitbox", "Jaw",
+            "Torso", "torsoHitbox", "Chest", "Neck1", "Neck2", "neckHitbox", "Head", "headHitbox", "Jaw",
             "tail1", "baseTailHitbox", "tail2", "midTailHitbox", "tailclub", "tailEndHitbox",
             "stingerbase", "stingerHitbox", "hips",
     };

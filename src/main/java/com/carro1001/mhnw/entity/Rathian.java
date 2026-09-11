@@ -1,6 +1,10 @@
 package com.carro1001.mhnw.entity;
 
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -55,6 +59,19 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * {@code Mob.doHurtTarget}, no custom timeline: the same honest interim {@link Izuchi} uses for the
  * same reason (no attack clip it can currently trust), rather than leaving a multipart monster with
  * no combat behaviour at all.
+ *
+ * <h2>Measurement rig for {@code attack_charge_bite_right}</h2>
+ * {@code doHurtTarget} now also starts a synced, purely cosmetic countdown that plays
+ * {@code attack_charge_bite_right} for its 30-tick length and, while it plays, switches
+ * {@code BoneProbe}'s Rathian logging to every tick instead of the idle sampling interval (see
+ * {@code MHNWClient.RathianRenderer}). This changes nothing about combat: damage is still the exact
+ * same instantaneous {@code doHurtTarget} call, unconditionally, the same tick the goal would have
+ * dealt it anyway. It exists purely so a live capture of this one clip (`debugCombat` on, provoke an
+ * attack, save {@code logs/latest.log}) is a single play session instead of also needing a code
+ * change first -- the next step described above, now that hurtbox placement is measured rather than
+ * guessed. Once a real path is baked from that capture, this rig is replaced by an actual
+ * {@code AttackProfile}/attack-volume goal the same shape as {@link GreatIzuchiCombatGoal}, not kept
+ * alongside it.
  */
 public class Rathian extends Monster implements GeoEntity {
 
@@ -70,7 +87,14 @@ public class Rathian extends Monster implements GeoEntity {
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.rathian.idle_normal");
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.rathian.walk");
     private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.rathian.run");
+    private static final RawAnimation BITE = RawAnimation.begin().thenPlay("animation.rathian.attack_charge_bite_right");
     private static final RawAnimation DEATH = RawAnimation.begin().thenPlayAndHold("animation.rathian.death");
+
+    /** {@code attack_charge_bite_right} is 1.5s = 30 ticks (see the measurement-rig doc above). */
+    private static final int BITE_TICKS = 30;
+
+    private static final EntityDataAccessor<Integer> DATA_BITE_TICKS =
+            SynchedEntityData.defineId(Rathian.class, EntityDataSerializers.INT);
 
     private final AnimatableInstanceCache animCache = GeckoLibUtil.createInstanceCache(this);
     private final MonsterPart[] parts;
@@ -161,6 +185,18 @@ public class Rathian extends Monster implements GeoEntity {
                 new MonsterPart(this, "tail_tip",  1.55F, 1.9F, 0.00D, 0.79D, -7.49D),
                 new MonsterPart(this, "stinger",   1.55F, 1.9F, 0.00D, 0.39D, -8.98D),
         };
+    }
+
+    @Override
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_BITE_TICKS, 0);
+    }
+
+    /** Whether the cosmetic bite-clip countdown is currently running; see the class doc for what
+     * this does and, deliberately, does not yet do. */
+    public boolean isBiting() {
+        return this.entityData.get(DATA_BITE_TICKS) > 0;
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -262,6 +298,26 @@ public class Rathian extends Monster implements GeoEntity {
     public void tick() {
         super.tick();
         positionParts();
+        if (!level().isClientSide) {
+            int ticks = this.entityData.get(DATA_BITE_TICKS);
+            if (ticks > 0) {
+                this.entityData.set(DATA_BITE_TICKS, ticks - 1);
+            }
+        }
+    }
+
+    /**
+     * Starts the cosmetic bite-clip countdown; see the class doc's "Measurement rig" section. This
+     * does not change combat at all -- {@code super.doHurtTarget} still deals damage the exact same
+     * instantaneous way it already did.
+     */
+    @Override
+    public boolean doHurtTarget(Entity target) {
+        boolean result = super.doHurtTarget(target);
+        if (!level().isClientSide) {
+            this.entityData.set(DATA_BITE_TICKS, BITE_TICKS);
+        }
+        return result;
     }
 
     /**
@@ -323,6 +379,9 @@ public class Rathian extends Monster implements GeoEntity {
     private PlayState mainAnim(AnimationState<Rathian> state) {
         if (isDeadOrDying()) {
             return state.setAndContinue(DEATH);
+        }
+        if (isBiting()) {
+            return state.setAndContinue(BITE);
         }
         if (state.isMoving()) {
             return state.setAndContinue(isAggressive() ? RUN : WALK);

@@ -98,10 +98,20 @@ where the idle pose that was trusted for the hurtbox offsets uses only plain con
 sine waves — the same category of channel that solved Great Izuchi's tail to within 0.05 block of
 the runtime-measured truth.
 
-To close it: same playbook as Great Izuchi's tail attacks. Enable `debugCombat`, add temporary bone
-probe logging for the relevant Chest/Neck1/Neck2/Head/Jaw bones (or the tail bones for tailwhip),
-play the attack live, and bake measured keyframes the way `AttackProfile.SCRATCH`'s path was built.
-Given Rathian likely wants more than one attack eventually, consider whether `AttackProfile` and
+**The measurement rig for the first attack (`attack_charge_bite_right`) is now wired** — `Rathian`'s
+`doHurtTarget` starts a synced, purely cosmetic 30-tick countdown that plays the clip and switches
+`BoneProbe`'s Rathian logging to every tick while it plays (`Chest`, the bone that clip actually
+animates, was added to the logged bone list). This changes nothing about combat: damage is still the
+same instantaneous `doHurtTarget` call, unconditionally, that vanilla `MeleeAttackGoal` already made.
+It exists purely so a live capture is a single play session (`docs/TEST_PLAN.md` has the exact ask).
+
+To close it: same playbook as Great Izuchi's tail attacks, now one step closer. With `debugCombat`
+on, provoke a Rathian into biting a few times and capture `logs/latest.log`, then bake measured
+keyframes into a real `AttackProfile` the way `AttackProfile.SCRATCH`'s path was built, and replace
+this cosmetic-only rig with an actual attack-volume goal the same shape as `GreatIzuchiCombatGoal`.
+`attack_tailwhip` and the other clips (`attack_charge_bite_left`, the fireball clips, `attack_backhop`,
+`attack_backflip_ground/flying`) still need the same treatment after this first one. Given Rathian
+likely wants more than one attack eventually, consider whether `AttackProfile` and
 `GreatIzuchiCombatGoal` are worth generalizing the same way `EndemicAreaEffectGoal` was generalized
 from the toad to the flashbug, once a second large-monster attack timeline actually exists to compare
 against, not before.

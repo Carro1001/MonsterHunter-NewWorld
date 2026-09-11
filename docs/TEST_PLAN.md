@@ -2,10 +2,10 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, currently 63 tests. The maintainer's
-P5a build passed, with 62/63 GameTests passing; the bidirectional Lagiacrus shoreline test failed.
-The 2026-09-11 correction is limited to native controls and that shoreline scenario (see below);
-the full suite and client acceptance have not been rerun for this correction.
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, currently 63 tests, all 63 passing as of
+the Rathian bite-clip measurement rig below (full `build runGameTestServer` run, 2026-09-11) — the
+shoreline test that failed under the P5a build passed cleanly after the native-controls correction.
+Client acceptance for that Lagiacrus correction has not been rerun by a human yet.
 
 This file is updated as features land. Checked items were confirmed by the maintainer; unchecked
 items are open. When you find a problem, say what you saw and I'll fix it and update this file.
@@ -317,10 +317,22 @@ spending real time on a system that may keep needing a wider capture each round;
 multi-minute capture across a full idle cycle (or several) when polishing, rather than another
 short live-tweak loop now.
 
-**No dedicated attack animation.** Like Izuchi, it fights using ordinary melee with no custom swing;
-real attack clips exist (charge, bite, tailwhip, fireball) but wiring them needs the hurtbox
-placement settled first, or a swing could land or miss for the wrong reason. Now that placement is
-measured rather than guessed, this is worth revisiting.
+**No dedicated attack volume yet, but a measurement rig for the first one landed this round.**
+`doHurtTarget` now also starts a synced, purely cosmetic countdown that plays
+`attack_charge_bite_right` (1.5s/30 ticks) and switches `BoneProbe`'s Rathian logging to every tick
+while it plays, instead of the idle sampling interval — `Chest` (the bone that clip actually
+animates, separate from `Torso`) was added to the logged bone list for it. **This changes nothing
+about combat**: damage is still the exact same instantaneous `doHurtTarget` call vanilla
+`MeleeAttackGoal` already made, unconditionally, the same tick it always did. It exists purely so
+capturing this one clip live is a single play session, not a play-session-plus-a-code-change:
+
+- [ ] **New: with `debugCombat` on, provoke a Rathian into attacking a few times and send back
+      `logs/latest.log`** — once the `Chest`/`Neck1`/`Neck2`/`Head`/`Jaw`/`headHitbox` path is
+      measured across a strike, I'll bake it into a real `AttackProfile` and a dedicated combat
+      goal the same shape as Great Izuchi's, replacing this cosmetic-only rig.
+- [ ] **New: does the bite clip itself play at a sane moment** (roughly when the melee hit lands),
+      even though the timing isn't tuned to anything yet? Flag if it looks badly desynced from the
+      actual hit (e.g. plays well after the target's health already dropped).
 
 - [ ] Renders, spawns via egg, idles/walks/runs with correct animation
 - [ ] **F3+B: do the boxes meet edge-to-edge with no visible gap**, and **does the tail chain read as
@@ -328,8 +340,8 @@ measured rather than guessed, this is worth revisiting.
       only one instant? Flag anything still off and I'll keep adjusting that specific part
 - [ ] Turning away no longer makes the head/neck suddenly vanish while still on screen
 - [ ] Hitting a hurtbox (try the head, then the tail tip) reduces health
-- [ ] Attacks and damages a nearby player using ordinary melee (no special swing — this is expected
-      for now, not a bug)
+- [ ] Attacks and damages a nearby player using ordinary melee (no special swing yet — this is
+      expected for now, not a bug)
 - [ ] Death removes the whole creature and all nine parts
 - [ ] No flight yet — it should behave as a purely ground-bound creature; this is expected, not a bug
 

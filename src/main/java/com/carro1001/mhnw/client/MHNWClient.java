@@ -198,7 +198,7 @@ public final class MHNWClient {
                            net.minecraft.client.renderer.MultiBufferSource bufferSource,
                            int packedLight) {
             super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
-            BoneProbe.maybeLog("rathian", entity, getGeoModel(), BoneProbe.WYVERN_BONES, false);
+            BoneProbe.maybeLog("rathian", entity, getGeoModel(), BoneProbe.WYVERN_BONES, entity.isBiting());
         }
 
         @Override
