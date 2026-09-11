@@ -31,7 +31,8 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 /**
  * The P3 proof of reuse: a passive herbivore, not another combat monster.
  *
- * <p>Ordinary in every way except one: it is {@link MonsterPart} multipart (body, head/neck, tail),
+ * <p>Ordinary in every way except one: it is {@link MonsterPart} multipart (body, head, two tail
+ * segments),
  * because a single vanilla AABB genuinely cannot fit a long-necked, long-tailed quadruped any
  * better than it can a wyvern's tail. This was originally single-hurtbox on the theory that section
  * 4.2's "a single fitted region is fine for a small creature" applied; a screenshot of the actual
@@ -97,11 +98,18 @@ public class Aptonoth extends Animal implements GeoEntity {
         super(type, level);
         // Offline-solved from the idle pose (simple constant/sine channels, no combat motion to
         // get wrong), not yet checked live. Sizes are a first estimate to match, not a measurement.
+        //
+        // Reshaped on a second round of feedback (screenshot): one small, roughly cube-shaped box
+        // per region read as boxy and disconnected from the actual low, elongated body. The body
+        // box is now the biggest and centred on the torso rather than offset toward the tail, and
+        // the tail is two overlapping boxes tapering toward the tip instead of one uniform box, the
+        // same "several boxes along a long axis" idea the large monsters use, just smaller.
         this.parts = new MonsterPart[] {
                 //              name          width height  left    up      forward
-                new MonsterPart(this, "body",  1.3F, 1.1F, 0.00D, 1.90D, -0.50D),
-                new MonsterPart(this, "head",  0.9F, 0.9F, 0.00D, 3.20D,  1.30D),
-                new MonsterPart(this, "tail",  0.7F, 0.7F, 0.00D, 1.90D, -3.40D),
+                new MonsterPart(this, "body",   1.6F, 1.3F, 0.00D, 1.85D,  0.00D),
+                new MonsterPart(this, "head",   0.9F, 0.9F, 0.00D, 3.10D,  1.30D),
+                new MonsterPart(this, "tail_1", 0.8F, 0.8F, 0.00D, 1.85D, -1.90D),
+                new MonsterPart(this, "tail_2", 0.6F, 0.6F, 0.00D, 1.75D, -3.30D),
         };
     }
 
