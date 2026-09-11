@@ -126,6 +126,9 @@ public class GreatIzuchi extends Monster implements GeoEntity {
     /** Client-only: the action sequence currently being presented. */
     private int presentedSeq = -1;
 
+    /** Server-only source of truth for the action sequence. Never read back from synced data. */
+    private int actionSequenceCounter;
+
     /**
      * Body yaw the combat goal wants held, or null when nothing is committed.
      *
@@ -239,11 +242,20 @@ public class GreatIzuchi extends Monster implements GeoEntity {
                 : (int) (level().getGameTime() - getAttackStartTime());
     }
 
-    /** Server: begin an action. Allocates a new sequence so a repeat restarts cleanly. */
+    /**
+     * Server: begin an action. Allocates a new sequence so a repeat restarts cleanly.
+     *
+     * <p>The counter is a plain server-side field rather than a read-modify-write of the synced
+     * value. Reading the synced sequence back to increment it made every attack report sequence 1
+     * in testing, and since the client restarts the animation only when the sequence changes, a
+     * stuck sequence means a repeated attack deals its damage without ever replaying its swing:
+     * the monster appears to stop attacking while the log shows hits landing.
+     */
     void beginAttack(byte attackId) {
+        this.actionSequenceCounter++;
         this.entityData.set(DATA_ATTACK_ID, attackId);
         this.entityData.set(DATA_ATTACK_START, level().getGameTime());
-        this.entityData.set(DATA_ACTION_SEQ, getActionSequence() + 1);
+        this.entityData.set(DATA_ACTION_SEQ, this.actionSequenceCounter);
     }
 
     /** Server: end an action. A client that starts tracking after this replays nothing. */

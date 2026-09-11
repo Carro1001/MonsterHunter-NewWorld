@@ -42,8 +42,8 @@ import java.util.List;
  * <p>{@link #CLAW_PATH} is a short offset path in the local (left, up, forward) frame documented on
  * {@link GreatIzuchi}, linearly interpolated between keys. It is the measured hand position,
  * smoothed over a seven tick window to take out the vertical bounce that made the volume jitter as
- * the claw rose and fell, and pushed outward on a ramp from 1.04 to 1.26 so the claw extends as
- * the swing progresses rather than hugging the body.
+ * the claw rose and fell, and pushed outward on a ramp from 1.12 to 1.52 so the claw reaches
+ * further from the body with each successive strike window rather than hugging it.
  */
 public class GreatIzuchiCombatGoal extends Goal {
 
@@ -84,12 +84,16 @@ public class GreatIzuchiCombatGoal extends Goal {
      * Distance at which the attack may be started, measured from the monster position to the
      * nearest point of the victim bounding box.
      *
-     * <p>Derived from the measured claw path rather than picked by feel. The hand crosses the
-     * centre line at about 1.78 blocks forward, and the volume is 0.9 across, so the reliably
-     * striking face is near 2.2. Closing to 1.9 leaves margin on both sides of that, since
-     * approach stops as soon as this threshold is met and the monster then commits.
+     * <p>Derived from the measured claw path. The swept claw centre reaches a radius of 2.5 to
+     * 3.2, so its striking face covers well beyond 3 blocks.
+     *
+     * <p>This was 1.9 and that deadlocked the fight. Making the hurtboxes collidable means the
+     * torso part now holds a victim at roughly 1.94 to 2.38 blocks, just outside 1.9, and vanilla
+     * navigation cannot path the last few centimetres to a target that is already touching the
+     * body. The monster stood there failing to path, attacking only when it happened to drift
+     * inside. Attack range has to clear the distance the body itself imposes.
      */
-    public static final double REACH = 1.9D;
+    public static final double REACH = 2.6D;
 
     /**
      * Measured {@code right_hand} positions, {tick, left, up, forward} in blocks, across the
@@ -106,17 +110,17 @@ public class GreatIzuchiCombatGoal extends Goal {
      */
     private static final double[][] CLAW_PATH = {
             // age    left      up   forward
-            {18,  -1.09D,  1.29D,  2.03D},
-            {21,  -1.19D,  1.39D,  2.13D},
-            {24,  -1.32D,  1.77D,  2.19D},
-            {27,  -1.32D,  2.13D,  2.33D},
-            {30,  -0.88D,  1.97D,  2.39D},
-            {33,  -0.28D,  1.58D,  2.16D},
-            {36,  -0.69D,  1.97D,  2.11D},
-            {39,  -1.41D,  2.35D,  2.32D},
-            {42,  -1.28D,  2.02D,  2.40D},
-            {45,  -1.10D,  1.34D,  1.99D},
-            {47,  -1.29D,  1.30D,  1.43D},
+            {18,  -1.17D,  1.29D,  2.18D},
+            {21,  -1.30D,  1.39D,  2.33D},
+            {24,  -1.46D,  1.77D,  2.43D},
+            {27,  -1.49D,  2.13D,  2.61D},
+            {30,  -1.00D,  1.97D,  2.72D},
+            {33,  -0.32D,  1.58D,  2.49D},
+            {36,  -0.81D,  1.97D,  2.45D},
+            {39,  -1.65D,  2.35D,  2.73D},
+            {42,  -1.52D,  2.02D,  2.86D},
+            {45,  -1.32D,  1.34D,  2.39D},
+            {47,  -1.55D,  1.30D,  1.72D},
     };
 
     private static final int REPATH_INTERVAL = 10;
@@ -256,8 +260,8 @@ public class GreatIzuchiCombatGoal extends Goal {
         this.monster.setAggressive(true);
         this.monster.getNavigation().stop();
         this.monster.beginAttack(GreatIzuchi.ATTACK_SCRATCH);
-        debug("attack start: id={} seq={} target={} distance={}",
-                GreatIzuchi.ATTACK_SCRATCH, this.monster.getActionSequence(),
+        debug("attack start: entity={} id={} seq={} target={} distance={}",
+                this.monster.getId(), GreatIzuchi.ATTACK_SCRATCH, this.monster.getActionSequence(),
                 target.getName().getString(), String.format("%.2f", distance));
     }
 
@@ -275,8 +279,8 @@ public class GreatIzuchiCombatGoal extends Goal {
         int age = this.monster.getAttackAge();
 
         if (age < 0 || age > ACTION_END) {
-            debug("attack end: seq={} age={} victims={}",
-                    this.monster.getActionSequence(), age, this.hitThisAction.size());
+            debug("attack end: entity={} seq={} age={} victims={}",
+                    this.monster.getId(), this.monster.getActionSequence(), age, this.hitThisAction.size());
             this.attacking = false;
             this.monster.endAttack();
             this.monster.attackCooldown = COOLDOWN;
