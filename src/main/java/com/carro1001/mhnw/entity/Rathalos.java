@@ -91,15 +91,20 @@ public class Rathalos extends Monster implements GeoEntity {
         // Switched from plain averaging to range-midpoint (see Rathian's constructor comment for
         // why), and added `throat` between neck and head to close a real, measured gap -- no
         // stinger chain here, so no tail_tip analog is needed.
+        //
+        // Widths re-sized to the exact distance to each neighbour (touching, not gapping or
+        // overlapping) and the tail chain's `up` raised +0.35, matching Rathian's identical follow-up
+        // fix (see that class's constructor comment) -- reused here for the same reason as the
+        // original numbers: same skeleton, same proportions, no Rathalos-specific capture yet.
         this.parts = new MonsterPart[] {
                 //              name          width height  left  up      forward
-                new MonsterPart(this, "torso",  2.1F, 2.1F, 0.00D, 2.23D,  2.05D),
-                new MonsterPart(this, "neck",   1.75F, 1.75F, 0.00D, 1.76D,  4.46D),
-                new MonsterPart(this, "throat", 1.85F, 1.85F, 0.00D, 1.69D,  5.83D),
+                new MonsterPart(this, "torso",  2.3F, 2.3F, 0.00D, 2.23D,  2.05D),
+                new MonsterPart(this, "neck",   2.3F, 2.3F, 0.00D, 1.76D,  4.46D),
+                new MonsterPart(this, "throat", 1.4F, 1.4F, 0.00D, 1.69D,  5.83D),
                 new MonsterPart(this, "head",   2.0F, 2.0F, 0.00D, 1.61D,  7.20D),
-                new MonsterPart(this, "tail_base", 1.75F, 1.6F, 0.00D, 1.99D, -1.65D),
-                new MonsterPart(this, "tail_mid",  1.6F, 1.3F, 0.00D, 1.48D, -3.91D),
-                new MonsterPart(this, "tail_end",  2.0F, 2.0F, 0.00D, 0.97D, -6.07D),
+                new MonsterPart(this, "tail_base", 2.2F, 1.6F, 0.00D, 2.34D, -1.65D),
+                new MonsterPart(this, "tail_mid",  2.2F, 1.3F, 0.00D, 1.83D, -3.91D),
+                new MonsterPart(this, "tail_end",  2.1F, 2.0F, 0.00D, 1.32D, -6.07D),
         };
     }
 

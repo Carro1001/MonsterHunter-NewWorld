@@ -108,23 +108,34 @@ public class Rathian extends Monster implements GeoEntity {
         // The neck-head and tail_end-stinger gaps were also large enough (0.87 and 1.1 blocks, once
         // computed from these same measured centres and part widths) to leave real, visible empty
         // space between boxes even at the correct positions -- confirmed by screenshot. `throat` and
-        // `tail_tip` below are interpolated at each gap's midpoint (not themselves measured) to close
-        // that space, the same "more segments," not "fatter boxes," fix used elsewhere in this file.
+        // `tail_tip` are interpolated at each gap's midpoint (not themselves measured) to close that
+        // space, the same "more segments," not "fatter boxes," fix used elsewhere in this file.
         //
-        // Sizes are still borrowed from the archived hitbox profile (same caveat as before, not
+        // A follow-up screenshot showed gaps still visible and the whole tail chain still reading low
+        // against the actual rendered mesh. Two changes here address that directly rather than by
+        // eye: widths for the torso/neck/throat/tail chain are now set to the exact distance to each
+        // neighbour (so consecutive boxes meet exactly, "start where the next ends" -- some, like
+        // stinger and tail_tip, needed to shrink, since the interpolated midpoints had made them
+        // overlap instead of gap); and the whole tail chain's `up` (tail_base through stinger) is
+        // raised +0.35 on top of the range-midpoint value, since that screenshot's rendered pose sat
+        // consistently higher than the statistical centre across the whole chain, not just one part.
+        // `head` keeps its original size: unlike the connecting sections, it's a genuinely bulky part
+        // of the mesh, so sizing it down to the bare touching-minimum would make it read too small.
+        //
+        // Sizes otherwise still borrow from the archived hitbox profile (same caveat as before, not
         // Rathian-specific), and `left` is set to 0 for every part: the measured samples oscillate
         // both sides of zero as the idle animation sways, with no consistent bias either way.
         this.parts = new MonsterPart[] {
                 //              name          width height  left  up      forward
-                new MonsterPart(this, "torso",  2.1F, 2.1F, 0.00D, 2.23D,  2.05D),
-                new MonsterPart(this, "neck",   1.75F, 1.75F, 0.00D, 1.76D,  4.46D),
-                new MonsterPart(this, "throat", 1.85F, 1.85F, 0.00D, 1.69D,  5.83D),
+                new MonsterPart(this, "torso",  2.3F, 2.3F, 0.00D, 2.23D,  2.05D),
+                new MonsterPart(this, "neck",   2.3F, 2.3F, 0.00D, 1.76D,  4.46D),
+                new MonsterPart(this, "throat", 1.4F, 1.4F, 0.00D, 1.69D,  5.83D),
                 new MonsterPart(this, "head",   2.0F, 2.0F, 0.00D, 1.61D,  7.20D),
-                new MonsterPart(this, "tail_base", 1.75F, 1.6F, 0.00D, 1.99D, -1.65D),
-                new MonsterPart(this, "tail_mid",  1.6F, 1.3F, 0.00D, 1.48D, -3.91D),
-                new MonsterPart(this, "tail_end",  2.0F, 2.0F, 0.00D, 0.97D, -6.07D),
-                new MonsterPart(this, "tail_tip",  1.9F, 1.9F, 0.00D, 0.64D, -7.56D),
-                new MonsterPart(this, "stinger",   1.75F, 1.6F, 0.00D, 0.30D, -9.05D),
+                new MonsterPart(this, "tail_base", 2.2F, 1.6F, 0.00D, 2.34D, -1.65D),
+                new MonsterPart(this, "tail_mid",  2.2F, 1.3F, 0.00D, 1.83D, -3.91D),
+                new MonsterPart(this, "tail_end",  2.1F, 2.0F, 0.00D, 1.32D, -6.07D),
+                new MonsterPart(this, "tail_tip",  1.5F, 1.5F, 0.00D, 0.99D, -7.56D),
+                new MonsterPart(this, "stinger",   1.5F, 1.5F, 0.00D, 0.65D, -9.05D),
         };
     }
 
