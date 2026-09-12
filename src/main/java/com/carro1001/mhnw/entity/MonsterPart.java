@@ -85,6 +85,21 @@ public class MonsterPart extends PartEntity<Mob> {
         return !isInvulnerableTo(source) && getParent().hurt(source, amount);
     }
 
+    /**
+     * Right-clicking a hurtbox is right-clicking the creature.
+     *
+     * <p>Added for R1 carving and deliberately nothing more than a forwarder: the parent owns the
+     * participants, the counters, the expiry and the rewards, and a part owns none of it. Without
+     * this, a Great Izuchi corpse would only be carvable from the narrow root envelope under its
+     * chest, which on a body five blocks long is not a usable interaction.
+     */
+    @Override
+    public net.minecraft.world.InteractionResult interactAt(net.minecraft.world.entity.player.Player player,
+                                                            net.minecraft.world.phys.Vec3 location,
+                                                            net.minecraft.world.InteractionHand hand) {
+        return getParent().interactAt(player, location, hand);
+    }
+
     /** Makes the parent and all of its parts count as "the same entity" for targeting checks. */
     @Override
     public boolean is(Entity entity) {

@@ -11,7 +11,8 @@ revival is no longer a side branch — `revival/neoforge-1.21.1` was squash-merg
 old Forge/MultiHitBoxLib/SmartBrainLib codebase survives only in history and on `origin/brain`.
 
 New feature work is scoped by `docs/ROADMAP.md` (revision `mh-nw-roadmap-2026-09-11-v4`) and the
-numbered packets it hands out, e.g. `docs/R0_BASELINE_HANDOFF.md`. Work the current packet; do not
+numbered packets it hands out, e.g. `docs/R0_BASELINE_HANDOFF.md` and
+`docs/R1_FIRST_HUNTING_LOOP_HANDOFF.md`. Work the current packet; do not
 re-read or restart the historical P0-P8 runbook. `docs/REVIVAL_HANDOFF.md` (70 KB) is background for
 *why* the architecture looks like this, not the work queue.
 
@@ -54,6 +55,9 @@ missed, not as the current source of truth.
 A Minecraft NeoForge mod (`mhnw`, "Monster Hunter: New World") adding Monster Hunter-style
 creatures — currently Great Izuchi, Izuchi (small), Rathian, Rathalos, Aptonoth, Lagiacrus, Toad,
 Flashbug, Bug — with GeckoLib-animated models and, for the large monsters, part-based hurtboxes.
+
+As of R1 it also has a survival loop: Great Izuchi, small Izuchi and Aptonoth leave carvable corpses,
+carving is the only way to get their materials, and those materials cook and craft into bone armor.
 
 Species notes that are easy to get wrong from an older doc:
 - **Lagiacrus is ported**, not planned: a limited *movement* baseline (seven native parts, amphibious
@@ -124,7 +128,8 @@ the risk of restructuring already-shipped code," not an oversight.
   `MHNWConfig` (client/server config, including `debugCombat`), `MHNWGameTests` (the entire GameTest
   suite, one file).
 - `com.carro1001.mhnw.entity`: every entity class, its species-specific `Goal`s, and the shared
-  `MonsterPart`/`AttackProfile` helpers — flat, not nested under per-species subpackages.
+  `MonsterPart`/`AttackProfile`/`CarveState` helpers — flat, not nested under per-species
+  subpackages.
 - `com.carro1001.mhnw.animation`: `ServerTimedAnimationController` (R0b). One class,
   common-loadable by design.
 - `com.carro1001.mhnw.client`: `MHNWClient` (renderer registration; each renderer is a small nested
@@ -134,8 +139,12 @@ the risk of restructuring already-shipped code," not an oversight.
   `AnimationSeekSelfCheck` (the R0b sampler probe -- it lives here, not in `MHNWGameTests`, because
   `GeoModel` references `Minecraft` and NeoForge's `RuntimeDistCleaner` refuses to load it on a
   dedicated server; any future test needing GeckoLib's real sampler has to be a client probe too).
-- `com.carro1001.mhnw.registry`: `ModEntities`, the one `DeferredRegister` holder for entity types
-  and their spawn eggs.
+- `com.carro1001.mhnw.registry`: `ModEntities` (entity types + their spawn eggs) and `ModItems`
+  (R1's carve materials, meats and the four bone-armor pieces). Two `DeferredRegister<Item>` holders
+  into the same registry, deliberately: the eggs are shipped registrations whose only fault is
+  living in a class named after entities, and moving them buys a prettier name for a rename risk.
+- `com.carro1001.mhnw.item`: `BoneArmorItem` — all four slots, one class, iron stats, and the
+  `mhnw:bone_armor_set_bonus` full-set trait.
 
 ### Multipart hurtboxes: native NeoForge, not a library
 
@@ -266,6 +275,64 @@ presentation is correct regardless — but don't expect an in-goal `isAlive()` g
 under normal death; a GameTest that kills a monster mid-action and expects the goal's own synced
 state to self-clear will fail, not because combat is broken, but because goal ticking stopped first.
 
+### Carving, corpses and the R1 economy
+
+`entity/CarveState.java` is the whole contract, held by composition in exactly three species
+(`GreatIzuchi`, `Izuchi`, `Aptonoth`) which forward five things to it — damage, interaction, death,
+save, load — and own none of it themselves. Composition, not a base class, because `Monster` and
+`Animal` are different superclasses; three fixed consumers do not get a capability, an attachment, a
+corpse entity or a generic loot service.
+
+Three facts worth not rediscovering:
+
+- **The corpse timer is vanilla's own `deathTime`, not a field of ours.** The window is 12,000 ticks
+  of *this entity ticking*, which is exactly what `deathTime` counts: it advances in `tickDeath`,
+  pauses for free while a chunk is unloaded or the server is down, and vanilla already saves it as
+  `DeathTime` (a short — 12,000 fits). Holding the body is just declining to call
+  `super.tickDeath()` until it gets there. A second saved counter would be the same number written
+  twice. This also means R0b's death anchor (`gameTime - deathTime`) keeps working unchanged.
+- **`Mob.interact` is `final` and returns `PASS` for anything not alive**, so a corpse can only be
+  reached through `interactAt` — which the client tries first anyway. `MonsterPart.interactAt`
+  forwards to the parent purely so a five-block-long body is carvable from somewhere other than the
+  narrow root envelope under its chest.
+- **A dead mob is still subject to `Mob.checkDespawn`'s distance rule**, which would delete a body
+  long before the window expires. Each carvable species calls `setPersistenceRequired()` in `die`;
+  the window deliberately does not force-load chunks.
+
+Eligibility is recorded only when `super.hurt` both accepted the hit *and* health actually fell, so
+absorbed, invulnerable and duplicated part damage grant nothing. Rewards are a deterministic table
+indexed by that player's carve count, which is what makes a full-inventory retry exact without any
+saved pending-roll state. The three species have empty loot tables under
+`data/mhnw/loot_table/entities/`: carving is the only item-reward path, and normal XP still drops
+once, at the real death, through vanilla.
+
+Bone armor uses `ArmorMaterials.IRON` directly rather than a private copy of iron's numbers. The
+set bonus is a **transient** attribute modifier recomputed from scratch by
+`BoneArmorItem.refreshSetBonus` on every `LivingEquipmentChangeEvent` for an armor slot — transient
+so it can never be written into saved attribute data and outlive the set, recomputed wholesale so
+equip/unequip/death/rejoin need no separate hook and it cannot stack. The worn model is
+`geo/entity/bone_armor.geo.json` (the complete eight-bone export) with the eight bone getters
+overridden in `MHNWClient.BoneArmorRenderer`; the later `geo/item/armor/` copy uses GeckoLib's
+default `armor*` names but has **no boot bones at all**, so a stock `GeoArmorRenderer` pointed at it
+renders bare feet.
+
+`entity/IzuchiHarassGoal.java` replaced small Izuchi's vanilla `MeleeAttackGoal`: bounded
+circle → dart → retreat, ordinary `doHurtTarget` damage, no new clip and no attack timeline. At most
+one Izuchi within 12 blocks darts at a time, enforced by reading `Izuchi.isDarting()` off the living
+neighbours. Every field it owns is transient; a reload starts from nothing. It overrides
+`requiresUpdateEveryTick()` for the same reason `RoarGoal` has to.
+
+Two cancellation paths that are not obvious and were both missed in the first cut:
+
+- **Peaceful difficulty is part of the goal's own precondition** (`canHarass`). Peaceful only
+  despawns hostile mobs whose `shouldDespawnInPeaceful()` agrees, and `Izuchi` deliberately returns
+  false — so without this a world switched to peaceful keeps the Izuchi, keeps its target, and keeps
+  attacking. Vanilla's `MeleeAttackGoal` had the same hole; the R1 contract is what closes it.
+- **Death clears the phase in `Izuchi.die`, not in the goal.** A dead mob never ticks a goal again
+  (see the lifecycle note above), so `stop()` cannot run for a mob killed mid-dart and its state
+  would freeze for the whole corpse window. The neighbours' `isAlive()` filter is still not
+  redundant: it covers a body removed by `discard()`, where `die()` never runs at all.
+
 ### Registration and client wiring
 
 `ModEntities` is the one `DeferredRegister` holder (entity types + spawn eggs together); attribute
@@ -314,7 +381,9 @@ via `./gradlew runGameTestServer`. It deliberately covers only what a human at a
 reliably check and what would regress silently — damage semantics (one hit through a part costs
 the parent exactly one hit, distinct attackers aren't conflated, damage only lands inside an
 attack's active window), state-machine edges (reload cancels transient combat, death removes every
-part exactly once), ground pathing across open terrain, an outside corner, a body-width passage, a
+part exactly once), the R1 carving contract (attribution, per-player quota, atomic inventory,
+persistence and the corpse window), the item/recipe registry, armor stats and the full-set modifier,
+bounded Izuchi harassment, ground pathing across open terrain, an outside corner, a body-width passage, a
 too-narrow passage, a single-block step, and a fully sealed unreachable target, and — as of the R0a
 baseline packet — real-tick timing: that the opening roar counts down one tick per *real* tick for
 its whole clip on all three roaring species, that the disengage re-arm honours its real 100-tick

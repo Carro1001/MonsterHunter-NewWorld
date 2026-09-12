@@ -1,14 +1,15 @@
 package com.carro1001.mhnw.entity;
 
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
-import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
@@ -17,6 +18,7 @@ import net.minecraft.world.entity.monster.AbstractIllager;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
@@ -31,10 +33,20 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * a genuinely hostile ground monster, unlike any of the P3 endemic life.
  *
  * <p>A single fitted hurtbox, not multipart: section 4.2 reserves that machinery for large
- * monsters, and this is explicitly the small one. Combat is ordinary vanilla {@link MeleeAttackGoal}
- * dealing damage through {@code Mob.doHurtTarget}, not {@link GreatIzuchiCombatGoal}'s attack
- * timeline: there is no attack clip to time a swing against (see below), and a creature this size
- * does not need one to be a working "simple independent" monster.
+ * monsters, and this is explicitly the small one. Damage is ordinary {@code Mob.doHurtTarget}, not
+ * {@link GreatIzuchiCombatGoal}'s synchronized attack timeline: there is no attack clip to time a
+ * swing against (see below), and a creature this size does not need one to be a working "simple
+ * independent" monster.
+ *
+ * <p>R1 replaced the vanilla {@code MeleeAttackGoal} this used to run with
+ * {@link IzuchiHarassGoal}: same ordinary damage, but the escorts now circle at a distance and take
+ * bounded turns darting in, instead of four of them closing to melee and staying there. The change
+ * is behavioural only -- no new clip, no attack timeline, no pack leader.
+ *
+ * <h2>Carving</h2>
+ * One of R1's three carvable species. Participation, the personal three-carve quota and the corpse
+ * window all live in {@link CarveState}; this class forwards damage, interaction, death, save and
+ * load to it and owns nothing of that contract itself.
  *
  * <h2>Why there is no attack or death animation</h2>
  * The preserved master-branch asset for this species has exactly four clips: idle, sleep, walk,
@@ -77,6 +89,17 @@ public class Izuchi extends Monster implements GeoEntity {
 
     private final AnimatableInstanceCache animCache = GeckoLibUtil.createInstanceCache(this);
 
+    /** R1 carving: participants, personal counters and the deterministic reward table. */
+    private final CarveState carveState = new CarveState(CarveState.Table.IZUCHI);
+
+    /**
+     * Which phase of {@link IzuchiHarassGoal} this Izuchi is in, or null when it is not harassing.
+     *
+     * <p>Transient on purpose: a half-finished dart is not a fact worth restoring, and the one-darter
+     * rule is enforced by reading this field off the neighbours rather than by any shared owner.
+     */
+    private IzuchiHarassGoal.Phase harassPhase;
+
     public Izuchi(EntityType<? extends Monster> type, Level level) {
         super(type, level);
     }
@@ -92,7 +115,7 @@ public class Izuchi extends Monster implements GeoEntity {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(1, new MeleeAttackGoal(this, 1.0D, true));
+        this.goalSelector.addGoal(1, new IzuchiHarassGoal(this));
         this.goalSelector.addGoal(2, new IzuchiSleepGoal(this));
         this.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 0.7D));
         this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 8.0F));
@@ -113,6 +136,97 @@ public class Izuchi extends Monster implements GeoEntity {
 
     public boolean isSleeping() {
         return this.entityData.get(DATA_SLEEPING);
+    }
+
+    /** Test/behaviour seam: the live harassment phase, or null when the goal is not running. */
+    public IzuchiHarassGoal.Phase harassPhase() {
+        return this.harassPhase;
+    }
+
+    void setHarassPhase(IzuchiHarassGoal.Phase phase) {
+        this.harassPhase = phase;
+    }
+
+    /** Read by neighbouring {@link IzuchiHarassGoal}s to keep at most one darter in a pack. */
+    public boolean isDarting() {
+        return this.harassPhase == IzuchiHarassGoal.Phase.DART;
+    }
+
+    /** R1 carving state. */
+    public CarveState carveState() {
+        return this.carveState;
+    }
+
+    /**
+     * R1: credit the attacking player only when the hit is accepted and health genuinely falls.
+     * This species is not multipart, so there is no duplicate-part case to guard, but the
+     * accepted-and-harmful rule is the same one {@link GreatIzuchi#hurt} applies.
+     */
+    @Override
+    public boolean hurt(DamageSource source, float amount) {
+        float before = getHealth();
+        boolean accepted = super.hurt(source, amount);
+        if (accepted && !level().isClientSide && getHealth() < before) {
+            this.carveState.creditDamage(source);
+        }
+        return accepted;
+    }
+
+    /** Shift + right-click carving; see {@link GreatIzuchi#interactAt}. */
+    @Override
+    public net.minecraft.world.InteractionResult interactAt(Player player, Vec3 location,
+                                                            net.minecraft.world.InteractionHand hand) {
+        net.minecraft.world.InteractionResult carved = this.carveState.interact(this, player, hand);
+        return carved == net.minecraft.world.InteractionResult.PASS
+                ? super.interactAt(player, location, hand)
+                : carved;
+    }
+
+    /**
+     * Corpse persistence, and the one place the harassment state can still be cleared on death.
+     *
+     * <p>{@code setPersistenceRequired} is the {@link GreatIzuchi#die} reason: a corpse must outlive
+     * the distance-despawn rule. The rest is {@link IzuchiHarassGoal}'s transient state, cleared
+     * here because it cannot clear itself: vanilla stops ticking every goal the instant
+     * {@code isDeadOrDying()} is true, so a mob killed mid-dart never runs {@code stop()} and would
+     * otherwise sit there flagged as darting and aggressive for the whole corpse window. The
+     * neighbours' pack scan already ignores the dead, but that hides the symptom rather than
+     * clearing the state -- and it is the scan's real job to cover the case this hook cannot,
+     * a body removed by {@code discard()} without {@code die()} ever running.
+     */
+    @Override
+    public void die(DamageSource source) {
+        super.die(source);
+        setPersistenceRequired();
+        setHarassPhase(null);
+        setAggressive(false);
+        getNavigation().stop();
+    }
+
+    /**
+     * Hold the body for the R1 carving window; see {@link GreatIzuchi#tickDeath}. Unlike the large
+     * monsters this species has no authored death clip, so the held body is vanilla's ordinary
+     * corpse flop, kept around rather than replaced.
+     */
+    @Override
+    protected void tickDeath() {
+        if (!CarveState.corpseExpired(this)) {
+            this.deathTime++;
+            return;
+        }
+        super.tickDeath();
+    }
+
+    @Override
+    public void addAdditionalSaveData(CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        this.carveState.save(tag);
+    }
+
+    @Override
+    public void readAdditionalSaveData(CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        this.carveState.load(tag);
     }
 
     void setSleeping(boolean sleeping) {

@@ -3,6 +3,9 @@ package com.carro1001.mhnw;
 import com.carro1001.mhnw.animation.ServerTimedAnimationController;
 import com.carro1001.mhnw.entity.Aptonoth;
 import com.carro1001.mhnw.entity.AttackProfile;
+import com.carro1001.mhnw.entity.CarveState;
+import com.carro1001.mhnw.entity.Izuchi;
+import com.carro1001.mhnw.entity.IzuchiHarassGoal;
 import com.carro1001.mhnw.entity.GreatIzuchi;
 import com.carro1001.mhnw.entity.GreatIzuchiCombatGoal;
 import com.carro1001.mhnw.entity.HuntingSpawnRules;
@@ -712,6 +715,10 @@ public class MHNWGameTests {
         helper.assertTrue(partCount > 0, "the monster registered no parts at all");
 
         monster.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
+        // R1 holds this body for the carving window; that window's own contract is proven by the
+        // r1Corpse* tests. What is checked here, unchanged, is that the final removal takes the
+        // whole creature with it.
+        expireCorpse(monster);
 
         helper.succeedWhen(() -> {
             helper.assertTrue(monster.isRemoved(), "the monster was not removed after dying");
@@ -726,6 +733,20 @@ public class MHNWGameTests {
      * than it looks; this is the assertion {@code lagiacrusDeathStopsPursuitAndUnregistersParts}
      * already relied on, applied to every multipart species' removal scenarios.
      */
+    /**
+     * Jump a corpse to the end of its hold so a test can observe the one final removal without
+     * idling for it.
+     *
+     * <p>R1 holds Great Izuchi, small Izuchi and Aptonoth bodies for {@link CarveState#CORPSE_TICKS}
+     * carvable ticks, which no test may sit through. Every species' hold is counted in vanilla's own
+     * {@code deathTime}, so writing that field is exactly the state a body reaches by waiting --
+     * there is no second counter to get out of step with. Harmless on the species that keep a
+     * shorter hold: vanilla removes at 20 either way.
+     */
+    private static void expireCorpse(net.minecraft.world.entity.LivingEntity subject) {
+        subject.deathTime = Math.max(subject.deathTime, CarveState.CORPSE_TICKS);
+    }
+
     private static void assertPartsUnregistered(GameTestHelper helper, MonsterPart[] parts) {
         helper.assertTrue(parts.length > 0, "the subject registered no parts at all");
         for (MonsterPart part : parts) {
@@ -765,6 +786,7 @@ public class MHNWGameTests {
                         victim.getHealth() >= victimHealth[0] - EPSILON,
                         "a dead subject kept dealing melee damage: its target went from "
                                 + victimHealth[0] + " to " + victim.getHealth()))
+                .thenExecute(() -> expireCorpse(subject))
                 .thenWaitUntil(() -> helper.assertTrue(subject.isRemoved(),
                         "the corpse was never removed"))
                 .thenExecute(() -> assertPartsUnregistered(helper, parts))
@@ -1041,6 +1063,7 @@ public class MHNWGameTests {
     public static void aptonothDeathRemovesIt(GameTestHelper helper) {
         Aptonoth aptonoth = helper.spawn(ModEntities.APTONOTH.get(), 8, 2, 8);
         aptonoth.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
+        expireCorpse(aptonoth);
 
         helper.succeedWhen(() -> helper.assertTrue(
                 aptonoth.isRemoved(), "the Aptonoth was not removed after dying"));
@@ -1098,6 +1121,7 @@ public class MHNWGameTests {
         helper.assertTrue(partCount == 6, "Aptonoth registered " + partCount + " parts, expected 6");
 
         aptonoth.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
+        expireCorpse(aptonoth);
 
         helper.succeedWhen(() -> {
             helper.assertTrue(aptonoth.isRemoved(), "Aptonoth was not removed after dying");
@@ -1344,12 +1368,17 @@ public class MHNWGameTests {
     // ---------------------------------------------------------------- Izuchi (P4, small monster)
 
     /**
-     * A03/A05: unlike every P3 species, Izuchi is genuinely hostile: ordinary vanilla
-     * {@code MeleeAttackGoal} against a player-shaped target, dealing damage through
-     * {@code Mob.doHurtTarget}, no custom timeline. This is the one concrete proof that "simple
-     * independent targeting" actually connects.
+     * A03/A05: unlike every P3 species, Izuchi is genuinely hostile, dealing damage through
+     * ordinary {@code Mob.doHurtTarget} with no custom timeline. This is the one concrete proof
+     * that "simple independent targeting" actually connects.
+     *
+     * <p>R1 replaced the vanilla {@code MeleeAttackGoal} with {@link IzuchiHarassGoal}, so the first
+     * hit no longer lands immediately: the Izuchi circles for a randomized 40-80 tick opportunity
+     * window before its first dart, and the dart itself has to cross the circling distance. The
+     * timeout is sized for that, not for a rusher. What is asserted is unchanged -- that damage
+     * actually reaches a target -- and {@code r1IzuchiHarass*} owns the shape of the approach.
      */
-    @GameTest(template = ARENA, timeoutTicks = 200)
+    @GameTest(template = ARENA, timeoutTicks = 400)
     public static void izuchiAttacksAndDamagesTarget(GameTestHelper helper) {
         com.carro1001.mhnw.entity.Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
         Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
@@ -1378,6 +1407,7 @@ public class MHNWGameTests {
     public static void izuchiDeathRemovesIt(GameTestHelper helper) {
         com.carro1001.mhnw.entity.Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
         izuchi.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
+        expireCorpse(izuchi);
 
         helper.succeedWhen(() -> helper.assertTrue(
                 izuchi.isRemoved(), "Izuchi was not removed after dying"));
@@ -2743,10 +2773,11 @@ public class MHNWGameTests {
     }
 
     /**
-     * Rathian, Rathalos and Aptonoth keep vanilla's own corpse lifetime (removal at {@code deathTime}
-     * 20); only Great Izuchi holds longer, for its authored 38-tick clip. R0b synchronizes what is
-     * visible while a body exists and deliberately extends no body's lifetime, so these three are
-     * observed inside their real window rather than given a longer one.
+     * Rathian and Rathalos keep vanilla's own corpse lifetime (removal at {@code deathTime} 20); the
+     * three carvable species hold for {@link CarveState#CORPSE_TICKS}. R0b synchronized what is
+     * visible while a body exists and extended no lifetime; R1's longer hold is the carving window,
+     * not a presentation change. Each of these is still observed well inside its own real window
+     * rather than given a longer one.
      */
     @GameTest(template = ARENA, timeoutTicks = 200)
     public static void rathianDeathAnchorAgesWithRealTicks(GameTestHelper helper) {
@@ -2871,6 +2902,1022 @@ public class MHNWGameTests {
                     long deathAge = helper.getLevel().getGameTime() - monster.getDeathStartTime();
                     helper.assertTrue(deathAge >= 0L && deathAge <= SCHEDULING_TOLERANCE,
                             "the death clock did not start at the death: age " + deathAge);
+                })
+                .thenSucceed();
+    }
+
+
+    // ================================================================ R1: the first hunting loop
+    //
+    // Gates R1-01..R1-08 of docs/R1_FIRST_HUNTING_LOOP_HANDOFF.md. What is deliberately NOT here:
+    // whether an item icon or the worn armor actually renders. A GameTest server never loads
+    // assets/, and R0b already established that a dedicated server refuses to load GeoModel at all
+    // -- so the model/texture/geometry side stays a named human gate in docs/TEST_PLAN.md, and what
+    // is proven headlessly is the registration, data and state contract underneath it.
+
+    private static final String[] R1_ITEM_IDS = {
+            "monster_hide", "monster_claw", "raw_meat", "cooked_meat",
+            "bone_head", "bone_chestplate", "bone_legging", "bone_boots"};
+
+    /** A survival-mode carver standing on the corpse, sneaking, with an empty inventory. */
+    private static net.minecraft.world.entity.player.Player carver(
+            GameTestHelper helper, net.minecraft.world.entity.Entity at) {
+        net.minecraft.world.entity.player.Player player =
+                helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        player.setPos(at.getX(), at.getY(), at.getZ());
+        player.setShiftKeyDown(true);
+        return player;
+    }
+
+    private static net.minecraft.world.InteractionResult carve(
+            net.minecraft.world.entity.Mob corpse, net.minecraft.world.entity.player.Player player) {
+        return corpse.interactAt(player, net.minecraft.world.phys.Vec3.ZERO,
+                net.minecraft.world.InteractionHand.MAIN_HAND);
+    }
+
+    private static void hurtBy(GameTestHelper helper, net.minecraft.world.entity.Mob mob,
+                               net.minecraft.world.entity.player.Player player, float amount) {
+        mob.hurt(helper.getLevel().damageSources().playerAttack(player), amount);
+    }
+
+    // ---------------------------------------------------------------- R1-01 registry and economy
+
+    /** R1-01: every new item id actually resolves in the item registry. */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void r1ItemIdsResolve(GameTestHelper helper) {
+        for (String id : R1_ITEM_IDS) {
+            net.minecraft.resources.ResourceLocation key =
+                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, id);
+            helper.assertTrue(net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(key),
+                    "item id never registered: " + key);
+        }
+        helper.assertTrue(com.carro1001.mhnw.registry.ModItems.MONSTER_HIDE.get()
+                        != net.minecraft.world.item.Items.AIR,
+                "the hide holder resolved to air");
+        helper.succeed();
+    }
+
+    /**
+     * R1-01: raw meat cooks in all three stations, by actually matching the recipe the way the
+     * furnace does, not by reading the file back.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void r1RawMeatCooksInEveryStation(GameTestHelper helper) {
+        net.minecraft.world.item.crafting.SingleRecipeInput input =
+                new net.minecraft.world.item.crafting.SingleRecipeInput(
+                        new net.minecraft.world.item.ItemStack(
+                                com.carro1001.mhnw.registry.ModItems.RAW_MEAT.get()));
+        assertCooks(helper, net.minecraft.world.item.crafting.RecipeType.SMELTING, input, "furnace");
+        assertCooks(helper, net.minecraft.world.item.crafting.RecipeType.SMOKING, input, "smoker");
+        assertCooks(helper, net.minecraft.world.item.crafting.RecipeType.CAMPFIRE_COOKING, input, "campfire");
+        helper.succeed();
+    }
+
+    private static <T extends net.minecraft.world.item.crafting.AbstractCookingRecipe> void assertCooks(
+            GameTestHelper helper, net.minecraft.world.item.crafting.RecipeType<T> type,
+            net.minecraft.world.item.crafting.SingleRecipeInput input, String station) {
+        java.util.Optional<net.minecraft.world.item.crafting.RecipeHolder<T>> found =
+                helper.getLevel().getServer().getRecipeManager().getRecipeFor(type, input, helper.getLevel());
+        helper.assertTrue(found.isPresent(), "raw meat has no " + station + " recipe");
+        helper.assertTrue(found.get().value()
+                        .getResultItem(helper.getLevel().registryAccess())
+                        .is(com.carro1001.mhnw.registry.ModItems.COOKED_MEAT.get()),
+                "the " + station + " recipe for raw meat does not produce cooked meat");
+    }
+
+    /**
+     * R1-01: each armor piece is craftable from its own shaped pattern, matched through the real
+     * crafting lookup. A recipe whose declared keys and pattern disagree does not load at all, so
+     * this is also the guard on that.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void r1BoneArmorRecipesCraft(GameTestHelper helper) {
+        assertCrafts(helper, 3, 2, "BHB" + "B B", com.carro1001.mhnw.registry.ModItems.BONE_HEAD.get());
+        assertCrafts(helper, 3, 3, "B B" + "BCB" + "HBH",
+                com.carro1001.mhnw.registry.ModItems.BONE_CHESTPLATE.get());
+        assertCrafts(helper, 3, 3, "HCH" + "B B" + "B B",
+                com.carro1001.mhnw.registry.ModItems.BONE_LEGGING.get());
+        assertCrafts(helper, 3, 2, "C C" + "B B", com.carro1001.mhnw.registry.ModItems.BONE_BOOTS.get());
+        helper.succeed();
+    }
+
+    private static void assertCrafts(GameTestHelper helper, int width, int height, String grid,
+                                     net.minecraft.world.item.Item expected) {
+        java.util.List<net.minecraft.world.item.ItemStack> items = new java.util.ArrayList<>();
+        for (int i = 0; i < grid.length(); i++) {
+            items.add(switch (grid.charAt(i)) {
+                case 'H' -> new net.minecraft.world.item.ItemStack(
+                        com.carro1001.mhnw.registry.ModItems.MONSTER_HIDE.get());
+                case 'C' -> new net.minecraft.world.item.ItemStack(
+                        com.carro1001.mhnw.registry.ModItems.MONSTER_CLAW.get());
+                case 'B' -> new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BONE);
+                default -> net.minecraft.world.item.ItemStack.EMPTY;
+            });
+        }
+        net.minecraft.world.item.crafting.CraftingInput input =
+                net.minecraft.world.item.crafting.CraftingInput.of(width, height, items);
+        java.util.Optional<net.minecraft.world.item.crafting.RecipeHolder<
+                net.minecraft.world.item.crafting.CraftingRecipe>> found =
+                helper.getLevel().getServer().getRecipeManager().getRecipeFor(
+                        net.minecraft.world.item.crafting.RecipeType.CRAFTING, input, helper.getLevel());
+        helper.assertTrue(found.isPresent(), "no crafting recipe matched the pattern for " + expected);
+        helper.assertTrue(found.get().value().assemble(input, helper.getLevel().registryAccess()).is(expected),
+                "the matched recipe did not produce " + expected);
+    }
+
+    /**
+     * R1-01: carving is the only item-reward path, so none of the three carvable species may drop
+     * ordinary death loot. Checked behaviourally -- an empty loot table and a missing one look the
+     * same from the outside, and what matters is that nothing lands on the ground.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void r1CarvableSpeciesDropNoDeathItems(GameTestHelper helper) {
+        GreatIzuchi great = spawnInert(helper);
+        Izuchi small = helper.spawn(ModEntities.IZUCHI.get(), 6, 2, 6);
+        Aptonoth aptonoth = helper.spawn(ModEntities.APTONOTH.get(), 10, 2, 10);
+        net.minecraft.world.entity.player.Player hunter = carver(helper, great);
+        net.minecraft.world.entity.Mob[] bodies = {great, small, aptonoth};
+
+        helper.startSequence()
+                .thenExecute(() -> {
+                    for (net.minecraft.world.entity.Mob mob : bodies) {
+                        mob.setNoAi(true);
+                        hurtBy(helper, mob, hunter, Float.MAX_VALUE);
+                        helper.assertTrue(mob.isDeadOrDying(),
+                                "the fixture failed to kill " + mob.getName().getString());
+                    }
+                })
+                .thenIdle(40)
+                .thenExecute(() -> {
+                    for (net.minecraft.world.entity.Mob mob : bodies) {
+                        java.util.List<net.minecraft.world.entity.item.ItemEntity> dropped =
+                                helper.getLevel().getEntitiesOfClass(
+                                        net.minecraft.world.entity.item.ItemEntity.class,
+                                        mob.getBoundingBox().inflate(6.0D));
+                        helper.assertTrue(dropped.isEmpty(),
+                                mob.getName().getString() + " dropped " + dropped.size()
+                                        + " death items; carving is meant to be the only reward path");
+                    }
+                })
+                .thenSucceed();
+    }
+
+    // ---------------------------------------------------------------- R1-02 attribution
+
+    /**
+     * R1-02: only an accepted hit that actually took health off, from a player, grants eligibility.
+     * A bystander, an ownerless environmental source and one source enumerating several hurtboxes
+     * all fail to add anything they should not.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void r1AttributionCreditsOnlyRealPlayerDamage(GameTestHelper helper) {
+        GreatIzuchi monster = spawnInert(helper);
+        net.minecraft.world.entity.player.Player hunter = carver(helper, monster);
+        net.minecraft.world.entity.player.Player bystander = carver(helper, monster);
+        CarveState state = monster.carveState();
+
+        helper.assertTrue(state.participantCount() == 0, "a fresh monster already had participants");
+
+        // Proximity alone: the bystander is standing right here and never swings.
+        monster.hurt(helper.getLevel().damageSources().cactus(), 3.0F);
+        helper.assertTrue(state.participantCount() == 0,
+                "ownerless environmental damage granted carving rights");
+
+        hurtBy(helper, monster, hunter, 4.0F);
+        helper.assertTrue(state.isParticipant(hunter.getUUID()), "a direct player hit granted nothing");
+        helper.assertTrue(!state.isParticipant(bystander.getUUID()),
+                "a bystander who never attacked was credited");
+
+        // One source touching several hurtboxes in a tick is one hit; the forwards that the parent
+        // rejects must not each credit a participant of their own.
+        int before = state.participantCount();
+        net.minecraft.world.damagesource.DamageSource splash =
+                helper.getLevel().damageSources().playerAttack(bystander);
+        for (MonsterPart part : monster.monsterParts()) {
+            part.hurt(splash, 2.0F);
+        }
+        helper.assertTrue(state.participantCount() == before + 1,
+                "one multi-part source produced " + (state.participantCount() - before)
+                        + " new participants instead of one");
+        helper.succeed();
+    }
+
+    /** R1-02: a player's thrown projectile credits the player, not the projectile. */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void r1AttributionCreditsAProjectilesOwner(GameTestHelper helper) {
+        GreatIzuchi monster = spawnInert(helper);
+        net.minecraft.world.entity.player.Player hunter = carver(helper, monster);
+        net.minecraft.world.entity.projectile.Snowball ball =
+                new net.minecraft.world.entity.projectile.Snowball(helper.getLevel(), hunter);
+
+        monster.hurt(helper.getLevel().damageSources().thrown(ball, hunter), 3.0F);
+
+        helper.assertTrue(monster.carveState().isParticipant(hunter.getUUID()),
+                "a player's projectile did not credit its owner");
+        helper.succeed();
+    }
+
+    /**
+     * R1-02: an owned attacker credits its owner, and this is the one case that genuinely needs a
+     * player in the level -- vanilla's own {@code OwnableEntity.getOwner()} resolves the saved UUID
+     * through the level's player list, so a detached mock player could never be found. The player is
+     * removed again on the way out so nothing else in the run sees it.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void r1AttributionResolvesAnOwnedAttackersPlayer(GameTestHelper helper) {
+        net.minecraft.server.level.ServerPlayer owner = helper.makeMockServerPlayerInLevel();
+        try {
+            net.minecraft.world.entity.animal.Wolf wolf =
+                    helper.spawn(net.minecraft.world.entity.EntityType.WOLF, 6, 2, 6);
+            wolf.setNoAi(true);
+            wolf.tame(owner);
+            helper.assertTrue(wolf.getOwner() == owner,
+                    "the fixture's wolf has no resolvable owner, so this test would prove nothing");
+
+            GreatIzuchi monster = spawnInert(helper);
+            monster.hurt(helper.getLevel().damageSources().mobAttack(wolf), 4.0F);
+
+            helper.assertTrue(monster.carveState().isParticipant(owner.getUUID()),
+                    "a tamed wolf's hit did not credit its owner");
+            helper.assertTrue(!monster.carveState().isParticipant(wolf.getUUID()),
+                    "the wolf itself was recorded as a participant");
+        } finally {
+            owner.getServer().getPlayerList().remove(owner);
+        }
+        helper.succeed();
+    }
+
+    /** R1-02: an untamed attacker with no owner at all grants nothing. */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void r1AttributionIgnoresAnOwnerlessAttacker(GameTestHelper helper) {
+        GreatIzuchi monster = spawnInert(helper);
+        net.minecraft.world.entity.animal.Wolf stray =
+                helper.spawn(net.minecraft.world.entity.EntityType.WOLF, 6, 2, 6);
+        stray.setNoAi(true);
+
+        monster.hurt(helper.getLevel().damageSources().mobAttack(stray), 4.0F);
+
+        helper.assertTrue(monster.carveState().participantCount() == 0,
+                "an ownerless wolf granted carving rights");
+        helper.succeed();
+    }
+
+    // ---------------------------------------------------------------- R1-03 personal quota
+
+    /**
+     * R1-03: two players each get their own three carves off one body, in the deterministic order,
+     * and neither consumes the other's allowance. A fourth attempt grants nothing.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 400)
+    public static void r1TwoPlayersEachGetTheirOwnThreeCarves(GameTestHelper helper) {
+        GreatIzuchi monster = spawnInert(helper);
+        net.minecraft.world.entity.player.Player first = carver(helper, monster);
+        net.minecraft.world.entity.player.Player second = carver(helper, monster);
+        net.minecraft.world.entity.player.Player[] both = {first, second};
+
+        net.minecraft.gametest.framework.GameTestSequence sequence = helper.startSequence()
+                .thenExecute(() -> {
+                    hurtBy(helper, monster, first, 4.0F);
+                    hurtBy(helper, monster, second, 4.0F);
+                    monster.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
+                    helper.assertTrue(monster.isDeadOrDying(), "the fixture never killed the monster");
+                });
+
+        for (int carveIndex = 0; carveIndex < CarveState.MAX_CARVES; carveIndex++) {
+            int index = carveIndex;
+            sequence = sequence
+                    .thenIdle(CarveState.DEBOUNCE_TICKS + 1)
+                    .thenExecute(() -> {
+                        for (net.minecraft.world.entity.player.Player player : both) {
+                            carve(monster, player);
+                            helper.assertTrue(
+                                    monster.carveState().carvesUsedBy(player.getUUID()) == index + 1,
+                                    "carve " + (index + 1) + " was not counted for one of the two players");
+                        }
+                    });
+        }
+
+        sequence.thenExecute(() -> {
+            // The R1 Great Izuchi table, in order: 4 hide, 2 claws, 4 bones.
+            for (net.minecraft.world.entity.player.Player player : both) {
+                assertHolds(helper, player, com.carro1001.mhnw.registry.ModItems.MONSTER_HIDE.get(), 4);
+                assertHolds(helper, player, com.carro1001.mhnw.registry.ModItems.MONSTER_CLAW.get(), 2);
+                assertHolds(helper, player, net.minecraft.world.item.Items.BONE, 4);
+            }
+        }).thenIdle(CarveState.DEBOUNCE_TICKS + 1).thenExecute(() -> {
+            carve(monster, first);
+            helper.assertTrue(monster.carveState().carvesUsedBy(first.getUUID()) == CarveState.MAX_CARVES,
+                    "a fourth carve was granted");
+            assertHolds(helper, first, net.minecraft.world.item.Items.BONE, 4);
+        }).thenSucceed();
+    }
+
+    private static void assertHolds(GameTestHelper helper, net.minecraft.world.entity.player.Player player,
+                                    net.minecraft.world.item.Item item, int expected) {
+        int actual = player.getInventory().countItem(item);
+        helper.assertTrue(actual == expected,
+                "expected " + expected + " x " + item + " in the carver's inventory, found " + actual);
+    }
+
+    /**
+     * R1-03: the gates around a carve, each checked on its own so a failure names the rule it broke.
+     * All of them are enforced server-side, inside the shared state, not by the caller.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void r1CarveGatesAreEnforcedServerSide(GameTestHelper helper) {
+        GreatIzuchi monster = spawnInert(helper);
+        net.minecraft.world.entity.player.Player hunter = carver(helper, monster);
+        net.minecraft.world.entity.player.Player stranger = carver(helper, monster);
+
+        hurtBy(helper, monster, hunter, 4.0F);
+        helper.assertTrue(carve(monster, hunter) == net.minecraft.world.InteractionResult.PASS,
+                "a living monster was carvable");
+
+        monster.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
+        CarveState state = monster.carveState();
+
+        monster.interactAt(hunter, net.minecraft.world.phys.Vec3.ZERO,
+                net.minecraft.world.InteractionHand.OFF_HAND);
+        helper.assertTrue(state.carvesUsedBy(hunter.getUUID()) == 0, "an off-hand interaction carved");
+
+        hunter.setShiftKeyDown(false);
+        carve(monster, hunter);
+        helper.assertTrue(state.carvesUsedBy(hunter.getUUID()) == 0, "a non-sneaking interaction carved");
+        hunter.setShiftKeyDown(true);
+
+        carve(monster, stranger);
+        helper.assertTrue(state.carvesUsedBy(stranger.getUUID()) == 0,
+                "a player who never damaged the monster carved it");
+
+        double far = CarveState.CARVE_RANGE * 2.0D;
+        hunter.setPos(monster.getX() + far, monster.getY(), monster.getZ());
+        helper.assertTrue(carve(monster, hunter) == net.minecraft.world.InteractionResult.PASS,
+                "a carve landed from " + far + " blocks away");
+        helper.assertTrue(state.carvesUsedBy(hunter.getUUID()) == 0, "an out-of-range carve was counted");
+        helper.succeed();
+    }
+
+    /** R1-03: two interactions inside the debounce window are one carve, not two. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void r1DebounceRejectsARepeatedClick(GameTestHelper helper) {
+        GreatIzuchi monster = spawnInert(helper);
+        net.minecraft.world.entity.player.Player hunter = carver(helper, monster);
+
+        helper.startSequence()
+                .thenExecute(() -> {
+                    hurtBy(helper, monster, hunter, 4.0F);
+                    monster.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
+                    carve(monster, hunter);
+                    carve(monster, hunter);
+                    helper.assertTrue(monster.carveState().carvesUsedBy(hunter.getUUID()) == 1,
+                            "a held right-click carved twice inside the "
+                                    + CarveState.DEBOUNCE_TICKS + "-tick debounce");
+                })
+                .thenIdle(CarveState.DEBOUNCE_TICKS + 1)
+                .thenExecute(() -> {
+                    carve(monster, hunter);
+                    helper.assertTrue(monster.carveState().carvesUsedBy(hunter.getUUID()) == 2,
+                            "the debounce never released");
+                })
+                .thenSucceed();
+    }
+
+    // ---------------------------------------------------------------- R1-04 atomic inventory
+
+    /**
+     * R1-04: a reward that cannot fit changes nothing -- not the inventory, not the carve count --
+     * and the retry produces the identical deterministic stack.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void r1FullInventoryConsumesNothing(GameTestHelper helper) {
+        GreatIzuchi monster = spawnInert(helper);
+        net.minecraft.world.entity.player.Player hunter = carver(helper, monster);
+        net.minecraft.world.entity.player.Inventory inventory = hunter.getInventory();
+        for (int slot = 0; slot < inventory.items.size(); slot++) {
+            inventory.items.set(slot, new net.minecraft.world.item.ItemStack(
+                    net.minecraft.world.item.Items.STONE, 64));
+        }
+
+        helper.startSequence()
+                .thenExecute(() -> {
+                    hurtBy(helper, monster, hunter, 4.0F);
+                    monster.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
+                    carve(monster, hunter);
+                    helper.assertTrue(monster.carveState().carvesUsedBy(hunter.getUUID()) == 0,
+                            "a carve into a full inventory was still counted");
+                    assertHolds(helper, hunter, com.carro1001.mhnw.registry.ModItems.MONSTER_HIDE.get(), 0);
+                    helper.assertTrue(inventory.countItem(net.minecraft.world.item.Items.STONE) == 64 * 36,
+                            "the full-inventory attempt disturbed what was already carried");
+                })
+                .thenIdle(CarveState.DEBOUNCE_TICKS + 1)
+                .thenExecute(() -> {
+                    inventory.items.set(0, net.minecraft.world.item.ItemStack.EMPTY);
+                    carve(monster, hunter);
+                    helper.assertTrue(monster.carveState().carvesUsedBy(hunter.getUUID()) == 1,
+                            "the retry after making room did not carve");
+                    // Identical to what the first attempt would have given: the first entry of the
+                    // Great Izuchi table, chosen from the carve count and nothing else.
+                    assertHolds(helper, hunter, com.carro1001.mhnw.registry.ModItems.MONSTER_HIDE.get(), 4);
+                })
+                .thenSucceed();
+    }
+
+    // ---------------------------------------------------------------- R1-05 persistence
+
+    /**
+     * R1-05: participation earned while the creature is alive survives a save/load round trip, so a
+     * chunk unload between the first hit and the kill does not erase who fought it.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void r1ParticipationSurvivesALiveRoundTrip(GameTestHelper helper) {
+        GreatIzuchi original = spawnInert(helper);
+        net.minecraft.world.entity.player.Player hunter = carver(helper, original);
+        GreatIzuchi[] reloaded = new GreatIzuchi[1];
+
+        helper.startSequence()
+                .thenExecute(() -> {
+                    hurtBy(helper, original, hunter, 4.0F);
+                    helper.assertTrue(original.isAlive(),
+                            "the fixture killed the monster, so this proves nothing about a live round trip");
+                    helper.assertTrue(original.carveState().isParticipant(hunter.getUUID()),
+                            "the hit was never credited in the first place");
+
+                    CompoundTag saved = original.saveWithoutId(new CompoundTag());
+                    original.discard();
+                    GreatIzuchi body = new GreatIzuchi(ModEntities.GREAT_IZUCHI.get(), helper.getLevel());
+                    body.load(saved);
+                    body.setNoAi(true);
+                    helper.getLevel().addFreshEntity(body);
+                    reloaded[0] = body;
+
+                    helper.assertTrue(body.carveState().isParticipant(hunter.getUUID()),
+                            "a live round trip lost the participant list");
+                    body.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
+                })
+                .thenIdle(CarveState.DEBOUNCE_TICKS + 1)
+                .thenExecute(() -> {
+                    net.minecraft.world.entity.player.Player latecomer = carver(helper, reloaded[0]);
+                    // The same UUID as the original hunter: eligibility is about who fought, not
+                    // which Player object happens to be holding the mouse now.
+                    carve(reloaded[0], hunter);
+                    helper.assertTrue(reloaded[0].carveState().carvesUsedBy(hunter.getUUID()) == 1,
+                            "the reloaded body refused a carve to the player who earned it");
+                    helper.assertTrue(!reloaded[0].carveState().isParticipant(latecomer.getUUID()),
+                            "a reload granted eligibility to somebody who never fought");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * R1-05: a corpse round trip keeps the exact per-player counts and its remaining time, and a
+     * reconnect renews neither. The remaining time is vanilla's own {@code deathTime}, so what is
+     * really asserted is that nothing re-derives it from wall clock or game time on load.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void r1CorpseRoundTripKeepsCountsAndRemainingTicks(GameTestHelper helper) {
+        GreatIzuchi original = spawnInert(helper);
+        net.minecraft.world.entity.player.Player hunter = carver(helper, original);
+        int[] deathTimeAtSave = {-1};
+        GreatIzuchi[] reloaded = new GreatIzuchi[1];
+
+        helper.startSequence()
+                .thenExecute(() -> {
+                    hurtBy(helper, original, hunter, 4.0F);
+                    original.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
+                    carve(original, hunter);
+                    helper.assertTrue(original.carveState().carvesUsedBy(hunter.getUUID()) == 1,
+                            "the fixture never carved once, so a preserved count would be vacuous");
+                })
+                .thenIdle(30)
+                .thenExecute(() -> {
+                    deathTimeAtSave[0] = original.deathTime;
+                    helper.assertTrue(deathTimeAtSave[0] >= 25,
+                            "the corpse clock barely advanced (" + deathTimeAtSave[0]
+                                    + "), too early to tell a preserved timer from a reset one");
+
+                    CompoundTag saved = original.saveWithoutId(new CompoundTag());
+                    original.discard();
+                    GreatIzuchi body = new GreatIzuchi(ModEntities.GREAT_IZUCHI.get(), helper.getLevel());
+                    body.load(saved);
+                    helper.getLevel().addFreshEntity(body);
+                    reloaded[0] = body;
+
+                    helper.assertTrue(body.isDeadOrDying(), "a corpse came back alive");
+                    helper.assertTrue(body.carveState().carvesUsedBy(hunter.getUUID()) == 1,
+                            "the reloaded corpse forgot how many carves were already taken: "
+                                    + body.carveState().carvesUsedBy(hunter.getUUID()));
+                    helper.assertTrue(body.deathTime == deathTimeAtSave[0],
+                            "the corpse timer jumped across the round trip, from "
+                                    + deathTimeAtSave[0] + " to " + body.deathTime
+                                    + "; offline time must not advance it");
+                    helper.assertTrue(!body.isRemoved(), "the reloaded corpse removed itself immediately");
+                })
+                .thenIdle(CarveState.DEBOUNCE_TICKS + 1)
+                .thenExecute(() -> {
+                    carve(reloaded[0], hunter);
+                    helper.assertTrue(reloaded[0].carveState().carvesUsedBy(hunter.getUUID()) == 2,
+                            "a reconnect renewed the quota instead of continuing it");
+                    assertHolds(helper, hunter, com.carro1001.mhnw.registry.ModItems.MONSTER_CLAW.get(), 2);
+                })
+                .thenSucceed();
+    }
+
+    // ---------------------------------------------------------------- R1-06 corpse lifecycle
+
+    /** R1-06: the configured window, asserted as a value rather than waited out. */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void r1CorpseWindowIsTwelveThousandTicks(GameTestHelper helper) {
+        helper.assertTrue(CarveState.CORPSE_TICKS == 12_000,
+                "the corpse window is " + CarveState.CORPSE_TICKS + ", not the agreed 12,000 ticks");
+        helper.assertTrue(CarveState.MAX_CARVES == 3, "the personal allowance is not three carves");
+        helper.succeed();
+    }
+
+    /**
+     * R1-06: all three species stay as inert, visible, part-owning bodies well past vanilla's own
+     * 20-tick removal, then leave exactly once at expiry with their parts.
+     *
+     * <p>Expiry is reached by writing the corpse's own counter rather than by idling 12,000 ticks;
+     * see {@link #expireCorpse}. Stopping two ticks short means the removal itself still has to
+     * happen through the real {@code tickDeath} path, not by the test doing it.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 300)
+    public static void r1CorpsesStayInertThenExpireExactlyOnce(GameTestHelper helper) {
+        GreatIzuchi great = spawnInert(helper);
+        Izuchi small = helper.spawn(ModEntities.IZUCHI.get(), 5, 2, 5);
+        Aptonoth aptonoth = helper.spawn(ModEntities.APTONOTH.get(), 11, 2, 11);
+        small.setNoAi(true);
+        aptonoth.setNoAi(true);
+        net.minecraft.world.entity.Mob[] bodies = {great, small, aptonoth};
+        MonsterPart[] greatParts = great.monsterParts();
+        MonsterPart[] aptonothParts = aptonoth.monsterParts();
+
+        helper.startSequence()
+                .thenExecute(() -> {
+                    for (net.minecraft.world.entity.Mob mob : bodies) {
+                        mob.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
+                        helper.assertTrue(mob.isDeadOrDying(), "the fixture failed to kill a subject");
+                    }
+                })
+                .thenIdle(60)
+                .thenExecute(() -> {
+                    for (net.minecraft.world.entity.Mob mob : bodies) {
+                        helper.assertTrue(!mob.isRemoved(),
+                                mob.getName().getString() + "'s body was removed inside the carving window");
+                        helper.assertTrue(mob.deathTime >= 55,
+                                "the corpse clock is not advancing: " + mob.deathTime);
+                    }
+                    for (MonsterPart part : greatParts) {
+                        helper.assertTrue(helper.getLevel().getPartEntities().contains(part),
+                                "a Great Izuchi hurtbox left the lookup while its corpse still exists: "
+                                        + part.partName);
+                    }
+                    for (MonsterPart part : aptonothParts) {
+                        helper.assertTrue(helper.getLevel().getPartEntities().contains(part),
+                                "an Aptonoth hurtbox left the lookup while its corpse still exists: "
+                                        + part.partName);
+                    }
+                    for (net.minecraft.world.entity.Mob mob : bodies) {
+                        mob.deathTime = CarveState.CORPSE_TICKS - 2;
+                    }
+                })
+                .thenIdle(6)
+                .thenExecute(() -> {
+                    for (net.minecraft.world.entity.Mob mob : bodies) {
+                        helper.assertTrue(mob.isRemoved(),
+                                mob.getName().getString() + "'s body outlived its carving window");
+                    }
+                    assertPartsUnregistered(helper, greatParts);
+                    assertPartsUnregistered(helper, aptonothParts);
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * R1-06: one reward owner, one death. The corpse's experience is dropped once, at the real
+     * death, and holding the body for the carving window does not re-run any of it.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void r1CorpseGrantsExperienceOnlyOnce(GameTestHelper helper) {
+        GreatIzuchi monster = spawnInert(helper);
+        net.minecraft.world.entity.player.Player hunter = carver(helper, monster);
+        int[] firstTotal = {-1};
+
+        helper.startSequence()
+                .thenExecute(() -> hurtBy(helper, monster, hunter, Float.MAX_VALUE))
+                .thenIdle(10)
+                .thenExecute(() -> {
+                    firstTotal[0] = experienceNear(helper, monster);
+                    helper.assertTrue(firstTotal[0] > 0,
+                            "the kill dropped no experience at all, so a duplicate would be invisible");
+                })
+                .thenIdle(80)
+                .thenExecute(() -> {
+                    int now = experienceNear(helper, monster);
+                    helper.assertTrue(now == firstTotal[0],
+                            "the held corpse granted experience again: " + firstTotal[0] + " -> " + now);
+                    helper.assertTrue(!monster.isRemoved(),
+                            "the body left before the window, so nothing was really held");
+                })
+                .thenSucceed();
+    }
+
+    private static int experienceNear(GameTestHelper helper, net.minecraft.world.entity.Entity at) {
+        int total = 0;
+        for (net.minecraft.world.entity.ExperienceOrb orb : helper.getLevel().getEntitiesOfClass(
+                net.minecraft.world.entity.ExperienceOrb.class, at.getBoundingBox().inflate(8.0D))) {
+            total += orb.getValue();
+        }
+        return total;
+    }
+
+    // ---------------------------------------------------------------- R1-07 armor
+
+    /** R1-07: every slot's protection, durability and enchantability equals iron's, with no
+     * toughness and no built-in knockback resistance of its own. */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void r1BoneArmorMatchesIronStats(GameTestHelper helper) {
+        assertMatchesIron(helper, com.carro1001.mhnw.registry.ModItems.BONE_HEAD.get(),
+                net.minecraft.world.item.Items.IRON_HELMET);
+        assertMatchesIron(helper, com.carro1001.mhnw.registry.ModItems.BONE_CHESTPLATE.get(),
+                net.minecraft.world.item.Items.IRON_CHESTPLATE);
+        assertMatchesIron(helper, com.carro1001.mhnw.registry.ModItems.BONE_LEGGING.get(),
+                net.minecraft.world.item.Items.IRON_LEGGINGS);
+        assertMatchesIron(helper, com.carro1001.mhnw.registry.ModItems.BONE_BOOTS.get(),
+                net.minecraft.world.item.Items.IRON_BOOTS);
+        helper.succeed();
+    }
+
+    private static void assertMatchesIron(GameTestHelper helper, net.minecraft.world.item.Item bone,
+                                          net.minecraft.world.item.Item iron) {
+        net.minecraft.world.item.ArmorItem boneArmor = (net.minecraft.world.item.ArmorItem) bone;
+        net.minecraft.world.item.ArmorItem ironArmor = (net.minecraft.world.item.ArmorItem) iron;
+        helper.assertTrue(boneArmor.getDefense() == ironArmor.getDefense(),
+                bone + " defends for " + boneArmor.getDefense() + ", iron for " + ironArmor.getDefense());
+        helper.assertTrue(boneArmor.getToughness() == 0.0F,
+                bone + " carries armor toughness " + boneArmor.getToughness() + "; R1 agreed on zero");
+        helper.assertTrue(boneArmor.getMaterial().value().knockbackResistance() == 0.0F,
+                bone + " has built-in knockback resistance; the set bonus is meant to be the only source");
+        helper.assertTrue(boneArmor.getEnchantmentValue() == ironArmor.getEnchantmentValue(),
+                bone + "'s enchantability does not match iron's");
+        helper.assertTrue(new net.minecraft.world.item.ItemStack(bone).getMaxDamage()
+                        == new net.minecraft.world.item.ItemStack(iron).getMaxDamage(),
+                bone + "'s durability does not match iron's");
+    }
+
+    /**
+     * R1-07: the full-set trait, driven through the real equipment-change hook on a ticking entity
+     * rather than by calling the recompute directly. Exactly +0.1, gone the moment the set is
+     * incomplete or mixed, and un-stackable across a re-equip.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void r1BoneArmorFullSetAddsOneKnockbackModifier(GameTestHelper helper) {
+        net.minecraft.world.entity.monster.Zombie wearer =
+                helper.spawn(net.minecraft.world.entity.EntityType.ZOMBIE, 8, 2, 8);
+        wearer.setNoAi(true);
+        double base = wearer.getAttributeBaseValue(
+                net.minecraft.world.entity.ai.attributes.Attributes.KNOCKBACK_RESISTANCE);
+
+        helper.startSequence()
+                .thenExecute(() -> equipFullSet(wearer))
+                .thenIdle(4)
+                .thenExecute(() -> assertSetBonus(helper, wearer, base, true, "a full set"))
+                .thenExecute(() -> wearer.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET,
+                        net.minecraft.world.item.ItemStack.EMPTY))
+                .thenIdle(4)
+                .thenExecute(() -> assertSetBonus(helper, wearer, base, false, "a set missing its boots"))
+                .thenExecute(() -> wearer.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET,
+                        new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_BOOTS)))
+                .thenIdle(4)
+                .thenExecute(() -> assertSetBonus(helper, wearer, base, false, "a set mixed with iron boots"))
+                .thenExecute(() -> equipFullSet(wearer))
+                .thenIdle(4)
+                .thenExecute(() -> assertSetBonus(helper, wearer, base, true, "a re-equipped full set"))
+                .thenExecute(() -> equipFullSet(wearer))
+                .thenIdle(4)
+                .thenExecute(() -> assertSetBonus(helper, wearer, base, true, "a twice-equipped full set"))
+                .thenSucceed();
+    }
+
+    private static void equipFullSet(net.minecraft.world.entity.LivingEntity wearer) {
+        wearer.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD,
+                new net.minecraft.world.item.ItemStack(com.carro1001.mhnw.registry.ModItems.BONE_HEAD.get()));
+        wearer.setItemSlot(net.minecraft.world.entity.EquipmentSlot.CHEST,
+                new net.minecraft.world.item.ItemStack(com.carro1001.mhnw.registry.ModItems.BONE_CHESTPLATE.get()));
+        wearer.setItemSlot(net.minecraft.world.entity.EquipmentSlot.LEGS,
+                new net.minecraft.world.item.ItemStack(com.carro1001.mhnw.registry.ModItems.BONE_LEGGING.get()));
+        wearer.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET,
+                new net.minecraft.world.item.ItemStack(com.carro1001.mhnw.registry.ModItems.BONE_BOOTS.get()));
+    }
+
+    private static void assertSetBonus(GameTestHelper helper, net.minecraft.world.entity.LivingEntity wearer,
+                                       double base, boolean expected, String what) {
+        net.minecraft.world.entity.ai.attributes.AttributeInstance resistance = wearer.getAttribute(
+                net.minecraft.world.entity.ai.attributes.Attributes.KNOCKBACK_RESISTANCE);
+        helper.assertTrue(resistance != null, "the wearer has no knockback-resistance attribute at all");
+        boolean present = resistance.hasModifier(com.carro1001.mhnw.item.BoneArmorItem.SET_BONUS_ID);
+        helper.assertTrue(present == expected,
+                what + (expected ? " did not add" : " still carries") + " the set bonus");
+        double want = base + (expected
+                ? com.carro1001.mhnw.item.BoneArmorItem.SET_BONUS_KNOCKBACK_RESISTANCE : 0.0D);
+        helper.assertTrue(Math.abs(resistance.getValue() - want) < 1.0E-6D,
+                what + " produced knockback resistance " + resistance.getValue() + ", expected " + want
+                        + " -- a doubled value means the modifier stacked");
+    }
+
+    // ---------------------------------------------------------------- R1-08 Izuchi harassment
+
+    /**
+     * R1-08: under ordinary goal scheduling an Izuchi circles, takes a bounded dart, and pulls back.
+     * Nothing here calls the goal's own methods: the phases are observed from outside, one sample
+     * per real tick, and the assertions are bounds rather than an expected script.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 600)
+    public static void r1IzuchiCirclesDartsAndRetreats(GameTestHelper helper) {
+        fillFloor(helper, 1, net.minecraft.world.level.block.Blocks.STONE);
+        Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
+        victim.setNoAi(true);
+
+        java.util.EnumSet<IzuchiHarassGoal.Phase> seen =
+                java.util.EnumSet.noneOf(IzuchiHarassGoal.Phase.class);
+        int[] dartRun = {0};
+        int[] longestDart = {0};
+        int[] hitsThisDart = {0};
+        float[] victimHealth = {victim.getHealth()};
+
+        helper.startSequence()
+                .thenExecute(() -> izuchi.setTarget(victim))
+                .thenExecuteFor(500, () -> {
+                    izuchi.setTarget(victim);
+                    IzuchiHarassGoal.Phase phase = izuchi.harassPhase();
+                    if (phase != null) {
+                        seen.add(phase);
+                    }
+                    if (victim.getHealth() < victimHealth[0] - EPSILON) {
+                        victimHealth[0] = victim.getHealth();
+                        hitsThisDart[0]++;
+                        helper.assertTrue(phase == IzuchiHarassGoal.Phase.DART
+                                        || phase == IzuchiHarassGoal.Phase.RETREAT,
+                                "an Izuchi landed a hit while in phase " + phase
+                                        + "; damage is meant to come from a dart");
+                    }
+                    if (phase == IzuchiHarassGoal.Phase.DART) {
+                        dartRun[0]++;
+                        longestDart[0] = Math.max(longestDart[0], dartRun[0]);
+                        helper.assertTrue(hitsThisDart[0] <= 1,
+                                "one dart landed " + hitsThisDart[0] + " hits");
+                    } else {
+                        dartRun[0] = 0;
+                        hitsThisDart[0] = 0;
+                    }
+                })
+                .thenExecute(() -> {
+                    helper.assertTrue(seen.contains(IzuchiHarassGoal.Phase.CIRCLE), "it never circled");
+                    helper.assertTrue(seen.contains(IzuchiHarassGoal.Phase.DART), "it never darted in");
+                    helper.assertTrue(seen.contains(IzuchiHarassGoal.Phase.RETREAT),
+                            "it never backed off after a dart; this is the constant-melee regression");
+                    helper.assertTrue(longestDart[0] > 0
+                                    && longestDart[0] <= IzuchiHarassGoal.DART_MAX_TICKS + SCHEDULING_TOLERANCE,
+                            "a dart ran for " + longestDart[0] + " ticks, past its "
+                                    + IzuchiHarassGoal.DART_MAX_TICKS + "-tick bound");
+                })
+                .thenSucceed();
+    }
+
+
+    /**
+     * R1-08: a dart that never arrives still ends on its own deadline, and hands the pack's slot
+     * back when it does.
+     *
+     * <p>Separate from {@link #r1IzuchiCirclesDartsAndRetreats} on purpose. There, the dart always
+     * reaches melee range and ends on its hit, so the {@value IzuchiHarassGoal#DART_MAX_TICKS}-tick
+     * deadline is never the thing that stops it -- verified by mutation: multiplying the deadline by
+     * a hundred leaves that test passing. Here the target is sealed in stone and unreachable, so the
+     * deadline is the only way out, and a member that could otherwise hold the slot forever is the
+     * exact failure being guarded against.
+     *
+     * <p>Everything asserted is about darts that were observed to <em>end</em>. An earlier version
+     * also required the Izuchi not to be darting at the 500-tick boundary, which samples a
+     * repeating randomized loop at an arbitrary instant: a perfectly legal dart that happened to
+     * start just before the window closed failed the test, and it did, once, in review. The
+     * completed-dart count is the deterministic form of the same claim -- and it is still what
+     * catches a broken deadline, which produces one dart that never ends and therefore none that
+     * completed.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 600)
+    public static void r1IzuchiUnreachableDartEndsOnItsDeadline(GameTestHelper helper) {
+        fillFloor(helper, 1, net.minecraft.world.level.block.Blocks.STONE);
+        Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 3, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 12, 2, 8);
+        victim.setNoAi(true);
+        victim.setInvulnerable(true);
+        for (int x = 11; x <= 13; x++) {
+            for (int y = 1; y <= 5; y++) {
+                for (int z = 7; z <= 9; z++) {
+                    if (x == 11 || x == 13 || y == 1 || y == 5 || z == 7 || z == 9) {
+                        helper.setBlock(x, y, z, net.minecraft.world.level.block.Blocks.STONE);
+                    }
+                }
+            }
+        }
+        int[] dartRun = {0};
+        int[] completedDarts = {0};
+        int[] longestCompletedDart = {0};
+
+        helper.startSequence()
+                .thenExecute(() -> izuchi.setTarget(victim))
+                .thenExecuteFor(500, () -> {
+                    izuchi.setTarget(victim);
+                    if (izuchi.isDarting()) {
+                        dartRun[0]++;
+                    } else if (dartRun[0] > 0) {
+                        completedDarts[0]++;
+                        longestCompletedDart[0] = Math.max(longestCompletedDart[0], dartRun[0]);
+                        dartRun[0] = 0;
+                    }
+                })
+                .thenExecute(() -> {
+                    helper.assertTrue(completedDarts[0] > 0,
+                            "no dart at an unreachable target ever ended: a member that cannot reach"
+                                    + " its target would hold the pack's one dart slot indefinitely");
+                    helper.assertTrue(longestCompletedDart[0]
+                                    <= IzuchiHarassGoal.DART_MAX_TICKS + SCHEDULING_TOLERANCE,
+                            "a dart at an unreachable target ran " + longestCompletedDart[0]
+                                    + " ticks before releasing, past its "
+                                    + IzuchiHarassGoal.DART_MAX_TICKS + "-tick deadline");
+                    helper.assertTrue(victim.getHealth() >= victim.getMaxHealth() - EPSILON,
+                            "the sealed target was reached after all, so this proves nothing");
+                })
+                .thenSucceed();
+    }
+
+    /** R1-08: at most one member of a nearby pack is mid-dart at any instant. */
+    @GameTest(template = ARENA, timeoutTicks = 600)
+    public static void r1IzuchiPackKeepsOneDarterAtATime(GameTestHelper helper) {
+        fillFloor(helper, 1, net.minecraft.world.level.block.Blocks.STONE);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 8);
+        victim.setNoAi(true);
+        victim.setInvulnerable(true);
+        java.util.List<Izuchi> pack = java.util.List.of(
+                helper.spawn(ModEntities.IZUCHI.get(), 6, 2, 6),
+                helper.spawn(ModEntities.IZUCHI.get(), 10, 2, 6),
+                helper.spawn(ModEntities.IZUCHI.get(), 6, 2, 10));
+        boolean[] sawADart = {false};
+
+        helper.startSequence()
+                .thenExecuteFor(500, () -> {
+                    int darting = 0;
+                    for (Izuchi member : pack) {
+                        member.setTarget(victim);
+                        if (member.isDarting()) {
+                            darting++;
+                        }
+                    }
+                    sawADart[0] |= darting > 0;
+                    helper.assertTrue(darting <= 1,
+                            darting + " Izuchi darted at once; the pack is meant to take turns");
+                })
+                .thenExecute(() -> helper.assertTrue(sawADart[0],
+                        "no member of the pack ever darted, so the one-darter rule was never exercised"))
+                .thenSucceed();
+    }
+
+    /** R1-08: losing the target stops the goal and clears the phase, within vanilla's own poll. */
+    @GameTest(template = ARENA, timeoutTicks = 400)
+    public static void r1IzuchiTargetLossClearsTheHarassment(GameTestHelper helper) {
+        fillFloor(helper, 1, net.minecraft.world.level.block.Blocks.STONE);
+        Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
+        victim.setNoAi(true);
+        victim.setInvulnerable(true);
+
+        helper.startSequence()
+                .thenExecute(() -> izuchi.setTarget(victim))
+                .thenWaitUntil(() -> {
+                    izuchi.setTarget(victim);
+                    helper.assertTrue(izuchi.harassPhase() != null, "the harassment goal never started");
+                })
+                .thenExecute(() -> {
+                    izuchi.setTarget(null);
+                    victim.discard();
+                })
+                .thenIdle(SCHEDULING_TOLERANCE + 2)
+                .thenExecute(() -> helper.assertTrue(izuchi.harassPhase() == null,
+                        "the harassment phase outlived its target: " + izuchi.harassPhase()))
+                .thenSucceed();
+    }
+
+
+    /**
+     * R1-08: peaceful difficulty cancels the harassment.
+     *
+     * <p>Not redundant with vanilla. Peaceful discards hostile mobs through {@code Mob.checkDespawn}
+     * only when their {@code shouldDespawnInPeaceful()} agrees, and {@link Izuchi} deliberately
+     * returns false, so a world switched to peaceful mid-fight keeps both the Izuchi and its target.
+     * Without the difficulty clause in the goal's own precondition it keeps circling and darting at
+     * a player who is supposed to be safe.
+     *
+     * <p>The difficulty is passed in rather than set on the level. A GameTest world is shared with
+     * every test running beside it, and difficulty is global: flipping it to peaceful for even a few
+     * ticks discards other tests' vanilla hostile mobs, which is exactly the cross-test interference
+     * the arena fixture note in {@code docs/TEST_PLAN.md} already warns about. So this asserts the
+     * rule against the real precondition and asserts that {@code canUse()} routes through it at the
+     * live difficulty; a genuine in-world peaceful switch stays a named human check.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void r1IzuchiHarassmentStopsOnPeaceful(GameTestHelper helper) {
+        Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
+        victim.setNoAi(true);
+        victim.setInvulnerable(true);
+        izuchi.setTarget(victim);
+
+        helper.assertTrue(
+                !IzuchiHarassGoal.canHarass(izuchi, victim, net.minecraft.world.Difficulty.PEACEFUL),
+                "an Izuchi would keep harassing a live target on peaceful difficulty");
+        helper.assertTrue(
+                IzuchiHarassGoal.canHarass(izuchi, victim, net.minecraft.world.Difficulty.EASY),
+                "the peaceful guard also refused an ordinary difficulty");
+        helper.assertTrue(
+                !IzuchiHarassGoal.canHarass(izuchi, null, net.minecraft.world.Difficulty.EASY),
+                "the precondition accepted a null target");
+
+        // And the running goal really does consult it, at whatever the level's difficulty is.
+        net.minecraft.world.Difficulty live = helper.getLevel().getDifficulty();
+        helper.assertTrue(live != net.minecraft.world.Difficulty.PEACEFUL,
+                "the test world is already peaceful, so the next assertion would be vacuous");
+        helper.assertTrue(IzuchiHarassGoal.canHarass(izuchi, izuchi.getTarget(), live),
+                "the live precondition disagrees with the goal's own inputs");
+        helper.succeed();
+    }
+
+    /**
+     * R1-08: death clears the harassment state, rather than freezing it for the corpse window.
+     *
+     * <p>This is the case an in-goal guard cannot cover, and the repository's own lifecycle note
+     * says why: vanilla stops ticking every goal the instant {@code isDeadOrDying()} is true, so
+     * {@code IzuchiHarassGoal.stop()} never runs for a mob killed mid-dart. Clearing it in
+     * {@code die()} is the only hook left. The kill is deliberately delivered while a dart is
+     * genuinely in flight, so a passing run cannot be one where there was nothing to clear.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 600)
+    public static void r1IzuchiDeathClearsTheHarassmentState(GameTestHelper helper) {
+        fillFloor(helper, 1, net.minecraft.world.level.block.Blocks.STONE);
+        Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
+        victim.setNoAi(true);
+        victim.setInvulnerable(true);
+
+        helper.startSequence()
+                .thenExecute(() -> izuchi.setTarget(victim))
+                .thenWaitUntil(() -> {
+                    izuchi.setTarget(victim);
+                    helper.assertTrue(izuchi.isDarting(),
+                            "waiting for a dart to be genuinely in flight before the kill");
+                })
+                .thenExecute(() -> izuchi.hurt(helper.getLevel().damageSources().genericKill(),
+                        Float.MAX_VALUE))
+                .thenIdle(20)
+                .thenExecute(() -> {
+                    helper.assertTrue(izuchi.isDeadOrDying() && !izuchi.isRemoved(),
+                            "the fixture needs a held corpse to check, not a removed entity");
+                    helper.assertTrue(izuchi.harassPhase() == null,
+                            "a corpse is still carrying harassment phase " + izuchi.harassPhase());
+                    helper.assertTrue(!izuchi.isDarting(),
+                            "a corpse is still holding the pack's dart slot");
+                    helper.assertTrue(!izuchi.isAggressive(),
+                            "a corpse is still flagged aggressive");
+                })
+                .thenSucceed();
+    }
+
+    /** R1-08: a dart in flight is transient -- a reload starts from nothing, never mid-lunge. */
+    @GameTest(template = ARENA, timeoutTicks = 600)
+    public static void r1IzuchiReloadDoesNotResumeADart(GameTestHelper helper) {
+        fillFloor(helper, 1, net.minecraft.world.level.block.Blocks.STONE);
+        Izuchi original = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
+        victim.setNoAi(true);
+        victim.setInvulnerable(true);
+
+        helper.startSequence()
+                .thenExecute(() -> original.setTarget(victim))
+                .thenWaitUntil(() -> {
+                    original.setTarget(victim);
+                    helper.assertTrue(original.isDarting(),
+                            "waiting for a dart to be genuinely in flight before saving");
+                })
+                .thenExecute(() -> {
+                    CompoundTag saved = original.saveWithoutId(new CompoundTag());
+                    original.discard();
+                    Izuchi reloaded = new Izuchi(ModEntities.IZUCHI.get(), helper.getLevel());
+                    reloaded.load(saved);
+                    helper.getLevel().addFreshEntity(reloaded);
+                    helper.assertTrue(reloaded.harassPhase() == null,
+                            "a reloaded Izuchi resumed a half-finished dart: " + reloaded.harassPhase());
+                    helper.assertTrue(!reloaded.isDarting(),
+                            "a reloaded Izuchi still held the pack's dart slot");
                 })
                 .thenSucceed();
     }

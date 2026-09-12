@@ -17,5 +17,18 @@
   "item.mhnw.rathalos_spawn_egg": "Rathalos Spawn Egg",
   "entity.mhnw.lagiacrus": "Lagiacrus",
   "item.mhnw.lagiacrus_spawn_egg": "Lagiacrus Spawn Egg",
-  "biome.mhnw.verdant_hunting_grounds": "Verdant Hunting Grounds"
+  "biome.mhnw.verdant_hunting_grounds": "Verdant Hunting Grounds",
+  "item.mhnw.monster_hide": "Monster Hide",
+  "item.mhnw.monster_claw": "Sharp Claw",
+  "item.mhnw.raw_meat": "Raw Meat",
+  "item.mhnw.cooked_meat": "Well-done Steak",
+  "item.mhnw.bone_head": "Bone Helm",
+  "item.mhnw.bone_chestplate": "Bone Mail",
+  "item.mhnw.bone_legging": "Bone Greaves",
+  "item.mhnw.bone_boots": "Bone Boots",
+  "message.mhnw.carve.hint": "Sneak and use to carve.",
+  "message.mhnw.carve.success": "Carved. %s left.",
+  "message.mhnw.carve.ineligible": "You did not help bring this one down.",
+  "message.mhnw.carve.full": "Make room in your inventory first.",
+  "message.mhnw.carve.exhausted": "You have carved this one out."
 }

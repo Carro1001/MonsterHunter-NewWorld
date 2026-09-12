@@ -1,6 +1,7 @@
 package com.carro1001.mhnw.entity;
 
 import com.carro1001.mhnw.animation.ServerTimedAnimationController;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -115,6 +116,9 @@ public class Aptonoth extends Animal implements GeoEntity {
 
     private final AnimatableInstanceCache animCache = GeckoLibUtil.createInstanceCache(this);
     private final MonsterPart[] parts;
+
+    /** R1 carving: participants, personal counters and the deterministic reward table. */
+    private final CarveState carveState = new CarveState(CarveState.Table.APTONOTH);
 
     /**
      * Client-side countdown driving the eat animation, the same mechanism vanilla's own grazing
@@ -337,7 +341,58 @@ public class Aptonoth extends Animal implements GeoEntity {
             this.lastDamageSource = source;
             this.lastDamageTick = this.tickCount;
         }
-        return super.hurt(source, amount);
+        // R1: see GreatIzuchi.hurt -- credit only an accepted hit that genuinely lowered health.
+        float before = getHealth();
+        boolean accepted = super.hurt(source, amount);
+        if (accepted && !level().isClientSide && getHealth() < before) {
+            this.carveState.creditDamage(source);
+        }
+        return accepted;
+    }
+
+    /** R1 carving state. */
+    public CarveState carveState() {
+        return this.carveState;
+    }
+
+    /** Shift + right-click carving; see {@link GreatIzuchi#interactAt}. A live Aptonoth is
+     * unaffected, so ordinary breeding and feeding still run through {@code mobInteract}. */
+    @Override
+    public net.minecraft.world.InteractionResult interactAt(Player player, Vec3 location,
+                                                            net.minecraft.world.InteractionHand hand) {
+        net.minecraft.world.InteractionResult carved = this.carveState.interact(this, player, hand);
+        return carved == net.minecraft.world.InteractionResult.PASS
+                ? super.interactAt(player, location, hand)
+                : carved;
+    }
+
+    /** See {@link GreatIzuchi#die}: a corpse must outlive the distance-despawn rule. */
+    @Override
+    public void die(DamageSource source) {
+        super.die(source);
+        setPersistenceRequired();
+    }
+
+    /** Hold the body for the R1 carving window; see {@link GreatIzuchi#tickDeath}. */
+    @Override
+    protected void tickDeath() {
+        if (!CarveState.corpseExpired(this)) {
+            this.deathTime++;
+            return;
+        }
+        super.tickDeath();
+    }
+
+    @Override
+    public void addAdditionalSaveData(CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        this.carveState.save(tag);
+    }
+
+    @Override
+    public void readAdditionalSaveData(CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        this.carveState.load(tag);
     }
 
     /**

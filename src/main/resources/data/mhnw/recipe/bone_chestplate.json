@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "B": {
+      "item": "minecraft:bone"
+    },
+    "C": {
+      "item": "mhnw:monster_claw"
+    },
+    "H": {
+      "item": "mhnw:monster_hide"
+    }
+  },
+  "pattern": [
+    "B B",
+    "BCB",
+    "HBH"
+  ],
+  "result": {
+    "count": 1,
+    "id": "mhnw:bone_chestplate"
+  }
+}
