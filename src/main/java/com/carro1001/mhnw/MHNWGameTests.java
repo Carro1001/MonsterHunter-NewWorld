@@ -707,6 +707,32 @@ public class MHNWGameTests {
                 .thenSucceed();
     }
 
+    /**
+     * The corpse's hurtboxes sit on the fallen body, not in the pose it died standing in. Carving
+     * is only reachable through a part, so a head box left floating where the living head was means
+     * a player has to hunt for an invisible box above a body lying flat.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void r1CorpsePartsDropToTheGround(GameTestHelper helper) {
+        GreatIzuchi monster = spawnInert(helper);
+        double standingTop = 0.0;
+        for (net.neoforged.neoforge.entity.PartEntity<?> part : monster.getParts()) {
+            standingTop = Math.max(standingTop, part.getBoundingBox().maxY - monster.getY());
+        }
+        helper.assertTrue(standingTop > 1.0,
+                "a living Great Izuchi's parts were already flat, so this test proves nothing");
+
+        monster.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
+        helper.runAfterDelay(5, () -> {
+            for (net.neoforged.neoforge.entity.PartEntity<?> part : monster.getParts()) {
+                double bottom = part.getBoundingBox().minY - monster.getY();
+                helper.assertTrue(Math.abs(bottom) < 1.0E-4,
+                        "corpse part " + part + " sat " + bottom + " blocks off the ground");
+            }
+            helper.succeed();
+        });
+    }
+
     /** A02/A13: death removes the creature and every one of its parts, exactly once. */
     @GameTest(template = ARENA, timeoutTicks = 200)
     public static void deathRemovesTheWholeCreature(GameTestHelper helper) {

@@ -62,6 +62,18 @@ public final class MHNWClient {
     }
 
     /**
+     * GeckoLib's default overlay red-tints anything with {@code deathTime > 0}. For a carvable
+     * species that is the whole 12,000-tick corpse window (see {@code CarveState}), not vanilla's
+     * 20 ticks, so the body would sit there glowing red until it expired. Keep the hurt flash,
+     * drop the death tint.
+     */
+    private static int overlayWithoutDeathTint(net.minecraft.world.entity.LivingEntity entity, float u) {
+        return net.minecraft.client.renderer.texture.OverlayTexture.pack(
+                net.minecraft.client.renderer.texture.OverlayTexture.u(u),
+                net.minecraft.client.renderer.texture.OverlayTexture.v(entity.hurtTime > 0));
+    }
+
+    /**
      * Renders the preserved geometry, animations and texture unchanged.
      * {@link DefaultedEntityGeoModel} resolves exactly the layout the original artists used:
      * {@code geo/entity/great_izuchi.geo.json}, {@code animations/entity/great_izuchi.animation.json}
@@ -83,6 +95,13 @@ public final class MHNWClient {
             boolean attacking = entity.getAttackId() != GreatIzuchi.ATTACK_NONE;
             BoneProbe.maybeLog("great_izuchi", entity, getGeoModel(), BoneProbe.GREAT_IZUCHI_BONES, attacking);
             AttackVolumeOverlay.render(entity, poseStack, bufferSource, partialTick);
+        }
+
+
+        /** Corpses stay carvable for a long time; no red death tint. @see #overlayWithoutDeathTint */
+        @Override
+        public int getPackedOverlay(GreatIzuchi animatable, float u, float partialTick) {
+            return overlayWithoutDeathTint(animatable, u);
         }
 
         /**
@@ -113,6 +132,12 @@ public final class MHNWClient {
                            int packedLight) {
             super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
             BoneProbe.maybeLog("aptonoth", entity, getGeoModel(), BoneProbe.APTONOTH_BONES, false);
+        }
+
+        /** Corpses stay carvable for a long time; no red death tint. @see #overlayWithoutDeathTint */
+        @Override
+        public int getPackedOverlay(Aptonoth animatable, float u, float partialTick) {
+            return overlayWithoutDeathTint(animatable, u);
         }
     }
 
@@ -195,6 +220,12 @@ public final class MHNWClient {
             boolean attacking = entity.getAttackId() != Izuchi.ATTACK_NONE;
             BoneProbe.maybeLog("izuchi", entity, getGeoModel(), BoneProbe.IZUCHI_BONES, attacking);
             AttackVolumeOverlay.render(entity, poseStack, bufferSource, partialTick);
+        }
+
+        /** Corpses stay carvable for a long time; no red death tint. @see #overlayWithoutDeathTint */
+        @Override
+        public int getPackedOverlay(Izuchi animatable, float u, float partialTick) {
+            return overlayWithoutDeathTint(animatable, u);
         }
     }
 

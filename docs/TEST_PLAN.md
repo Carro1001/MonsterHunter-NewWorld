@@ -2,9 +2,10 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 156 tests, all passing**
-(full `.\gradlew.bat --no-daemon clean build` then `runGameTestServer`, 2026-09-12, R2
-field-preparation packet; 123 before the packet, 121 before the R1 PR #6 review round, 97 before
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 157 tests, all passing**
+(`.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-12, corpse-presentation fix rebased
+onto the R3/Izuchi-tail-swipe master; 156 before this fix, 148 after the R2 field-preparation
+packet, 123 before that packet, 121 before the R1 PR #6 review round, 97 before
 R1, 85 before R0b). The earlier 69-, 75-, 85-, 86- and 97-test figures are superseded — note the R0a round's
 real observed count was 74, not the 75 this line used to claim. The shoreline test that failed under the P5a build passed
 cleanly after the native-controls correction. Client acceptance for that Lagiacrus correction has
@@ -456,6 +457,7 @@ Both were then re-run **strictly serially, with nothing else touching the build 
 | after the PR #7 review fixes: 6 repeats, serial | **6/6 — all 146 passing every time** |
 | after the PR #7 follow-up fix: `clean build runGameTestServer` | **148/148** |
 | after the PR #7 follow-up fix: 5 repeats, serial | **5/5 — all 148 passing every time** |
+| after the corpse-presentation fix (death tint + grounded corpse parts): `build runGameTestServer` | **149/149** |
 
 The lesson worth keeping: **do not run `runServer` and `runGameTestServer --rerun-tasks` at the same
 time on this project.** They share one `build/` and one `run/`, and the loser sees a half-written

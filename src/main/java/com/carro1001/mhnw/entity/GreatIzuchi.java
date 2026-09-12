@@ -551,11 +551,20 @@ public class GreatIzuchi extends Monster implements GeoEntity, Roarable {
                 getZ() + left * sin + forward * cos);
     }
 
+    /**
+     * Standing offsets are a lie once the body is on the ground: the authored death clip lays the
+     * creature down but position and yaw stop changing, so the parts would keep floating in the
+     * pose the creature died in -- a head hurtbox in mid-air above a corpse lying flat, and nothing
+     * clickable where the body actually is. Carving is reached through a part
+     * ({@link MonsterPart#interactAt}), so for the whole corpse window the parts are dropped to the
+     * ground and keep only their horizontal spread, which still covers the fallen body's footprint.
+     */
     private void positionParts() {
+        boolean down = isDeadOrDying();
         for (MonsterPart part : this.parts) {
             part.setOldPosAndRot();
             Vec3 centre = localToWorld(part.localLeft, part.localUp, part.localForward);
-            part.setPos(centre.x, centre.y - part.halfHeight(), centre.z);
+            part.setPos(centre.x, down ? getY() : centre.y - part.halfHeight(), centre.z);
         }
     }
 
