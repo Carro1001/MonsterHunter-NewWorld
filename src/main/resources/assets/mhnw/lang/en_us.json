@@ -1,4 +1,20 @@
 {
   "entity.mhnw.great_izuchi": "Great Izuchi",
-  "item.mhnw.great_izuchi_spawn_egg": "Great Izuchi Spawn Egg"
+  "item.mhnw.great_izuchi_spawn_egg": "Great Izuchi Spawn Egg",
+  "entity.mhnw.aptonoth": "Aptonoth",
+  "item.mhnw.aptonoth_spawn_egg": "Aptonoth Spawn Egg",
+  "entity.mhnw.toad": "Toad",
+  "item.mhnw.toad_spawn_egg": "Toad Spawn Egg",
+  "entity.mhnw.flashbug": "Flashbug",
+  "item.mhnw.flashbug_spawn_egg": "Flashbug Spawn Egg",
+  "entity.mhnw.bug": "Bitterbug",
+  "item.mhnw.bug_spawn_egg": "Bitterbug Spawn Egg",
+  "entity.mhnw.izuchi": "Izuchi",
+  "item.mhnw.izuchi_spawn_egg": "Izuchi Spawn Egg",
+  "entity.mhnw.rathian": "Rathian",
+  "item.mhnw.rathian_spawn_egg": "Rathian Spawn Egg",
+  "entity.mhnw.rathalos": "Rathalos",
+  "item.mhnw.rathalos_spawn_egg": "Rathalos Spawn Egg",
+  "entity.mhnw.lagiacrus": "Lagiacrus",
+  "item.mhnw.lagiacrus_spawn_egg": "Lagiacrus Spawn Egg"
 }

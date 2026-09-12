@@ -4,6 +4,8 @@ import com.carro1001.mhnw.MHNWConfig;
 import com.carro1001.mhnw.entity.GreatIzuchi;
 import com.carro1001.mhnw.entity.AttackProfile;
 import com.carro1001.mhnw.entity.GreatIzuchiCombatGoal;
+import com.carro1001.mhnw.entity.Rathian;
+import com.carro1001.mhnw.entity.RathianCombatGoal;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.LevelRenderer;
@@ -54,6 +56,33 @@ final class AttackVolumeOverlay {
 
         VertexConsumer lines = bufferSource.getBuffer(RenderType.lines());
         for (AABB volume : GreatIzuchiCombatGoal.attackVolumes(entity, age)) {
+            LevelRenderer.renderLineBox(
+                    poseStack, lines, volume.move(-ox, -oy, -oz), 1.0F, 0.15F, 0.1F, 1.0F);
+        }
+    }
+
+    /** Same contract as {@link #render(GreatIzuchi, PoseStack, MultiBufferSource, float)}, for
+     * Rathian's own attacks. */
+    static void render(Rathian entity, PoseStack poseStack, MultiBufferSource bufferSource,
+                       float partialTick) {
+        if (!MHNWConfig.DEBUG_COMBAT.get() || entity.getAttackId() == Rathian.ATTACK_NONE) {
+            return;
+        }
+        AttackProfile profile = RathianCombatGoal.byId(entity.getAttackId());
+        if (profile == null) {
+            return;
+        }
+        int age = entity.getAttackAge();
+        if (age < profile.activeStart() || age > profile.activeEnd()) {
+            return;
+        }
+
+        double ox = net.minecraft.util.Mth.lerp(partialTick, entity.xOld, entity.getX());
+        double oy = net.minecraft.util.Mth.lerp(partialTick, entity.yOld, entity.getY());
+        double oz = net.minecraft.util.Mth.lerp(partialTick, entity.zOld, entity.getZ());
+
+        VertexConsumer lines = bufferSource.getBuffer(RenderType.lines());
+        for (AABB volume : RathianCombatGoal.attackVolumes(entity, age)) {
             LevelRenderer.renderLineBox(
                     poseStack, lines, volume.move(-ox, -oy, -oz), 1.0F, 0.15F, 0.1F, 1.0F);
         }

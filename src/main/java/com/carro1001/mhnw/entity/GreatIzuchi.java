@@ -1,6 +1,7 @@
 package com.carro1001.mhnw.entity;
 
 import com.carro1001.mhnw.MHNWConfig;
+import com.carro1001.mhnw.registry.ModEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -71,7 +72,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * <p>Known limitations: a static local offset cannot track a tail that swings sideways during
  * locomotion, so the tail boxes approximate a swept envelope rather than the instantaneous tail.
  */
-public class GreatIzuchi extends Monster implements GeoEntity {
+public class GreatIzuchi extends Monster implements GeoEntity, Roarable {
 
     // Provisional balance constants. Tuning is a later packet; the behaviour itself is finished.
     // ponytail: 40 HP is a deliberately low testing value so a slice can be killed quickly during
@@ -117,7 +118,14 @@ public class GreatIzuchi extends Monster implements GeoEntity {
     private static final RawAnimation SCRATCH = RawAnimation.begin().thenPlay("animation.great_izuchi.attack_scratch");
     private static final RawAnimation TAIL_SWIPE = RawAnimation.begin().thenPlay("animation.great_izuchi.attack_tailswipe");
     private static final RawAnimation TAIL_SLAM = RawAnimation.begin().thenPlay("animation.great_izuchi.attack_tailslam");
+    private static final RawAnimation ROAR = RawAnimation.begin().thenPlay("animation.great_izuchi.roar");
     private static final RawAnimation DEATH = RawAnimation.begin().thenPlayAndHold("animation.great_izuchi.death");
+
+    /** {@code animation.great_izuchi.roar} is 3.5417s; see {@code docs/ANIMATION_MANIFEST.json}. */
+    private static final int ROAR_TICKS = 71;
+
+    private static final EntityDataAccessor<Integer> DATA_ROAR_TICKS =
+            SynchedEntityData.defineId(GreatIzuchi.class, EntityDataSerializers.INT);
 
     private final AnimatableInstanceCache animCache = GeckoLibUtil.createInstanceCache(this);
     private final MonsterPart[] parts;
@@ -202,12 +210,47 @@ public class GreatIzuchi extends Monster implements GeoEntity {
         return Monster.checkMonsterSpawnRules(type, level, spawnType, pos, random);
     }
 
+    /** How many escort Izuchi spawn alongside a Great Izuchi, inclusive both ends. */
+    private static final int MIN_ESCORTS = 1;
+    private static final int MAX_ESCORTS = 4;
+
+    /** A Great Izuchi is a pack leader: it never appears alone in the wild (section 2, pack mechanic). */
+    @Override
+    public net.minecraft.world.entity.SpawnGroupData finalizeSpawn(
+            ServerLevelAccessor level, net.minecraft.world.DifficultyInstance difficulty,
+            MobSpawnType spawnType, net.minecraft.world.entity.SpawnGroupData groupData) {
+        net.minecraft.world.entity.SpawnGroupData result = super.finalizeSpawn(level, difficulty, spawnType, groupData);
+        if (spawnType != MobSpawnType.NATURAL && spawnType != MobSpawnType.SPAWNER) {
+            // A summoned or otherwise deliberately placed Great Izuchi doesn't drag escorts along;
+            // only genuine wild spawns get the pack.
+            return result;
+        }
+        int count = MIN_ESCORTS + this.random.nextInt(MAX_ESCORTS - MIN_ESCORTS + 1);
+        for (int i = 0; i < count; i++) {
+            Izuchi izuchi = ModEntities.IZUCHI.get().create(level.getLevel());
+            if (izuchi == null) {
+                continue;
+            }
+            double angle = this.random.nextDouble() * Math.PI * 2.0D;
+            double dist = 2.0D + this.random.nextDouble() * 3.0D;
+            double x = getX() + Math.cos(angle) * dist;
+            double z = getZ() + Math.sin(angle) * dist;
+            izuchi.moveTo(x, getY(), z, this.random.nextFloat() * 360.0F, 0.0F);
+            izuchi.finalizeSpawn(level, difficulty, MobSpawnType.MOB_SUMMONED, null);
+            level.addFreshEntity(izuchi);
+        }
+        return result;
+    }
+
     @Override
     protected void registerGoals() {
         // One combat owner. GreatIzuchiCombatGoal selects, approaches, orients and executes the
         // attack; no other goal moves this mob toward a target or deals its damage (section 4.3).
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(1, new GreatIzuchiCombatGoal(this));
+        // Sits above the combat goal deliberately (section on RoarGoal): the opening roar must
+        // freeze the fight, not play underneath an attack goal that keeps moving/swinging.
+        this.goalSelector.addGoal(1, new RoarGoal<>(this));
+        this.goalSelector.addGoal(2, new GreatIzuchiCombatGoal(this));
         this.goalSelector.addGoal(7, new WaterAvoidingRandomStrollGoal(this, 0.8D));
         this.goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 12.0F));
         this.goalSelector.addGoal(9, new RandomLookAroundGoal(this));
@@ -225,6 +268,41 @@ public class GreatIzuchi extends Monster implements GeoEntity {
         builder.define(DATA_ATTACK_ID, ATTACK_NONE);
         builder.define(DATA_ATTACK_START, 0L);
         builder.define(DATA_ACTION_SEQ, 0);
+        builder.define(DATA_ROAR_TICKS, 0);
+    }
+
+    // ---------------------------------------------------------------- roar (Roarable)
+
+    @Override
+    public int getRoarTicks() {
+        return this.entityData.get(DATA_ROAR_TICKS);
+    }
+
+    @Override
+    public void setRoarTicks(int ticks) {
+        this.entityData.set(DATA_ROAR_TICKS, ticks);
+    }
+
+    @Override
+    public int roarDurationTicks() {
+        return ROAR_TICKS;
+    }
+
+    public boolean isRoaring() {
+        return getRoarTicks() > 0;
+    }
+
+    /** Server-only AI state, not synced (see {@link Roarable#hasRoaredThisEngagement}). */
+    private boolean roaredThisEngagement;
+
+    @Override
+    public boolean hasRoaredThisEngagement() {
+        return this.roaredThisEngagement;
+    }
+
+    @Override
+    public void setRoaredThisEngagement(boolean roared) {
+        this.roaredThisEngagement = roared;
     }
 
     // ---------------------------------------------------------------- action state
@@ -378,12 +456,29 @@ public class GreatIzuchi extends Monster implements GeoEntity {
      * exactly one hit, but two different attackers in the same tick must both land. The key is
      * therefore the {@link DamageSource} instance, which vanilla allocates per attack, rather than
      * the tick alone (handoff section 4.1, A03/A06).
+     *
+     * <h2>A correction to that claim</h2>
+     * The early-return guard below only ever fires for the literal same source object, so on its
+     * own it does nothing for two genuinely different attackers; the fairness half of that claim
+     * was not actually true until the {@code invulnerableTime} reset was added. Vanilla's own
+     * invulnerability check compares only the raw damage amount to the previous hit
+     * ({@code amount <= this.lastHurt} in {@code LivingEntity.hurt}), not which source dealt it, so
+     * without the reset, a second distinct attacker in the same tick whose damage happened to be
+     * equal to or smaller than the first would have been silently dropped by vanilla's own logic,
+     * underneath this override, regardless of the source-identity guard. Resetting
+     * {@code invulnerableTime} before delegating to a genuinely new source forces vanilla to treat
+     * it as a fresh hit. This was caught by a test that made the second hit strictly larger than
+     * the first, which passes either way and therefore never actually exercised the gap; see the
+     * corrected version in {@code MHNWGameTests}.
      */
     @Override
     public boolean hurt(DamageSource source, float amount) {
         if (!level().isClientSide) {
             if (source == this.lastDamageSource && this.tickCount == this.lastDamageTick) {
                 return false;
+            }
+            if (source != this.lastDamageSource) {
+                this.invulnerableTime = 0;
             }
             this.lastDamageSource = source;
             this.lastDamageTick = this.tickCount;
@@ -407,6 +502,20 @@ public class GreatIzuchi extends Monster implements GeoEntity {
     @Override
     public boolean shouldRenderAtSqrDistance(double distance) {
         return distance < 16384.0D;
+    }
+
+    /**
+     * Vanilla's default culling box is the collision hitbox inflated by a flat 0.5 block
+     * ({@code EntityRenderer.shouldRender}), which is correct for a normal mob but not for one
+     * whose visible model reaches well outside its own hitbox: the tail alone reaches 4.9 blocks
+     * behind the 1.6-wide root box. Without this, the game stops rendering the whole entity the
+     * moment that small root box leaves the camera frustum, which reads as the head or tail
+     * abruptly vanishing while clearly still on screen, well before the body itself is off camera.
+     * This is the same hook vanilla's own long/large entities use for the same reason.
+     */
+    @Override
+    public net.minecraft.world.phys.AABB getBoundingBoxForCulling() {
+        return getBoundingBox().inflate(6.0D, 4.0D, 6.0D);
     }
 
     @Override
@@ -434,6 +543,9 @@ public class GreatIzuchi extends Monster implements GeoEntity {
     private PlayState mainAnim(AnimationState<GreatIzuchi> state) {
         if (isDeadOrDying()) {
             return state.setAndContinue(DEATH);
+        }
+        if (isRoaring()) {
+            return state.setAndContinue(ROAR);
         }
         byte attack = getAttackId();
         if (attack != ATTACK_NONE) {

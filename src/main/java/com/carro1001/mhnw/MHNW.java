@@ -1,6 +1,14 @@
 package com.carro1001.mhnw;
 
+import com.carro1001.mhnw.entity.Aptonoth;
+import com.carro1001.mhnw.entity.Bug;
+import com.carro1001.mhnw.entity.Flashbug;
 import com.carro1001.mhnw.entity.GreatIzuchi;
+import com.carro1001.mhnw.entity.Izuchi;
+import com.carro1001.mhnw.entity.Lagiacrus;
+import com.carro1001.mhnw.entity.Rathian;
+import com.carro1001.mhnw.entity.Rathalos;
+import com.carro1001.mhnw.entity.Toad;
 import com.carro1001.mhnw.registry.ModEntities;
 import net.minecraft.world.entity.SpawnPlacementTypes;
 import net.minecraft.world.item.CreativeModeTabs;
@@ -10,6 +18,7 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent;
@@ -27,6 +36,8 @@ public class MHNW {
         modBus.addListener(MHNW::onRegisterSpawnPlacements);
         modBus.addListener(MHNW::onBuildCreativeTabs);
         modBus.addListener(MHNW::onRegisterGameTests);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (RegisterCommandsEvent event) -> MHNWCommands.register(event.getDispatcher()));
         container.registerConfig(ModConfig.Type.SERVER, MHNWConfig.SERVER_SPEC);
         container.registerConfig(ModConfig.Type.COMMON, MHNWConfig.COMMON_SPEC);
     }
@@ -34,6 +45,14 @@ public class MHNW {
     @SubscribeEvent
     private static void onAttributeCreation(EntityAttributeCreationEvent event) {
         event.put(ModEntities.GREAT_IZUCHI.get(), GreatIzuchi.createAttributes().build());
+        event.put(ModEntities.APTONOTH.get(), Aptonoth.createAttributes().build());
+        event.put(ModEntities.TOAD.get(), Toad.createAttributes().build());
+        event.put(ModEntities.FLASHBUG.get(), Flashbug.createAttributes().build());
+        event.put(ModEntities.BUG.get(), Bug.createAttributes().build());
+        event.put(ModEntities.IZUCHI.get(), Izuchi.createAttributes().build());
+        event.put(ModEntities.RATHIAN.get(), Rathian.createAttributes().build());
+        event.put(ModEntities.RATHALOS.get(), Rathalos.createAttributes().build());
+        event.put(ModEntities.LAGIACRUS.get(), Lagiacrus.createAttributes().build());
     }
 
     @SubscribeEvent
@@ -43,6 +62,9 @@ public class MHNW {
                 ModEntities.SPAWN_HEIGHTMAP,
                 GreatIzuchi::checkSpawnRules,
                 RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        // Aptonoth natural spawn placement is deferred with the rest of A11 (docs/DEFERRED.md):
+        // spawn egg only for now, per the maintainer's decision not to worry about natural
+        // spawning until closer to release.
     }
 
     @SubscribeEvent
@@ -54,6 +76,14 @@ public class MHNW {
     private static void onBuildCreativeTabs(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS) {
             event.accept(ModEntities.GREAT_IZUCHI_SPAWN_EGG.get());
+            event.accept(ModEntities.APTONOTH_SPAWN_EGG.get());
+            event.accept(ModEntities.TOAD_SPAWN_EGG.get());
+            event.accept(ModEntities.FLASHBUG_SPAWN_EGG.get());
+            event.accept(ModEntities.BUG_SPAWN_EGG.get());
+            event.accept(ModEntities.IZUCHI_SPAWN_EGG.get());
+            event.accept(ModEntities.RATHIAN_SPAWN_EGG.get());
+            event.accept(ModEntities.RATHALOS_SPAWN_EGG.get());
+            event.accept(ModEntities.LAGIACRUS_SPAWN_EGG.get());
         }
     }
 }

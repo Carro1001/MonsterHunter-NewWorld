@@ -5,11 +5,12 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.Pose;
 import net.neoforged.neoforge.entity.PartEntity;
 
 /**
- * One named hurtbox of a large monster.
+ * One named hurtbox of a creature with a body shape a single vanilla AABB cannot fit well.
  *
  * <p>A part is <em>not</em> a living entity: it has no health of its own and never dies. It only
  * forwards damage to its parent, which owns health, mitigation, attribution, death and loot
@@ -17,17 +18,23 @@ import net.neoforged.neoforge.entity.PartEntity;
  * automatically from {@link Entity#isMultipartEntity()}, and {@code Level#getEntities} scans them,
  * so melee picking, projectiles and area damage all reach this class without any custom packet.
  *
- * <p>Local frame used by {@link GreatIzuchi#positionParts()}: +X = the monster's left,
+ * <p>Generic over {@link Mob} rather than any one species or category: {@link GreatIzuchi} was the
+ * first user, {@link Rathian} and {@link Rathalos} the next two, all large hostile monsters, and
+ * {@link Aptonoth} the first passive one. Vanilla only gives a mob one square footprint, which
+ * cannot represent a long, low, small-bodied-but-long-necked creature any better than it can a
+ * wyvern's tail; this class is the same fix for both, not something specific to "monster."
+ *
+ * <p>Local frame used by each owner's own {@code positionParts()}: +X = the monster's left,
  * +Y = up, +Z = the direction it faces. Units are blocks. See {@link GreatIzuchi} for the
- * model-to-world derivation.
+ * model-to-world derivation these owners share.
  */
-public class MonsterPart extends PartEntity<GreatIzuchi> {
+public class MonsterPart extends PartEntity<Mob> {
     public final String partName;
     private final EntityDimensions size;
     /** Centre of this part in the parent's local frame (left, up, forward), in blocks. */
     public final double localLeft, localUp, localForward;
 
-    public MonsterPart(GreatIzuchi parent, String partName, float width, float height,
+    public MonsterPart(Mob parent, String partName, float width, float height,
                        double localLeft, double localUp, double localForward) {
         super(parent);
         this.partName = partName;

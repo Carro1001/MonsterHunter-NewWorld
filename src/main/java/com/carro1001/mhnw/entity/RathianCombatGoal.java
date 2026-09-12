@@ -16,68 +16,103 @@ import java.util.EnumSet;
 import java.util.List;
 
 /**
- * The one and only owner of Great Izuchi combat: target selection follow-through, approach,
- * orientation, attack choice, and the attack timeline (handoff section 4.3).
+ * Rathian's combat owner: approach, orientation, and the two mirrored bite timelines -- the same
+ * windup/active/recovery shape as {@link GreatIzuchiCombatGoal}, and for the same reason. Reported
+ * problem this replaced: plain vanilla {@code MeleeAttackGoal} closes to contact range and deals
+ * damage the instant it touches, which reads as a body-slam that only afterward plays a bite clip,
+ * rather than a bite that actually connects. This goal stops the approach, winds up while the clip
+ * plays, and only evaluates a hit volume during the active window.
  *
- * <p>No other goal, no animation callback and no client code may start an attack or deal its
- * damage. The phase is derived from a single number, the action age, rather than stored in several
- * counters that can contradict one another. Everything that differs between attacks lives in
- * {@link AttackProfile}; this class is the machinery that runs one.
- *
- * <h2>Phases</h2>
- * <pre>
- *   0 .. windupEnd      WINDUP    telegraph; body turns to aim, movement damps to a stop
- *   activeStart..End    ACTIVE    volume evaluated every tick; monster paces forward
- *   .. actionEnd        RECOVERY  committed, no contact, movement unforced
- * </pre>
- * Death overrides all of them.
+ * <p>Duplicated from {@link GreatIzuchiCombatGoal} rather than shared through a generalized base:
+ * this is the second real attack-timeline implementation in the codebase, which is exactly the
+ * point {@code docs/DEFERRED.md} names as worth reconsidering that decision at -- but doing so now
+ * would mean restructuring Great Izuchi's already-shipped, player-tested combat at the same time as
+ * standing up Rathian's first cut, with no way to interactively verify the result beyond GameTests.
+ * Revisit once this one has also seen live play.
  */
-public class GreatIzuchiCombatGoal extends Goal {
-
-    /** Seeds the entity's attack damage attribute. Per-attack scaling lives in the profile. */
-    public static final double SCRATCH_DAMAGE = 2.5D;
+public class RathianCombatGoal extends Goal {
 
     /**
-     * How close the monster tries to get when nothing is in range yet.
+     * A real path baked from a live capture (see {@code docs/TEST_PLAN.md}), not the round-one
+     * hand-estimate it replaced.
      *
-     * <p>Not a gate on attacking. Each attack has its own range band, and the long-reach tail
-     * attacks are deliberately usable further out than this, so the monster can open with one
-     * while it is still closing. Gating selection on a single global reach made the tail slam,
-     * whose band starts at 3.0, permanently unselectable.
+     * <p>Bucketing every {@code Jaw}-bone sample from that capture by its position in the clip
+     * showed the earlier guess was wrong on both counts it was estimated: the jaw does not dip down
+     * close to the body early on -- it stays reared up and far out (up 4+, forward 5.3-6.9) for most
+     * of the clip -- and only actually descends toward something reachable in the clip's last third
+     * (age 19-28, up dropping from 4.48 to 0.91, forward settling to 4.3-5.5). That descent is the
+     * real bite, not the first half of the clip. Every sample's {@code left} oscillated with no
+     * consistent sign (residual aiming noise from the goal's own per-attack facing, not a real
+     * animation offset), so it's set to 0 throughout, the same convention every measured hurtbox in
+     * this file already uses for the same reason.
+     *
+     * <p>{@code minRange}/{@code maxRange} come directly from where this path can actually reach
+     * (forward 4.26-5.52, padded by the volume's own half-width); previously this fired from as
+     * close as touching distance, which is well short of where this path lands.
      */
-    public static final double CLOSE_RANGE = 2.6D;
+    public static final AttackProfile BITE_RIGHT = new AttackProfile(
+            Rathian.ATTACK_BITE_RIGHT,
+            18, 19, 28, 29,
+            25, 1, 1.8D, Rathian.ATTACK_DAMAGE, 0.0F, 0.05D,
+            2.0D, 6.0D,
+            new double[][][] {{
+                    // age    left      up   forward
+                    {19, 0.00D, 4.48D, 5.52D},
+                    {22, 0.00D, 2.51D, 5.48D},
+                    {25, 0.00D, 1.38D, 4.26D},
+                    {28, 0.00D, 0.91D, 4.37D},
+            }});
+
+    /**
+     * {@code attack_charge_bite_left} mirrored from {@link #BITE_RIGHT}'s own measured path, not a
+     * separate capture: {@code left} was already 0 throughout the right bite's real data (any real
+     * per-side asymmetry was smaller than the aiming noise that data itself showed), and a left/right
+     * pair of clips authored as a mirror of one another is the ordinary case, not an assumption
+     * unique to this pair. If a live capture of this specific clip ever shows it isn't a clean
+     * mirror, replace this with its own measured path the same way {@link #BITE_RIGHT} replaced its
+     * own first estimate -- don't just nudge this one by eye.
+     */
+    public static final AttackProfile BITE_LEFT = new AttackProfile(
+            Rathian.ATTACK_BITE_LEFT,
+            BITE_RIGHT.windupEnd(), BITE_RIGHT.activeStart(), BITE_RIGHT.activeEnd(), BITE_RIGHT.actionEnd(),
+            BITE_RIGHT.cooldown(), BITE_RIGHT.strikes(), BITE_RIGHT.volumeSize(), BITE_RIGHT.damage(),
+            BITE_RIGHT.aimOffsetDeg(), BITE_RIGHT.lungeSpeed(), BITE_RIGHT.minRange(), BITE_RIGHT.maxRange(),
+            new double[][][] {{
+                    {19, 0.00D, 4.48D, 5.52D},
+                    {22, 0.00D, 2.51D, 5.48D},
+                    {25, 0.00D, 1.38D, 4.26D},
+                    {28, 0.00D, 0.91D, 4.37D},
+            }});
 
     private static final int REPATH_INTERVAL = 10;
 
-    /** Degrees per tick the body may turn while winding up. Keeps the telegraph readable. */
+    /** Same tuning as {@link GreatIzuchiCombatGoal}'s identical constants; see there for why. */
     private static final float WINDUP_TURN_RATE = 9.0F;
-
-    /**
-     * Horizontal speed retained each windup tick. Low enough that a run-up is gone within about
-     * three ticks, so the monster plants and waits out the telegraph rather than drifting.
-     */
     private static final double WINDUP_DAMPING = 0.35D;
-
-    /** Ticks spent easing into the pace, so the first active tick is not a jolt. */
     private static final int LUNGE_RAMP_TICKS = 6;
 
-    private final GreatIzuchi monster;
+    /** Every attack this species can choose from. {@link #chooseAttack} discourages repeating
+     * whichever was used last, so a fight alternates bite angles rather than always picking the
+     * same one -- distance-influenced, never guaranteed, the same shape as
+     * {@link GreatIzuchiCombatGoal}'s selection. */
+    private static final AttackProfile[] ALL = {BITE_RIGHT, BITE_LEFT};
 
-    /**
-     * Keys of {victim, strike window} already struck by the current action. Cleared per action, so
-     * it is bounded by victims times strikes and cannot grow over a fight.
-     */
+    private final Rathian monster;
+
+    /** Keys of {victim, strike window} already struck by the current action; see
+     * {@link GreatIzuchiCombatGoal}'s identical field for why this is bounded and cleared per action. */
     private final List<Long> hitThisAction = new ArrayList<>();
 
     private int repathCooldown;
     private boolean attacking;
     private AttackProfile current;
-    /** Last attack chosen, so the selector can prefer variety over repetition. */
+    /** Last attack chosen, so the selector can prefer variety over repetition once there is more
+     * than one candidate; see {@link #chooseAttack} and {@link GreatIzuchiCombatGoal}'s identical
+     * field for why this alone isn't enough to guarantee anything, only to discourage repeats. */
     private AttackProfile previous;
-    /** Direction of the committed lunge, fixed on the first active tick. */
     private Vec3 lungeDirection = Vec3.ZERO;
 
-    public GreatIzuchiCombatGoal(GreatIzuchi monster) {
+    public RathianCombatGoal(Rathian monster) {
         this.monster = monster;
         setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
     }
@@ -94,8 +129,6 @@ public class GreatIzuchiCombatGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        // An action already committed finishes even if the target is lost, but it cannot acquire a
-        // new victim, because the volume follows a fixed body-local path (rule 6).
         return this.attacking || targetIsValid();
     }
 
@@ -115,13 +148,12 @@ public class GreatIzuchiCombatGoal extends Goal {
         this.attacking = false;
     }
 
-    /** Every exit path funnels through here: goal stop, target loss, death, removal, reload. */
     @Override
     public void stop() {
         if (this.attacking) {
             this.attacking = false;
             this.monster.endAttack();
-            this.monster.attackCooldown = this.current != null ? this.current.cooldown() : 30;
+            this.monster.attackCooldown = this.current != null ? this.current.cooldown() : 25;
         }
         this.current = null;
         this.monster.setCommittedBodyYaw(null);
@@ -134,12 +166,6 @@ public class GreatIzuchiCombatGoal extends Goal {
     @Override
     public void tick() {
         if (!this.monster.isAlive()) {
-            // Death overrides every phase (rule 6) -- though in practice this can't actually fire:
-            // vanilla stops ticking every goal at all, permanently, for the whole corpse-hold window
-            // once isDeadOrDying() is true (see CLAUDE.md's "opening roar" section for the exact
-            // mechanism, found while chasing the identical check in RoarGoal). Kept for parity and
-            // because it's harmless either way -- mainAnim() already checks isDeadOrDying() before
-            // reading any combat state, so presentation is correct regardless.
             stop();
             return;
         }
@@ -155,13 +181,10 @@ public class GreatIzuchiCombatGoal extends Goal {
         }
 
         this.monster.getLookControl().setLookAt(target, 30.0F, 30.0F);
-        // Drives the run animation on clients, which cannot see getTarget().
         this.monster.setAggressive(true);
 
         double distance = distanceToBox(target);
 
-        // Attack the moment anything is in range, even mid-approach: that is what lets a
-        // long-reach tail attack open the engagement instead of only ever trading claw swipes.
         if (this.monster.attackCooldown <= 0 && this.monster.hasLineOfSight(target)) {
             AttackProfile chosen = chooseAttack(distance);
             if (chosen != null) {
@@ -171,11 +194,12 @@ public class GreatIzuchiCombatGoal extends Goal {
             }
         }
 
-        if (distance > CLOSE_RANGE) {
+        // Stays at whatever distance an attack can actually reach from, rather than closing to
+        // touching range and then reaching backward for the bite: only approaches while genuinely
+        // too far for anything, and only up to the point that changes.
+        if (distance > furthestRange()) {
             if (--this.repathCooldown <= 0) {
                 this.repathCooldown = REPATH_INTERVAL;
-                // Bounded re-pathing: a failed path abandons the approach for this interval
-                // instead of recalculating every tick (handoff section 4.5, A10).
                 if (!this.monster.getNavigation().moveTo(target, 1.0D)) {
                     debug("approach: no path to {} at {} blocks",
                             target.getName().getString(), String.format("%.2f", distance));
@@ -186,17 +210,25 @@ public class GreatIzuchiCombatGoal extends Goal {
         this.monster.getNavigation().stop();
     }
 
+    /** The furthest any candidate attack can reach from, so the approach logic stops once
+     * something is in range rather than assuming one specific profile's own maxRange. */
+    private static double furthestRange() {
+        double max = 0.0D;
+        for (AttackProfile profile : ALL) {
+            max = Math.max(max, profile.maxRange());
+        }
+        return max;
+    }
+
     /**
-     * Picks one attack, deliberately.
-     *
-     * <p>The previous implementation installed three melee goals at the same priority and carried a
-     * TODO that it always chose the same one. Selection here is an explicit choice: narrow to the
-     * attacks whose range band contains the target, then prefer one that was not used last time so
-     * a fight does not become the same swing repeatedly, and break remaining ties randomly.
+     * Picks one attack: filters candidates by range, discourages repeating the last one, breaks
+     * remaining ties randomly -- the same shape as {@link GreatIzuchiCombatGoal#chooseAttack}, so
+     * distance can influence which bite angle gets picked without ever guaranteeing the same choice
+     * at the same distance every time.
      */
     private AttackProfile chooseAttack(double distance) {
         List<AttackProfile> candidates = new ArrayList<>();
-        for (AttackProfile profile : AttackProfile.all()) {
+        for (AttackProfile profile : ALL) {
             if (profile.inRange(distance)) {
                 candidates.add(profile);
             }
@@ -224,13 +256,9 @@ public class GreatIzuchiCombatGoal extends Goal {
                 target.getName().getString(), String.format("%.2f", distance));
     }
 
-    /**
-     * Sparse development diagnostics: transitions and contact decisions only, never per tick.
-     * Off unless the config enables it (handoff P2).
-     */
     private void debug(String message, Object... args) {
         if (MHNWConfig.DEBUG_COMBAT.get()) {
-            MHNW.LOG.info("[great_izuchi] " + message, args);
+            MHNW.LOG.info("[rathian] " + message, args);
         }
     }
 
@@ -244,7 +272,7 @@ public class GreatIzuchiCombatGoal extends Goal {
                     this.hitThisAction.size());
             this.attacking = false;
             this.monster.endAttack();
-            this.monster.attackCooldown = profile != null ? profile.cooldown() : 30;
+            this.monster.attackCooldown = profile != null ? profile.cooldown() : 25;
             this.current = null;
             this.monster.setCommittedBodyYaw(null);
             this.lungeDirection = Vec3.ZERO;
@@ -258,11 +286,8 @@ public class GreatIzuchiCombatGoal extends Goal {
         LivingEntity target = this.monster.getTarget();
         if (age <= profile.windupEnd()) {
             if (target != null) {
-                // The telegraph tracks, turn-rate limited; after it, facing stays at whatever the
-                // windup committed to, so a swing already under way cannot snap around behind the
-                // monster to follow a dodging player (rule 2).
                 this.monster.getLookControl().setLookAt(target, 20.0F, 20.0F);
-                aimArcAt(profile, target);
+                aimAt(target);
             }
             plantForWindup();
             return;
@@ -274,22 +299,14 @@ public class GreatIzuchiCombatGoal extends Goal {
         }
     }
 
-    /** Bleeds off horizontal momentum so the windup reads as planting, not gliding. */
     private void plantForWindup() {
         Vec3 velocity = this.monster.getDeltaMovement();
         this.monster.setDeltaMovement(
                 velocity.x * WINDUP_DAMPING, velocity.y, velocity.z * WINDUP_DAMPING);
     }
 
-    /**
-     * Drives the monster forward through the swing so the limb carries its weight.
-     *
-     * <p>The direction is captured once, on the first active tick, and then held. Re-aiming it
-     * every tick would let a committed strike home onto a target that has since moved, which the
-     * runtime contract forbids (rule 6): once the strike is under way it travels where it was
-     * launched, and missing a target that dodged is the correct outcome. The body yaw is likewise
-     * locked after windup, so the arc cannot swing onto someone new mid-strike.
-     */
+    /** Same commit-once-then-hold contract as {@link GreatIzuchiCombatGoal#lunge}: aimed once on the
+     * first active tick, not re-aimed at a target that moves after the strike is under way (rule 6). */
     private void lunge(AttackProfile profile, int age, LivingEntity target) {
         if (age == profile.activeStart() && target != null) {
             Vec3 toTarget = new Vec3(
@@ -306,63 +323,56 @@ public class GreatIzuchiCombatGoal extends Goal {
                 this.lungeDirection.x * speed, velocity.y, this.lungeDirection.z * speed);
     }
 
-    /**
-     * Turns the body so the measured arc sweeps over the target, instead of beside it.
-     *
-     * <p>Turn-rate limited so the windup reads as a wind-up rather than a snap, and held in
-     * {@link GreatIzuchi#setCommittedBodyYaw} so the vanilla body-rotation control cannot undo it
-     * and so the hurtboxes rotate with the same yaw the attack volume does.
-     */
-    private void aimArcAt(AttackProfile profile, LivingEntity target) {
+    /** Bite has no aim offset (straight ahead), so this only turns to face, unlike
+     * {@link GreatIzuchiCombatGoal#aimArcAt}'s cross-body-swipe correction. */
+    private void aimAt(LivingEntity target) {
         double dx = target.getX() - this.monster.getX();
         double dz = target.getZ() - this.monster.getZ();
         float bearing = (float) Math.toDegrees(Math.atan2(-dx, dz));
-        float desired = bearing - profile.aimOffsetDeg();
 
         Float held = this.monster.getCommittedBodyYaw();
         float currentYaw = held != null ? held : this.monster.yBodyRot;
         float step = Mth.clamp(
-                Mth.wrapDegrees(desired - currentYaw), -WINDUP_TURN_RATE, WINDUP_TURN_RATE);
+                Mth.wrapDegrees(bearing - currentYaw), -WINDUP_TURN_RATE, WINDUP_TURN_RATE);
         this.monster.setCommittedBodyYaw(Mth.wrapDegrees(currentYaw + step));
     }
 
-    /**
-     * World-space damage volume for the monster's current action at this age, or null when it is
-     * not attacking.
-     *
-     * <p>Static and public so the developer overlay draws the very same geometry the server hits
-     * with, rather than a second approximation of it that could drift out of agreement.
-     */
-    public static AABB[] attackVolumes(GreatIzuchi monster, int age) {
-        AttackProfile profile = AttackProfile.byId(monster.getAttackId());
+    /** Resolves a synchronized attack id back to its profile, or null; same role as
+     * {@link AttackProfile#byId} but scoped to this species' own {@link #ALL} so a future id never
+     * collides with Great Izuchi's identically-numbered ids in that shared lookup. Public so the
+     * developer overlay can look up the active profile's window generically instead of hardcoding
+     * one attack, the same way it already does for Great Izuchi via {@link AttackProfile#byId}. */
+    public static AttackProfile byId(byte id) {
+        for (AttackProfile profile : ALL) {
+            if (profile.id() == id) {
+                return profile;
+            }
+        }
+        return null;
+    }
+
+    /** Same reason this is static and public as {@link GreatIzuchiCombatGoal#attackVolumes}: the
+     * developer overlay draws the exact geometry the server hits with, not a second approximation. */
+    public static AABB[] attackVolumes(Rathian monster, int age) {
+        AttackProfile profile = byId(monster.getAttackId());
         if (profile == null) {
             return new AABB[0];
         }
-        AABB[] volumes = new AABB[profile.volumeCount()];
-        for (int i = 0; i < volumes.length; i++) {
-            double[] local = profile.limbLocalAt(i, age);
-            Vec3 centre = monster.localToWorld(local[0], local[1], local[2]);
-            volumes[i] = AABB.ofSize(
-                    centre, profile.volumeSize(), profile.volumeSize(), profile.volumeSize());
-        }
-        return volumes;
+        double[] local = profile.limbLocalAt(0, age);
+        Vec3 centre = monster.localToWorld(local[0], local[1], local[2]);
+        return new AABB[] {AABB.ofSize(centre, profile.volumeSize(), profile.volumeSize(), profile.volumeSize())};
     }
 
     private void applyContact(AttackProfile profile, int age) {
         if (this.monster.level().isClientSide) {
             return;
         }
-        // A sweeping tail carries a volume at several points along its length, so a victim beside
-        // the mid tail is struck even though the tip passes well outside them. The per-strike key
-        // below is shared across volumes, so overlapping two of them is still one hit.
         for (AABB volume : attackVolumes(this.monster, age)) {
             applyContactIn(profile, age, volume);
         }
     }
 
     private void applyContactIn(AttackProfile profile, int age, AABB volume) {
-        // Intersect real bounding boxes, not centres. getEntities also returns PartEntity objects,
-        // so victims are normalized to their parent before de-duplication (rule 3).
         for (Entity candidate : this.monster.level().getEntities(this.monster, volume)) {
             Entity resolved = candidate instanceof PartEntity<?> part ? part.getParent() : candidate;
             if (!(resolved instanceof LivingEntity victim)) {
@@ -378,19 +388,13 @@ public class GreatIzuchiCombatGoal extends Goal {
             if (!victim.getBoundingBox().intersects(volume)) {
                 continue;
             }
-            // A melee swing must not reach through a wall (rule 3).
             if (!this.monster.hasLineOfSight(victim)) {
                 debug("contact rejected at age={}: {} is behind cover",
                         age, victim.getName().getString());
                 continue;
             }
             this.hitThisAction.add(strikeKey);
-            float damage = (float) (this.monster.getAttributeValue(Attributes.ATTACK_DAMAGE)
-                    * (profile.damage() / SCRATCH_DAMAGE));
-            // The reviewed exception to leaving vanilla invulnerability alone. Strikes land about
-            // ten ticks apart, inside vanilla's twenty tick window, so without this only the first
-            // of them would ever be felt and the multi-hit design would be silent. Scoped by the
-            // per-strike key above, so it cannot become per-tick damage.
+            float damage = (float) this.monster.getAttributeValue(Attributes.ATTACK_DAMAGE);
             victim.invulnerableTime = 0;
             victim.hurt(this.monster.damageSources().mobAttack(this.monster), damage);
             debug("contact accepted at age={} strike={}: {} for {} damage (seq={})",
