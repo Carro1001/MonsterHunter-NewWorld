@@ -256,10 +256,31 @@ blocks. Commands actually run, in this order:
 git diff --check
 ```
 
-The suite was run **eight times in total** after the final code state, all 144 passing every time.
-That repetition is aimed at the scheduling-sensitive new tests specifically: the 40-tick toad fuse
-under a real goal tick, the thrown bomb flying and impacting on its own, and the wild flashbug's
-11-tick telegraph.
+### Repeats, and the one flake
+
+The repetition targets the scheduling-sensitive new tests specifically: the 40-tick toad fuse under
+a real goal tick, the thrown bomb flying and impacting on its own, and the wild flashbug's 11-tick
+telegraph.
+
+A first batch of seven `--rerun-tasks` repeats gave **6 passed, 1 failed**. The failure fired in the
+same minute a `runServer` had been started **concurrently** with that loop — and `--rerun-tasks`
+rewrites `build/classes` underneath an already-running server. That server run failed too, with
+`Failed to load class com.carro1001.mhnw.MHNW` and
+`NullPointerException: Cannot invoke "java.lang.Class.getName()" because "cls" is null`, which is a
+half-written build directory, not a mod defect.
+
+Both were then re-run **strictly serially, with nothing else touching the build directory**:
+
+| Batch | Result |
+|---|---|
+| 7 repeats, concurrent with a `runServer` start | 6 passed, 1 failed (build-directory race, above) |
+| 8 repeats, serial | **8/8 — all 144 passing every time** |
+| final `clean build`, then `runGameTestServer`, then `build runGameTestServer` | all passing |
+
+The lesson worth keeping: **do not run `runServer` and `runGameTestServer --rerun-tasks` at the same
+time on this project.** They share one `build/` and one `run/`, and the loser sees a half-written
+class directory. That is a harness rule, not a code bug — but it looks exactly like a flaky test
+until you line up the timestamps.
 
 ### Three fixture lessons worth not rediscovering
 
