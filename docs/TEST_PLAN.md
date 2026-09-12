@@ -2,8 +2,8 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, currently 64 tests, all passing as of
-the Rathian pillager-targeting addition below (full `build runGameTestServer` run, 2026-09-11) — the
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, currently 66 tests, all passing as of
+the pillager-targeting rollout below (full `build runGameTestServer` run, 2026-09-11) — the
 shoreline test that failed under the P5a build passed cleanly after the native-controls correction.
 Client acceptance for that Lagiacrus correction has not been rerun by a human yet.
 
@@ -244,6 +244,8 @@ That is the current, deliberate state, not a bug to report.
 
 - [ ] Renders, spawns via egg, idles/walks/runs with correct animation
 - [ ] Notices and attacks a nearby player, dealing real damage
+- [x] **New: targets pillagers on sight, same as Great Izuchi/Rathian/Rathalos** — GameTest-covered
+      (`izuchiTargetsAPillagerOnSight`)
 - [ ] Naps occasionally when nothing is around (uses the `sleep` clip) — this is a rare, roughly
       1-in-20-minutes-of-idle-time random event per goal-selection check, so may take a while to
       observe; not urgent to confirm
@@ -370,5 +372,7 @@ Also fixed a few rounds ago: same culling fix as Rathian/Great Izuchi.
 - [ ] Turning away no longer makes the head/neck suddenly vanish while still on screen
 - [ ] Hitting a hurtbox reduces health
 - [ ] Attacks and damages a nearby player using ordinary melee
+- [x] **New: targets pillagers on sight, same as Great Izuchi/Rathian/Izuchi** — GameTest-covered
+      (`rathalosTargetsAPillagerOnSight`)
 - [ ] Death removes the whole creature and all seven parts
 - [ ] No flight yet — ground-bound only; expected, not a bug

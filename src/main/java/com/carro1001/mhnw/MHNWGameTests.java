@@ -1023,6 +1023,17 @@ public class MHNWGameTests {
                 "Izuchi never damaged a target standing right next to it"));
     }
 
+    /** Same pillager-targeting goal as Great Izuchi/Rathian/Rathalos; see {@code rathianTargetsAPillagerOnSight}. */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void izuchiTargetsAPillagerOnSight(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        net.minecraft.world.entity.monster.Pillager pillager =
+                helper.spawn(net.minecraft.world.entity.EntityType.PILLAGER, 8, 2, 10);
+
+        helper.succeedWhen(() -> helper.assertTrue(izuchi.getTarget() == pillager,
+                "Izuchi never acquired a nearby pillager as a target"));
+    }
+
     /** A13: death removes it, same as every other species. */
     @GameTest(template = ARENA, timeoutTicks = 120)
     public static void izuchiDeathRemovesIt(GameTestHelper helper) {
@@ -1207,6 +1218,17 @@ public class MHNWGameTests {
 
         helper.succeedWhen(() -> helper.assertTrue(victim.getHealth() < startingHealth,
                 "Rathalos never damaged a target standing right next to it"));
+    }
+
+    /** Same pillager-targeting goal as Great Izuchi/Rathian/Izuchi; see {@code rathianTargetsAPillagerOnSight}. */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void rathalosTargetsAPillagerOnSight(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Rathalos rathalos = helper.spawn(ModEntities.RATHALOS.get(), 8, 2, 8);
+        net.minecraft.world.entity.monster.Pillager pillager =
+                helper.spawn(net.minecraft.world.entity.EntityType.PILLAGER, 8, 2, 10);
+
+        helper.succeedWhen(() -> helper.assertTrue(rathalos.getTarget() == pillager,
+                "Rathalos never acquired a nearby pillager as a target"));
     }
 
     /** A02/A13: death removes Rathalos and every one of its six parts, exactly once. */
