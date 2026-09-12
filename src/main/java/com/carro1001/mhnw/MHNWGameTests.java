@@ -3922,6 +3922,781 @@ public class MHNWGameTests {
                 .thenSucceed();
     }
 
+    // ================================================================ R2: field preparation
+    //
+    // Gates R2-01..R2-11 of docs/R2_FIELD_PREPARATION_HANDOFF.md. What is deliberately NOT here,
+    // for the same reason as the R1 block: whether the two temporary vanilla icons read clearly,
+    // whether the thrown bomb renders through its flight, and whether a filled bucket's art matches
+    // the creature. A GameTest server loads no assets at all, so those stay named human gates in
+    // docs/TEST_PLAN.md and what is proven headlessly is the transaction and state contract.
+
+    private static final String[] R2_ITEM_IDS = {
+            "bbq_spit", "bottled_flashbug", "flash_bomb",
+            "poisontoad_bucket", "sleeptoad_bucket", "paratoad_bucket", "nitrotoad_bucket"};
+
+    private static net.minecraft.world.entity.player.Player preparer(
+            GameTestHelper helper, double x, double y, double z) {
+        net.minecraft.world.entity.player.Player player =
+                helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        player.setPos(helper.absoluteVec(new net.minecraft.world.phys.Vec3(x, y, z)));
+        return player;
+    }
+
+    /**
+     * A real, level-resident player. Needed wherever vanilla's own code casts to {@code ServerPlayer}
+     * to award a criterion -- {@code Bucketable.bucketMobPickup} does, so a detached mock player
+     * cannot catch a toad at all. Callers must remove it again; see {@link #retire}.
+     */
+    private static net.minecraft.server.level.ServerPlayer realPreparer(
+            GameTestHelper helper, double x, double y, double z) {
+        net.minecraft.server.level.ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        net.minecraft.world.phys.Vec3 at = helper.absoluteVec(new net.minecraft.world.phys.Vec3(x, y, z));
+        player.moveTo(at.x, at.y, at.z, 0.0F, 0.0F);
+        // The fixture arrives with creative abilities, under which vanilla's filled-container rule
+        // deliberately keeps the input stack -- correct behaviour, but not the survival transaction
+        // most of these tests are about. Callers that want the creative path ask for it explicitly.
+        player.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+        return player;
+    }
+
+    private static void retire(net.minecraft.server.level.ServerPlayer player) {
+        player.getServer().getPlayerList().remove(player);
+    }
+
+    private static int countInInventory(net.minecraft.world.entity.player.Player player,
+                                        net.minecraft.world.item.Item item) {
+        int total = 0;
+        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
+            net.minecraft.world.item.ItemStack stack = player.getInventory().getItem(slot);
+            if (stack.is(item)) {
+                total += stack.getCount();
+            }
+        }
+        return total;
+    }
+
+    // ---------------------------------------------------------------- R2-01 registry and data
+
+    /** R2-01: every new preparation item id, and the projectile entity type, actually resolve. */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void r2ItemIdsResolve(GameTestHelper helper) {
+        for (String id : R2_ITEM_IDS) {
+            net.minecraft.resources.ResourceLocation key =
+                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, id);
+            helper.assertTrue(net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(key),
+                    "item id never registered: " + key);
+        }
+        helper.assertTrue(net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.containsKey(
+                        net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, "flash_bomb")),
+                "the flash bomb projectile entity type never registered");
+        helper.succeed();
+    }
+
+    /**
+     * R2-01: the four bucket items map to the four variants one-for-one and with no collisions.
+     * This is the mapping the preserved icons were drawn for, so getting it backwards would ship a
+     * bucket whose picture disagrees with what comes out of it.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void r2ToadBucketVariantMappingIsExact(GameTestHelper helper) {
+        String[] expected = {"poisontoad_bucket", "sleeptoad_bucket", "paratoad_bucket", "nitrotoad_bucket"};
+        Toad.Variant[] variants = {Toad.Variant.POISON, Toad.Variant.SLEEP,
+                Toad.Variant.PARALYSIS, Toad.Variant.BLAST};
+        for (int i = 0; i < variants.length; i++) {
+            net.minecraft.world.item.Item bucket =
+                    com.carro1001.mhnw.registry.ModItems.toadBucket(variants[i]).get();
+            net.minecraft.resources.ResourceLocation id =
+                    net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(bucket);
+            helper.assertTrue(id.getPath().equals(expected[i]),
+                    variants[i] + " mapped to " + id + ", expected " + expected[i]);
+            helper.assertTrue(bucket instanceof com.carro1001.mhnw.item.ToadBucketItem toadBucket
+                            && toadBucket.variant() == variants[i],
+                    expected[i] + " does not itself carry variant " + variants[i]);
+        }
+        helper.succeed();
+    }
+
+    /**
+     * R2-01/R2-04: both shapeless recipes are packaged, match their exact inputs and yield exactly
+     * one result. The flash-bomb recipe additionally has to give the glass bottle back exactly once
+     * -- proven through vanilla's own remaining-items path, not by trusting the item property.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void r2PreparationRecipesMatchTheirExactInputs(GameTestHelper helper) {
+        assertShapeless(helper, "bbq_spit",
+                new net.minecraft.world.item.ItemStack(com.carro1001.mhnw.registry.ModItems.RAW_MEAT.get()),
+                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK),
+                com.carro1001.mhnw.registry.ModItems.BBQ_SPIT.get(),
+                null);
+        assertShapeless(helper, "flash_bomb",
+                new net.minecraft.world.item.ItemStack(com.carro1001.mhnw.registry.ModItems.BOTTLED_FLASHBUG.get()),
+                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.PAPER),
+                com.carro1001.mhnw.registry.ModItems.FLASH_BOMB.get(),
+                net.minecraft.world.item.Items.GLASS_BOTTLE);
+        helper.succeed();
+    }
+
+    private static void assertShapeless(GameTestHelper helper, String recipeId,
+                                        net.minecraft.world.item.ItemStack first,
+                                        net.minecraft.world.item.ItemStack second,
+                                        net.minecraft.world.item.Item result,
+                                        net.minecraft.world.item.Item expectedRemainder) {
+        net.minecraft.resources.ResourceLocation key =
+                net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, recipeId);
+        net.minecraft.world.item.crafting.RecipeHolder<?> holder =
+                helper.getLevel().getServer().getRecipeManager().byKey(key).orElse(null);
+        helper.assertTrue(holder != null, "recipe not packaged: " + key);
+        helper.assertTrue(holder.value() instanceof net.minecraft.world.item.crafting.CraftingRecipe,
+                key + " is not a crafting recipe");
+        net.minecraft.world.item.crafting.CraftingRecipe recipe =
+                (net.minecraft.world.item.crafting.CraftingRecipe) holder.value();
+
+        net.minecraft.world.item.crafting.CraftingInput input =
+                net.minecraft.world.item.crafting.CraftingInput.of(2, 1, java.util.List.of(first, second));
+        helper.assertTrue(recipe.matches(input, helper.getLevel()),
+                key + " did not match its own documented inputs");
+
+        net.minecraft.world.item.ItemStack assembled =
+                recipe.assemble(input, helper.getLevel().registryAccess());
+        helper.assertTrue(assembled.is(result) && assembled.getCount() == 1,
+                key + " yielded " + assembled + " instead of exactly one " + result);
+
+        // The wrong ingredient must not also satisfy it, or "exact inputs" would mean nothing.
+        net.minecraft.world.item.crafting.CraftingInput wrong =
+                net.minecraft.world.item.crafting.CraftingInput.of(2, 1, java.util.List.of(
+                        new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIRT), second));
+        helper.assertTrue(!recipe.matches(wrong, helper.getLevel()),
+                key + " matched an unrelated ingredient");
+
+        net.minecraft.core.NonNullList<net.minecraft.world.item.ItemStack> remaining =
+                recipe.getRemainingItems(input);
+        int bottles = 0;
+        for (net.minecraft.world.item.ItemStack stack : remaining) {
+            if (!stack.isEmpty()) {
+                bottles += stack.getCount();
+                helper.assertTrue(expectedRemainder != null && stack.is(expectedRemainder),
+                        key + " left an unexpected remainder: " + stack);
+            }
+        }
+        helper.assertTrue(bottles == (expectedRemainder == null ? 0 : 1),
+                key + " returned " + bottles + " remainder items, expected "
+                        + (expectedRemainder == null ? 0 : 1));
+    }
+
+    // ---------------------------------------------------------------- R2-02 BBQ transaction
+
+    /**
+     * R2-02: the hold is a fixed 80 ticks and cancelling it costs and grants nothing.
+     *
+     * <p>Vanilla owns the countdown, so what is checked here is that the item declares the agreed
+     * duration and that stopping short leaves the world exactly as it was -- no cooked meat, the
+     * spit still in hand, no cooldown started. That is the whole of "cancellation changes nothing":
+     * there is no cancellation code to test, only the absence of an effect.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void r2BbqCancelledHoldChangesNothing(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player cook = preparer(helper, 8, 2, 8);
+        net.minecraft.world.item.ItemStack spit =
+                new net.minecraft.world.item.ItemStack(com.carro1001.mhnw.registry.ModItems.BBQ_SPIT.get());
+        cook.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, spit);
+
+        helper.assertTrue(spit.getUseDuration(cook) == 80,
+                "the spit's use duration is " + spit.getUseDuration(cook) + " ticks, expected 80");
+        helper.assertTrue(spit.getMaxStackSize() == 1,
+                "the spit must stack to one for the completed use to be transactional");
+
+        cook.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+        helper.assertTrue(cook.getUseItemRemainingTicks() == 80,
+                "starting the hold did not arm the full 80 ticks");
+        cook.stopUsingItem();
+
+        helper.assertTrue(cook.getMainHandItem().is(com.carro1001.mhnw.registry.ModItems.BBQ_SPIT.get())
+                        && cook.getMainHandItem().getCount() == 1,
+                "a cancelled hold did not leave exactly one spit in hand");
+        helper.assertTrue(countInInventory(cook, com.carro1001.mhnw.registry.ModItems.COOKED_MEAT.get()) == 0,
+                "a cancelled hold produced cooked meat anyway");
+        helper.assertTrue(!cook.getCooldowns().isOnCooldown(com.carro1001.mhnw.registry.ModItems.BBQ_SPIT.get()),
+                "a cancelled hold started the cooldown");
+        helper.succeed();
+    }
+
+    /**
+     * R2-02: one completed hold consumes one survival spit, yields exactly one cooked meat and
+     * starts the cooldown. Driven through {@code ItemStack.finishUsingItem}, the same seam
+     * {@code LivingEntity.completeUsingItem} calls -- a held client input is not a meaningful thing
+     * to simulate on a server, but the conversion it triggers is, and that is what is checked.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void r2BbqCompletedHoldYieldsExactlyOneCookedMeat(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player cook = preparer(helper, 8, 2, 8);
+        net.minecraft.world.item.ItemStack spit =
+                new net.minecraft.world.item.ItemStack(com.carro1001.mhnw.registry.ModItems.BBQ_SPIT.get());
+        cook.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, spit);
+
+        net.minecraft.world.item.ItemStack result = spit.finishUsingItem(helper.getLevel(), cook);
+
+        helper.assertTrue(result.is(com.carro1001.mhnw.registry.ModItems.COOKED_MEAT.get())
+                        && result.getCount() == 1,
+                "a completed hold produced " + result + " instead of exactly one cooked meat");
+        helper.assertTrue(spit.isEmpty(),
+                "the survival spit was not consumed: " + spit.getCount() + " left");
+        helper.assertTrue(cook.getCooldowns().isOnCooldown(com.carro1001.mhnw.registry.ModItems.BBQ_SPIT.get()),
+                "a completed hold did not start the spit cooldown");
+        helper.succeed();
+    }
+
+    /**
+     * R2-02: the conversion cannot run twice off one spit. The second attempt has no spit left to
+     * consume, so it must not mint a second cooked meat out of nothing.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void r2BbqCannotDoubleComplete(GameTestHelper helper) {
+        net.minecraft.world.entity.player.Player cook = preparer(helper, 8, 2, 8);
+        net.minecraft.world.item.ItemStack spit =
+                new net.minecraft.world.item.ItemStack(com.carro1001.mhnw.registry.ModItems.BBQ_SPIT.get());
+        cook.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, spit);
+
+        net.minecraft.world.item.ItemStack first = spit.finishUsingItem(helper.getLevel(), cook);
+        cook.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, first);
+        net.minecraft.world.item.ItemStack second = spit.finishUsingItem(helper.getLevel(), cook);
+
+        helper.assertTrue(second.isEmpty(),
+                "a spent spit completed a second time and produced " + second);
+        int cooked = countInInventory(cook, com.carro1001.mhnw.registry.ModItems.COOKED_MEAT.get());
+        helper.assertTrue(cooked == 1,
+                "one spit ended up producing " + cooked + " cooked meats");
+        helper.succeed();
+    }
+
+    // ---------------------------------------------------------------- R2-03 Flashbug capture
+
+    /**
+     * R2-03: a glass bottle takes one live Flashbug out of the world without firing its flash. The
+     * bystander check is the point -- capture must not be a disguised way of triggering the thing
+     * you were trying to catch.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void r2BottleCapturesAFlashbugWithoutFlashing(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Flashbug flashbug = helper.spawn(ModEntities.FLASHBUG.get(), 8, 2, 8);
+        Cow bystander = helper.spawn(EntityType.COW, 8, 2, 9);
+        bystander.setNoAi(true);
+        bystander.setYRot(180.0F);
+        net.minecraft.world.entity.player.Player catcher = preparer(helper, 8, 2, 7);
+        catcher.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GLASS_BOTTLE));
+
+        net.minecraft.world.InteractionResult result =
+                flashbug.interact(catcher, net.minecraft.world.InteractionHand.MAIN_HAND);
+
+        helper.assertTrue(result.consumesAction(), "the bottle interaction was not accepted");
+        helper.assertTrue(flashbug.isRemoved(), "the captured flashbug was not removed");
+        helper.assertTrue(!flashbug.isFlashing(), "capturing the flashbug started its telegraph");
+        helper.assertTrue(!bystander.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS),
+                "capturing the flashbug flashed a bystander");
+        helper.assertTrue(catcher.getMainHandItem()
+                        .is(com.carro1001.mhnw.registry.ModItems.BOTTLED_FLASHBUG.get())
+                        && catcher.getMainHandItem().getCount() == 1,
+                "capture left " + catcher.getMainHandItem() + " in hand, expected one bottled flashbug");
+        helper.succeed();
+    }
+
+    /**
+     * R2-03: a partial stack of bottles neither loses the capture nor duplicates anything --
+     * exactly one bottle is spent and exactly one bottled bug arrives, through vanilla's own
+     * filled-container rule rather than slot arithmetic of ours.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void r2BottleCaptureFromAStackSpendsExactlyOneBottle(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Flashbug flashbug = helper.spawn(ModEntities.FLASHBUG.get(), 8, 2, 8);
+        net.minecraft.world.entity.player.Player catcher = preparer(helper, 8, 2, 7);
+        catcher.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GLASS_BOTTLE, 3));
+
+        flashbug.interact(catcher, net.minecraft.world.InteractionHand.MAIN_HAND);
+
+        int bottlesLeft = countInInventory(catcher, net.minecraft.world.item.Items.GLASS_BOTTLE);
+        helper.assertTrue(bottlesLeft == 2,
+                "capturing from a stack of three bottles left " + bottlesLeft + ", expected two");
+        helper.assertTrue(countInInventory(catcher,
+                        com.carro1001.mhnw.registry.ModItems.BOTTLED_FLASHBUG.get()) == 1,
+                "capturing from a stack did not add exactly one bottled flashbug");
+        helper.succeed();
+    }
+
+    /**
+     * R2-03: in creative the bottle is kept, under vanilla's own infinite-materials convention --
+     * but exactly one bottled flashbug still arrives and the bug is still removed. The fixture is
+     * deliberately left in its default creative state here; that is the whole point of the test.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void r2CreativeBottleCaptureNeitherLosesNorDuplicates(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Flashbug flashbug = helper.spawn(ModEntities.FLASHBUG.get(), 8, 2, 8);
+        net.minecraft.server.level.ServerPlayer catcher = helper.makeMockServerPlayerInLevel();
+        try {
+            helper.assertTrue(catcher.hasInfiniteMaterials(),
+                    "this fixture is meant to be creative; it is not, so the test proves nothing");
+            catcher.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.GLASS_BOTTLE));
+
+            flashbug.interact(catcher, net.minecraft.world.InteractionHand.MAIN_HAND);
+
+            helper.assertTrue(flashbug.isRemoved(), "a creative capture did not remove the flashbug");
+            helper.assertTrue(countInInventory(catcher,
+                            com.carro1001.mhnw.registry.ModItems.BOTTLED_FLASHBUG.get()) == 1,
+                    "a creative capture produced " + countInInventory(catcher,
+                            com.carro1001.mhnw.registry.ModItems.BOTTLED_FLASHBUG.get())
+                            + " bottled flashbugs, expected exactly one");
+            helper.assertTrue(countInInventory(catcher, net.minecraft.world.item.Items.GLASS_BOTTLE) == 1,
+                    "a creative capture changed the bottle count");
+        } finally {
+            retire(catcher);
+        }
+        helper.succeed();
+    }
+
+    /** R2-03: an unrelated held item still does nothing; only the bottle interaction captures. */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void r2NonBottleInteractionDoesNotCaptureAFlashbug(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Flashbug flashbug = helper.spawn(ModEntities.FLASHBUG.get(), 8, 2, 8);
+        net.minecraft.world.entity.player.Player catcher = preparer(helper, 8, 2, 7);
+        catcher.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK));
+
+        flashbug.interact(catcher, net.minecraft.world.InteractionHand.MAIN_HAND);
+
+        helper.assertTrue(!flashbug.isRemoved(), "a stick captured a flashbug");
+        helper.assertTrue(countInInventory(catcher,
+                        com.carro1001.mhnw.registry.ModItems.BOTTLED_FLASHBUG.get()) == 0,
+                "a stick produced a bottled flashbug");
+        helper.succeed();
+    }
+
+    // ---------------------------------------------------------------- R2-05 flash impact
+
+    /**
+     * R2-05/R2-06: the one eligibility matrix both the wild flashbug and the thrown bomb obey.
+     * Facing, cover, range and the player exclusion are all checked against a single flash, so a
+     * change to {@code FlashEffect} that broke any one of them fails here regardless of which
+     * caller triggered it.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void r2FlashAffectsOnlyEligibleTargets(GameTestHelper helper) {
+        fillFloor(helper, 1, net.minecraft.world.level.block.Blocks.STONE);
+        net.minecraft.world.phys.Vec3 origin =
+                helper.absoluteVec(new net.minecraft.world.phys.Vec3(8.0D, 2.5D, 8.0D));
+
+        // Facing the flash from one block north: must be blinded and slowed.
+        Cow facing = helper.spawn(EntityType.COW, 8, 2, 10);
+        facing.setNoAi(true);
+        facing.setYRot(180.0F);
+        // Same spot, looking the other way: must be untouched.
+        Cow lookingAway = helper.spawn(EntityType.COW, 8, 2, 6);
+        lookingAway.setNoAi(true);
+        lookingAway.setYRot(180.0F);
+        // Well outside the five-block radius, facing it.
+        Cow outOfRange = helper.spawn(EntityType.COW, 14, 2, 8);
+        outOfRange.setNoAi(true);
+        outOfRange.setYRot(90.0F);
+        // Facing it, but behind a solid wall raised between the two.
+        Cow covered = helper.spawn(EntityType.COW, 8, 2, 5);
+        covered.setNoAi(true);
+        covered.setYRot(180.0F);
+        for (int y = 2; y <= 4; y++) {
+            for (int x = 6; x <= 10; x++) {
+                helper.setBlock(x, y, 6, net.minecraft.world.level.block.Blocks.STONE);
+            }
+        }
+
+        net.minecraft.server.level.ServerPlayer bystander = helper.makeMockServerPlayerInLevel();
+        try {
+            bystander.moveTo(origin.x, origin.y, origin.z + 1.0D, 180.0F, 0.0F);
+            float[] healthBefore = {facing.getHealth()};
+
+            com.carro1001.mhnw.entity.FlashEffect.flash(helper.getLevel(), null, origin);
+
+            helper.assertTrue(facing.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS),
+                    "a facing target in range was not blinded");
+            net.minecraft.world.effect.MobEffectInstance slow =
+                    facing.getEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN);
+            helper.assertTrue(slow != null && slow.getAmplifier() == 1,
+                    "a facing target did not get Movement Slowdown II: " + slow);
+            helper.assertTrue(slow.getDuration() <= 40 && slow.getDuration() > 35,
+                    "the slowdown ran for " + slow.getDuration() + " ticks, expected 40");
+            helper.assertTrue(facing.getHealth() == healthBefore[0],
+                    "the flash damaged a target");
+
+            helper.assertTrue(!lookingAway.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS),
+                    "a target looking away was flashed anyway");
+            helper.assertTrue(!outOfRange.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS),
+                    "a target outside the radius was flashed anyway");
+            helper.assertTrue(!covered.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS),
+                    "a target behind solid cover was flashed anyway");
+            helper.assertTrue(!bystander.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS)
+                            && !bystander.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN),
+                    "a player was affected by the flash");
+        } finally {
+            bystander.getServer().getPlayerList().remove(bystander);
+        }
+        helper.succeed();
+    }
+
+    /**
+     * R2-05: a genuinely thrown bomb -- launched, flying, impacting a block on its own -- releases
+     * once, flashes, breaks nothing and is gone. Nothing here calls the impact handler directly;
+     * the projectile is added to the level and left to hit the floor by itself.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void r2ThrownFlashBombReleasesOnceOnImpact(GameTestHelper helper) {
+        fillFloor(helper, 1, net.minecraft.world.level.block.Blocks.STONE);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
+        victim.setNoAi(true);
+        victim.setYRot(180.0F);
+        float healthBefore = victim.getHealth();
+
+        com.carro1001.mhnw.entity.FlashBombProjectile bomb =
+                new com.carro1001.mhnw.entity.FlashBombProjectile(ModEntities.FLASH_BOMB.get(), helper.getLevel());
+        bomb.moveTo(helper.absoluteVec(new net.minecraft.world.phys.Vec3(8.0D, 4.0D, 8.0D)));
+        bomb.setDeltaMovement(0.0D, -0.6D, 0.0D);
+        helper.getLevel().addFreshEntity(bomb);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(bomb.isRemoved(),
+                        "waiting for the thrown bomb to impact and discard itself"))
+                .thenExecute(() -> {
+                    helper.assertTrue(victim.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS),
+                            "a facing target next to the impact was not flashed");
+                    helper.assertTrue(victim.getHealth() == healthBefore,
+                            "the thrown bomb damaged a target");
+                    helper.assertBlockPresent(net.minecraft.world.level.block.Blocks.STONE, 8, 1, 8);
+                })
+                .thenSucceed();
+    }
+
+    // ---------------------------------------------------------------- R2-06 wild regression
+
+    /**
+     * R2-06: the wild flashbug's own contract is unchanged by the extraction -- still hit-only,
+     * still discarded after one release -- and it now carries the same bounded slowdown the crafted
+     * bomb does. If the shared helper ever stops being shared, the slowdown assertion fails here
+     * while every pre-existing flashbug test still passes, which is exactly the regression this
+     * guards.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void r2WildFlashbugSharesTheBoundedFlash(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Flashbug flashbug = helper.spawn(ModEntities.FLASHBUG.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
+        victim.setNoAi(true);
+        victim.setYRot(180.0F);
+
+        flashbug.hurt(helper.getLevel().damageSources().generic(), 1.0F);
+
+        helper.succeedWhen(() -> {
+            helper.assertTrue(victim.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS),
+                    "the wild flashbug no longer blinds a facing victim");
+            net.minecraft.world.effect.MobEffectInstance slow =
+                    victim.getEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN);
+            helper.assertTrue(slow != null && slow.getAmplifier() == 1,
+                    "the wild flashbug did not apply the shared Movement Slowdown II: " + slow);
+            helper.assertTrue(flashbug.isRemoved(),
+                    "the wild flashbug was not discarded after its one release");
+        });
+    }
+
+    // ---------------------------------------------------------------- R2-07 toad capture
+
+    /**
+     * R2-07: every variant plus one water bucket yields its exact filled id, keeps the custom name
+     * and health, removes exactly that toad, and does not light a fuse.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void r2WaterBucketCapturesEveryToadVariant(GameTestHelper helper) {
+        net.minecraft.server.level.ServerPlayer catcher = realPreparer(helper, 8, 2, 7);
+        try {
+        for (Toad.Variant variant : Toad.Variant.values()) {
+            Toad toad = helper.spawn(ModEntities.TOAD.get(), 8, 2, 8);
+            toad.setVariant(variant);
+            toad.setCustomName(net.minecraft.network.chat.Component.literal("Hopper"));
+            toad.setHealth(2.5F);
+            catcher.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.WATER_BUCKET));
+
+            toad.interact(catcher, net.minecraft.world.InteractionHand.MAIN_HAND);
+
+            net.minecraft.world.item.ItemStack filled = catcher.getMainHandItem();
+            helper.assertTrue(filled.is(com.carro1001.mhnw.registry.ModItems.toadBucket(variant).get())
+                            && filled.getCount() == 1,
+                    variant + " produced " + filled + " instead of its own filled bucket");
+            helper.assertTrue(toad.isRemoved(), variant + " toad was not removed by the capture");
+            helper.assertTrue(!toad.isFusing(), "capturing a " + variant + " toad lit its fuse");
+
+            net.minecraft.nbt.CompoundTag bucketData = filled
+                    .getOrDefault(net.minecraft.core.component.DataComponents.BUCKET_ENTITY_DATA,
+                            net.minecraft.world.item.component.CustomData.EMPTY).copyTag();
+            helper.assertTrue(bucketData.getByte("Variant") == (byte) variant.ordinal(),
+                    variant + " was not stored in its own bucket data");
+            helper.assertTrue(Math.abs(bucketData.getFloat("Health") - 2.5F) < EPSILON,
+                    variant + " lost its health through the bucket");
+            helper.assertTrue(filled.get(net.minecraft.core.component.DataComponents.CUSTOM_NAME) != null,
+                    variant + " lost its custom name through the bucket");
+        }
+        } finally {
+            retire(catcher);
+        }
+        helper.succeed();
+    }
+
+    /** R2-07: an empty hand or the wrong bucket still does nothing at all to a live toad. */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void r2EmptyBucketDoesNotCaptureAToad(GameTestHelper helper) {
+        Toad toad = helper.spawn(ModEntities.TOAD.get(), 8, 2, 8);
+        toad.setVariant(Toad.Variant.BLAST);
+        net.minecraft.world.entity.player.Player catcher = preparer(helper, 8, 2, 7);
+        catcher.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BUCKET));
+
+        toad.interact(catcher, net.minecraft.world.InteractionHand.MAIN_HAND);
+
+        helper.assertTrue(!toad.isRemoved(), "an empty bucket captured a toad");
+        helper.assertTrue(catcher.getMainHandItem().is(net.minecraft.world.item.Items.BUCKET),
+                "an empty bucket turned into something else");
+        helper.succeed();
+    }
+
+    // ---------------------------------------------------------------- R2-08 release and round trip
+
+    /**
+     * Releases a filled bucket the way a player actually does: hold it, look straight down at the
+     * floor, and use it. This runs the whole of {@code BucketItem.use} -- the water placement, the
+     * spawn seam and the empty-bucket return -- rather than only the seam this mod overrides.
+     */
+    private static Toad releaseFrom(GameTestHelper helper, net.minecraft.world.item.ItemStack filled,
+                                    net.minecraft.world.entity.player.Player player) {
+        player.setXRot(90.0F);
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, filled);
+        java.util.List<Toad> before = helper.getLevel().getEntitiesOfClass(
+                Toad.class, player.getBoundingBox().inflate(8.0D));
+        // ServerPlayerGameMode.useItem puts the returned stack back in the hand; use() itself does
+        // not, so the test has to do the same thing the game mode would.
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                filled.use(helper.getLevel(), player, net.minecraft.world.InteractionHand.MAIN_HAND)
+                        .getObject());
+        for (Toad candidate : helper.getLevel().getEntitiesOfClass(
+                Toad.class, player.getBoundingBox().inflate(8.0D))) {
+            if (!before.contains(candidate)) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * R2-08: each filled id releases exactly one live toad of its own variant, marked FromBucket,
+     * and hands back exactly one empty bucket. The stacks here carry no bucket data at all -- they
+     * are what {@code /give} produces -- which is the case vanilla's own {@code MobBucketItem}
+     * would get wrong, and the reason {@code ToadBucketItem} exists.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 80)
+    public static void r2BareFilledBucketReleasesItsOwnVariant(GameTestHelper helper) {
+        fillFloor(helper, 1, net.minecraft.world.level.block.Blocks.STONE);
+        for (Toad.Variant variant : Toad.Variant.values()) {
+            net.minecraft.world.entity.player.Player keeper = preparer(helper, 8, 3, 8);
+            Toad released = releaseFrom(helper, new net.minecraft.world.item.ItemStack(
+                    com.carro1001.mhnw.registry.ModItems.toadBucket(variant).get()), keeper);
+
+            helper.assertTrue(released != null, "a bare " + variant + " bucket released no toad");
+            helper.assertTrue(released.getVariant() == variant,
+                    "a bare " + variant + " bucket released a " + released.getVariant() + " toad");
+            helper.assertTrue(released.fromBucket(), variant + " was not marked FromBucket");
+            helper.assertTrue(released.requiresCustomPersistence(),
+                    variant + " released from a bucket can still distance-despawn");
+            helper.assertTrue(!released.isFusing(), variant + " lit its fuse on release");
+            helper.assertTrue(keeper.getMainHandItem().is(net.minecraft.world.item.Items.BUCKET)
+                            && keeper.getMainHandItem().getCount() == 1,
+                    "releasing " + variant + " returned " + keeper.getMainHandItem()
+                            + " instead of exactly one empty bucket");
+            released.discard();
+        }
+        helper.succeed();
+    }
+
+    /**
+     * R2-08: catch, release, save/load and catch again -- the variant, the name, the health and
+     * FromBucket all survive, and nothing multiplies along the way.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void r2ToadSurvivesACaptureReleaseRoundTrip(GameTestHelper helper) {
+        fillFloor(helper, 1, net.minecraft.world.level.block.Blocks.STONE);
+        net.minecraft.server.level.ServerPlayer keeper = realPreparer(helper, 8, 3, 7);
+        try {
+        Toad original = helper.spawn(ModEntities.TOAD.get(), 8, 3, 8);
+        original.setVariant(Toad.Variant.PARALYSIS);
+        original.setCustomName(net.minecraft.network.chat.Component.literal("Hopper"));
+        original.setHealth(3.0F);
+
+        keeper.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.WATER_BUCKET));
+        original.interact(keeper, net.minecraft.world.InteractionHand.MAIN_HAND);
+        net.minecraft.world.item.ItemStack filled = keeper.getMainHandItem().copy();
+        helper.assertTrue(filled.is(com.carro1001.mhnw.registry.ModItems.PARATOAD_BUCKET.get()),
+                "capture produced " + filled + " instead of a paratoad bucket");
+
+        Toad released = releaseFrom(helper, filled, keeper);
+        helper.assertTrue(released != null, "the round trip released no toad");
+        helper.assertTrue(released.getVariant() == Toad.Variant.PARALYSIS,
+                "the round trip changed the variant to " + released.getVariant());
+        helper.assertTrue(released.hasCustomName(), "the round trip lost the custom name");
+        helper.assertTrue(Math.abs(released.getHealth() - 3.0F) < EPSILON,
+                "the round trip changed health to " + released.getHealth());
+
+        // A real reload: save and restore, the same round trip a chunk unload performs.
+        CompoundTag saved = released.saveWithoutId(new CompoundTag());
+        Toad reloaded = new Toad(ModEntities.TOAD.get(), helper.getLevel());
+        reloaded.load(saved);
+        helper.assertTrue(reloaded.getVariant() == Toad.Variant.PARALYSIS,
+                "a reloaded bucket toad had variant " + reloaded.getVariant());
+        helper.assertTrue(reloaded.fromBucket(), "a reloaded bucket toad lost FromBucket");
+
+        // And catching it again gives back the same bucket, not a different variant's.
+        keeper.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.WATER_BUCKET));
+        released.interact(keeper, net.minecraft.world.InteractionHand.MAIN_HAND);
+        helper.assertTrue(keeper.getMainHandItem()
+                        .is(com.carro1001.mhnw.registry.ModItems.PARATOAD_BUCKET.get()),
+                "recapturing gave " + keeper.getMainHandItem() + " instead of the same bucket");
+        helper.assertTrue(helper.getLevel().getEntitiesOfClass(
+                        Toad.class, keeper.getBoundingBox().inflate(10.0D)).isEmpty(),
+                "the capture/release round trip left extra toads behind");
+        } finally {
+            retire(keeper);
+        }
+        helper.succeed();
+    }
+
+    // ---------------------------------------------------------------- R2-09 deployed effects
+
+    /**
+     * R2-09: a deployed toad is still a toad -- it sits there until something hits it, then runs
+     * the existing 40-tick fuse and releases exactly once. Release is not automatic and the bucket
+     * did not make it so.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void r2ReleasedToadStillNeedsAHitAndReleasesOnce(GameTestHelper helper) {
+        fillFloor(helper, 1, net.minecraft.world.level.block.Blocks.STONE);
+        net.minecraft.world.entity.player.Player keeper = preparer(helper, 8, 3, 7);
+        Toad released = releaseFrom(helper, new net.minecraft.world.item.ItemStack(
+                com.carro1001.mhnw.registry.ModItems.POISONTOAD_BUCKET.get()), keeper);
+        helper.assertTrue(released != null, "the fixture released no toad");
+        Cow victim = helper.spawn(EntityType.COW, 8, 3, 9);
+        victim.setNoAi(true);
+
+        helper.startSequence()
+                .thenExecuteFor(60, () -> helper.assertTrue(!released.isFusing(),
+                        "a released toad started fusing without being hit"))
+                .thenExecute(() -> released.hurt(helper.getLevel().damageSources().generic(), 1.0F))
+                .thenWaitUntil(() -> helper.assertTrue(released.isRemoved(),
+                        "waiting for the provoked toad to release and discard itself"))
+                .thenExecute(() -> helper.assertTrue(
+                        victim.hasEffect(net.minecraft.world.effect.MobEffects.POISON),
+                        "a released poison toad's cloud never reached a victim next to it"))
+                .thenSucceed();
+    }
+
+    // ---------------------------------------------------------------- R2-10 Blastoad attribution
+
+    /**
+     * R2-10: a player who provokes a Blastoad owns the damage it deals. The blast has to actually
+     * take health off the monster for anything to be credited -- that is the same rule a sword
+     * swing goes through -- and an unrelated player standing right beside it gets nothing.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void r2ProvokedBlastoadCreditsItsProvoker(GameTestHelper helper) {
+        net.minecraft.server.level.ServerPlayer hunter = helper.makeMockServerPlayerInLevel();
+        GreatIzuchi quarry = spawnInert(helper);
+        Toad blastoad = helper.spawn(ModEntities.TOAD.get(), 8, 2, 8);
+        blastoad.setVariant(Toad.Variant.BLAST);
+        hunter.moveTo(blastoad.getX(), blastoad.getY(), blastoad.getZ() - 1.0D, 0.0F, 0.0F);
+        float healthBefore = quarry.getHealth();
+
+        blastoad.hurt(helper.getLevel().damageSources().playerAttack(hunter), 1.0F);
+        boolean recorded = blastoad.provokerId() != null && blastoad.provokerId().equals(hunter.getUUID());
+
+        helper.startSequence()
+                .thenExecute(() -> helper.assertTrue(recorded,
+                        "the hit did not record the provoking player"))
+                .thenWaitUntil(() -> helper.assertTrue(blastoad.isRemoved(),
+                        "waiting for the provoked blastoad to detonate"))
+                .thenExecute(() -> {
+                    // Read everything, then take the fixture player back out of the level before
+                    // asserting: a failed assertion aborts the sequence, and a mock player left in
+                    // the player list would follow the rest of the run around.
+                    boolean credited = quarry.carveState().isParticipant(hunter.getUUID());
+                    int participants = quarry.carveState().participantCount();
+                    float health = quarry.getHealth();
+                    hunter.getServer().getPlayerList().remove(hunter);
+
+                    helper.assertTrue(health < healthBefore,
+                            "the blast did no damage to the monster, so this proves nothing");
+                    helper.assertTrue(credited,
+                            "the provoking player was not credited for the blast damage");
+                    helper.assertTrue(participants == 1,
+                            "the blast credited " + participants
+                                    + " participants instead of only its provoker");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * R2-10: an unprovoked blast, and a non-damaging variant, credit nobody. Releasing a bucket
+     * next to a monster or standing near one going off is not participation.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void r2UnprovokedAndStatusToadsCreditNobody(GameTestHelper helper) {
+        fillFloor(helper, 1, net.minecraft.world.level.block.Blocks.STONE);
+        net.minecraft.server.level.ServerPlayer bystander = helper.makeMockServerPlayerInLevel();
+        GreatIzuchi quarry = spawnInert(helper);
+        // Deployed from this player's own bucket, then set off by something that is not them.
+        Toad blastoad = helper.spawn(ModEntities.TOAD.get(), 8, 2, 8);
+        blastoad.setVariant(Toad.Variant.BLAST);
+        blastoad.setFromBucket(true);
+        bystander.moveTo(blastoad.getX(), blastoad.getY(), blastoad.getZ() - 1.0D, 0.0F, 0.0F);
+
+        blastoad.hurt(helper.getLevel().damageSources().generic(), 1.0F);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(blastoad.isRemoved(),
+                        "waiting for the unprovoked blastoad to detonate"))
+                .thenExecute(() -> {
+                    int participants = quarry.carveState().participantCount();
+                    bystander.getServer().getPlayerList().remove(bystander);
+                    helper.assertTrue(participants == 0,
+                            "an unprovoked blast credited " + participants + " participants");
+                })
+                .thenSucceed();
+    }
+
+    /** R2-10: a provoked status toad damages nothing, so it credits nobody either. */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void r2ProvokedStatusToadCreditsNobody(GameTestHelper helper) {
+        net.minecraft.server.level.ServerPlayer hunter = helper.makeMockServerPlayerInLevel();
+        GreatIzuchi quarry = spawnInert(helper);
+        Toad poisontoad = helper.spawn(ModEntities.TOAD.get(), 8, 2, 8);
+        poisontoad.setVariant(Toad.Variant.POISON);
+        hunter.moveTo(poisontoad.getX(), poisontoad.getY(), poisontoad.getZ() - 1.0D, 0.0F, 0.0F);
+
+        poisontoad.hurt(helper.getLevel().damageSources().playerAttack(hunter), 1.0F);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(poisontoad.isRemoved(),
+                        "waiting for the provoked poison toad to release"))
+                .thenExecute(() -> {
+                    int participants = quarry.carveState().participantCount();
+                    hunter.getServer().getPlayerList().remove(hunter);
+                    helper.assertTrue(participants == 0,
+                            "a non-damaging status toad credited carve participation");
+                })
+                .thenSucceed();
+    }
+
     private static void fillFloor(GameTestHelper helper, int y, net.minecraft.world.level.block.Block block) {
         for (int x = 0; x <= 15; x++) {
             for (int z = 0; z <= 15; z++) {
