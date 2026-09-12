@@ -60,10 +60,11 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * attacks already follow.
  *
  * <p><b>The bite's active-window volume is now a real measured path</b>, not the round-one
- * hand-estimate: see {@link RathianCombatGoal#BITE}'s own doc for what a live capture actually
+ * hand-estimate: see {@link RathianCombatGoal#BITE_RIGHT}'s own doc for what a live capture actually
  * showed (the jaw stays reared up and far out for most of the clip, only descending toward
  * something reachable in its last third) and why that moved both the strike point and the
- * active window it had originally been guessed at.
+ * active window it had originally been guessed at. {@code attack_charge_bite_left} plays the same
+ * timeline, mirrored from that same measured path -- see {@link RathianCombatGoal#BITE_LEFT}.
  */
 public class Rathian extends Monster implements GeoEntity, Roarable {
 
