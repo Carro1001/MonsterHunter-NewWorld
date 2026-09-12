@@ -105,22 +105,29 @@ the same windup/active/recovery shape as `GreatIzuchiCombatGoal`: it stops the a
 while `attack_charge_bite_right` plays (`Rathian.BITE`/`ATTACK_BITE`, synced attack id/age/sequence,
 same pattern as Great Izuchi's), and only evaluates a hit volume during the active window.
 
-**The strike volume and phase timing are still a hand-estimate, not a live capture** — this is the
-part still open, not the cadence fix above. `RathianCombatGoal.BITE`'s path is a single static point
-close in front of the body (forward 1.60, up 1.90), deliberately not `Rathian`'s own already-measured
-`head` hurtbox offset (forward 7.30, the fully-extended resting-neck position, nowhere near where a
-bite lands against something in melee reach), widened generously (volume size 2.2) to cover the guess
-rather than chase a precise centre with no real data yet. The windup/active/recovery split (ticks
-0-10/11-20/21-29 of the clip's 30 ticks) is likewise an estimate of the clip's shape, not measured
-timing.
+**The strike volume and phase timing are now a real measured path, not a hand-estimate** — closed,
+this round. A live capture (`debugCombat` on, several bites against a Pillager) let the round-one
+estimate be checked against the actual `Jaw`-bone motion, and it was wrong on both counts it was
+guessed: the jaw doesn't dip close to the body early on, it stays reared up and far out (up 4+,
+forward 5.3-6.9) for most of the clip, and only descends toward something reachable in the clip's
+last third (age 19-28, up dropping from 4.48 to 0.91, forward settling to 4.3-5.5). `BITE`'s path is
+now those four real bucketed keyframes, and the windup/active/recovery split moved to bracket that
+descent (18/19-28/29) instead of the middle third. `minRange`/`maxRange` were set from where that
+path can actually reach (2.0-6.0), replacing the old 0-3.0 band that let the attack fire from
+touching distance, well short of where the real path lands.
 
-To close it: same playbook as Great Izuchi's tail attacks, now most of the way there. With
-`debugCombat` on, provoke a Rathian into biting a few times and capture `logs/latest.log` (`BoneProbe`
-already logs every tick while the clip plays), then replace the estimated point/timing above with a
-real baked path the way `AttackProfile.SCRATCH`'s was built. `attack_tailwhip` and the other clips
-(`attack_charge_bite_left`, the fireball clips, `attack_backhop`, `attack_backflip_ground/flying`)
-still need the same treatment after this first one, most likely as additional entries alongside
-`BITE` in the same goal rather than a new one per clip.
+Two behaviour fixes landed in the same pass, both from the same live-play report: the goal now stops
+approaching once within the bite's own maximum reach instead of closing to touching range and then
+reaching backward for the strike, and attack selection was restructured to the same
+filter-by-range/discourage-repeat/random-tiebreak shape as `GreatIzuchiCombatGoal`'s (see
+`RathianCombatGoal.chooseAttack`) even though there's still one candidate today, per explicit
+direction that distance should influence but never guarantee which attack a fight uses once a second
+one exists.
+
+Still open: `attack_tailwhip` and the other clips (`attack_charge_bite_left`, the fireball clips,
+`attack_backhop`, `attack_backflip_ground/flying`) need the same live-capture treatment as `BITE`
+just got, most likely as additional entries in `RathianCombatGoal`'s `ALL` array rather than a new
+goal per clip -- the selection machinery is already shaped for that.
 
 `RathianCombatGoal` was written as its own class rather than generalizing `GreatIzuchiCombatGoal`,
 deliberately: this is the second real attack-timeline implementation now, exactly the point this

@@ -36,31 +36,35 @@ import java.util.List;
 public class RathianCombatGoal extends Goal {
 
     /**
-     * The one attack this species owns for real so far. {@code windupEnd}/{@code activeStart}/
-     * {@code activeEnd}/{@code actionEnd} split the clip's 30 ticks (1.5s, see {@code Rathian}'s
-     * {@code BITE} animation) into thirds as an estimate of the bite's shape, not measured timing.
+     * The one attack this species owns for real so far, now with a real measured path baked from a
+     * live capture (see {@code docs/TEST_PLAN.md}) instead of the round-one hand-estimate.
      *
-     * <p>The path is a single static point close in front of the body, deliberately NOT the
-     * already-measured {@code head} hurtbox offset (up 1.61, forward 7.30): that idle position is
-     * where the head sits at the end of the fully-extended resting neck, nowhere near where a bite
-     * needs to land against a target within melee reach. Widened generously (volume size 2.2, well
-     * past every other profile in this codebase) rather than chased to a precise centre, since
-     * there is no captured path yet to say where the jaw actually closes -- the same "cover the
-     * range, don't guess the exact point" lesson the hurtbox tuning already learned the hard way.
-     * Replace both the point and this width once a live capture gives a real path to bake.
+     * <p>Bucketing every {@code Jaw}-bone sample from that capture by its position in the clip
+     * showed the earlier guess was wrong on both counts it was estimated: the jaw does not dip down
+     * close to the body early on -- it stays reared up and far out (up 4+, forward 5.3-6.9) for most
+     * of the clip -- and only actually descends toward something reachable in the clip's last third
+     * (age 19-28, up dropping from 4.48 to 0.91, forward settling to 4.3-5.5). That descent is the
+     * real bite, not the first half of the clip. Every sample's {@code left} oscillated with no
+     * consistent sign (residual aiming noise from the goal's own per-attack facing, not a real
+     * animation offset), so it's set to 0 throughout, the same convention every measured hurtbox in
+     * this file already uses for the same reason.
+     *
+     * <p>{@code minRange}/{@code maxRange} come directly from where this path can actually reach
+     * (forward 4.26-5.52, padded by the volume's own half-width); previously this fired from as
+     * close as touching distance, which is well short of where this path lands.
      */
     public static final AttackProfile BITE = new AttackProfile(
             Rathian.ATTACK_BITE,
-            10, 11, 20, 29,
-            25, 1, 2.2D, Rathian.ATTACK_DAMAGE, 0.0F, 0.05D,
-            0.0D, 3.0D,
+            18, 19, 28, 29,
+            25, 1, 1.8D, Rathian.ATTACK_DAMAGE, 0.0F, 0.05D,
+            2.0D, 6.0D,
             new double[][][] {{
                     // age    left      up   forward
-                    {11, 0.00D, 1.90D, 1.60D},
+                    {19, 0.00D, 4.48D, 5.52D},
+                    {22, 0.00D, 2.51D, 5.48D},
+                    {25, 0.00D, 1.38D, 4.26D},
+                    {28, 0.00D, 0.91D, 4.37D},
             }});
-
-    /** How close the monster tries to get before it may attack; matches the bite's own maxRange. */
-    private static final double CLOSE_RANGE = 3.0D;
 
     private static final int REPATH_INTERVAL = 10;
 
@@ -68,6 +72,10 @@ public class RathianCombatGoal extends Goal {
     private static final float WINDUP_TURN_RATE = 9.0F;
     private static final double WINDUP_DAMPING = 0.35D;
     private static final int LUNGE_RAMP_TICKS = 6;
+
+    /** Every attack this species can choose from. One entry today; {@link #chooseAttack} is already
+     * shaped to add more (tailwhip, most likely) without a rewrite. */
+    private static final AttackProfile[] ALL = {BITE};
 
     private final Rathian monster;
 
@@ -77,6 +85,11 @@ public class RathianCombatGoal extends Goal {
 
     private int repathCooldown;
     private boolean attacking;
+    private AttackProfile current;
+    /** Last attack chosen, so the selector can prefer variety over repetition once there is more
+     * than one candidate; see {@link #chooseAttack} and {@link GreatIzuchiCombatGoal}'s identical
+     * field for why this alone isn't enough to guarantee anything, only to discourage repeats. */
+    private AttackProfile previous;
     private Vec3 lungeDirection = Vec3.ZERO;
 
     public RathianCombatGoal(Rathian monster) {
@@ -120,8 +133,9 @@ public class RathianCombatGoal extends Goal {
         if (this.attacking) {
             this.attacking = false;
             this.monster.endAttack();
-            this.monster.attackCooldown = BITE.cooldown();
+            this.monster.attackCooldown = this.current != null ? this.current.cooldown() : 25;
         }
+        this.current = null;
         this.monster.setCommittedBodyYaw(null);
         this.lungeDirection = Vec3.ZERO;
         this.hitThisAction.clear();
@@ -151,14 +165,19 @@ public class RathianCombatGoal extends Goal {
 
         double distance = distanceToBox(target);
 
-        if (this.monster.attackCooldown <= 0 && distance <= BITE.maxRange()
-                && this.monster.hasLineOfSight(target)) {
-            this.monster.getNavigation().stop();
-            beginAttack(target, distance);
-            return;
+        if (this.monster.attackCooldown <= 0 && this.monster.hasLineOfSight(target)) {
+            AttackProfile chosen = chooseAttack(distance);
+            if (chosen != null) {
+                this.monster.getNavigation().stop();
+                beginAttack(chosen, target, distance);
+                return;
+            }
         }
 
-        if (distance > CLOSE_RANGE) {
+        // Stays at whatever distance an attack can actually reach from, rather than closing to
+        // touching range and then reaching backward for the bite: only approaches while genuinely
+        // too far for anything, and only up to the point that changes.
+        if (distance > BITE.maxRange()) {
             if (--this.repathCooldown <= 0) {
                 this.repathCooldown = REPATH_INTERVAL;
                 if (!this.monster.getNavigation().moveTo(target, 1.0D)) {
@@ -171,15 +190,40 @@ public class RathianCombatGoal extends Goal {
         this.monster.getNavigation().stop();
     }
 
-    private void beginAttack(LivingEntity target, double distance) {
+    /**
+     * Picks one attack. With a single candidate this just checks range, but the shape (filter by
+     * range, discourage repeating the last one, break remaining ties randomly) is
+     * {@link GreatIzuchiCombatGoal#chooseAttack}'s, so distance can influence which attack gets
+     * picked once a second one exists without ever guaranteeing the same choice at the same
+     * distance every time -- the actual ask, not simulated for a species that doesn't need it yet.
+     */
+    private AttackProfile chooseAttack(double distance) {
+        List<AttackProfile> candidates = new ArrayList<>();
+        for (AttackProfile profile : ALL) {
+            if (profile.inRange(distance)) {
+                candidates.add(profile);
+            }
+        }
+        if (candidates.isEmpty()) {
+            return null;
+        }
+        if (candidates.size() > 1) {
+            candidates.remove(this.previous);
+        }
+        return candidates.get(this.monster.getRandom().nextInt(candidates.size()));
+    }
+
+    private void beginAttack(AttackProfile profile, LivingEntity target, double distance) {
         this.attacking = true;
+        this.current = profile;
+        this.previous = profile;
         this.hitThisAction.clear();
         this.lungeDirection = Vec3.ZERO;
         this.monster.setAggressive(true);
         this.monster.getNavigation().stop();
-        this.monster.beginAttack(BITE.id());
+        this.monster.beginAttack(profile.id());
         debug("attack start: entity={} id={} seq={} target={} distance={}",
-                this.monster.getId(), BITE.id(), this.monster.getActionSequence(),
+                this.monster.getId(), profile.id(), this.monster.getActionSequence(),
                 target.getName().getString(), String.format("%.2f", distance));
     }
 
@@ -190,15 +234,17 @@ public class RathianCombatGoal extends Goal {
     }
 
     private void tickAttack() {
+        AttackProfile profile = this.current;
         int age = this.monster.getAttackAge();
 
-        if (age < 0 || age > BITE.actionEnd()) {
+        if (profile == null || age < 0 || age > profile.actionEnd()) {
             debug("attack end: entity={} seq={} age={} victims={}",
                     this.monster.getId(), this.monster.getActionSequence(), age,
                     this.hitThisAction.size());
             this.attacking = false;
             this.monster.endAttack();
-            this.monster.attackCooldown = BITE.cooldown();
+            this.monster.attackCooldown = profile != null ? profile.cooldown() : 25;
+            this.current = null;
             this.monster.setCommittedBodyYaw(null);
             this.lungeDirection = Vec3.ZERO;
             this.hitThisAction.clear();
@@ -209,7 +255,7 @@ public class RathianCombatGoal extends Goal {
         this.monster.getNavigation().stop();
 
         LivingEntity target = this.monster.getTarget();
-        if (age <= BITE.windupEnd()) {
+        if (age <= profile.windupEnd()) {
             if (target != null) {
                 this.monster.getLookControl().setLookAt(target, 20.0F, 20.0F);
                 aimAt(target);
@@ -218,9 +264,9 @@ public class RathianCombatGoal extends Goal {
             return;
         }
 
-        if (age >= BITE.activeStart() && age <= BITE.activeEnd()) {
-            lunge(age, target);
-            applyContact(age);
+        if (age >= profile.activeStart() && age <= profile.activeEnd()) {
+            lunge(profile, age, target);
+            applyContact(profile, age);
         }
     }
 
@@ -232,8 +278,8 @@ public class RathianCombatGoal extends Goal {
 
     /** Same commit-once-then-hold contract as {@link GreatIzuchiCombatGoal#lunge}: aimed once on the
      * first active tick, not re-aimed at a target that moves after the strike is under way (rule 6). */
-    private void lunge(int age, LivingEntity target) {
-        if (age == BITE.activeStart() && target != null) {
+    private void lunge(AttackProfile profile, int age, LivingEntity target) {
+        if (age == profile.activeStart() && target != null) {
             Vec3 toTarget = new Vec3(
                     target.getX() - this.monster.getX(), 0.0D, target.getZ() - this.monster.getZ());
             this.lungeDirection = toTarget.lengthSqr() > 1.0E-4D ? toTarget.normalize() : Vec3.ZERO;
@@ -241,8 +287,8 @@ public class RathianCombatGoal extends Goal {
         if (this.lungeDirection.lengthSqr() <= 0.0D) {
             return;
         }
-        double easeIn = Math.min(1.0D, (age - BITE.activeStart() + 1.0D) / LUNGE_RAMP_TICKS);
-        double speed = BITE.lungeSpeed() * easeIn;
+        double easeIn = Math.min(1.0D, (age - profile.activeStart() + 1.0D) / LUNGE_RAMP_TICKS);
+        double speed = profile.lungeSpeed() * easeIn;
         Vec3 velocity = this.monster.getDeltaMovement();
         this.monster.setDeltaMovement(
                 this.lungeDirection.x * speed, velocity.y, this.lungeDirection.z * speed);
@@ -262,27 +308,42 @@ public class RathianCombatGoal extends Goal {
         this.monster.setCommittedBodyYaw(Mth.wrapDegrees(currentYaw + step));
     }
 
+    /** Resolves a synchronized attack id back to its profile, or null; same role as
+     * {@link AttackProfile#byId} but scoped to this species' own {@link #ALL} so a future id never
+     * collides with Great Izuchi's identically-numbered ids in that shared lookup. Public so the
+     * developer overlay can look up the active profile's window generically instead of hardcoding
+     * {@link #BITE}, the same way it already does for Great Izuchi via {@link AttackProfile#byId}. */
+    public static AttackProfile byId(byte id) {
+        for (AttackProfile profile : ALL) {
+            if (profile.id() == id) {
+                return profile;
+            }
+        }
+        return null;
+    }
+
     /** Same reason this is static and public as {@link GreatIzuchiCombatGoal#attackVolumes}: the
      * developer overlay draws the exact geometry the server hits with, not a second approximation. */
     public static AABB[] attackVolumes(Rathian monster, int age) {
-        if (monster.getAttackId() != Rathian.ATTACK_BITE) {
+        AttackProfile profile = byId(monster.getAttackId());
+        if (profile == null) {
             return new AABB[0];
         }
-        double[] local = BITE.limbLocalAt(0, age);
+        double[] local = profile.limbLocalAt(0, age);
         Vec3 centre = monster.localToWorld(local[0], local[1], local[2]);
-        return new AABB[] {AABB.ofSize(centre, BITE.volumeSize(), BITE.volumeSize(), BITE.volumeSize())};
+        return new AABB[] {AABB.ofSize(centre, profile.volumeSize(), profile.volumeSize(), profile.volumeSize())};
     }
 
-    private void applyContact(int age) {
+    private void applyContact(AttackProfile profile, int age) {
         if (this.monster.level().isClientSide) {
             return;
         }
         for (AABB volume : attackVolumes(this.monster, age)) {
-            applyContactIn(age, volume);
+            applyContactIn(profile, age, volume);
         }
     }
 
-    private void applyContactIn(int age, AABB volume) {
+    private void applyContactIn(AttackProfile profile, int age, AABB volume) {
         for (Entity candidate : this.monster.level().getEntities(this.monster, volume)) {
             Entity resolved = candidate instanceof PartEntity<?> part ? part.getParent() : candidate;
             if (!(resolved instanceof LivingEntity victim)) {
@@ -291,7 +352,7 @@ public class RathianCombatGoal extends Goal {
             if (victim == this.monster || victim.is(this.monster) || !victim.isAlive()) {
                 continue;
             }
-            long strikeKey = ((long) victim.getId() << 8) | BITE.strikeIndexAt(age);
+            long strikeKey = ((long) victim.getId() << 8) | profile.strikeIndexAt(age);
             if (this.hitThisAction.contains(strikeKey)) {
                 continue;
             }
@@ -308,7 +369,7 @@ public class RathianCombatGoal extends Goal {
             victim.invulnerableTime = 0;
             victim.hurt(this.monster.damageSources().mobAttack(this.monster), damage);
             debug("contact accepted at age={} strike={}: {} for {} damage (seq={})",
-                    age, BITE.strikeIndexAt(age), victim.getName().getString(), damage,
+                    age, profile.strikeIndexAt(age), victim.getName().getString(), damage,
                     this.monster.getActionSequence());
         }
     }

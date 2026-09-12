@@ -59,14 +59,11 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * evaluates a hit volume during the active window, the same rule 6-shaped contract Great Izuchi's
  * attacks already follow.
  *
- * <p><b>The bite's active-window volume is a documented estimate, not a live capture.</b> See
- * {@link RathianCombatGoal#BITE}'s own doc for the anchor point and why it is deliberately not this
- * class's already-measured (but far-forward, fully-extended-neck) {@code head} hurtbox offset. The
- * windup/active/recovery split (ticks 0-10 / 11-20 / 21-29 of the clip's 30-tick length) is
- * similarly an estimate from the clip's overall shape, not measured timing. Both should be
- * corrected once a live `debugCombat` capture of this clip (`BoneProbe`'s Rathian logging already
- * switches to every tick while it plays) gives real keyframes to bake, the same way
- * {@code AttackProfile.SCRATCH}'s path replaced Great Izuchi's own first estimate.
+ * <p><b>The bite's active-window volume is now a real measured path</b>, not the round-one
+ * hand-estimate: see {@link RathianCombatGoal#BITE}'s own doc for what a live capture actually
+ * showed (the jaw stays reared up and far out for most of the clip, only descending toward
+ * something reachable in its last third) and why that moved both the strike point and the
+ * active window it had originally been guessed at.
  */
 public class Rathian extends Monster implements GeoEntity {
 

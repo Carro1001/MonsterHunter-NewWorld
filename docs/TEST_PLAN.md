@@ -319,33 +319,38 @@ spending real time on a system that may keep needing a wider capture each round;
 multi-minute capture across a full idle cycle (or several) when polishing, rather than another
 short live-tweak loop now.
 
-**Real attack timeline landed this round: `RathianCombatGoal`, replacing plain vanilla
+**Real attack timeline landed two rounds ago: `RathianCombatGoal`, replacing plain vanilla
 `MeleeAttackGoal`.** The reported problem was cadence, not damage: vanilla melee closes to contact
 range and deals damage the instant it touches, which read as a body-slam that only afterward played
 a bite clip, rather than a bite that actually connects. `RathianCombatGoal` is the same
-windup/active/recovery shape as `GreatIzuchiCombatGoal` (see its own doc): it stops the approach,
-plants and winds up while `attack_charge_bite_right` plays, and only evaluates a hit volume during
-the active window (ticks 11-20 of the clip's 30).
+windup/active/recovery shape as `GreatIzuchiCombatGoal`.
 
-**The strike volume and phase timing are a documented estimate, not a live capture.** The
-anchor point (forward 1.60, up 1.90, a generous 2.2-wide volume) is deliberately not this class's
-already-measured `head` hurtbox offset (forward 7.30) — that's where the head sits at the end of the
-fully-extended resting neck, nowhere near where a bite needs to land against something within melee
-reach — and the windup/active/recovery split is an estimate of the clip's overall shape, not measured
-timing. Both should be corrected once a live capture (`BoneProbe`'s Rathian logging already switches
-to every tick while the clip plays) gives real keyframes to bake, the same way `AttackProfile.SCRATCH`
-replaced Great Izuchi's own first estimate.
+**This round: the strike volume and phase timing were replaced with a real measured path**, baked
+from a live capture, plus two behaviour fixes reported from that same session. The round-one
+estimate (a static point close to the body, active ticks 11-20) turned out wrong on both counts:
+bucketing every `Jaw`-bone sample from the capture by its position in the clip showed the jaw
+actually stays reared up and far out (up 4+, forward 5.3-6.9) for most of the clip, and only
+descends toward something reachable in its *last* third (age 19-28, up dropping from 4.48 to 0.91,
+forward settling to 4.3-5.5) — that descent is baked in now as a real 4-point path, and the
+active window moved to match it (see `RathianCombatGoal.BITE`'s own doc for the numbers). This also
+explains the "box next to its feet, not its face" report: the round-one point undershot the real
+reach by roughly 4-5 blocks.
 
-- [ ] **New: does the bite actually read as connecting** — windup (plant, no forward drift), a
-      beat, then the jaws closing on the target — rather than the previous body-slam-then-clip?
-      This is the concrete problem this round's change targets; flag if it still reads wrong.
-- [ ] **New: does the strike land at a sane distance** (not way too close, not whiffing at anything
-      past ~2-3 blocks)? The exact reach is a guess pending a live capture — say roughly how far off
-      it feels (too short/too long/about right) so the next pass has a real number to aim for.
-- [ ] **New: with `debugCombat` on, provoke a Rathian into biting a few times and send back
-      `logs/latest.log`** — once a real path is measured across a strike, it replaces the estimated
-      anchor point above with baked keyframes, the same way Great Izuchi's claw/tail paths were built.
+**Two behaviour fixes from the same report:**
+- The goal now stops approaching once within the bite's own maximum reach (padded from where the
+  real path can land) instead of closing all the way to touching range and then swinging backward
+  for the bite — it tries to fight from the distance the attack actually needs, not point-blank.
+- Attack selection was restructured to the same shape as `GreatIzuchiCombatGoal`'s (filter
+  candidates by range, discourage repeating the last choice, break ties randomly) even though
+  there's still only one candidate today — distance can influence which attack gets picked once a
+  second one exists, without ever guaranteeing the same choice at the same distance every time, per
+  your explicit ask ("shouldn't guarantee so it's not spamming").
 
+- [ ] **New: does the bite now land at a believable distance and height**, rather than the box
+      reading as being near the feet? The path is real now but still just one capture session's
+      worth — flag anything that still looks off so it can be refined further.
+- [ ] **New: does it now hold its ground at roughly biting range** instead of closing all the way
+      to contact first?
 - [ ] Renders, spawns via egg, idles/walks/runs with correct animation
 - [ ] **F3+B: do the boxes meet edge-to-edge with no visible gap**, and **does the tail chain read as
       roughly centred on the tail across a few seconds of watching it sway**, rather than checking

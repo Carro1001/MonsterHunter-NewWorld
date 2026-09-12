@@ -62,14 +62,18 @@ final class AttackVolumeOverlay {
     }
 
     /** Same contract as {@link #render(GreatIzuchi, PoseStack, MultiBufferSource, float)}, for
-     * Rathian's own {@link RathianCombatGoal#BITE}. */
+     * Rathian's own attacks. */
     static void render(Rathian entity, PoseStack poseStack, MultiBufferSource bufferSource,
                        float partialTick) {
         if (!MHNWConfig.DEBUG_COMBAT.get() || entity.getAttackId() == Rathian.ATTACK_NONE) {
             return;
         }
+        AttackProfile profile = RathianCombatGoal.byId(entity.getAttackId());
+        if (profile == null) {
+            return;
+        }
         int age = entity.getAttackAge();
-        if (age < RathianCombatGoal.BITE.activeStart() || age > RathianCombatGoal.BITE.activeEnd()) {
+        if (age < profile.activeStart() || age > profile.activeEnd()) {
             return;
         }
 

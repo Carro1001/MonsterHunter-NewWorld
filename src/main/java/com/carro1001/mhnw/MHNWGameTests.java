@@ -1125,7 +1125,9 @@ public class MHNWGameTests {
     @GameTest(template = ARENA, timeoutTicks = 200)
     public static void rathianAttacksAndDamagesTarget(GameTestHelper helper) {
         com.carro1001.mhnw.entity.Rathian rathian = helper.spawn(ModEntities.RATHIAN.get(), 8, 2, 8);
-        Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
+        // Within RathianCombatGoal.BITE's real range band (2.0-6.0), not touching distance: this
+        // attack now deliberately does not fire from point-blank (see that profile's own doc).
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 12);
         victim.setNoAi(true);
 
         rathian.setTarget(victim);
@@ -1141,7 +1143,7 @@ public class MHNWGameTests {
     @GameTest(template = ARENA, timeoutTicks = 200)
     public static void rathianBiteDamagesOnlyDuringActiveWindow(GameTestHelper helper) {
         com.carro1001.mhnw.entity.Rathian rathian = helper.spawn(ModEntities.RATHIAN.get(), 8, 2, 8);
-        Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 12);
         victim.setNoAi(true);
 
         rathian.setTarget(victim);
