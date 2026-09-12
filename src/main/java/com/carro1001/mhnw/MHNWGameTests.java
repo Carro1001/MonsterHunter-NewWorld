@@ -1123,6 +1123,19 @@ public class MHNWGameTests {
                 "Rathian never damaged a target standing right next to it"));
     }
 
+    /** A pillager is a valid target on its own, the same reasoning as Great Izuchi's identical goal:
+     * it makes the attack observable from outside the fight, and a large monster does not care who
+     * you are. Nothing else provokes it here -- the target must come from acquisition, not retaliation. */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void rathianTargetsAPillagerOnSight(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Rathian rathian = helper.spawn(ModEntities.RATHIAN.get(), 8, 2, 8);
+        net.minecraft.world.entity.monster.Pillager pillager =
+                helper.spawn(net.minecraft.world.entity.EntityType.PILLAGER, 8, 2, 10);
+
+        helper.succeedWhen(() -> helper.assertTrue(rathian.getTarget() == pillager,
+                "Rathian never acquired a nearby pillager as a target"));
+    }
+
     /** A02/A13: death removes Rathian and every one of its seven parts, exactly once. */
     @GameTest(template = ARENA, timeoutTicks = 200)
     public static void rathianDeathRemovesTheWholeCreature(GameTestHelper helper) {

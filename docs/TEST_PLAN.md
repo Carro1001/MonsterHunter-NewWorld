@@ -2,8 +2,8 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, currently 63 tests, all 63 passing as of
-the Rathian bite-clip measurement rig below (full `build runGameTestServer` run, 2026-09-11) — the
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, currently 64 tests, all passing as of
+the Rathian pillager-targeting addition below (full `build runGameTestServer` run, 2026-09-11) — the
 shoreline test that failed under the P5a build passed cleanly after the native-controls correction.
 Client acceptance for that Lagiacrus correction has not been rerun by a human yet.
 
@@ -342,6 +342,8 @@ capturing this one clip live is a single play session, not a play-session-plus-a
 - [ ] Hitting a hurtbox (try the head, then the tail tip) reduces health
 - [ ] Attacks and damages a nearby player using ordinary melee (no special swing yet — this is
       expected for now, not a bug)
+- [x] **New: targets pillagers on sight, the same as Great Izuchi** — GameTest-covered
+      (`rathianTargetsAPillagerOnSight`), also worth a quick look live if a raid/patrol is nearby
 - [ ] Death removes the whole creature and all nine parts
 - [ ] No flight yet — it should behave as a purely ground-bound creature; this is expected, not a bug
 
