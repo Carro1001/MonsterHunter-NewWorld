@@ -158,6 +158,9 @@ public class GreatIzuchi extends Monster implements GeoEntity, Roarable {
     private final AnimatableInstanceCache animCache = GeckoLibUtil.createInstanceCache(this);
     private final MonsterPart[] parts;
 
+    /** R1 carving: participants, personal counters and the deterministic reward table. */
+    private final CarveState carveState = new CarveState(CarveState.Table.GREAT_IZUCHI);
+
     /** Server-only: ticks until another attack may start. Never saved, so a reload cools down. */
     public int attackCooldown = 20;
 
@@ -583,12 +586,17 @@ public class GreatIzuchi extends Monster implements GeoEntity, Roarable {
     }
 
     /**
-     * The death clip is 1.875 s (38 ticks) but vanilla removes a corpse at 20. Hold the body long
-     * enough for its authored death to finish, then defer to vanilla removal (handoff A13).
+     * Hold the body for the whole R1 carving window instead of vanilla's 20 ticks.
+     *
+     * <p>This used to hold only {@link #DEATH_ANIMATION_TICKS} (38), long enough for the authored
+     * death clip; {@link CarveState#CORPSE_TICKS} subsumes that, and the clip's own
+     * {@code thenPlayAndHold} keeps its last frame for the rest. The counter is vanilla's
+     * {@code deathTime}, so it advances only while this entity actually ticks and vanilla already
+     * persists it -- see {@link CarveState} on why there is no second counter.
      */
     @Override
     protected void tickDeath() {
-        if (this.deathTime < DEATH_ANIMATION_TICKS) {
+        if (!CarveState.corpseExpired(this)) {
             this.deathTime++;
             return;
         }
@@ -630,7 +638,46 @@ public class GreatIzuchi extends Monster implements GeoEntity, Roarable {
             this.lastDamageSource = source;
             this.lastDamageTick = this.tickCount;
         }
-        return super.hurt(source, amount);
+        // R1: credit the attacking player only once the hit is actually accepted AND health
+        // genuinely falls, which is what makes absorbed, invulnerable and duplicated part damage
+        // grant nothing. See CarveState.creditDamage.
+        float before = getHealth();
+        boolean accepted = super.hurt(source, amount);
+        if (accepted && !level().isClientSide && getHealth() < before) {
+            this.carveState.creditDamage(source);
+        }
+        return accepted;
+    }
+
+    /** R1 carving state. Package-visible to the goals and tests; nothing else reads it. */
+    public CarveState carveState() {
+        return this.carveState;
+    }
+
+    /**
+     * Shift + right-click carving. {@code Mob.interact} is final and returns PASS for anything not
+     * alive, so a corpse can only be reached through {@code interactAt} -- which the client tries
+     * first anyway, and which {@link MonsterPart} forwards here so the tail is a usable carve
+     * surface on a body longer than a player's reach.
+     */
+    @Override
+    public net.minecraft.world.InteractionResult interactAt(Player player, Vec3 location,
+                                                            net.minecraft.world.InteractionHand hand) {
+        net.minecraft.world.InteractionResult carved = this.carveState.interact(this, player, hand);
+        return carved == net.minecraft.world.InteractionResult.PASS
+                ? super.interactAt(player, location, hand)
+                : carved;
+    }
+
+    /**
+     * Keep the corpse from being despawned out from under its carvers. A dead mob is still subject
+     * to {@code Mob.checkDespawn}'s distance rule, which would delete the body long before the
+     * carving window expires, and the window is deliberately not allowed to force-load chunks.
+     */
+    @Override
+    public void die(DamageSource source) {
+        super.die(source);
+        setPersistenceRequired();
     }
 
     @Override
@@ -638,12 +685,16 @@ public class GreatIzuchi extends Monster implements GeoEntity, Roarable {
         super.addAdditionalSaveData(tag);
         // Transient combat state is deliberately not saved. Reloading cancels the action, and the
         // fresh cooldown prevents an instant swing on load (handoff section 4.3 rule 7).
+        // Carving participation is the exception: it is earned, not transient, and has to survive a
+        // chunk unload between the first hit and the kill.
+        this.carveState.save(tag);
     }
 
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         this.attackCooldown = 20;
+        this.carveState.load(tag);
     }
 
     @Override
