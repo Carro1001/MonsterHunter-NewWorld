@@ -5,11 +5,15 @@ repository.
 
 ## Read this first if you're picking this up cold
 
-This is a from-scratch revival of an older Forge 1.20.1 mod, in progress on the
-`revival/neoforge-1.21.1` branch. **`master` is the old, larger, Forge/MultiHitBoxLib/SmartBrainLib
-codebase and is not what you are working on** — everything below describes the revival branch only.
-The full plan, rationale, and phase-by-phase runbook live in `docs/REVIVAL_HANDOFF.md`; read that
-before starting new feature work, not just this file.
+This is a from-scratch revival of an older Forge 1.20.1 mod. **Superseded as of 2026-09-11:** the
+revival is no longer a side branch — `revival/neoforge-1.21.1` was squash-merged into `master`
+(`ab59e19`), so `master` *is* the NeoForge 1.21.1 rewrite and everything below describes it. The
+old Forge/MultiHitBoxLib/SmartBrainLib codebase survives only in history and on `origin/brain`.
+
+New feature work is scoped by `docs/ROADMAP.md` (revision `mh-nw-roadmap-2026-09-11-v4`) and the
+numbered packets it hands out, e.g. `docs/R0_BASELINE_HANDOFF.md`. Work the current packet; do not
+re-read or restart the historical P0-P8 runbook. `docs/REVIVAL_HANDOFF.md` (70 KB) is background for
+*why* the architecture looks like this, not the work queue.
 
 For "where exactly did we leave off": `docs/TEST_PLAN.md` has a dated, round-by-round history under
 each species' section (what changed, why, and what's still an open checklist item) and states the
@@ -19,8 +23,10 @@ every round of work, not just at milestones — treat a stale-looking entry as a
 missed, not as the current source of truth.
 
 **Standing constraints that apply to any future work on this branch, unless told otherwise:**
-- `revival/neoforge-1.21.1` stays **local-only, never pushed**, until the maintainer explicitly says
-  otherwise.
+- **Superseded:** the old "`revival/neoforge-1.21.1` stays local-only, never pushed" rule no longer
+  describes reality — both that branch and `master` exist on `origin`. The standing rule is now:
+  **no further push or publish without explicit authorization**, per push, not implied by the
+  branches already being remote.
 - Commits end with `Co-Authored-By: Codex Sonnet 5 <noreply@anthropic.com>` (PRs additionally with
   `🤖 Generated with [Codex]`).
 - KISS/YAGNI: this rewrite is deliberately much smaller than the old `master` codebase (see below) —
@@ -37,10 +43,21 @@ missed, not as the current source of truth.
 ## What this is
 
 A Minecraft NeoForge mod (`mhnw`, "Monster Hunter: New World") adding Monster Hunter-style
-creatures — currently Great Izuchi, Izuchi (small), Rathian, Rathalos, Aptonoth, Toad, Flashbug, Bug —
-with GeckoLib-animated models and, for the large monsters, part-based hurtboxes. More species
-(Zinogre, Deviljho, Lagiacrus, Blango, Blangonga) are planned per the handoff's runbook but not yet
-ported.
+creatures — currently Great Izuchi, Izuchi (small), Rathian, Rathalos, Aptonoth, Lagiacrus, Toad,
+Flashbug, Bug — with GeckoLib-animated models and, for the large monsters, part-based hurtboxes.
+
+Species notes that are easy to get wrong from an older doc:
+- **Lagiacrus is ported**, not planned: a limited *movement* baseline (seven native parts, amphibious
+  navigation, bounded land pursuit with no outgoing damage, underwater breathing). Its bank-exit
+  GameTest proves bounded failure cleanup, not successful climbing — that limitation is deliberate
+  and documented in `docs/DEFERRED.md`, not a bug to fix in passing.
+- **Rathian** has a real measured/mirrored bite timeline and the opening roar; it is not
+  vanilla-melee-only.
+- **Small Izuchi's** missing dedicated attack/death clips are an **accepted first-release
+  presentation limitation** (roadmap v4), not a prerequisite for R1. See "Attack timeline" below.
+- **Toad and Flashbug** endemic behaviour ships as-is and is retained; R2 extends it rather than
+  redesigning it.
+- Still unported: Zinogre, Deviljho, Blango, Blangonga.
 
 ## Build & run
 
@@ -56,11 +73,11 @@ the wrapper:
 
 **JDK note:** the project compiles to Java 21 (`java.toolchain.languageVersion`, since Mojang ships
 Java 21 to end users on 1.21.1). Gradle itself (wrapper pinned to `9.2.1`) also needs a JDK it can
-run on; if the machine's default `java`/`JAVA_HOME` doesn't work for Gradle's own startup, point
-`JAVA_HOME` at one that does for `gradlew` invocations. The working invocation used throughout this
-branch's own session history on this machine:
-`JAVA_HOME="C:\Program Files\Java\jdk-22" ./gradlew.bat --no-daemon build runGameTestServer`
-(bash-style quoting; adjust the path if the local JDK 21/22 install lives elsewhere). A build/test
+run on, and provisions its own JDK 21 toolchain for the actual compilation. As of R0a (2026-09-11)
+the plain wrapper invocation works on this machine with no override at all —
+`./gradlew.bat --no-daemon build runGameTestServer` under the ambient `JAVA_HOME` (Temurin 25) —
+so the old `JAVA_HOME="C:\Program Files\Java\jdk-22"` prefix is no longer required; use it only if
+Gradle's own startup actually fails, and don't hardcode another contributor's JDK path. A build/test
 round on this machine takes roughly 30 seconds.
 
 Combat/behaviour diagnostics: `/mhnw debugcombat` toggles logging in-game (op-only) — see
@@ -184,9 +201,15 @@ via `./gradlew runGameTestServer`. It deliberately covers only what a human at a
 reliably check and what would regress silently — damage semantics (one hit through a part costs
 the parent exactly one hit, distinct attackers aren't conflated, damage only lands inside an
 attack's active window), state-machine edges (reload cancels transient combat, death removes every
-part exactly once), and — as of the A10 navigation work — ground pathing across open terrain, an
-outside corner, a body-width passage, a too-narrow passage, a single-block step, and a fully sealed
-unreachable target. It deliberately does **not** cover whether a texture renders, an animation looks
+part exactly once), ground pathing across open terrain, an outside corner, a body-width passage, a
+too-narrow passage, a single-block step, and a fully sealed unreachable target, and — as of the R0a
+baseline packet — real-tick timing: that the opening roar counts down one tick per *real* tick for
+its whole clip on all three roaring species, that the disengage re-arm honours its real 100-tick
+interval, that a monster killed mid-roar/mid-attack deals no further damage and leaves NeoForge's
+part lookup, and that a full `saveWithoutId`/`load` round trip keeps health and parts while dropping
+the transient action (saved mid-attack for Great Izuchi, mid-roar for Rathian, so neither
+assertion is vacuous). Timing tests anchor their deadline to an observed countdown rather than a
+broad timeout, so a half-rate countdown fails them (verified by reintroducing the bug). It deliberately does **not** cover whether a texture renders, an animation looks
 right, or a hurtbox visually sits on the body — those need `docs/TEST_PLAN.md`'s human checklist.
 Current test count and pass status are stated at the top of `docs/TEST_PLAN.md`; keep that number in
 sync when adding tests.

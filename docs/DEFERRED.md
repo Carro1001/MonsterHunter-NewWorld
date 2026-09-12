@@ -5,6 +5,35 @@ Things consciously postponed, with enough context to pick them up cold. Nothing 
 
 Acceptance IDs refer to the matrix in `REVIVAL_HANDOFF.md` section 4.6.
 
+## Found during R0a (2026-09-11), deferred out of that packet
+
+### `RoarGoal`'s disengage clock stalls while a committed attack holds the goal's flags
+**Status:** real, measured, harmless enough to leave. `RoarGoal` keeps its re-arm bookkeeping inside
+`canUse()` — deliberately, so it uses real elapsed `getGameTime()` rather than a per-call counter.
+But vanilla's `GoalSelector` never calls `canUse()` on a goal whose flags (here `MOVE`/`LOOK`) are
+held by a running goal that reports `isInterruptable() == false`, and `GreatIzuchiCombatGoal` reports
+exactly that while an action is committed. So if the target is dropped mid-swing, the disengage clock
+does not start until that action finishes: measured at 161 real ticks to re-arm instead of the
+intended 100.
+
+Consequence is bounded and small — at most one action's length of extra delay before a monster is
+willing to play its opening roar again, and only when aggro is lost mid-attack. Fixing it properly
+means moving the clock somewhere that ticks unconditionally (entity `tick()`, or a goal that owns no
+flags), which is a structural change to a shipped, working mechanic and explicitly out of scope for a
+baseline-hardening packet. `greatIzuchiReArmsRoarOnlyAfterTheRealDisengageInterval` therefore holds
+`attackCooldown` high so no action commits, and measures the clean disengage the interval is actually
+specified for; the caveat is commented in the test itself. Pick this up if a live session shows the
+delayed re-roar reading as wrong, not before.
+
+### R0b / pre-release acceptance gates still open
+Named here so they are not lost between packets. None of these were closed by R0a, and none of them
+block R1a:
+- Correctly aged presentation for a client that starts tracking mid-action (GeckoLib seeking).
+- Two actual clients agreeing on damage, health, parts and death.
+- A real save / stop / restart / rejoin cycle, including part reconstruction from disk. R0a's T04
+  covers an in-memory `saveWithoutId`/`load` round trip only, which is not the same claim.
+- Fresh human confirmation of roar and death playback.
+
 ## Deferred to the pre-release / survival phase
 
 ### Great Izuchi — `rally` clip not wired

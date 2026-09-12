@@ -42,6 +42,21 @@ public class MHNWGameTests {
     private static final float PROBE_DAMAGE = 5.0F;
     private static final float EPSILON = 0.01F;
 
+    /** Real-tick slack allowed when observing a goal-driven countdown: vanilla's goal selector
+     * starts and stops goals on its every-other-tick poll, and a sequence step lands a tick after
+     * the one that satisfied it. Deliberately far below the doubling a half-rate countdown
+     * produces, so T01 still fails if {@code RoarGoal.requiresUpdateEveryTick()} is removed. */
+    private static final int SCHEDULING_TOLERANCE = 2;
+
+    /** Mirrors {@code RoarGoal.DISENGAGE_TICKS}: how long with no target before the next
+     * engagement roars again. Not imported -- the goal keeps it private, and a test that read the
+     * production constant could not tell a changed interval from a broken one. */
+    private static final int REARM_TICKS = 100;
+
+    /** Re-arming is decided inside {@code canUse()}, which vanilla polls only every other tick --
+     * once to notice the loss and once to act on it. Four ticks of slack, no more (T02). */
+    private static final int REARM_POLL_TOLERANCE = 4;
+
     private static GreatIzuchi spawnInert(GameTestHelper helper) {
         GreatIzuchi monster = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
         monster.setNoAi(true);
@@ -87,36 +102,171 @@ public class MHNWGameTests {
         helper.succeed();
     }
 
-    /** MHW-style opening roar (RoarGoal): fires the moment a target is first acquired, and no
-     * attack may start while it's still playing -- the roar goal outranks the combat goal for
-     * exactly this reason (see RoarGoal's own doc). */
-    @GameTest(template = ARENA, timeoutTicks = 200)
-    public static void greatIzuchiRoarsOnFirstEngagement(GameTestHelper helper) {
+    /**
+     * T01: the MHW-style opening roar fires the moment a target is first acquired, runs down at
+     * exactly one tick per <em>real</em> tick for its species' whole authored clip, and blocks any
+     * attack for that whole time -- the roar goal outranks the combat goal for exactly this reason
+     * (see {@code RoarGoal}'s own doc).
+     *
+     * <p>This is the regression for the bug {@code RoarGoal.requiresUpdateEveryTick()} fixes.
+     * Without that override, {@code Mob.serverAiStep} ticks a running goal only every other real
+     * tick, so the countdown takes roughly twice the clip's length: the clip finishes and holds its
+     * last authored frame long before the goal lets go, which reads live as "froze after the roar."
+     * Nothing here calls {@code RoarGoal.tick()} directly -- a direct call ticks at whatever rate
+     * the test chose and could never catch vanilla's own scheduling. The deadline is anchored to
+     * the first countdown value actually observed, not to an assumed global test tick, and the
+     * per-tick rate check means a doubled countdown fails long before any timeout expires.
+     *
+     * @param attacking species-specific "is mid-attack" probe; Rathalos has no synced attack id
+     *                  (it uses vanilla melee), so it relies on the victim-health check instead.
+     */
+    private static <T extends net.minecraft.world.entity.Mob & com.carro1001.mhnw.entity.Roarable>
+            void assertRoarRunsAtOneTickPerRealTick(GameTestHelper helper, T monster, Cow victim,
+                    java.util.function.BooleanSupplier attacking) {
+        long[] startTime = {0L};
+        int[] startRemaining = {0};
+        float[] victimHealth = {0.0F};
+        long[] finishedAfter = {-1L};
+
+        helper.startSequence()
+                .thenWaitUntil(() -> {
+                    monster.setTarget(victim);
+                    helper.assertTrue(monster.getRoarTicks() > 0, "never started roaring on first engagement");
+                    // Recorded on the one invocation that passes, so these are the first positive
+                    // countdown actually observed and the real game time it was observed at.
+                    startTime[0] = helper.getLevel().getGameTime();
+                    startRemaining[0] = monster.getRoarTicks();
+                    victimHealth[0] = victim.getHealth();
+                })
+                .thenExecute(() -> {
+                    helper.assertTrue(monster.hasRoaredThisEngagement(),
+                            "hasRoaredThisEngagement wasn't set once roaring started");
+                    helper.assertTrue(startRemaining[0] >= monster.roarDurationTicks() - SCHEDULING_TOLERANCE,
+                            "the roar started at " + startRemaining[0] + " ticks, not this species'"
+                                    + " clip length of " + monster.roarDurationTicks());
+                })
+                .thenExecuteFor(monster.roarDurationTicks() + SCHEDULING_TOLERANCE, () -> {
+                    long elapsed = helper.getLevel().getGameTime() - startTime[0];
+                    int remaining = monster.getRoarTicks();
+                    if (remaining <= 0) {
+                        if (finishedAfter[0] < 0L) {
+                            finishedAfter[0] = elapsed;
+                        }
+                        return;
+                    }
+                    helper.assertTrue(Math.abs((startRemaining[0] - elapsed) - remaining) <= SCHEDULING_TOLERANCE,
+                            "the roar countdown is not running at one tick per real tick: " + elapsed
+                                    + " real ticks in, " + remaining + " left of " + startRemaining[0]);
+                    helper.assertTrue(!attacking.getAsBoolean(), "started an attack while still roaring");
+                    helper.assertTrue(victim.getHealth() >= victimHealth[0] - EPSILON,
+                            "damaged its target while still roaring: " + victimHealth[0] + " -> "
+                                    + victim.getHealth());
+                })
+                .thenExecute(() -> helper.assertTrue(
+                        finishedAfter[0] >= 0L
+                                && Math.abs(finishedAfter[0] - startRemaining[0]) <= SCHEDULING_TOLERANCE,
+                        "a roar with " + startRemaining[0] + " ticks left finished after "
+                                + finishedAfter[0] + " real ticks (-1 means it never finished)"))
+                .thenSucceed();
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 300)
+    public static void greatIzuchiRoarRunsForItsRealClipLength(GameTestHelper helper) {
         GreatIzuchi monster = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
         Cow victim = helper.spawn(EntityType.COW, 8, 2, 10);
         victim.setNoAi(true);
-
         monster.setTarget(victim);
 
-        helper.succeedWhen(() -> {
-            helper.assertTrue(monster.isRoaring(), "never started roaring on first engagement");
-            helper.assertTrue(monster.hasRoaredThisEngagement(),
-                    "hasRoaredThisEngagement wasn't set once roaring started");
-            helper.assertTrue(monster.getAttackId() == GreatIzuchi.ATTACK_NONE,
-                    "started an attack while still supposed to be roaring");
-        });
+        assertRoarRunsAtOneTickPerRealTick(helper, monster, victim,
+                () -> monster.getAttackId() != GreatIzuchi.ATTACK_NONE);
     }
 
-    /** The re-arm half of the same mechanic: a real stretch with no target (not a one-tick target
-     * flicker) resets {@code hasRoaredThisEngagement}, so the next fight roars again. No victim
-     * needed here -- nothing to acquire as a target is the point. */
-    @GameTest(template = ARENA, timeoutTicks = 200)
-    public static void greatIzuchiReArmsRoarAfterARealDisengage(GameTestHelper helper) {
-        GreatIzuchi monster = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
-        monster.setRoaredThisEngagement(true); // simulate a fight that already roared and just ended
+    @GameTest(template = ARENA, timeoutTicks = 300)
+    public static void rathianRoarRunsForItsRealClipLength(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Rathian rathian = helper.spawn(ModEntities.RATHIAN.get(), 8, 2, 8);
+        // Inside RathianCombatGoal.BITE_RIGHT's real 2.0-6.0 range band, so "no attack while
+        // roaring" is a claim about the roar and not about the victim being out of reach.
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 12);
+        victim.setNoAi(true);
+        rathian.setTarget(victim);
 
-        helper.succeedWhen(() -> helper.assertTrue(!monster.hasRoaredThisEngagement(),
-                "never re-armed after a real stretch with no target"));
+        assertRoarRunsAtOneTickPerRealTick(helper, rathian, victim,
+                () -> rathian.getAttackId() != com.carro1001.mhnw.entity.Rathian.ATTACK_NONE);
+    }
+
+    /** Third real {@code Roarable}. Rathalos fights with vanilla melee and has no synced attack id
+     * to inspect, so the victim's health is the whole "didn't attack while roaring" probe here --
+     * inventing a {@code Rathalos.getAttackId()} for a test would be inventing production API. */
+    @GameTest(template = ARENA, timeoutTicks = 300)
+    public static void rathalosRoarRunsForItsRealClipLength(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Rathalos rathalos = helper.spawn(ModEntities.RATHALOS.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
+        victim.setNoAi(true);
+        rathalos.setTarget(victim);
+
+        assertRoarRunsAtOneTickPerRealTick(helper, rathalos, victim, () -> false);
+    }
+
+    /**
+     * T02: the re-arm half of the same mechanic, at its real interval rather than "eventually."
+     *
+     * <p>Three things have to hold, and only the first was previously covered: an engaged monster
+     * never re-arms; a brief loss and re-acquisition (a dodge, a moment out of line of sight) does
+     * not re-arm <em>and restarts the clock</em>; and a genuinely sustained loss re-arms at the
+     * real 100-tick interval, not at double it. The window is measured from the game time the
+     * target was actually cleared, so a per-call tick counter inside {@code canUse()} -- which
+     * vanilla polls every other tick, and which would therefore take ~200 real ticks -- fails the
+     * upper bound instead of passing a generous timeout.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 400)
+    public static void greatIzuchiReArmsRoarOnlyAfterTheRealDisengageInterval(GameTestHelper helper) {
+        GreatIzuchi monster = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 10);
+        victim.setNoAi(true);
+        victim.setInvulnerable(true); // the fight itself is not what this test is about
+        monster.setRoaredThisEngagement(true); // a fight that already roared and is about to end
+        monster.setTarget(victim);
+        // Engaged and approaching, but never committing an attack. A committed action makes
+        // GreatIzuchiCombatGoal non-interruptable, and vanilla's GoalSelector will not even call a
+        // blocked goal's canUse() -- which is where RoarGoal's disengage clock lives, so the clock
+        // simply does not start until that action finishes. Measured live at 161 ticks instead of
+        // 100 when the target was dropped mid-swing; that costs at most one action's worth of extra
+        // delay before re-arming and is recorded in docs/DEFERRED.md rather than patched here.
+        monster.attackCooldown = 10_000;
+
+        long[] lostAt = {0L};
+        Runnable stillArmed = () -> helper.assertTrue(monster.hasRoaredThisEngagement(),
+                "re-armed the opening roar too early");
+
+        helper.startSequence()
+                .thenExecuteFor(10, () -> {
+                    monster.setTarget(victim);
+                    stillArmed.run();
+                })
+                // A brief loss: long enough for vanilla's every-other-tick poll to see it, far
+                // short of the disengage interval.
+                .thenExecute(() -> monster.setTarget(null))
+                .thenExecuteFor(40, stillArmed)
+                // Re-acquired. If the clock does not restart here, the 40 ticks above still count
+                // and the sustained-loss window below re-arms ~40 ticks early -- which the
+                // no-early-re-arm check then fails.
+                .thenExecute(() -> monster.setTarget(victim))
+                .thenExecuteFor(6, stillArmed)
+                .thenExecute(() -> {
+                    monster.setTarget(null);
+                    lostAt[0] = helper.getLevel().getGameTime();
+                })
+                .thenExecuteFor(REARM_TICKS - REARM_POLL_TOLERANCE, stillArmed)
+                .thenWaitUntil(() -> helper.assertTrue(!monster.hasRoaredThisEngagement(),
+                        "never re-armed after a sustained loss of target"))
+                .thenExecute(() -> {
+                    long elapsed = helper.getLevel().getGameTime() - lostAt[0];
+                    helper.assertTrue(elapsed <= REARM_TICKS + REARM_POLL_TOLERANCE,
+                            "re-arming took " + elapsed + " real ticks, not the " + REARM_TICKS
+                                    + "-tick disengage interval (+" + REARM_POLL_TOLERANCE
+                                    + " ticks of polling slack)");
+                })
+                .thenSucceed();
     }
 
     /** A03: a hit on a named part reduces the parent's health, once. */
@@ -448,50 +598,124 @@ public class MHNWGameTests {
     }
 
     /**
-     * A02: a reload cancels transient combat instead of resuming it.
+     * T04: the same contract through the <em>full</em> vanilla entity save/load path, not just the
+     * mod's own additional save data.
      *
-     * <p>This cannot exercise an actual save-quit-reload of the world; a GameTest structure has no
-     * such cycle to trigger. What it does exercise is the exact code path a real reload goes
-     * through for this entity: {@code addAdditionalSaveData} writing NBT from a live, mid-fight
-     * monster, and {@code readAdditionalSaveData} reading it back into a freshly constructed one,
-     * which is what disk persistence actually calls. Section 4.3 rule 7 says loading a creature
-     * must cancel any transient combat and impose a short cooldown rather than replaying an
-     * interrupted attack; this is that promise, checked at the boundary this mod owns.
+     * <p>Replaces an earlier {@code reloadCancelsTransientCombatState}, which round-tripped
+     * {@code addAdditionalSaveData} alone and could not show whether a vanilla field survives; every
+     * assertion it made is a subset of these. This goes through {@code saveWithoutId}/{@code load}
+     * on a fresh instance that actually enters the level -- the same path
+     * {@code lagiacrusReloadCancelsPursuitAndPreservesHealth} uses -- starting from a deliberately
+     * reduced, non-default health and a live transient state, and disposes of the original first so
+     * no duplicate UUID or duplicate part identity enters the level.
      *
-     * <p>Also checks that the reloaded entity has exactly as many parts as it started with. Parts
-     * are always rebuilt fresh in the constructor rather than read from NBT, so a genuine part-list
-     * bug (the previous implementation's parts list that only ever appended, never replaced, a
-     * later part of the same type) would show up here as an unexpected count.
+     * <p>Section 4.3 rule 7: loading a creature must cancel transient combat and impose a short
+     * cooldown rather than replaying an interrupted action. Parts are rebuilt fresh in the
+     * constructor rather than read from NBT, so a genuine part-list bug (the old implementation's
+     * list that only ever appended, never replaced, a later part of the same type) shows up here as
+     * a wrong count or a wrong name.
+     *
+     * <p>The two fixtures deliberately save in <em>different</em> transient states: Great Izuchi
+     * mid-attack, Rathian mid-roar. Saving both mid-attack would leave {@code getRoarTicks()}
+     * already zero at save time, making the roar assertion unable to fail.
+     *
+     * <p>Not a claim about a real disk restart: that stays an R0b gate.
      */
-    @GameTest(template = ARENA, timeoutTicks = 200)
-    public static void reloadCancelsTransientCombatState(GameTestHelper helper) {
+    private static void assertPartsSurviveReload(GameTestHelper helper, MonsterPart[] original,
+                                                 MonsterPart[] reloaded) {
+        helper.assertTrue(original.length > 0, "the subject registered no parts at all");
+        helper.assertTrue(reloaded.length == original.length,
+                "reload produced " + reloaded.length + " parts, expected " + original.length);
+        for (int i = 0; i < original.length; i++) {
+            helper.assertTrue(reloaded[i].partName.equals(original[i].partName),
+                    "reloaded part " + i + " is " + reloaded[i].partName + ", expected "
+                            + original[i].partName);
+            helper.assertTrue(helper.getLevel().getPartEntities().contains(reloaded[i]),
+                    "reloaded part " + reloaded[i].partName + " never reached the NeoForge lookup");
+        }
+        assertPartsUnregistered(helper, original);
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 300)
+    public static void greatIzuchiFullReloadKeepsHealthAndPartsButNotTheAction(GameTestHelper helper) {
         GreatIzuchi original = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
         Cow victim = helper.spawn(EntityType.COW, 8, 2, 10);
         victim.setNoAi(true);
+        victim.setInvulnerable(true);
 
-        original.setRoaredThisEngagement(true); // skips the intro roar; this test is not about it
+        original.setRoaredThisEngagement(true); // skips the intro roar; T01 owns that
         original.setTarget(victim);
         original.attackCooldown = 0;
-        int originalPartCount = original.monsterParts().length;
+        original.setHealth(17.0F); // deliberately not the 40.0 default
+        MonsterPart[] originalParts = original.monsterParts();
 
         helper.startSequence()
-                .thenWaitUntil(() -> helper.assertTrue(
-                        original.getAttackId() != GreatIzuchi.ATTACK_NONE, "waiting for an attack to start"))
+                .thenWaitUntil(() -> helper.assertTrue(original.getAttackId() != GreatIzuchi.ATTACK_NONE,
+                        "waiting for an attack to start"))
                 .thenExecute(() -> {
-                    CompoundTag saved = new CompoundTag();
-                    original.addAdditionalSaveData(saved);
+                    helper.assertTrue(original.getHealth() == 17.0F,
+                            "the fixture's own health changed before saving: " + original.getHealth());
+                    CompoundTag saved = original.saveWithoutId(new CompoundTag());
+                    original.discard();
 
                     GreatIzuchi reloaded = new GreatIzuchi(ModEntities.GREAT_IZUCHI.get(), helper.getLevel());
-                    reloaded.readAdditionalSaveData(saved);
+                    reloaded.load(saved);
+                    helper.getLevel().addFreshEntity(reloaded);
 
+                    helper.assertTrue(reloaded.getHealth() == 17.0F,
+                            "reload lost parent health: " + reloaded.getHealth() + " instead of 17.0");
                     helper.assertTrue(reloaded.getAttackId() == GreatIzuchi.ATTACK_NONE,
-                            "a reloaded monster resumed attack id " + reloaded.getAttackId()
-                                    + " instead of starting idle");
+                            "a reloaded monster resumed attack id " + reloaded.getAttackId());
+                    helper.assertTrue(reloaded.getRoarTicks() == 0,
+                            "a reloaded monster resumed a roar countdown of " + reloaded.getRoarTicks());
                     helper.assertTrue(reloaded.attackCooldown > 0,
                             "a reloaded monster had no cooldown at all, so it could attack instantly");
-                    helper.assertTrue(reloaded.monsterParts().length == originalPartCount,
-                            "reload produced " + reloaded.monsterParts().length + " parts, expected "
-                                    + originalPartCount);
+                    assertPartsSurviveReload(helper, originalParts, reloaded.monsterParts());
+                })
+                .thenSucceed();
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 300)
+    public static void rathianFullReloadKeepsHealthAndPartsButNotTheRoar(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Rathian original = helper.spawn(ModEntities.RATHIAN.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 12); // BITE_RIGHT's range band
+        victim.setNoAi(true);
+        victim.setInvulnerable(true);
+
+        // Saved mid-ROAR, not mid-attack: an attack fixture has getRoarTicks() == 0 at save time,
+        // so its roar assertion could not fail. Great Izuchi's sibling test covers the attack half.
+        original.setTarget(victim);
+        original.setHealth(41.0F); // deliberately not the 90.0 default
+        MonsterPart[] originalParts = original.monsterParts();
+
+        helper.startSequence()
+                .thenWaitUntil(() -> {
+                    original.setTarget(victim);
+                    helper.assertTrue(original.getRoarTicks() > 0, "waiting for the opening roar");
+                })
+                .thenExecute(() -> {
+                    helper.assertTrue(original.getRoarTicks() > 0,
+                            "the roar ended before the fixture could save mid-roar");
+                    helper.assertTrue(original.getHealth() == 41.0F,
+                            "the fixture's own health changed before saving: " + original.getHealth());
+                    CompoundTag saved = original.saveWithoutId(new CompoundTag());
+                    original.discard();
+
+                    com.carro1001.mhnw.entity.Rathian reloaded =
+                            new com.carro1001.mhnw.entity.Rathian(ModEntities.RATHIAN.get(), helper.getLevel());
+                    reloaded.load(saved);
+                    helper.getLevel().addFreshEntity(reloaded);
+
+                    helper.assertTrue(reloaded.getHealth() == 41.0F,
+                            "reload lost parent health: " + reloaded.getHealth() + " instead of 41.0");
+                    helper.assertTrue(reloaded.getRoarTicks() == 0,
+                            "a reloaded Rathian resumed the roar it was saved mid-way through, with "
+                                    + reloaded.getRoarTicks() + " ticks left");
+                    helper.assertTrue(reloaded.getAttackId() == com.carro1001.mhnw.entity.Rathian.ATTACK_NONE,
+                            "a reloaded Rathian resumed attack id " + reloaded.getAttackId());
+                    helper.assertTrue(reloaded.attackCooldown > 0,
+                            "a reloaded Rathian had no cooldown at all, so it could attack instantly");
+                    assertPartsSurviveReload(helper, originalParts, reloaded.monsterParts());
                 })
                 .thenSucceed();
     }
@@ -507,11 +731,101 @@ public class MHNWGameTests {
 
         helper.succeedWhen(() -> {
             helper.assertTrue(monster.isRemoved(), "the monster was not removed after dying");
-            for (MonsterPart part : monster.monsterParts()) {
-                helper.assertTrue(part.isRemoved() || !part.isAddedToLevel(),
-                        "part " + part.partName + " outlived its parent");
-            }
+            assertPartsUnregistered(helper, monster.monsterParts());
         });
+    }
+
+    /**
+     * T05: a part is gone when NeoForge's own lookup no longer holds it, which is the thing melee
+     * picking, projectiles and area damage actually scan. Native parts can be unregistered without
+     * their own {@code isRemoved} flag ever being set, so flag inspection alone is a weaker claim
+     * than it looks; this is the assertion {@code lagiacrusDeathStopsPursuitAndUnregistersParts}
+     * already relied on, applied to every multipart species' removal scenarios.
+     */
+    private static void assertPartsUnregistered(GameTestHelper helper, MonsterPart[] parts) {
+        helper.assertTrue(parts.length > 0, "the subject registered no parts at all");
+        for (MonsterPart part : parts) {
+            helper.assertTrue(!helper.getLevel().getPartEntities().contains(part),
+                    "part outlived its parent in NeoForge lookup: " + part.partName);
+        }
+    }
+
+    /**
+     * T03: a dead monster is inert for the whole time its corpse is held, then leaves completely.
+     *
+     * <p>What this deliberately does <em>not</em> assert is that the synced attack id or roar
+     * countdown clears itself. It cannot: {@code LivingEntity.travel()} stops calling
+     * {@code serverAiStep()} once {@code isDeadOrDying()} is true, so from the instant death begins
+     * no goal is ticked again -- not the combat goal, not {@code RoarGoal}, not their own
+     * {@code isAlive()} guards. Those fields simply freeze at whatever they held. That is harmless
+     * because {@code mainAnim} checks death before reading either one, and R1b will deliberately
+     * change corpse retention anyway. What matters, and what is asserted here, is that the corpse
+     * deals no further damage and that it and its parts really do leave.
+     */
+    private static void assertDeadSubjectGoesInert(GameTestHelper helper,
+            net.minecraft.gametest.framework.GameTestSequence sequence,
+            net.minecraft.world.entity.Mob subject, MonsterPart[] parts, Cow victim, int holdTicks) {
+        float[] victimHealth = {0.0F};
+        sequence
+                .thenExecute(() -> {
+                    helper.assertTrue(subject.isAlive(), "the fixture's subject was already dead");
+                    subject.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
+                    helper.assertTrue(subject.isDeadOrDying(), "the lethal hit did not start death");
+                    // Only damage dealt *after* the lethal action counts; the victim is kept out of
+                    // harm's way until this point so nothing else in the fixture can move its health.
+                    victim.setInvulnerable(false);
+                    victimHealth[0] = victim.getHealth();
+                    helper.assertTrue(victim.isAlive(), "the fixture's victim died before the subject");
+                })
+                .thenExecuteFor(holdTicks, () -> helper.assertTrue(
+                        victim.getHealth() >= victimHealth[0] - EPSILON,
+                        "a dead subject kept dealing melee damage: its target went from "
+                                + victimHealth[0] + " to " + victim.getHealth()))
+                .thenWaitUntil(() -> helper.assertTrue(subject.isRemoved(),
+                        "the corpse was never removed"))
+                .thenExecute(() -> assertPartsUnregistered(helper, parts))
+                .thenSucceed();
+    }
+
+    /** T03, Great Izuchi killed mid-roar, held for its own 38-tick death clip before vanilla
+     * removal. Reached through ordinary AI, not by writing the roar countdown directly. */
+    @GameTest(template = ARENA, timeoutTicks = 400)
+    public static void greatIzuchiKilledMidRoarLeavesAnInertCorpse(GameTestHelper helper) {
+        GreatIzuchi monster = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 10);
+        victim.setNoAi(true);
+        victim.setInvulnerable(true);
+        monster.setTarget(victim);
+        MonsterPart[] parts = monster.monsterParts();
+
+        assertDeadSubjectGoesInert(helper,
+                helper.startSequence().thenWaitUntil(() -> {
+                    monster.setTarget(victim);
+                    helper.assertTrue(monster.isRoaring(), "waiting for the opening roar");
+                }),
+                monster, parts, victim, GreatIzuchi.DEATH_ANIMATION_TICKS + 30);
+    }
+
+    /** T03, Rathian killed mid-attack: its measured bite timeline must not keep landing contacts
+     * out of a corpse. The roar is armed off deliberately -- this one is about the attack. */
+    @GameTest(template = ARENA, timeoutTicks = 400)
+    public static void rathianKilledMidAttackLeavesAnInertCorpse(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Rathian rathian = helper.spawn(ModEntities.RATHIAN.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 12); // BITE_RIGHT's range band
+        victim.setNoAi(true);
+        victim.setInvulnerable(true);
+        rathian.setRoaredThisEngagement(true);
+        rathian.attackCooldown = 0;
+        rathian.setTarget(victim);
+        MonsterPart[] parts = rathian.monsterParts();
+
+        assertDeadSubjectGoesInert(helper,
+                helper.startSequence().thenWaitUntil(() -> {
+                    rathian.setTarget(victim);
+                    helper.assertTrue(rathian.getAttackId() != com.carro1001.mhnw.entity.Rathian.ATTACK_NONE,
+                            "waiting for an attack to start");
+                }),
+                rathian, parts, victim, 40);
     }
 
     // ---------------------------------------------------------------- A10 navigation (Great Izuchi)
@@ -803,10 +1117,7 @@ public class MHNWGameTests {
 
         helper.succeedWhen(() -> {
             helper.assertTrue(aptonoth.isRemoved(), "Aptonoth was not removed after dying");
-            for (MonsterPart part : aptonoth.monsterParts()) {
-                helper.assertTrue(part.isRemoved() || !part.isAddedToLevel(),
-                        "part " + part.partName + " outlived its parent");
-            }
+            assertPartsUnregistered(helper, aptonoth.monsterParts());
         });
     }
 
@@ -1240,10 +1551,7 @@ public class MHNWGameTests {
 
         helper.succeedWhen(() -> {
             helper.assertTrue(rathian.isRemoved(), "Rathian was not removed after dying");
-            for (MonsterPart part : rathian.monsterParts()) {
-                helper.assertTrue(part.isRemoved() || !part.isAddedToLevel(),
-                        "part " + part.partName + " outlived its parent");
-            }
+            assertPartsUnregistered(helper, rathian.monsterParts());
         });
     }
 
@@ -1325,10 +1633,7 @@ public class MHNWGameTests {
 
         helper.succeedWhen(() -> {
             helper.assertTrue(rathalos.isRemoved(), "Rathalos was not removed after dying");
-            for (MonsterPart part : rathalos.monsterParts()) {
-                helper.assertTrue(part.isRemoved() || !part.isAddedToLevel(),
-                        "part " + part.partName + " outlived its parent");
-            }
+            assertPartsUnregistered(helper, rathalos.monsterParts());
         });
     }
 
@@ -1651,10 +1956,7 @@ public class MHNWGameTests {
     }
 
     private static void assertLagiacrusPartsUnregistered(GameTestHelper helper, Lagiacrus monster) {
-        for (MonsterPart part : monster.monsterParts()) {
-            helper.assertTrue(!helper.getLevel().getPartEntities().contains(part),
-                    "part outlived its parent in NeoForge lookup: " + part.partName);
-        }
+        assertPartsUnregistered(helper, monster.monsterParts());
     }
 
     private static void fillLagiacrusPool(GameTestHelper helper, int waterMaxX, int topY) {
