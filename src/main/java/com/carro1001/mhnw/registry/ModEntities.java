@@ -100,6 +100,7 @@ public final class ModEntities {
             ENTITY_TYPES.register("bug", () -> EntityType.Builder
                     .of(Bug::new, MobCategory.AMBIENT)
                     .sized(Bug.BODY_WIDTH, Bug.BODY_HEIGHT)
+                    .eyeHeight(Bug.EYE_HEIGHT)
                     .clientTrackingRange(6)
                     .updateInterval(3)
                     .build("bug"));

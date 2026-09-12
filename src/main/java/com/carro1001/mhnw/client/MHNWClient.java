@@ -195,6 +195,20 @@ public final class MHNWClient {
         protected int getBlockLightLevel(Flashbug entity, net.minecraft.core.BlockPos pos) {
             return Math.max(12, super.getBlockLightLevel(entity, pos));
         }
+
+        /**
+         * The wings. GeckoLib's default is {@code entityCutoutNoCull}, which has no partial alpha
+         * at all -- a texel is either fully drawn or fully discarded -- so the wing texture's
+         * semi-transparent pixels rendered solid. Translucent is the render type that keeps them.
+         */
+        @Override
+        public net.minecraft.client.renderer.RenderType getRenderType(
+                Flashbug animatable, ResourceLocation texture,
+                net.minecraft.client.renderer.MultiBufferSource bufferSource, float partialTick) {
+            return animatable.isInvisible()
+                    ? super.getRenderType(animatable, texture, bufferSource, partialTick)
+                    : net.minecraft.client.renderer.RenderType.entityTranslucent(texture);
+        }
     }
 
     /**

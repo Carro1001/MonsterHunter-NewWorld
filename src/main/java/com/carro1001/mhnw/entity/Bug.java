@@ -34,8 +34,13 @@ public class Bug extends PathfinderMob {
     /** Low enough that any hit, including a bare-handed punch, kills it in one: it's meant to be
      * collected for future item crafting, not fought. */
     public static final double MAX_HEALTH = 1.0D;
-    public static final float BODY_WIDTH = 0.4F;
-    public static final float BODY_HEIGHT = 0.4F;
+    /** Halved from 0.4 on sight: the old box was roughly twice the size of the mesh inside it. */
+    public static final float BODY_WIDTH = 0.2F;
+    public static final float BODY_HEIGHT = 0.2F;
+
+    /** Vanilla's default eye line is 85% of the height, which on a creature that crawls puts it
+     * above the whole animal. A bug's head is right at the floor. */
+    public static final float EYE_HEIGHT = 0.05F;
 
     /** How often the golden variant rolls. Was 2%; feedback asked for an even 50/50 so testing
      * doesn't need dozens of spawn-egg uses to see one. Old code had this as a config option; kept a

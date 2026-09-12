@@ -4423,6 +4423,36 @@ public class MHNWGameTests {
     }
 
     /**
+     * The fuse: a bomb that hits nothing still goes off, once, on time. Fired horizontally over a
+     * hole with no floor under it, so nothing but the fuse can end it -- if the fuse were missing
+     * this test would time out rather than pass for the wrong reason.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void r2FlashBombFuseReleasesWithoutAnImpact(GameTestHelper helper) {
+        Cow victim = helper.spawn(EntityType.COW, 8, 3, 9);
+        victim.setNoAi(true);
+        victim.setYRot(180.0F);
+
+        com.carro1001.mhnw.entity.FlashBombProjectile bomb =
+                new com.carro1001.mhnw.entity.FlashBombProjectile(ModEntities.FLASH_BOMB.get(), helper.getLevel());
+        bomb.moveTo(helper.absoluteVec(new net.minecraft.world.phys.Vec3(8.0D, 3.0D, 8.0D)));
+        bomb.setNoGravity(true);
+        helper.getLevel().addFreshEntity(bomb);
+
+        helper.startSequence()
+                .thenIdle(com.carro1001.mhnw.entity.FlashBombProjectile.FUSE_TICKS - 2)
+                .thenExecute(() -> helper.assertTrue(!bomb.isRemoved(),
+                        "the bomb went off before its fuse ran out"))
+                .thenIdle(4)
+                .thenExecute(() -> {
+                    helper.assertTrue(bomb.isRemoved(), "the fuse never went off");
+                    helper.assertTrue(victim.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS),
+                            "the fuse discarded the bomb without flashing anything");
+                })
+                .thenSucceed();
+    }
+
+    /**
      * R2-05: a genuinely thrown bomb -- launched, flying, impacting a block on its own -- releases
      * once, flashes, breaks nothing and is gone. Nothing here calls the impact handler directly;
      * the projectile is added to the level and left to hit the floor by itself.

@@ -22,6 +22,16 @@ repositories {
         url = 'https://maven.minecraftforge.net'
         content { includeGroup 'com.github.glitchfiend' }
     }
+    // JEI, for the dev client only.
+    maven {
+        url = 'https://maven.blamejared.com'
+        content { includeGroup 'mezz.jei' }
+    }
+    // Jade, for the dev client only. Modrinth is its only maven.
+    maven {
+        url = 'https://api.modrinth.com/maven'
+        content { includeGroup 'maven.modrinth' }
+    }
 }
 
 // Mojang ships Java 21 to end users in 1.21.1, so mods target Java 21.
@@ -76,6 +86,16 @@ neoForge {
 dependencies {
     implementation "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
     implementation "com.github.glitchfiend:TerraBlender-neoforge:${minecraft_version}-${terrablender_version}"
+
+    // Manual-testing tools, loaded into the dev CLIENT RUN ONLY: JEI to look up recipes and items,
+    // Jade to read what the crosshair is on. Neither is compiled against, neither appears in
+    // neoforge.mods.toml and neither ships -- nothing in src/ may reference their APIs.
+    //
+    // The run-scoped configuration is not tidiness. A plain runtimeOnly puts them on the GameTest
+    // server too, and Jade's server ping then throws "Payload jade:server_ping_v1 may not be sent
+    // to the client!" at every mock player a test creates -- 11 real failures, none of them ours.
+    clientAdditionalRuntimeClasspath "mezz.jei:jei-${minecraft_version}-neoforge:${jei_version}"
+    clientAdditionalRuntimeClasspath "maven.modrinth:jade:${jade_version}"
 }
 
 var generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {

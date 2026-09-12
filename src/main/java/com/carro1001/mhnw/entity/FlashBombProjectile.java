@@ -28,6 +28,14 @@ public class FlashBombProjectile extends ThrowableItemProjectile {
     /** Nudges a block impact off the face it hit, so the block cannot occlude its own flash. */
     private static final double FACE_CLEARANCE = 0.25D;
 
+    /**
+     * The fuse, in ticks. A bomb that lands on nothing -- thrown up, thrown over a ledge, thrown
+     * into open water -- still goes off, so a miss is a spent bomb rather than a dud that falls
+     * forever. Whichever comes first wins: an impact flashes immediately and discards, and the
+     * fuse only ever gets to run on a bomb that has not hit anything.
+     */
+    public static final int FUSE_TICKS = 40;
+
     public FlashBombProjectile(EntityType<? extends FlashBombProjectile> type, Level level) {
         super(type, level);
     }
@@ -39,6 +47,16 @@ public class FlashBombProjectile extends ThrowableItemProjectile {
     @Override
     protected Item getDefaultItem() {
         return ModItems.FLASH_BOMB.get();
+    }
+
+    /** The fuse. Server only: {@link #onHit} already owns the impact path on both sides. */
+    @Override
+    public void tick() {
+        super.tick();
+        if (!level().isClientSide && this.tickCount >= FUSE_TICKS) {
+            FlashEffect.flash(level(), this, position());
+            discard();
+        }
     }
 
     @Override

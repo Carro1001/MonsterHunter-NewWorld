@@ -1,6 +1,3 @@
 {
-  "parent": "minecraft:item/generated",
-  "textures": {
-    "layer0": "mhnw:item/rare_monster_meat"
-  }
+  "parent": "minecraft:block/campfire"
 }

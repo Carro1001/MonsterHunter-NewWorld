@@ -57,17 +57,28 @@ public class BarbecueSpitItem extends Item {
         return COOK_TICKS;
     }
 
+    /**
+     * Starts the hold. The sound is the whole feedback that a hold has begun: with only the
+     * half-second smoke puffs of {@link #onUseTick}, a tap or a short hold looked exactly like an
+     * item that does nothing at all, which is how the four-second cost was first read as a bug.
+     */
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+        if (!level.isClientSide) {
+            level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                    SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 0.6F, 1.6F);
+        }
         return ItemUtils.startUsingInstantly(level, player, hand);
     }
 
-    /** Presentation only, and only a puff every half second: the server's completed use is authority. */
+    /** Presentation only, four times a second: the server's completed use is the authority. */
     @Override
     public void onUseTick(Level level, LivingEntity entity, ItemStack stack, int remainingUseDuration) {
-        if (level instanceof ServerLevel serverLevel && remainingUseDuration % 10 == 0) {
+        if (level instanceof ServerLevel serverLevel && remainingUseDuration % 5 == 0) {
             serverLevel.sendParticles(ParticleTypes.SMOKE,
                     entity.getX(), entity.getEyeY() - 0.1D, entity.getZ(), 2, 0.15D, 0.05D, 0.15D, 0.005D);
+            serverLevel.sendParticles(ParticleTypes.SMALL_FLAME,
+                    entity.getX(), entity.getEyeY() - 0.2D, entity.getZ(), 1, 0.1D, 0.05D, 0.1D, 0.0D);
         }
     }
 
