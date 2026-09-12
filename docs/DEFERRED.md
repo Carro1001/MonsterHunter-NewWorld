@@ -27,6 +27,14 @@ durations are unchanged from P3.
 registry, no per-effect subclass and no configuration. If a third caller ever appears that needs a
 different radius or duration, those become parameters before they become a framework.
 
+### Blastoad attribution ignores every hit after the one that lights the fuse
+**Status:** deliberate, and tightened by the PR #7 review. Only a hit taken while `!isFusing()` sets
+`Toad.provokerId`, and a fuse lit by a mob or the environment records "nobody" — permanently, for
+that fuse. A player who joins in afterwards gets no credit, even though their hit is real. That is
+the intended reading of "the provoking player": the one who set it off. If a future packet ever
+wants shared credit for a blast several people contributed to, that is a product decision about
+`CarveState` participation, not a bug in this rule.
+
 ### Blastoad attribution is last-fuse only, and does not survive a logout
 **Status:** deliberate, and the narrower choice on purpose. `Toad.provokerId` is a transient uuid
 cleared by `ToadFuseGoal.stop()`. A provoker who logs out or dies during the 40-tick warning simply

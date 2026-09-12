@@ -100,6 +100,10 @@ public class Toad extends PathfinderMob implements GeoEntity, Bucketable {
      * <p>Only {@code BLAST} does anything with it: its explosion names that player as the causing
      * entity, which is the one path by which a deployed toad's damage can count toward that
      * player's carve eligibility, through exactly the same {@link CarveState} rule as a direct hit.
+     *
+     * <p>Set only by a hit taken while no fuse is burning (see {@link #hurt}), so it records the
+     * trigger that actually started this fuse and not a later opportunist; {@code null} is a real
+     * record meaning "nobody", not "not yet asked".
      */
     UUID provokerId;
 
@@ -180,11 +184,14 @@ public class Toad extends PathfinderMob implements GeoEntity, Bucketable {
     public boolean hurt(DamageSource source, float amount) {
         if (!level().isClientSide) {
             this.provoked = true;
-            if (this.provokerId == null) {
+            // Attribution belongs to whoever lands the hit that STARTS a fuse, so only hits taken
+            // while no fuse is burning may set it -- including setting it back to nobody. Testing
+            // "provokerId == null" instead would conflate "nothing recorded yet" with the perfectly
+            // valid record of an environmental or mob trigger, and let a player who hit an already
+            // burning toad take credit for a fuse somebody else lit.
+            if (!isFusing()) {
                 Player provoker = CarveState.resolvePlayer(source);
-                if (provoker != null) {
-                    this.provokerId = provoker.getUUID();
-                }
+                this.provokerId = provoker == null ? null : provoker.getUUID();
             }
         }
         return super.hurt(source, 0.0F);

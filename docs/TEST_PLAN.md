@@ -2,7 +2,7 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 144 tests, all passing**
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 146 tests, all passing**
 (full `.\gradlew.bat --no-daemon clean build` then `runGameTestServer`, 2026-09-12, R2
 field-preparation packet; 123 before the packet, 121 before the R1 PR #6 review round, 97 before
 R1, 85 before R0b). The earlier 69-, 75-, 85-, 86- and 97-test figures are superseded — note the R0a round's
@@ -163,6 +163,34 @@ The review found no dependency or abstraction bloat, and nothing to change about
 composition, the `deathTime` reuse, the iron material reuse, the deterministic reward table or the
 neighbour scan.
 
+### PR #7 adversarial review round (same day)
+
+Two P1 correctness findings, both reproduced against the code before fixing and both now guarded by
+a test that fails without the fix.
+
+**1. The five-block flash radius was a ten-block cube.** `FlashEffect.flash` used the inflated
+broad-phase `AABB` as its final eligibility test. An inflated box reaches ~8.7 blocks at its corners,
+so a target on the diagonal at `(+4, +4)` — 6.38 blocks from the flash — was flashed anyway. Fixed
+with one squared-distance guard against `RADIUS * RADIUS`, keeping the box as the cheap query it
+should always have been. This was a **pre-existing P3 bug inherited by R2**, not something the packet
+introduced: the wild flashbug's original `release()` inflated its own bounding box the same way. The
+fix lands in the shared helper, so both callers get it.
+
+The existing out-of-range cow could not have caught this: at `|dx| = 6.5` it is outside the cube and
+never reaches the guard. The new test's cow is deliberately inside the cube (`|dx| = |dz| = 4.5`) and
+outside the radius, and asserts both of those facts about itself first, so it cannot quietly stop
+testing what it was written for.
+
+**2. A latecomer could steal an already-burning fuse.** `Toad.hurt` tested `provokerId == null` to
+mean "nothing recorded yet" — but `null` is also the correct, final record for a fuse lit by a mob or
+the environment. Since `ToadFuseGoal.start()` clears `provoked`, a player who hit the toad during
+that same 40-tick fuse filled in the empty slot and collected carve credit for a blast somebody else
+set off. Attribution is now recorded only by a hit taken while `!isFusing()`, and records "nobody"
+explicitly rather than leaving the slot open.
+
+Mutation run: with the two guards reverted and the new tests kept, exactly those two tests fail and
+nothing else does.
+
 ### Gates: what is closed and what is not
 
 | Gate | Status |
@@ -244,8 +272,8 @@ wild toad      -> water bucket -> same variant on release -> hit once -> existin
 
 ### Automated results
 
-144/144 passing. 21 new tests covering gates R2-01..R2-11, added next to the existing endemic and R1
-blocks. Commands actually run, in this order:
+146/146 passing. 23 new tests covering gates R2-01..R2-11, added next to the existing endemic and
+R1 blocks (21 in the first cut, 2 more from the PR #7 review round below). Commands actually run, in this order:
 
 ```powershell
 .\gradlew.bat --no-daemon clean build runGameTestServer   # fresh 123-test baseline, before any edit
@@ -276,6 +304,8 @@ Both were then re-run **strictly serially, with nothing else touching the build 
 | 7 repeats, concurrent with a `runServer` start | 6 passed, 1 failed (build-directory race, above) |
 | 8 repeats, serial | **8/8 — all 144 passing every time** |
 | final `clean build`, then `runGameTestServer`, then `build runGameTestServer` | all passing |
+| after the PR #7 review fixes: `clean build runGameTestServer` | **146/146** |
+| after the PR #7 review fixes: 6 repeats, serial | **6/6 — all 146 passing every time** |
 
 The lesson worth keeping: **do not run `runServer` and `runGameTestServer --rerun-tasks` at the same
 time on this project.** They share one `build/` and one `run/`, and the loser sees a half-written
@@ -311,12 +341,12 @@ stack. Not reachable in play — vanilla stops a use the moment its stack runs o
 | R2-02 BBQ transaction | closed headlessly |
 | R2-03 Flashbug capture | closed headlessly, survival and creative |
 | R2-04 flash recipe/container | closed headlessly, through vanilla's own remaining-items path |
-| R2-05 flash impact | closed headlessly — full eligibility matrix plus a genuinely thrown bomb |
+| R2-05 flash impact | closed headlessly — full eligibility matrix, a diagonal just-outside-radius case, plus a genuinely thrown bomb |
 | R2-06 wild regression | closed headlessly |
 | R2-07 toad capture mapping | closed headlessly, all four variants |
 | R2-08 release/round trip | closed headlessly, including a bare `/give` stack and a save/load |
 | R2-09 deployed effects | closed headlessly |
-| R2-10 attribution | closed headlessly — provoked, unprovoked and non-damaging variants |
+| R2-10 attribution | closed headlessly — provoked, unprovoked, non-damaging variants and mixed-source ordering |
 | R2-11 regression | closed — all 123 pre-existing tests pass unchanged |
 
 **Not closed, and not claimed:** every item in "What still needs a human — R2" below. No client was

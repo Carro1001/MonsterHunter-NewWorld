@@ -4341,6 +4341,47 @@ public class MHNWGameTests {
     }
 
     /**
+     * R2-05: the radius is a radius, not the broad-phase box.
+     *
+     * <p>PR #7 review, finding 1. {@code FlashEffect} queries an AABB inflated by {@code RADIUS},
+     * which is a 10-cube whose corners reach ~8.7 blocks; the eligibility test has to be a real
+     * distance on top of that. This cow sits at a diagonal 6.38 blocks from the flash while still
+     * being comfortably inside the cube ({@code |dx| = |dz| = 4.5}), and it faces the flash with
+     * clear line of sight -- so the only thing that can exclude it is the distance guard. The
+     * existing out-of-range cow in {@code r2FlashAffectsOnlyEligibleTargets} cannot catch this: at
+     * {@code |dx| = 6.5} it is outside the cube and so never reaches the guard at all.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void r2FlashRadiusIsARadiusNotABoundingBox(GameTestHelper helper) {
+        fillFloor(helper, 1, net.minecraft.world.level.block.Blocks.STONE);
+        net.minecraft.world.phys.Vec3 origin =
+                helper.absoluteVec(new net.minecraft.world.phys.Vec3(8.0D, 2.5D, 8.0D));
+
+        Cow diagonal = helper.spawn(EntityType.COW, 12, 2, 12);
+        diagonal.setNoAi(true);
+        // Yaw 135 looks toward -X/-Z, i.e. back at the flash point, so the facing rule passes.
+        diagonal.setYRot(135.0F);
+        diagonal.setXRot(0.0F);
+
+        double distance = Math.sqrt(diagonal.distanceToSqr(origin));
+        helper.assertTrue(distance > com.carro1001.mhnw.entity.FlashEffect.RADIUS,
+                "fixture error: the diagonal cow is " + distance + " blocks away, inside the radius");
+        helper.assertTrue(new net.minecraft.world.phys.AABB(origin, origin)
+                        .inflate(com.carro1001.mhnw.entity.FlashEffect.RADIUS)
+                        .intersects(diagonal.getBoundingBox()),
+                "fixture error: the diagonal cow is outside the broad-phase box, so this test would"
+                        + " pass without the distance guard it exists to check");
+
+        com.carro1001.mhnw.entity.FlashEffect.flash(helper.getLevel(), null, origin);
+
+        helper.assertTrue(!diagonal.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS)
+                        && !diagonal.hasEffect(net.minecraft.world.effect.MobEffects.MOVEMENT_SLOWDOWN),
+                "a target " + distance + " blocks away was flashed; the box is the query, the"
+                        + " radius is the contract");
+        helper.succeed();
+    }
+
+    /**
      * R2-05: a genuinely thrown bomb -- launched, flying, impacting a block on its own -- releases
      * once, flashes, breaks nothing and is gone. Nothing here calls the impact handler directly;
      * the projectile is added to the level and left to hit the floor by itself.
@@ -4670,6 +4711,53 @@ public class MHNWGameTests {
                     bystander.getServer().getPlayerList().remove(bystander);
                     helper.assertTrue(participants == 0,
                             "an unprovoked blast credited " + participants + " participants");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * R2-10: a player who hits an already-burning toad does not inherit somebody else's fuse.
+     *
+     * <p>PR #7 review, finding 2. The fuse is lit by an unattributed generic hit, so the correct
+     * record is "nobody"; a player then hits the same toad while it is still burning. Attribution
+     * belongs to the hit that started the fuse, so that player must not be credited when it goes
+     * off. The earlier code tested {@code provokerId == null} to mean "nothing recorded yet", which
+     * conflated it with a valid record of an environmental trigger and let exactly this happen.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void r2LaterPlayerHitDoesNotStealARunningFuse(GameTestHelper helper) {
+        net.minecraft.server.level.ServerPlayer latecomer = helper.makeMockServerPlayerInLevel();
+        GreatIzuchi quarry = spawnInert(helper);
+        Toad blastoad = helper.spawn(ModEntities.TOAD.get(), 8, 2, 8);
+        blastoad.setVariant(Toad.Variant.BLAST);
+        latecomer.moveTo(blastoad.getX(), blastoad.getY(), blastoad.getZ() - 1.0D, 0.0F, 0.0F);
+
+        // Something that is nobody lights the fuse.
+        blastoad.hurt(helper.getLevel().damageSources().generic(), 1.0F);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(blastoad.isFusing(),
+                        "waiting for the unattributed fuse to actually be burning"))
+                .thenExecute(() -> {
+                    helper.assertTrue(blastoad.provokerId() == null,
+                            "fixture error: the generic hit recorded a provoker, so this test would"
+                                    + " prove nothing");
+                    // ... and only now does a player turn up and hit it.
+                    blastoad.hurt(helper.getLevel().damageSources().playerAttack(latecomer), 1.0F);
+                    helper.assertTrue(blastoad.provokerId() == null,
+                            "a player who hit an already-burning toad was recorded as its provoker");
+                })
+                .thenWaitUntil(() -> helper.assertTrue(blastoad.isRemoved(),
+                        "waiting for the blastoad to detonate"))
+                .thenExecute(() -> {
+                    boolean credited = quarry.carveState().isParticipant(latecomer.getUUID());
+                    int participants = quarry.carveState().participantCount();
+                    latecomer.getServer().getPlayerList().remove(latecomer);
+
+                    helper.assertTrue(!credited,
+                            "a player who hit an already-burning toad was credited for its blast");
+                    helper.assertTrue(participants == 0,
+                            "an unattributed fuse credited " + participants + " participants");
                 })
                 .thenSucceed();
     }

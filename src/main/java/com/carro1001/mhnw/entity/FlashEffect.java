@@ -25,9 +25,10 @@ import net.minecraft.world.phys.Vec3;
  *
  * <h2>Who is eligible</h2>
  * Alive, not a {@link Player} (a flash that blinds the person playing is a punishing surprise, not
- * a readable hazard), inside {@link #RADIUS} of the flash point, with an unobstructed view of it,
- * and looking roughly toward it. Looking away, putting cover in between, or leaving the radius is
- * the counterplay, and all three are things a player can see and do.
+ * a readable hazard), within {@link #RADIUS} blocks of the flash point -- a real distance from the
+ * victim's position, not merely inside the box the broad-phase query uses -- with an unobstructed
+ * view of it, and looking roughly toward it. Looking away, putting cover in between, or leaving the
+ * radius is the counterplay, and all three are things a player can see and do.
  *
  * <p>It never deals damage and never touches blocks. The particles are presentation; this method
  * is the authority.
@@ -35,6 +36,7 @@ import net.minecraft.world.phys.Vec3;
 public final class FlashEffect {
 
     public static final double RADIUS = 5.0D;
+    private static final double RADIUS_SQR = RADIUS * RADIUS;
 
     /** A startling burst, not a sustained ailment: brief on purpose, for both callers. */
     public static final int DURATION_TICKS = 40;
@@ -56,9 +58,16 @@ public final class FlashEffect {
         if (level.isClientSide) {
             return;
         }
+        // The inflated box is the broad phase only. It is a 10-cube, so its corners reach ~8.7
+        // blocks; without the squared-distance guard below, a target on the diagonal at (+4,+4)
+        // sits 5.7 blocks away and would still be flashed. The radius is the contract, the box is
+        // just the cheap query that feeds it.
         AABB range = new AABB(origin, origin).inflate(RADIUS);
         for (LivingEntity victim : level.getEntitiesOfClass(LivingEntity.class, range,
                 e -> e != source && e.isAlive() && !(e instanceof Player))) {
+            if (victim.distanceToSqr(origin) > RADIUS_SQR) {
+                continue;
+            }
             if (!hasLineOfSight(level, origin, victim) || !isFacing(victim, origin)) {
                 continue;
             }
