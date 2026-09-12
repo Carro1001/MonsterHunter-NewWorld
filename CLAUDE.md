@@ -116,10 +116,15 @@ the risk of restructuring already-shipped code," not an oversight.
   suite, one file).
 - `com.carro1001.mhnw.entity`: every entity class, its species-specific `Goal`s, and the shared
   `MonsterPart`/`AttackProfile` helpers — flat, not nested under per-species subpackages.
+- `com.carro1001.mhnw.animation`: `ServerTimedAnimationController` (R0b). One class,
+  common-loadable by design.
 - `com.carro1001.mhnw.client`: `MHNWClient` (renderer registration; each renderer is a small nested
   static class in this one file, not a separate `*Renderer.java` per entity — e.g.
   `MHNWClient.RathianRenderer extends GeoEntityRenderer<Rathian>`), `BoneProbe` (the measurement
-  tool described above), `AttackVolumeOverlay` (F3+B attack-volume drawing).
+  tool described above), `AttackVolumeOverlay` (F3+B attack-volume drawing),
+  `AnimationSeekSelfCheck` (the R0b sampler probe -- it lives here, not in `MHNWGameTests`, because
+  `GeoModel` references `Minecraft` and NeoForge's `RuntimeDistCleaner` refuses to load it on a
+  dedicated server; any future test needing GeckoLib's real sampler has to be a client probe too).
 - `com.carro1001.mhnw.registry`: `ModEntities`, the one `DeferredRegister` holder for entity types
   and their spawn eggs.
 
@@ -153,6 +158,35 @@ even those needs the same range-midpoint treatment, not a single trusted sample.
 Rathian/Rathalos constructor comments before changing any hurtbox number — they carry the exact
 lesson-by-lesson history of what was tried and why it was wrong, and repeating an already-disproved
 approach (a single mean, a flat directional nudge) wastes a full test round.
+
+### Presentation is aged, not restarted (R0b)
+
+Every finite, server-timed clip -- the timed attacks, the three opening roars, the four authored
+deaths -- plays at its *real* age, so a client that starts rendering mid-action sees the current
+phase instead of replaying the windup while the server lands the hit.
+`animation/ServerTimedAnimationController` does it, and the **convention is deliberately the one
+that already existed**: a controller with transition length `L` blends for `L` ticks and only then
+starts the clip at zero, so an on-time observer has always shown `clipTime = age - L`. The adapter
+reproduces that function for everybody rather than inventing a new one, which is why no measured
+attack path, active window or accepted contact frame moved. `L` is `TRANSITION_TICKS` on each
+species (5, or 6 for Aptonoth). **Do not "simplify" this to feeding raw action age in as clip
+time** -- that shifts every measured attack by five ticks, and a GameTest fails if you try.
+
+GeckoLib 4.9.2 has no public seek (verified against the sources jar the R0b handoff names, SHA-256
+`009055c5...db99ee41`); `forceAnimationReset()` reloads rather than seeks, and a speed modifier
+multiplies elapsed time rather than moving it. The only lever is `tickOffset`, which is `protected`.
+A cold controller also cannot just be advanced: `process` polls its queue only while the adjusted
+tick is zero, so advancing first leaves it with a correct number and no clip at all -- observed
+live, not assumed. Hence: run GeckoLib's own initialization pass first, then re-anchor and let it
+sample again in the same render call. Don't reflect into it, copy the processor or fork the library.
+
+Each `mainAnim` picks the clip, the presentation instance and the clock from **one** priority
+decision (death, roar, attack, locomotion) -- splitting them is how a death pose ends up driven by a
+stale attack clock. Roars and deaths carry synced start-time anchors; the death one is stamped as
+`gameTime - deathTime`, which reconstructs itself on load from vanilla's own saved `DeathTime`
+without persisting anything of ours and without calling `die()` twice. No body's lifetime was
+extended; see `docs/DEFERRED.md` on Rathian's and Rathalos's death clips still being cut short by
+vanilla's 20-tick removal.
 
 ### Attack timeline: Great Izuchi and Rathian, so far
 

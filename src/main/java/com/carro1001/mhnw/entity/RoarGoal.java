@@ -91,6 +91,12 @@ public class RoarGoal<T extends Mob & Roarable> extends Goal {
     @Override
     public void start() {
         this.monster.setRoaredThisEngagement(true);
+        // Presentation anchor first, so a client that receives both in one packet never sees a
+        // running countdown paired with a stale start time from the previous engagement. The
+        // countdown itself, its rate and the re-arm rules are untouched: age 0 is this tick, and
+        // this same tick's tick() then takes the countdown to duration-1 (R0a's observed 70-of-71
+        // and 99-of-100), so the presentation window is exactly [0, duration-1] ticks of age.
+        this.monster.setRoarStartTime(this.monster.level().getGameTime());
         this.monster.setRoarTicks(this.monster.roarDurationTicks());
         this.monster.getNavigation().stop();
     }

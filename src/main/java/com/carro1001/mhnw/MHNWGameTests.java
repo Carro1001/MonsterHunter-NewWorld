@@ -1,5 +1,6 @@
 package com.carro1001.mhnw;
 
+import com.carro1001.mhnw.animation.ServerTimedAnimationController;
 import com.carro1001.mhnw.entity.Aptonoth;
 import com.carro1001.mhnw.entity.AttackProfile;
 import com.carro1001.mhnw.entity.GreatIzuchi;
@@ -2478,6 +2479,384 @@ public class MHNWGameTests {
                                                                                GreatIzuchi leader) {
         return helper.getLevel().getEntitiesOfClass(com.carro1001.mhnw.entity.Izuchi.class,
                 leader.getBoundingBox().inflate(10.0D));
+    }
+
+    // ================================================================ R0b: presentation clock
+    //
+    // What can honestly be tested headlessly, and what cannot. A dedicated server never runs
+    // GeckoLib's animation system at all, so nothing here samples a keyframe or looks at a bone --
+    // that half of R0b needs a client and a person, and docs/TEST_PLAN.md names it. What a
+    // dedicated server *can* prove, and what these cover, is everything the client reads: that the
+    // age-to-clip-time contract is the one an on-time observer has always been on, and that every
+    // synced presentation anchor exists, is stable for the life of its instance, distinguishes one
+    // instance from the next, and survives a save/load as a reconstructed age rather than a restart
+    // -- plus that the adapter itself loads and constructs on a server with no client classes.
+
+    /** Great Izuchi's blend length and its scratch clip, so the numbers below are real ones. */
+    private static final double IZUCHI_TRANSITION = GreatIzuchi.TRANSITION_TICKS;
+    private static final double SCRATCH_CLIP_TICKS = 65.0D;
+
+    /**
+     * R0b-01: the clock contract itself.
+     *
+     * <p>An action of age {@code a} samples clip time {@code a - L}, which is not a new convention:
+     * it is exactly what a controller with an {@code L}-tick transition has always shown an observer
+     * who was already watching when the action began. That is the whole reason aging a late observer
+     * does not move anybody else's contact timing, so it is worth a test that fails if someone
+     * "simplifies" it to feeding raw action age straight in as clip time -- the specific mistake the
+     * handoff's GeckoLib notes warn about, because it silently shifts an already-measured attack by
+     * five ticks.
+     *
+     * <p>Also pins the terminal clamp: past the end, the sample must stay inside the clip. Landing
+     * on zero there is the one-shot looping back to its first frame; landing on or past the length
+     * is GeckoLib taking its end branch and dropping the pose to the base skeleton.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void animationClockMapsActionAgeToClipTime(GameTestHelper helper) {
+        double blend = ServerTimedAnimationController.clipTimeFor(0.0D, IZUCHI_TRANSITION, SCRATCH_CLIP_TICKS);
+        helper.assertTrue(blend == 0.0D, "age 0 should still be blending, not at clip time " + blend);
+
+        double atBlendEnd = ServerTimedAnimationController.clipTimeFor(
+                IZUCHI_TRANSITION, IZUCHI_TRANSITION, SCRATCH_CLIP_TICKS);
+        helper.assertTrue(atBlendEnd == 0.0D,
+                "the clip should start exactly when the blend ends, not at " + atBlendEnd);
+
+        double midAction = ServerTimedAnimationController.clipTimeFor(20.0D, IZUCHI_TRANSITION, SCRATCH_CLIP_TICKS);
+        helper.assertTrue(Math.abs(midAction - 15.0D) < 1.0E-6D,
+                "age 20 should sample clip time 15 (age minus the " + IZUCHI_TRANSITION
+                        + "-tick blend), not " + midAction + "; feeding raw action age straight in"
+                        + " as clip time shifts every measured attack");
+
+        double fractional = ServerTimedAnimationController.clipTimeFor(20.5D, IZUCHI_TRANSITION, SCRATCH_CLIP_TICKS);
+        helper.assertTrue(fractional > midAction && fractional < midAction + 1.0D,
+                "a partial tick should interpolate between clip times, not snap: " + fractional);
+
+        double negative = ServerTimedAnimationController.clipTimeFor(-4.0D, IZUCHI_TRANSITION, SCRATCH_CLIP_TICKS);
+        helper.assertTrue(negative == 0.0D,
+                "a clock reading as ahead of its own start must floor at zero, not " + negative);
+
+        double expired = ServerTimedAnimationController.clipTimeFor(500.0D, IZUCHI_TRANSITION, SCRATCH_CLIP_TICKS);
+        helper.assertTrue(expired > SCRATCH_CLIP_TICKS - 1.0D && expired < SCRATCH_CLIP_TICKS,
+                "an expired one-shot must hold its last frame, not loop to zero or run off the end: "
+                        + expired);
+        helper.succeed();
+    }
+
+    /**
+     * R0b-02: the client/server boundary, proved by the only process that can prove it.
+     *
+     * <p>{@code ServerTimedAnimationController} is named from common entity registration, so if it
+     * ever acquired a {@code net.minecraft.client} import, a static {@code Minecraft} reference or a
+     * link back to {@code MHNWClient}, a dedicated server would die class-loading it. This test runs
+     * on a dedicated server and forces exactly that: class initialization, and a real construction
+     * against a real entity. A compile-time check could not catch it -- the client classes are on
+     * the compile classpath either way.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 20)
+    public static void animationControllerLoadsOnADedicatedServer(GameTestHelper helper) {
+        GreatIzuchi monster = spawnInert(helper);
+        ServerTimedAnimationController<GreatIzuchi> controller =
+                new ServerTimedAnimationController<>(monster, "r0b_probe", GreatIzuchi.TRANSITION_TICKS,
+                        state -> software.bernie.geckolib.animation.PlayState.STOP);
+        helper.assertTrue(controller.getName().equals("r0b_probe"),
+                "the adapter did not construct on a dedicated server");
+        helper.assertTrue(controller.getAnimationState()
+                        == software.bernie.geckolib.animation.AnimationController.State.STOPPED,
+                "a freshly constructed adapter should be STOPPED, not " + controller.getAnimationState());
+        helper.succeed();
+    }
+
+    /**
+     * R0b-03: the roar's presentation anchor, and the age convention around its first tick.
+     *
+     * <p>The countdown is the server's clock -- how much longer to stay frozen -- and it can neither
+     * identify an instance nor be joined late. The anchor is the presentation clock. Both have to
+     * hold together, so this asserts the relationship between them rather than a hard-coded offset:
+     * whatever {@code duration - remaining - age} is on the first tick the roar is observed, it must
+     * be that same number for the entire roar. A stale anchor, an anchor re-stamped every tick, and
+     * a countdown drifting against game time all break that identity on some tick, and none of them
+     * is visible by watching the countdown alone.
+     *
+     * <p>R0a recorded 70 ticks remaining of a 71-tick Great Izuchi roar and 99 of the 100-tick wyvern
+     * roars at first observation. That is a scheduling fact about when the goal's own {@code tick()}
+     * first runs, not a shorter clip, so it is accounted for here rather than hidden by changing
+     * anybody's duration: the offset is observed, then held to.
+     */
+    private static <T extends net.minecraft.world.entity.Mob & com.carro1001.mhnw.entity.Roarable>
+            void assertRoarAnchorIsStableForTheWholeRoar(GameTestHelper helper, T monster) {
+        long[] anchor = {Long.MIN_VALUE};
+        int[] offset = {Integer.MIN_VALUE};
+        int[] maxAge = {-1};
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(monster.getRoarTicks() > 0, "never started roaring"))
+                .thenExecute(() -> {
+                    anchor[0] = monster.getRoarStartTime();
+                    long age = helper.getLevel().getGameTime() - anchor[0];
+                    helper.assertTrue(age >= 0L && age <= SCHEDULING_TOLERANCE,
+                            "the roar anchor is not this roar's own start: age " + age
+                                    + " on the first tick it was seen roaring");
+                    offset[0] = (int) (monster.roarDurationTicks() - monster.getRoarTicks() - age);
+                })
+                .thenExecuteFor(monster.roarDurationTicks() - SCHEDULING_TOLERANCE, () -> {
+                    if (monster.getRoarTicks() <= 0) {
+                        return;
+                    }
+                    helper.assertTrue(monster.getRoarStartTime() == anchor[0],
+                            "the roar anchor moved mid-roar, from " + anchor[0] + " to "
+                                    + monster.getRoarStartTime() + " -- a presentation instance whose"
+                                    + " identity changes restarts its clip every tick");
+                    int age = (int) (helper.getLevel().getGameTime() - anchor[0]);
+                    maxAge[0] = Math.max(maxAge[0], age);
+                    int nowOffset = monster.roarDurationTicks() - monster.getRoarTicks() - age;
+                    helper.assertTrue(nowOffset == offset[0],
+                            "the anchor and the countdown disagree at age " + age + ": offset was "
+                                    + offset[0] + ", now " + nowOffset);
+                })
+                .thenExecute(() -> helper.assertTrue(
+                        maxAge[0] >= monster.roarDurationTicks() - 1 - SCHEDULING_TOLERANCE,
+                        "the anchor only ever aged to " + maxAge[0] + " ticks, but this species' roar"
+                                + " is " + monster.roarDurationTicks() + " ticks -- a late observer"
+                                + " joining near the end would be told the wrong phase"))
+                .thenSucceed();
+    }
+
+    private static Cow inertVictim(GameTestHelper helper) {
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
+        victim.setNoAi(true);
+        victim.setInvulnerable(true);
+        return victim;
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 300)
+    public static void greatIzuchiRoarAnchorIsStableForTheWholeRoar(GameTestHelper helper) {
+        GreatIzuchi monster = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
+        monster.setTarget(inertVictim(helper));
+        assertRoarAnchorIsStableForTheWholeRoar(helper, monster);
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 300)
+    public static void rathianRoarAnchorIsStableForTheWholeRoar(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Rathian rathian = helper.spawn(ModEntities.RATHIAN.get(), 8, 2, 8);
+        rathian.setTarget(inertVictim(helper));
+        assertRoarAnchorIsStableForTheWholeRoar(helper, rathian);
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 300)
+    public static void rathalosRoarAnchorIsStableForTheWholeRoar(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Rathalos rathalos = helper.spawn(ModEntities.RATHALOS.get(), 8, 2, 8);
+        rathalos.setTarget(inertVictim(helper));
+        assertRoarAnchorIsStableForTheWholeRoar(helper, rathalos);
+    }
+
+    /**
+     * R0b-04: two roars are two instances.
+     *
+     * <p>A client joining the second roar must not be handed the first one's identity, or the
+     * controller sees no change and keeps playing whatever it already had. Anchors are game times,
+     * so the second must be strictly later; sharing a value is the failure. Re-arming itself is
+     * T02's subject -- the engagement is reset directly here, because this only cares that the
+     * anchor moves when a second roar does happen.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 400)
+    public static void greatIzuchiSecondRoarIsADistinctInstance(GameTestHelper helper) {
+        GreatIzuchi monster = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
+        Cow victim = inertVictim(helper);
+        monster.setTarget(victim);
+
+        long[] first = {Long.MIN_VALUE};
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(monster.getRoarTicks() > 0, "never roared"))
+                .thenExecute(() -> first[0] = monster.getRoarStartTime())
+                .thenWaitUntil(() -> helper.assertTrue(monster.getRoarTicks() <= 0,
+                        "the first roar is still running"))
+                .thenExecute(() -> monster.setRoaredThisEngagement(false))
+                .thenWaitUntil(() -> helper.assertTrue(monster.getRoarTicks() > 0, "never roared again"))
+                .thenExecute(() -> helper.assertTrue(monster.getRoarStartTime() > first[0],
+                        "the second roar reused the first roar's anchor (" + first[0]
+                                + "): a late client cannot tell the two apart"))
+                .thenSucceed();
+    }
+
+    /**
+     * R0b-05: the death anchor exists, is stamped once, and ages one tick per real tick.
+     *
+     * <p>Vanilla's {@code deathTime} already counts the corpse hold, but it is never synced, so a
+     * client that starts tracking a body already part way through its death clip would restart that
+     * clip. This is the anchor that fixes it, and the two ways it can be wrong are opposite: never
+     * stamped (a late client sees no death clock at all), or re-stamped every tick (the clip never
+     * advances, which looks exactly like a frozen corpse). Holding the age to real elapsed ticks
+     * catches both.
+     */
+    private static void assertDeathAnchorAgesWithRealTicks(GameTestHelper helper,
+                                                          net.minecraft.world.entity.LivingEntity body,
+                                                          java.util.function.LongSupplier anchor,
+                                                          long none, int observeTicks) {
+        long[] stamped = {none};
+        long[] ageWhenStamped = {-1L};
+        helper.startSequence()
+                .thenExecute(() -> helper.assertTrue(anchor.getAsLong() == none,
+                        "a living creature already carries a death anchor: " + anchor.getAsLong()))
+                .thenExecute(() -> body.hurt(helper.getLevel().damageSources().genericKill(), 1000.0F))
+                .thenWaitUntil(() -> helper.assertTrue(anchor.getAsLong() != none,
+                        "death was never stamped with a presentation anchor"))
+                .thenExecute(() -> {
+                    stamped[0] = anchor.getAsLong();
+                    ageWhenStamped[0] = helper.getLevel().getGameTime() - stamped[0];
+                    helper.assertTrue(ageWhenStamped[0] >= 0L && ageWhenStamped[0] <= SCHEDULING_TOLERANCE,
+                            "the death anchor is not this death's own start: age " + ageWhenStamped[0]);
+                })
+                .thenIdle(observeTicks)
+                .thenExecute(() -> {
+                    helper.assertTrue(anchor.getAsLong() == stamped[0],
+                            "the death anchor was re-stamped mid-death, from " + stamped[0] + " to "
+                                    + anchor.getAsLong() + " -- the clip would never advance");
+                    long age = helper.getLevel().getGameTime() - stamped[0];
+                    long elapsed = age - ageWhenStamped[0];
+                    helper.assertTrue(elapsed >= observeTicks && elapsed <= observeTicks + SCHEDULING_TOLERANCE,
+                            "the death age is not running at one tick per real tick: it advanced "
+                                    + elapsed + " over " + observeTicks + " ticks");
+                })
+                .thenSucceed();
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void greatIzuchiDeathAnchorAgesWithRealTicks(GameTestHelper helper) {
+        GreatIzuchi monster = spawnInert(helper);
+        assertDeathAnchorAgesWithRealTicks(helper, monster, monster::getDeathStartTime,
+                GreatIzuchi.NO_DEATH, 20);
+    }
+
+    /**
+     * Rathian, Rathalos and Aptonoth keep vanilla's own corpse lifetime (removal at {@code deathTime}
+     * 20); only Great Izuchi holds longer, for its authored 38-tick clip. R0b synchronizes what is
+     * visible while a body exists and deliberately extends no body's lifetime, so these three are
+     * observed inside their real window rather than given a longer one.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void rathianDeathAnchorAgesWithRealTicks(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Rathian rathian = helper.spawn(ModEntities.RATHIAN.get(), 8, 2, 8);
+        rathian.setNoAi(true);
+        assertDeathAnchorAgesWithRealTicks(helper, rathian, rathian::getDeathStartTime,
+                com.carro1001.mhnw.entity.Rathian.NO_DEATH, 12);
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void rathalosDeathAnchorAgesWithRealTicks(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Rathalos rathalos = helper.spawn(ModEntities.RATHALOS.get(), 8, 2, 8);
+        rathalos.setNoAi(true);
+        assertDeathAnchorAgesWithRealTicks(helper, rathalos, rathalos::getDeathStartTime,
+                com.carro1001.mhnw.entity.Rathalos.NO_DEATH, 12);
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void aptonothDeathAnchorAgesWithRealTicks(GameTestHelper helper) {
+        Aptonoth aptonoth = helper.spawn(ModEntities.APTONOTH.get(), 8, 2, 8);
+        aptonoth.setNoAi(true);
+        assertDeathAnchorAgesWithRealTicks(helper, aptonoth, aptonoth::getDeathStartTime,
+                Aptonoth.NO_DEATH, 12);
+    }
+
+    /**
+     * R0b-06: a reloaded body resumes its death, it does not restart it.
+     *
+     * <p>The anchor is deliberately not persisted. It is reconstructed on the first tick after load
+     * from {@code gameTime - deathTime}, and {@code deathTime} is a field vanilla already saves --
+     * so there is no second death state machine, no second saved field, and above all no second call
+     * into {@code die()}. The failure this catches is the obvious shortcut: stamping plain
+     * {@code gameTime} at load, which silently rewinds a half-finished death to frame zero. It also
+     * pins that the anchor is genuinely absent in the saved data, which is what lets a body restored
+     * into a world at a different game time still be the right age.
+     *
+     * <p>Not a claim about a real disk restart -- that stays a named R0b client-side gate, and an
+     * in-memory round trip does not substitute for it.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void greatIzuchiReloadedBodyResumesItsDeathInsteadOfRestartingIt(GameTestHelper helper) {
+        GreatIzuchi original = spawnInert(helper);
+        long[] ageAtSave = {-1L};
+        GreatIzuchi[] reloadedBody = new GreatIzuchi[1];
+        helper.startSequence()
+                .thenExecute(() -> original.hurt(helper.getLevel().damageSources().genericKill(), 1000.0F))
+                .thenWaitUntil(() -> helper.assertTrue(original.getDeathStartTime() != GreatIzuchi.NO_DEATH,
+                        "death was never stamped"))
+                .thenIdle(10)
+                .thenExecute(() -> {
+                    ageAtSave[0] = helper.getLevel().getGameTime() - original.getDeathStartTime();
+                    helper.assertTrue(ageAtSave[0] >= 8L,
+                            "the fixture saved at death age " + ageAtSave[0] + ", too early to tell a"
+                                    + " resumed death from a restarted one");
+
+                    CompoundTag saved = original.saveWithoutId(new CompoundTag());
+                    original.discard();
+                    GreatIzuchi reloaded = new GreatIzuchi(ModEntities.GREAT_IZUCHI.get(), helper.getLevel());
+                    reloaded.load(saved);
+                    helper.getLevel().addFreshEntity(reloaded);
+                    reloadedBody[0] = reloaded;
+
+                    helper.assertTrue(reloaded.getDeathStartTime() == GreatIzuchi.NO_DEATH,
+                            "the death anchor was persisted; it is meant to be reconstructed, so a"
+                                    + " body restored into a world at a different game time is still"
+                                    + " the right age");
+                    helper.assertTrue(reloaded.isDeadOrDying(),
+                            "a dead body came back alive across a reload");
+                    helper.assertTrue(reloaded.getAttackId() == GreatIzuchi.ATTACK_NONE,
+                            "a reloaded body resumed a transient action");
+                })
+                .thenIdle(2)
+                .thenExecute(() -> {
+                    GreatIzuchi reloaded = reloadedBody[0];
+                    helper.assertTrue(reloaded.getDeathStartTime() != GreatIzuchi.NO_DEATH,
+                            "the reloaded body never reconstructed its death anchor");
+                    long age = helper.getLevel().getGameTime() - reloaded.getDeathStartTime();
+                    helper.assertTrue(age >= ageAtSave[0],
+                            "the reloaded body restarted its death clip: age went from " + ageAtSave[0]
+                                    + " back to " + age);
+                    helper.assertTrue(age - ageAtSave[0] <= 2L + SCHEDULING_TOLERANCE,
+                            "the reloaded body's death age jumped from " + ageAtSave[0] + " to " + age);
+                    helper.assertTrue(reloaded.getHealth() == 0.0F,
+                            "the reloaded body regained health: " + reloaded.getHealth());
+                    helper.assertTrue(helper.getLevel().getPartEntities().containsAll(
+                                    java.util.Arrays.asList(reloaded.getParts())),
+                            "the reloaded body's parts never reached the NeoForge lookup");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * R0b-07: death presentation has a clock of its own to win with.
+     *
+     * <p>R0a established that a monster killed mid-action freezes its synced action state rather
+     * than clearing it, because vanilla stops ticking every goal the instant {@code isDeadOrDying()}
+     * becomes true -- so an in-goal guard never runs. That is only harmless because the death branch
+     * is checked first. R0b adds the requirement that the death branch also carries a real age, so
+     * it is a death clip at the right phase and not merely a death clip. This asserts both halves at
+     * once: the stale attack still sitting there, and a genuine death anchor beside it. Choosing the
+     * clip and the clock from the same decision is what stops a death pose being driven by that
+     * stale attack clock.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 300)
+    public static void greatIzuchiDeathAnchorOutranksAFrozenAttack(GameTestHelper helper) {
+        GreatIzuchi monster = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
+        Cow victim = inertVictim(helper);
+        monster.setRoaredThisEngagement(true);
+        monster.attackCooldown = 0;
+        monster.setTarget(victim);
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(monster.getAttackId() != GreatIzuchi.ATTACK_NONE,
+                        "never started an attack"))
+                .thenExecute(() -> monster.hurt(helper.getLevel().damageSources().genericKill(), 1000.0F))
+                .thenWaitUntil(() -> helper.assertTrue(monster.getDeathStartTime() != GreatIzuchi.NO_DEATH,
+                        "death was never stamped on a monster killed mid-attack"))
+                .thenExecute(() -> {
+                    helper.assertTrue(monster.getAttackId() != GreatIzuchi.ATTACK_NONE,
+                            "the frozen-attack precondition no longer holds, so this test would pass"
+                                    + " for the wrong reason; see R0a on goals not ticking once dead");
+                    long deathAge = helper.getLevel().getGameTime() - monster.getDeathStartTime();
+                    helper.assertTrue(deathAge >= 0L && deathAge <= SCHEDULING_TOLERANCE,
+                            "the death clock did not start at the death: age " + deathAge);
+                })
+                .thenSucceed();
     }
 
     private static void fillFloor(GameTestHelper helper, int y, net.minecraft.world.level.block.Block block) {

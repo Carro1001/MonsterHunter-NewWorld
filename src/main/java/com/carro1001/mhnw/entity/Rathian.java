@@ -1,5 +1,6 @@
 package com.carro1001.mhnw.entity;
 
+import com.carro1001.mhnw.animation.ServerTimedAnimationController;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -22,7 +23,6 @@ import net.neoforged.neoforge.entity.PartEntity;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
-import software.bernie.geckolib.animation.AnimationController;
 import software.bernie.geckolib.animation.AnimationState;
 import software.bernie.geckolib.animation.PlayState;
 import software.bernie.geckolib.animation.RawAnimation;
@@ -99,6 +99,26 @@ public class Rathian extends Monster implements GeoEntity, Roarable {
     /** {@code animation.rathian.roar} is 5s; see {@code docs/ANIMATION_MANIFEST.json}. */
     private static final int ROAR_TICKS = 100;
 
+    /** Game time the current roar began; see {@link Roarable#getRoarStartTime()}. */
+    private static final EntityDataAccessor<Long> DATA_ROAR_START =
+            SynchedEntityData.defineId(Rathian.class, EntityDataSerializers.LONG);
+
+    /** Game time this body's death began, or {@link #NO_DEATH} while alive; see
+     * {@link GreatIzuchi#getDeathStartTime()} for why this anchor exists and how it reconstructs
+     * itself from vanilla's own saved death progress on load. */
+    private static final EntityDataAccessor<Long> DATA_DEATH_START =
+            SynchedEntityData.defineId(Rathian.class, EntityDataSerializers.LONG);
+
+    /** Sentinel for {@link #DATA_DEATH_START} while this creature is alive. */
+    public static final long NO_DEATH = Long.MIN_VALUE;
+
+    /**
+     * Ticks spent blending into a newly set clip, and therefore part of the clock contract
+     * {@link ServerTimedAnimationController} honours: an action of age {@code a} samples clip time
+     * {@code a - TRANSITION_TICKS}, which is what an ordinary observer has always been shown.
+     */
+    public static final int TRANSITION_TICKS = 5;
+
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.rathian.idle_normal");
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.rathian.walk");
     private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.rathian.run");
@@ -112,9 +132,6 @@ public class Rathian extends Monster implements GeoEntity, Roarable {
 
     /** Server-only: ticks until another attack may start. Never saved, so a reload cools down. */
     public int attackCooldown = 20;
-
-    /** Client-only: the action sequence currently being presented; see {@link GreatIzuchi}'s copy. */
-    private int presentedSeq = -1;
 
     /** Server-only source of truth for the action sequence; see {@link GreatIzuchi}'s copy for why
      * this isn't a read-modify-write of the synced value. */
@@ -227,6 +244,8 @@ public class Rathian extends Monster implements GeoEntity, Roarable {
         builder.define(DATA_ATTACK_START, 0L);
         builder.define(DATA_ACTION_SEQ, 0);
         builder.define(DATA_ROAR_TICKS, 0);
+        builder.define(DATA_ROAR_START, 0L);
+        builder.define(DATA_DEATH_START, NO_DEATH);
     }
 
     // ---------------------------------------------------------------- roar (Roarable)
@@ -239,6 +258,30 @@ public class Rathian extends Monster implements GeoEntity, Roarable {
     @Override
     public void setRoarTicks(int ticks) {
         this.entityData.set(DATA_ROAR_TICKS, ticks);
+    }
+
+    @Override
+    public long getRoarStartTime() {
+        return this.entityData.get(DATA_ROAR_START);
+    }
+
+    @Override
+    public void setRoarStartTime(long gameTime) {
+        this.entityData.set(DATA_ROAR_START, gameTime);
+    }
+
+    /** Game time this body's death began, or {@link #NO_DEATH} while alive. Valid on both sides. */
+    public long getDeathStartTime() {
+        return this.entityData.get(DATA_DEATH_START);
+    }
+
+    /** Server: stamp the death anchor once, from {@code gameTime - deathTime}; see
+     * {@link GreatIzuchi#getDeathStartTime()} for why that expression also reconstructs the age of a
+     * body restored from disk without re-running any death, XP or loot processing. */
+    private void stampDeathStart() {
+        if (!level().isClientSide && isDeadOrDying() && getDeathStartTime() == NO_DEATH) {
+            this.entityData.set(DATA_DEATH_START, level().getGameTime() - this.deathTime);
+        }
     }
 
     @Override
@@ -411,6 +454,7 @@ public class Rathian extends Monster implements GeoEntity, Roarable {
             setYRot(this.committedBodyYaw);
         }
         positionParts();
+        stampDeathStart();
         if (!level().isClientSide && this.attackCooldown > 0) {
             this.attackCooldown--;
         }
@@ -469,28 +513,39 @@ public class Rathian extends Monster implements GeoEntity, Roarable {
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "main", 5, this::mainAnim));
+        controllers.add(new ServerTimedAnimationController<>(this, "main", TRANSITION_TICKS, this::mainAnim));
     }
 
+    /**
+     * Death, then roar, then attack, then locomotion -- one priority decision choosing the clip, its
+     * presentation instance and its clock together. See {@link ServerTimedAnimationController} for
+     * the age-to-clip convention and why aging a late observer leaves an on-time one untouched.
+     */
     private PlayState mainAnim(AnimationState<Rathian> state) {
+        ServerTimedAnimationController<Rathian> controller = ServerTimedAnimationController.of(state);
+        double partial = state.getPartialTick();
+        long now = level().getGameTime();
+
         if (isDeadOrDying()) {
-            return state.setAndContinue(DEATH);
+            long start = getDeathStartTime();
+            return controller.playTimed(state, DEATH, ServerTimedAnimationController.KIND_DEATH,
+                    start, start == NO_DEATH ? partial : now - start + partial);
         }
         if (isRoaring()) {
-            return state.setAndContinue(ROAR);
+            long start = getRoarStartTime();
+            return controller.playTimed(state, ROAR, ServerTimedAnimationController.KIND_ROAR,
+                    start, now - start + partial);
         }
         byte attack = getAttackId();
         if (attack != ATTACK_NONE) {
-            if (this.presentedSeq != getActionSequence()) {
-                this.presentedSeq = getActionSequence();
-                state.getController().forceAnimationReset();
-            }
-            return state.setAndContinue(attack == ATTACK_BITE_LEFT ? BITE_LEFT : BITE_RIGHT);
+            return controller.playTimed(state, attack == ATTACK_BITE_LEFT ? BITE_LEFT : BITE_RIGHT,
+                    ServerTimedAnimationController.KIND_ATTACK, getActionSequence(),
+                    getAttackAge() + partial);
         }
         if (state.isMoving()) {
-            return state.setAndContinue(isAggressive() ? RUN : WALK);
+            return controller.playFree(state, isAggressive() ? RUN : WALK);
         }
-        return state.setAndContinue(IDLE);
+        return controller.playFree(state, IDLE);
     }
 
     @Override
