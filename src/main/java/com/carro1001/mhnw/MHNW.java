@@ -4,6 +4,7 @@ import com.carro1001.mhnw.entity.Aptonoth;
 import com.carro1001.mhnw.entity.Bug;
 import com.carro1001.mhnw.entity.Flashbug;
 import com.carro1001.mhnw.entity.GreatIzuchi;
+import com.carro1001.mhnw.entity.HuntingSpawnRules;
 import com.carro1001.mhnw.entity.Izuchi;
 import com.carro1001.mhnw.entity.Lagiacrus;
 import com.carro1001.mhnw.entity.Rathian;
@@ -22,6 +23,9 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent;
+import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import com.carro1001.mhnw.worldgen.HuntingGroundsRegion;
+import terrablender.api.Regions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,6 +40,7 @@ public class MHNW {
         modBus.addListener(MHNW::onRegisterSpawnPlacements);
         modBus.addListener(MHNW::onBuildCreativeTabs);
         modBus.addListener(MHNW::onRegisterGameTests);
+        modBus.addListener(MHNW::onCommonSetup);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 (RegisterCommandsEvent event) -> MHNWCommands.register(event.getDispatcher()));
         container.registerConfig(ModConfig.Type.SERVER, MHNWConfig.SERVER_SPEC);
@@ -57,14 +62,52 @@ public class MHNW {
 
     @SubscribeEvent
     private static void onRegisterSpawnPlacements(RegisterSpawnPlacementsEvent event) {
+        // R1a: the six species that can appear in the Verdant Hunting Grounds. Small Izuchi is here
+        // for placement validation only -- it has no independent spawn entry and arrives solely as a
+        // Great Izuchi escort. All six anchor to MOTION_BLOCKING_NO_LEAVES so a position under a tree
+        // canopy resolves to the ground, not to the leaves.
         event.register(ModEntities.GREAT_IZUCHI.get(),
                 SpawnPlacementTypes.ON_GROUND,
                 ModEntities.SPAWN_HEIGHTMAP,
                 GreatIzuchi::checkSpawnRules,
                 RegisterSpawnPlacementsEvent.Operation.REPLACE);
-        // Aptonoth natural spawn placement is deferred with the rest of A11 (docs/DEFERRED.md):
-        // spawn egg only for now, per the maintainer's decision not to worry about natural
-        // spawning until closer to release.
+        event.register(ModEntities.IZUCHI.get(),
+                SpawnPlacementTypes.ON_GROUND,
+                ModEntities.SPAWN_HEIGHTMAP,
+                HuntingSpawnRules::checkMonster,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.APTONOTH.get(),
+                SpawnPlacementTypes.ON_GROUND,
+                ModEntities.SPAWN_HEIGHTMAP,
+                HuntingSpawnRules::checkAnimal,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.TOAD.get(),
+                SpawnPlacementTypes.ON_GROUND,
+                ModEntities.SPAWN_HEIGHTMAP,
+                HuntingSpawnRules::checkSurfaceWildlife,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.FLASHBUG.get(),
+                SpawnPlacementTypes.ON_GROUND,
+                ModEntities.SPAWN_HEIGHTMAP,
+                HuntingSpawnRules::checkSurfaceWildlife,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.BUG.get(),
+                SpawnPlacementTypes.ON_GROUND,
+                ModEntities.SPAWN_HEIGHTMAP,
+                HuntingSpawnRules::checkSurfaceWildlife,
+                RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        // Rathian, Rathalos and Lagiacrus stay registered and egg-only: R1a gives them no natural
+        // spawn entry, so they need no placement rule yet (docs/DEFERRED.md).
+    }
+
+    /**
+     * Where {@code mhnw:verdant_hunting_grounds} becomes a biome the Overworld can actually pick.
+     * TerraBlender's region list is plain static state, so registration has to be enqueued onto the
+     * main thread rather than run on the parallel mod-loading thread.
+     */
+    @SubscribeEvent
+    private static void onCommonSetup(FMLCommonSetupEvent event) {
+        event.enqueueWork(() -> Regions.register(new HuntingGroundsRegion()));
     }
 
     @SubscribeEvent

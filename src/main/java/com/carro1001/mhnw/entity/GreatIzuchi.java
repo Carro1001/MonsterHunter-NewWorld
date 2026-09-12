@@ -1,6 +1,5 @@
 package com.carro1001.mhnw.entity;
 
-import com.carro1001.mhnw.MHNWConfig;
 import com.carro1001.mhnw.registry.ModEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -201,20 +200,60 @@ public class GreatIzuchi extends Monster implements GeoEntity, Roarable {
                 .add(Attributes.STEP_HEIGHT, 1.0D);
     }
 
-    /** Natural spawning honours the server config so it can be switched off (handoff A11). */
+    /**
+     * Automatic spawning honours both the habitat selector and the server off switch; see
+     * {@link HuntingSpawnRules}, which owns that decision for every R1a species so the two cannot
+     * drift apart. Before R1a this consulted the config for {@code NATURAL} only, which let
+     * {@code CHUNK_GENERATION} straight past it.
+     */
     public static boolean checkSpawnRules(EntityType<GreatIzuchi> type, ServerLevelAccessor level,
                                           MobSpawnType spawnType, BlockPos pos, RandomSource random) {
-        if (spawnType == MobSpawnType.NATURAL && !MHNWConfig.NATURAL_SPAWNING.get()) {
-            return false;
-        }
-        return Monster.checkMonsterSpawnRules(type, level, spawnType, pos, random);
+        return HuntingSpawnRules.checkMonster(type, level, spawnType, pos, random);
     }
 
     /** How many escort Izuchi spawn alongside a Great Izuchi, inclusive both ends. */
     private static final int MIN_ESCORTS = 1;
     private static final int MAX_ESCORTS = 4;
 
-    /** A Great Izuchi is a pack leader: it never appears alone in the wild (section 2, pack mechanic). */
+    /**
+     * Candidate positions tried per requested escort before giving that one up. Bounded on purpose:
+     * on a cliff face or in dense forest there may be no valid spot at all, and a smaller pack -- or
+     * none -- is the right answer there. Retrying until it succeeds would either hang worldgen or
+     * push an Izuchi into stone.
+     */
+    private static final int ESCORT_ATTEMPTS = 8;
+
+    /** Escort ring around the leader, in blocks. Unchanged from the pre-R1a behaviour. */
+    private static final double ESCORT_MIN_RADIUS = 2.0D;
+    private static final double ESCORT_RADIUS_SPREAD = 3.0D;
+
+    /**
+     * How far above and below the leader an escort's own ground may be found, in blocks. Keeps a pack
+     * on the same hillside instead of dropping a member off a ravine lip it would then have to path
+     * back up, and bounds each candidate to a dozen block reads.
+     *
+     * <p>Deliberately a local scan rather than the world's surface heightmap: the heightmap answers
+     * "where is the sky", which is the wrong question for a leader standing in a cave, under an
+     * overhang or inside a structure -- resolving against it would put the pack on the roof above.
+     */
+    private static final int ESCORT_MAX_RISE = 2;
+    private static final int ESCORT_MAX_DROP = 8;
+
+    /**
+     * A Great Izuchi is a pack leader: it never appears alone in the wild (section 2, pack mechanic).
+     *
+     * <p>Only genuinely wild origins bring a pack. A spawn egg, {@code /summon} or any other
+     * deliberate placement gets a lone leader, which is what makes the egg usable as a development
+     * tool.
+     *
+     * <p>Escort <em>placement</em> is the R1a correction. The original loop put every escort at the
+     * leader's own Y, which is correct only on flat ground: in real terrain that buries members in a
+     * hillside or hangs them in the air over a drop. Each escort now resolves its own surface Y from
+     * the spawn heightmap and is accepted only if it has solid ground, a clear body-sized volume, no
+     * fluid, no other entity in the way and -- for a naturally spawned leader standing at the biome
+     * edge -- a position still inside the habitat selector. A manually spawned leader keeps its
+     * unrestricted behaviour, so a spawner or egg still works outside the biome.
+     */
     @Override
     public net.minecraft.world.entity.SpawnGroupData finalizeSpawn(
             ServerLevelAccessor level, net.minecraft.world.DifficultyInstance difficulty,
@@ -225,21 +264,70 @@ public class GreatIzuchi extends Monster implements GeoEntity, Roarable {
             // only genuine wild spawns get the pack.
             return result;
         }
-        int count = MIN_ESCORTS + this.random.nextInt(MAX_ESCORTS - MIN_ESCORTS + 1);
-        for (int i = 0; i < count; i++) {
-            Izuchi izuchi = ModEntities.IZUCHI.get().create(level.getLevel());
-            if (izuchi == null) {
-                continue;
-            }
-            double angle = this.random.nextDouble() * Math.PI * 2.0D;
-            double dist = 2.0D + this.random.nextDouble() * 3.0D;
-            double x = getX() + Math.cos(angle) * dist;
-            double z = getZ() + Math.sin(angle) * dist;
-            izuchi.moveTo(x, getY(), z, this.random.nextFloat() * 360.0F, 0.0F);
-            izuchi.finalizeSpawn(level, difficulty, MobSpawnType.MOB_SUMMONED, null);
-            level.addFreshEntity(izuchi);
+        int requested = MIN_ESCORTS + this.random.nextInt(MAX_ESCORTS - MIN_ESCORTS + 1);
+        for (int i = 0; i < requested; i++) {
+            trySpawnEscort(level, difficulty, spawnType);
         }
         return result;
+    }
+
+    /** One escort, or none if {@link #ESCORT_ATTEMPTS} nearby candidates all fail their checks. */
+    private void trySpawnEscort(ServerLevelAccessor level, net.minecraft.world.DifficultyInstance difficulty,
+                                MobSpawnType spawnType) {
+        for (int attempt = 0; attempt < ESCORT_ATTEMPTS; attempt++) {
+            BlockPos pos = findEscortPos(level, spawnType);
+            if (pos == null) {
+                continue;
+            }
+            Izuchi izuchi = ModEntities.IZUCHI.get().create(level.getLevel());
+            if (izuchi == null) {
+                // Not terrain rejection: the entity type failed to build one. Say so rather than
+                // letting it look like a crowded hillside.
+                com.carro1001.mhnw.MHNW.LOG.warn(
+                        "Izuchi entity factory returned null; Great Izuchi at {} spawns without a full escort",
+                        blockPosition());
+                return;
+            }
+            izuchi.moveTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D,
+                    this.random.nextFloat() * 360.0F, 0.0F);
+            if (!level.getLevel().noCollision(izuchi)) {
+                // Another entity, or a block the static checks could not see from the corner position.
+                izuchi.discard();
+                continue;
+            }
+            izuchi.finalizeSpawn(level, difficulty, MobSpawnType.MOB_SUMMONED, null);
+            level.addFreshEntity(izuchi);
+            return;
+        }
+    }
+
+    /** A terrain-safe escort position in the ring around the leader, or {@code null} if this try failed. */
+    private BlockPos findEscortPos(ServerLevelAccessor level, MobSpawnType spawnType) {
+        double angle = this.random.nextDouble() * Math.PI * 2.0D;
+        double dist = ESCORT_MIN_RADIUS + this.random.nextDouble() * ESCORT_RADIUS_SPREAD;
+        int x = net.minecraft.util.Mth.floor(getX() + Math.cos(angle) * dist);
+        int z = net.minecraft.util.Mth.floor(getZ() + Math.sin(angle) * dist);
+        int leaderY = blockPosition().getY();
+        if (!level.hasChunkAt(new BlockPos(x, leaderY, z))) {
+            // Never load or generate a chunk to complete a pack.
+            return null;
+        }
+        EntityType<Izuchi> type = ModEntities.IZUCHI.get();
+        // Walk the candidate column from just above the leader down to the bottom of the allowed
+        // drop, and take the first spot that is genuinely standable.
+        for (int y = leaderY + ESCORT_MAX_RISE; y >= leaderY - ESCORT_MAX_DROP; y--) {
+            BlockPos pos = new BlockPos(x, y, z);
+            if (!HuntingSpawnRules.hasSolidGround(level, type, pos)
+                    || !HuntingSpawnRules.isFree(level, type, pos)) {
+                continue;
+            }
+            if (spawnType == MobSpawnType.NATURAL && !HuntingSpawnRules.inHabitat(level, pos)) {
+                // The leader may stand at the biome edge; its wild pack still belongs in the habitat.
+                return null;
+            }
+            return pos;
+        }
+        return null;
     }
 
     @Override

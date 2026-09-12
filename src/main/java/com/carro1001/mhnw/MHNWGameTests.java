@@ -4,11 +4,14 @@ import com.carro1001.mhnw.entity.Aptonoth;
 import com.carro1001.mhnw.entity.AttackProfile;
 import com.carro1001.mhnw.entity.GreatIzuchi;
 import com.carro1001.mhnw.entity.GreatIzuchiCombatGoal;
+import com.carro1001.mhnw.entity.HuntingSpawnRules;
 import com.carro1001.mhnw.entity.Lagiacrus;
 import com.carro1001.mhnw.entity.LagiacrusPursuitGoal;
 import com.carro1001.mhnw.entity.MonsterPart;
 import com.carro1001.mhnw.entity.Toad;
+import com.carro1001.mhnw.registry.ModBiomes;
 import com.carro1001.mhnw.registry.ModEntities;
+import com.carro1001.mhnw.worldgen.HuntingGroundsRegion;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
@@ -72,6 +75,9 @@ public class MHNWGameTests {
      */
     @GameTest(template = ARENA, timeoutTicks = 40)
     public static void greatIzuchiNaturalSpawnBringsAnEscort(GameTestHelper helper) {
+        // R1a restricted a wild pack to the habitat selector, so the fixture has to be the habitat
+        // now. The assertion itself is unchanged: a genuine wild spawn still brings 1-4 escorts.
+        helper.setBiome(ModBiomes.VERDANT_HUNTING_GROUNDS);
         GreatIzuchi monster = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
         monster.finalizeSpawn(helper.getLevel(),
                 helper.getLevel().getCurrentDifficultyAt(monster.blockPosition()),
@@ -1969,6 +1975,514 @@ public class MHNWGameTests {
                         helper.setBlock(x, y, z, net.minecraft.world.level.block.Blocks.WATER);
                     }
                 }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // R1a: Verdant Hunting Grounds. Registry, resolved spawn data, the automatic-spawn guard and
+    // terrain-safe escort placement.
+    //
+    // These deliberately stop where a flat GameTest arena stops being evidence. `setBiome` paints a
+    // biome key onto test chunks, which is exactly right for asking "does the guard read the tag"
+    // and wrong for asking "does the Overworld generate this biome" -- the latter needs real scratch
+    // worlds and lives in docs/TEST_PLAN.md's recorded seed runs, not here.
+    // ------------------------------------------------------------------------------------------
+
+    /** Every MH mob R1a gives an automatic spawn entry to, plus small Izuchi for placement validation. */
+    private static final EntityType<?>[] HABITAT_TYPES = {
+            ModEntities.GREAT_IZUCHI.get(), ModEntities.IZUCHI.get(), ModEntities.APTONOTH.get(),
+            ModEntities.TOAD.get(), ModEntities.FLASHBUG.get(), ModEntities.BUG.get(),
+    };
+
+    /** H01: the biome, its sparse tree placement and the habitat selector all resolve at runtime. */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void huntingGroundsRegistryResolves(GameTestHelper helper) {
+        net.minecraft.server.level.ServerLevel level = helper.getLevel();
+        helper.assertTrue(level.registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.BIOME)
+                        .containsKey(ModBiomes.VERDANT_HUNTING_GROUNDS.location()),
+                "biome mhnw:verdant_hunting_grounds did not load from the datapack");
+        helper.assertTrue(level.registryAccess()
+                        .registryOrThrow(net.minecraft.core.registries.Registries.PLACED_FEATURE)
+                        .containsKey(net.minecraft.resources.ResourceLocation
+                                .fromNamespaceAndPath(MHNW.MOD_ID, "trees_hunting_grounds")),
+                "placed feature mhnw:trees_hunting_grounds did not load");
+        // The selector must actually contain our biome -- an empty tag would silently switch every
+        // habitat check off rather than fail loudly.
+        helper.assertTrue(level.registryAccess().registryOrThrow(net.minecraft.core.registries.Registries.BIOME)
+                        .getHolderOrThrow(ModBiomes.VERDANT_HUNTING_GROUNDS)
+                        .is(ModBiomes.SPAWNS_HUNTING_WILDLIFE),
+                "the habitat biome is not in #mhnw:spawns_hunting_wildlife");
+        // Every species this packet spawns automatically needs a registered placement, or the natural
+        // spawner silently refuses it.
+        for (EntityType<?> type : HABITAT_TYPES) {
+            helper.assertTrue(net.minecraft.world.entity.SpawnPlacements.getPlacementType(type)
+                            == net.minecraft.world.entity.SpawnPlacementTypes.ON_GROUND,
+                    "no ON_GROUND spawn placement registered for " + type.getDescriptionId());
+            helper.assertTrue(net.minecraft.world.entity.SpawnPlacements.getHeightmapType(type)
+                            == ModEntities.SPAWN_HEIGHTMAP,
+                    "wrong spawn heightmap for " + type.getDescriptionId());
+        }
+        helper.succeed();
+    }
+
+    /**
+     * H02: our TerraBlender region really is registered for the Overworld and really does map the
+     * habitat key, without replacing the Overworld's other climate slots.
+     *
+     * <p>This walks the region's own output rather than trusting the JSON: {@code addBiomes} is asked
+     * for its parameter list and the result is checked for both our key and a sample of vanilla keys
+     * that must survive. A global replacement would show up here as vanilla keys going missing.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void huntingGroundsRegionMapsPlainsAndForestOnly(GameTestHelper helper) {
+        helper.assertTrue(terrablender.api.Regions.get(terrablender.api.RegionType.OVERWORLD).stream()
+                        .anyMatch(r -> r.getName().equals(HuntingGroundsRegion.NAME)),
+                "mhnw:overworld_hunting_grounds is not registered as an Overworld region");
+
+        java.util.List<net.minecraft.resources.ResourceKey<net.minecraft.world.level.biome.Biome>> mapped =
+                new java.util.ArrayList<>();
+        new HuntingGroundsRegion().addBiomes(
+                helper.getLevel().registryAccess()
+                        .registryOrThrow(net.minecraft.core.registries.Registries.BIOME),
+                pair -> mapped.add(pair.getSecond()));
+
+        helper.assertTrue(mapped.contains(ModBiomes.VERDANT_HUNTING_GROUNDS),
+                "our region never maps mhnw:verdant_hunting_grounds");
+        helper.assertTrue(!mapped.contains(net.minecraft.world.level.biome.Biomes.PLAINS)
+                        && !mapped.contains(net.minecraft.world.level.biome.Biomes.FOREST),
+                "plains/forest slots were not replaced inside our own region");
+        // A representative spread of untouched mappings. If replaceBiome ever went global these
+        // would vanish along with plains and forest.
+        for (net.minecraft.resources.ResourceKey<net.minecraft.world.level.biome.Biome> kept :
+                java.util.List.of(net.minecraft.world.level.biome.Biomes.OCEAN,
+                        net.minecraft.world.level.biome.Biomes.DESERT,
+                        net.minecraft.world.level.biome.Biomes.TAIGA,
+                        net.minecraft.world.level.biome.Biomes.DARK_FOREST,
+                        net.minecraft.world.level.biome.Biomes.SNOWY_PLAINS,
+                        net.minecraft.world.level.biome.Biomes.JUNGLE)) {
+            helper.assertTrue(mapped.contains(kept),
+                    "our region dropped the vanilla mapping for " + kept.location());
+        }
+        helper.succeed();
+    }
+
+    /**
+     * H03: after biome modifiers run, the habitat holds exactly one entry per independent species, in
+     * the right category and with the agreed counts -- and the unfinished wyverns and the escort-only
+     * small Izuchi hold none.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void huntingGroundsHasOneEntryPerSpecies(GameTestHelper helper) {
+        net.minecraft.world.level.biome.Biome habitat = helper.getLevel().registryAccess()
+                .registryOrThrow(net.minecraft.core.registries.Registries.BIOME)
+                .getOrThrow(ModBiomes.VERDANT_HUNTING_GROUNDS);
+
+        assertOneSpawnEntry(helper, habitat, net.minecraft.world.entity.MobCategory.MONSTER,
+                ModEntities.GREAT_IZUCHI.get(), 2, 1, 1);
+        assertOneSpawnEntry(helper, habitat, net.minecraft.world.entity.MobCategory.CREATURE,
+                ModEntities.APTONOTH.get(), 8, 2, 3);
+        assertOneSpawnEntry(helper, habitat, net.minecraft.world.entity.MobCategory.CREATURE,
+                ModEntities.TOAD.get(), 2, 1, 2);
+        assertOneSpawnEntry(helper, habitat, net.minecraft.world.entity.MobCategory.CREATURE,
+                ModEntities.FLASHBUG.get(), 2, 1, 2);
+        assertOneSpawnEntry(helper, habitat, net.minecraft.world.entity.MobCategory.AMBIENT,
+                ModEntities.BUG.get(), 2, 1, 2);
+
+        // No independent small-Izuchi population: it arrives as an escort or not at all.
+        assertNoSpawnEntry(helper, habitat, ModEntities.IZUCHI.get());
+        // Registered, egg-usable, but deliberately not part of R1a's habitat.
+        assertNoSpawnEntry(helper, habitat, ModEntities.RATHIAN.get());
+        assertNoSpawnEntry(helper, habitat, ModEntities.RATHALOS.get());
+        assertNoSpawnEntry(helper, habitat, ModEntities.LAGIACRUS.get());
+
+        // And the retargeting really moved Great Izuchi off the vanilla forest tag it used to sit on.
+        net.minecraft.world.level.biome.Biome vanillaForest = helper.getLevel().registryAccess()
+                .registryOrThrow(net.minecraft.core.registries.Registries.BIOME)
+                .getOrThrow(net.minecraft.world.level.biome.Biomes.FOREST);
+        for (EntityType<?> type : HABITAT_TYPES) {
+            assertNoSpawnEntry(helper, vanillaForest, type);
+        }
+        helper.succeed();
+    }
+
+    private static java.util.List<net.minecraft.world.level.biome.MobSpawnSettings.SpawnerData> entriesFor(
+            net.minecraft.world.level.biome.Biome biome, net.minecraft.world.entity.MobCategory category,
+            EntityType<?> type) {
+        return biome.getMobSettings().getMobs(category).unwrap().stream()
+                .filter(entry -> entry.type == type).toList();
+    }
+
+    private static void assertOneSpawnEntry(GameTestHelper helper, net.minecraft.world.level.biome.Biome biome,
+                                            net.minecraft.world.entity.MobCategory category, EntityType<?> type,
+                                            int weight, int min, int max) {
+        java.util.List<net.minecraft.world.level.biome.MobSpawnSettings.SpawnerData> found =
+                entriesFor(biome, category, type);
+        helper.assertTrue(found.size() == 1, "expected exactly one " + category + " entry for "
+                + type.getDescriptionId() + ", found " + found.size());
+        net.minecraft.world.level.biome.MobSpawnSettings.SpawnerData data = found.get(0);
+        helper.assertTrue(data.getWeight().asInt() == weight && data.minCount == min && data.maxCount == max,
+                type.getDescriptionId() + " entry is weight " + data.getWeight().asInt() + " count "
+                        + data.minCount + "-" + data.maxCount + ", expected " + weight + " / " + min + "-" + max);
+        helper.assertTrue(type.getCategory() == category,
+                type.getDescriptionId() + " is registered in category " + type.getCategory()
+                        + " but its spawn entry is under " + category);
+    }
+
+    private static void assertNoSpawnEntry(GameTestHelper helper, net.minecraft.world.level.biome.Biome biome,
+                                          EntityType<?> type) {
+        for (net.minecraft.world.entity.MobCategory category : net.minecraft.world.entity.MobCategory.values()) {
+            helper.assertTrue(entriesFor(biome, category, type).isEmpty(),
+                    "unexpected " + category + " spawn entry for " + type.getDescriptionId());
+        }
+    }
+
+    /**
+     * H04: the automatic-spawn guard, for every relevant type and both automatic sources.
+     *
+     * <p>Three things are checked together because they are one decision: inside the habitat with the
+     * config on, an automatic spawn may pass; outside it, or with the config off, it may not; and a
+     * manual origin passes regardless of either. {@code CHUNK_GENERATION} is included deliberately --
+     * before R1a it slipped past the config entirely, which is how a worldgen-seeded animal
+     * population would have ignored the off switch.
+     *
+     * <p>The config is restored in a {@code finally} in this one synchronous callback rather than
+     * across ticks, so a failure cannot leave the shared server setting flipped for the tests that
+     * run after it.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void huntingGuardGatesAutomaticSpawnsOnHabitatAndConfig(GameTestHelper helper) {
+        net.minecraft.world.entity.MobSpawnType[] automatic = {
+                net.minecraft.world.entity.MobSpawnType.NATURAL,
+                net.minecraft.world.entity.MobSpawnType.CHUNK_GENERATION,
+        };
+        net.minecraft.world.entity.MobSpawnType[] manual = {
+                net.minecraft.world.entity.MobSpawnType.SPAWN_EGG,
+                net.minecraft.world.entity.MobSpawnType.COMMAND,
+                net.minecraft.world.entity.MobSpawnType.SPAWNER,
+                net.minecraft.world.entity.MobSpawnType.MOB_SUMMONED,
+        };
+        net.minecraft.core.BlockPos pos = helper.absolutePos(new net.minecraft.core.BlockPos(8, 3, 8));
+        boolean restore = MHNWConfig.NATURAL_SPAWNING.get();
+        try {
+            // In the habitat, switch on: automatic spawning is permitted.
+            helper.setBiome(ModBiomes.VERDANT_HUNTING_GROUNDS);
+            MHNWConfig.NATURAL_SPAWNING.set(true);
+            for (net.minecraft.world.entity.MobSpawnType type : automatic) {
+                helper.assertTrue(HuntingSpawnRules.habitatAllows(helper.getLevel(), type, pos),
+                        "guard rejected " + type + " inside the habitat with the config on");
+            }
+
+            // Switch off: both automatic sources are refused, in the very same biome.
+            MHNWConfig.NATURAL_SPAWNING.set(false);
+            for (net.minecraft.world.entity.MobSpawnType type : automatic) {
+                helper.assertTrue(!HuntingSpawnRules.habitatAllows(helper.getLevel(), type, pos),
+                        "guard allowed " + type + " with naturalSpawning=false");
+            }
+            // ...but development access is untouched by the off switch.
+            for (net.minecraft.world.entity.MobSpawnType type : manual) {
+                helper.assertTrue(HuntingSpawnRules.habitatAllows(helper.getLevel(), type, pos),
+                        "guard rejected manual origin " + type + " with naturalSpawning=false");
+            }
+
+            // Wrong biome, switch back on: still refused, and still not for manual origins.
+            MHNWConfig.NATURAL_SPAWNING.set(true);
+            helper.setBiome(net.minecraft.world.level.biome.Biomes.FOREST);
+            for (net.minecraft.world.entity.MobSpawnType type : automatic) {
+                helper.assertTrue(!HuntingSpawnRules.habitatAllows(helper.getLevel(), type, pos),
+                        "guard allowed " + type + " in a vanilla forest outside the habitat");
+            }
+            for (net.minecraft.world.entity.MobSpawnType type : manual) {
+                helper.assertTrue(HuntingSpawnRules.habitatAllows(helper.getLevel(), type, pos),
+                        "guard rejected manual origin " + type + " outside the habitat");
+            }
+
+            // And the same, driven through each species' real registered predicate rather than the
+            // shared helper, so a species wired to the wrong one is caught.
+            MHNWConfig.NATURAL_SPAWNING.set(false);
+            helper.setBiome(ModBiomes.VERDANT_HUNTING_GROUNDS);
+            for (EntityType<?> type : HABITAT_TYPES) {
+                for (net.minecraft.world.entity.MobSpawnType source : automatic) {
+                    helper.assertTrue(!checkPlacement(helper, type, source, pos),
+                            type.getDescriptionId() + " accepted " + source + " with naturalSpawning=false");
+                }
+            }
+        } finally {
+            MHNWConfig.NATURAL_SPAWNING.set(restore);
+        }
+        helper.succeed();
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static boolean checkPlacement(GameTestHelper helper, EntityType<?> type,
+                                         net.minecraft.world.entity.MobSpawnType source,
+                                         net.minecraft.core.BlockPos pos) {
+        return net.minecraft.world.entity.SpawnPlacements.checkSpawnRules((EntityType) type,
+                helper.getLevel(), source, pos, helper.getLevel().getRandom());
+    }
+
+    /**
+     * H04, the other half: a valid position inside the habitat with the switch on actually passes,
+     * so the rejection test above cannot be satisfied by a guard that simply refuses everything.
+     *
+     * <p>Aptonoth is the species that can be driven end to end here: its predicate is habitat plus
+     * vanilla's animal rules, neither of which minds being indoors. The three surface species cannot
+     * be, and the reason is worth knowing before someone "fixes" it: the GameTest framework encloses
+     * every test structure in a barrier cage <em>with a lid</em>, so the entire arena interior sits
+     * below the spawn heightmap and {@code isSurface} correctly answers "this is not the surface".
+     * Building a fixture above that lid would mean writing blocks outside the test's own bounds, into
+     * a world shared with the tests running beside it -- which is exactly the flakiness that got this
+     * test rewritten. The surface rule is therefore covered in three parts instead: its own logic in
+     * {@link #huntingSurfaceRuleFollowsTheSpawnHeightmap}, its ground/clearance components below, and
+     * the whole composite accept path by the real-world spawn evidence in docs/TEST_PLAN.md.
+     *
+     * <p>Great Izuchi is excluded for a different and ordinary reason: it is a {@code MONSTER}, so
+     * vanilla's darkness and difficulty rules apply on top of the guard, and a lit arena is
+     * legitimately not a valid spot for it.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void huntingGuardAcceptsValidHabitatPositions(GameTestHelper helper) {
+        boolean restore = MHNWConfig.NATURAL_SPAWNING.get();
+        try {
+            helper.setBiome(ModBiomes.VERDANT_HUNTING_GROUNDS);
+            MHNWConfig.NATURAL_SPAWNING.set(true);
+            // Grass underfoot is what vanilla's animal rules want; the arena is lit, so the light
+            // half of those rules is satisfied too.
+            helper.setBlock(8, 1, 8, net.minecraft.world.level.block.Blocks.GRASS_BLOCK);
+            net.minecraft.core.BlockPos pos = helper.absolutePos(new net.minecraft.core.BlockPos(8, 2, 8));
+            helper.assertTrue(checkPlacement(helper, ModEntities.APTONOTH.get(),
+                            net.minecraft.world.entity.MobSpawnType.NATURAL, pos),
+                    "Aptonoth refused a valid habitat position at " + pos);
+
+            // The two physical components every surface species shares, accepted on the same spot.
+            for (EntityType<?> type : new EntityType<?>[]{ModEntities.TOAD.get(),
+                    ModEntities.FLASHBUG.get(), ModEntities.BUG.get()}) {
+                helper.assertTrue(HuntingSpawnRules.hasSolidGround(helper.getLevel(), type, pos),
+                        type.getDescriptionId() + " refused solid grass underfoot");
+                helper.assertTrue(HuntingSpawnRules.isFree(helper.getLevel(), type, pos),
+                        type.getDescriptionId() + " refused a clear body-sized volume");
+            }
+        } finally {
+            MHNWConfig.NATURAL_SPAWNING.set(restore);
+        }
+        helper.succeed();
+    }
+
+    /**
+     * The surface rule in isolation: at or just under the column's own heightmap counts as the
+     * surface, and well below it does not. Asserted against the arena's real heightmap rather than a
+     * hardcoded Y, because what that value is depends on the GameTest cage, not on our code.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void huntingSurfaceRuleFollowsTheSpawnHeightmap(GameTestHelper helper) {
+        net.minecraft.core.BlockPos anchor = helper.absolutePos(new net.minecraft.core.BlockPos(8, 2, 8));
+        int top = helper.getLevel().getHeight(ModEntities.SPAWN_HEIGHTMAP, anchor.getX(), anchor.getZ());
+        helper.assertTrue(HuntingSpawnRules.isSurface(helper.getLevel(),
+                        new net.minecraft.core.BlockPos(anchor.getX(), top, anchor.getZ())),
+                "the heightmap position itself was not treated as the surface");
+        helper.assertTrue(HuntingSpawnRules.isSurface(helper.getLevel(),
+                        new net.minecraft.core.BlockPos(anchor.getX(), top - 1, anchor.getZ())),
+                "one block under the heightmap was not treated as the surface (canopy tolerance)");
+        helper.assertTrue(!HuntingSpawnRules.isSurface(helper.getLevel(),
+                        new net.minecraft.core.BlockPos(anchor.getX(), top - 6, anchor.getZ())),
+                "six blocks under the heightmap was treated as the surface");
+        // And the whole composite check refuses the arena interior for exactly that reason, which is
+        // also the cave case: a position well below its column's surface.
+        helper.assertTrue(!HuntingSpawnRules.checkSurfaceWildlife(ModEntities.TOAD.get(), helper.getLevel(),
+                        net.minecraft.world.entity.MobSpawnType.NATURAL, anchor,
+                        helper.getLevel().getRandom()),
+                "surface wildlife accepted a position far below its column's surface");
+        helper.succeed();
+    }
+
+    /** Surface wildlife must not be placed in liquid, in a solid block, or in unsupported air. */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void huntingSurfaceWildlifeRejectsLiquidAndBlockedSpace(GameTestHelper helper) {
+        boolean restore = MHNWConfig.NATURAL_SPAWNING.get();
+        try {
+            helper.setBiome(ModBiomes.VERDANT_HUNTING_GROUNDS);
+            MHNWConfig.NATURAL_SPAWNING.set(true);
+            EntityType<Toad> toad = ModEntities.TOAD.get();
+            net.minecraft.server.level.ServerLevel level = helper.getLevel();
+
+            // Grass at 1, the body volume at 2: the control the three rejections below are variations
+            // on. Only the component under test is broken each time.
+            helper.setBlock(8, 1, 8, net.minecraft.world.level.block.Blocks.GRASS_BLOCK);
+            net.minecraft.core.BlockPos good = helper.absolutePos(new net.minecraft.core.BlockPos(8, 2, 8));
+            helper.assertTrue(HuntingSpawnRules.hasSolidGround(level, toad, good)
+                            && HuntingSpawnRules.isFree(level, toad, good),
+                    "the control position was already rejected, so the rejections below prove nothing");
+
+            // Nothing underneath.
+            helper.setBlock(4, 1, 4, net.minecraft.world.level.block.Blocks.AIR);
+            helper.assertTrue(!HuntingSpawnRules.hasSolidGround(level, toad,
+                            helper.absolutePos(new net.minecraft.core.BlockPos(4, 2, 4))),
+                    "surface wildlife accepted a position with nothing underneath");
+
+            // Standing in water.
+            helper.setBlock(6, 1, 6, net.minecraft.world.level.block.Blocks.GRASS_BLOCK);
+            helper.setBlock(6, 2, 6, net.minecraft.world.level.block.Blocks.WATER);
+            helper.assertTrue(!HuntingSpawnRules.isFree(level, toad,
+                            helper.absolutePos(new net.minecraft.core.BlockPos(6, 2, 6))),
+                    "surface wildlife accepted a position in water");
+
+            // A solid block where the body would go.
+            helper.setBlock(10, 1, 10, net.minecraft.world.level.block.Blocks.GRASS_BLOCK);
+            helper.setBlock(10, 2, 10, net.minecraft.world.level.block.Blocks.STONE);
+            helper.assertTrue(!HuntingSpawnRules.isFree(level, toad,
+                            helper.absolutePos(new net.minecraft.core.BlockPos(10, 2, 10))),
+                    "surface wildlife accepted a position occupied by a solid block");
+        } finally {
+            MHNWConfig.NATURAL_SPAWNING.set(restore);
+        }
+        helper.succeed();
+    }
+
+    /**
+     * H05: an open, valid habitat gives the leader a full 1-4 pack, and every member lands on real
+     * ground rather than at the leader's own Y.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void escortsLandOnGroundInOpenHabitat(GameTestHelper helper) {
+        helper.setBiome(ModBiomes.VERDANT_HUNTING_GROUNDS);
+        fillFloor(helper, 1, net.minecraft.world.level.block.Blocks.GRASS_BLOCK);
+        GreatIzuchi leader = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
+        leader.finalizeSpawn(helper.getLevel(),
+                helper.getLevel().getCurrentDifficultyAt(leader.blockPosition()),
+                net.minecraft.world.entity.MobSpawnType.NATURAL, null);
+
+        java.util.List<com.carro1001.mhnw.entity.Izuchi> escorts = escortsNear(helper, leader);
+        helper.assertTrue(escorts.size() >= 1 && escorts.size() <= 4,
+                "expected 1-4 escorts in open valid habitat, got " + escorts.size());
+        for (com.carro1001.mhnw.entity.Izuchi escort : escorts) {
+            helper.assertTrue(!escort.level().getBlockState(escort.blockPosition()).isSolid(),
+                    "escort spawned inside a solid block at " + escort.blockPosition());
+            helper.assertTrue(escort.level().getBlockState(escort.blockPosition().below()).isSolid(),
+                    "escort spawned with nothing underneath at " + escort.blockPosition());
+        }
+        helper.succeed();
+    }
+
+    /**
+     * H05: on a step the escort ring straddles, members resolve their own surface Y instead of
+     * inheriting the leader's. This is the regression for the fixed-Y loop R1a replaced -- with that
+     * code an escort on the raised half is created buried in the step.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void escortsResolveTheirOwnSurfaceOnSlopedGround(GameTestHelper helper) {
+        helper.setBiome(ModBiomes.VERDANT_HUNTING_GROUNDS);
+        fillFloor(helper, 1, net.minecraft.world.level.block.Blocks.GRASS_BLOCK);
+        // Raise the half of the arena the escort ring reaches into by three blocks.
+        for (int x = 11; x <= 15; x++) {
+            for (int z = 0; z <= 15; z++) {
+                for (int y = 2; y <= 4; y++) {
+                    helper.setBlock(x, y, z, net.minecraft.world.level.block.Blocks.STONE);
+                }
+            }
+        }
+        GreatIzuchi leader = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
+        leader.finalizeSpawn(helper.getLevel(),
+                helper.getLevel().getCurrentDifficultyAt(leader.blockPosition()),
+                net.minecraft.world.entity.MobSpawnType.NATURAL, null);
+
+        java.util.List<com.carro1001.mhnw.entity.Izuchi> escorts = escortsNear(helper, leader);
+        helper.assertTrue(!escorts.isEmpty(), "no escort survived sloped terrain at all");
+        for (com.carro1001.mhnw.entity.Izuchi escort : escorts) {
+            helper.assertTrue(!escort.level().getBlockState(escort.blockPosition()).isSolid()
+                            && escort.level().getBlockState(escort.blockPosition().below()).isSolid(),
+                    "escort on sloped ground is buried or floating at " + escort.blockPosition());
+        }
+        helper.succeed();
+    }
+
+    /**
+     * H05: with nowhere valid in the ring, the bounded attempts give up and the leader stands alone.
+     * Zero escorts is the correct outcome here -- suffocating four of them in stone is not.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void escortsAreSkippedWhenTheRingIsBlocked(GameTestHelper helper) {
+        helper.setBiome(ModBiomes.VERDANT_HUNTING_GROUNDS);
+        fillFloor(helper, 1, net.minecraft.world.level.block.Blocks.GRASS_BLOCK);
+        // Solid stone everywhere except a one-block-wide slot for the leader itself.
+        for (int x = 0; x <= 15; x++) {
+            for (int z = 0; z <= 15; z++) {
+                if (x == 8 && z == 8) {
+                    continue;
+                }
+                for (int y = 2; y <= 6; y++) {
+                    helper.setBlock(x, y, z, net.minecraft.world.level.block.Blocks.STONE);
+                }
+            }
+        }
+        GreatIzuchi leader = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
+        leader.finalizeSpawn(helper.getLevel(),
+                helper.getLevel().getCurrentDifficultyAt(leader.blockPosition()),
+                net.minecraft.world.entity.MobSpawnType.NATURAL, null);
+
+        for (com.carro1001.mhnw.entity.Izuchi escort : escortsNear(helper, leader)) {
+            helper.fail("escort forced into blocked terrain at " + escort.blockPosition());
+        }
+        helper.succeed();
+    }
+
+    /** H05: a wild leader's pack stays inside the habitat even when the leader stands at its edge. */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void naturalEscortsStayInsideTheHabitat(GameTestHelper helper) {
+        // The whole test chunk is a vanilla forest: the leader is at the extreme edge case, entirely
+        // outside the selector. A NATURAL leader therefore gets no escorts...
+        helper.setBiome(net.minecraft.world.level.biome.Biomes.FOREST);
+        fillFloor(helper, 1, net.minecraft.world.level.block.Blocks.GRASS_BLOCK);
+        GreatIzuchi wild = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 4, 2, 4);
+        wild.finalizeSpawn(helper.getLevel(),
+                helper.getLevel().getCurrentDifficultyAt(wild.blockPosition()),
+                net.minecraft.world.entity.MobSpawnType.NATURAL, null);
+        helper.assertTrue(escortsNear(helper, wild).isEmpty(),
+                "a natural leader produced escorts outside the habitat selector");
+
+        // ...while a mob spawner keeps its existing unrestricted behaviour, so a development or
+        // adventure-map spawner still works anywhere.
+        GreatIzuchi placed = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 12, 2, 12);
+        placed.finalizeSpawn(helper.getLevel(),
+                helper.getLevel().getCurrentDifficultyAt(placed.blockPosition()),
+                net.minecraft.world.entity.MobSpawnType.SPAWNER, null);
+        helper.assertTrue(!escortsNear(helper, placed).isEmpty(),
+                "a spawner-placed leader lost its escorts to the habitat restriction");
+        helper.succeed();
+    }
+
+    /** H05: reloading a saved leader does not re-run the pack spawn. */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void reloadDoesNotRecreateEscorts(GameTestHelper helper) {
+        helper.setBiome(ModBiomes.VERDANT_HUNTING_GROUNDS);
+        fillFloor(helper, 1, net.minecraft.world.level.block.Blocks.GRASS_BLOCK);
+        GreatIzuchi leader = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
+        leader.finalizeSpawn(helper.getLevel(),
+                helper.getLevel().getCurrentDifficultyAt(leader.blockPosition()),
+                net.minecraft.world.entity.MobSpawnType.NATURAL, null);
+        int before = escortsNear(helper, leader).size();
+
+        CompoundTag saved = leader.saveWithoutId(new CompoundTag());
+        leader.discard();
+        GreatIzuchi reloaded = new GreatIzuchi(ModEntities.GREAT_IZUCHI.get(), helper.getLevel());
+        reloaded.load(saved);
+        helper.getLevel().addFreshEntity(reloaded);
+
+        helper.assertTrue(escortsNear(helper, reloaded).size() == before,
+                "reloading a saved Great Izuchi changed the escort count from " + before
+                        + " to " + escortsNear(helper, reloaded).size());
+        helper.succeed();
+    }
+
+    private static java.util.List<com.carro1001.mhnw.entity.Izuchi> escortsNear(GameTestHelper helper,
+                                                                               GreatIzuchi leader) {
+        return helper.getLevel().getEntitiesOfClass(com.carro1001.mhnw.entity.Izuchi.class,
+                leader.getBoundingBox().inflate(10.0D));
+    }
+
+    private static void fillFloor(GameTestHelper helper, int y, net.minecraft.world.level.block.Block block) {
+        for (int x = 0; x <= 15; x++) {
+            for (int z = 0; z <= 15; z++) {
+                helper.setBlock(x, y, z, block);
             }
         }
     }

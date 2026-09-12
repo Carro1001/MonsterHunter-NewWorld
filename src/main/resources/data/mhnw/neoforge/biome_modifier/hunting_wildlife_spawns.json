@@ -1,0 +1,30 @@
+{
+  "type": "neoforge:add_spawns",
+  "biomes": "#mhnw:spawns_hunting_wildlife",
+  "spawners": [
+    {
+      "type": "mhnw:aptonoth",
+      "weight": 8,
+      "minCount": 2,
+      "maxCount": 3
+    },
+    {
+      "type": "mhnw:toad",
+      "weight": 2,
+      "minCount": 1,
+      "maxCount": 2
+    },
+    {
+      "type": "mhnw:flashbug",
+      "weight": 2,
+      "minCount": 1,
+      "maxCount": 2
+    },
+    {
+      "type": "mhnw:bug",
+      "weight": 2,
+      "minCount": 1,
+      "maxCount": 2
+    }
+  ]
+}
