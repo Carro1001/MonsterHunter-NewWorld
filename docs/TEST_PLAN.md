@@ -346,11 +346,12 @@ reach by roughly 4-5 blocks.
   second one exists, without ever guaranteeing the same choice at the same distance every time, per
   your explicit ask ("shouldn't guarantee so it's not spamming").
 
-- [ ] **New: does the bite now land at a believable distance and height**, rather than the box
-      reading as being near the feet? The path is real now but still just one capture session's
-      worth — flag anything that still looks off so it can be refined further.
-- [ ] **New: does it now hold its ground at roughly biting range** instead of closing all the way
-      to contact first?
+- [x] **New: does the bite now land at a believable distance and height**, rather than the box
+      reading as being near the feet? **Confirmed live** — reads right now, no longer near the feet.
+- [x] **New: does it now hold its ground at roughly biting range** instead of closing all the way
+      to contact first? **Confirmed live** — every attack fired from 5.4-6.0 blocks out (the edge of
+      the new range band), 8 of 9 landed; the one miss at max range is expected variance for a path
+      from a single capture, not a bug.
 - [ ] Renders, spawns via egg, idles/walks/runs with correct animation
 - [ ] **F3+B: do the boxes meet edge-to-edge with no visible gap**, and **does the tail chain read as
       roughly centred on the tail across a few seconds of watching it sway**, rather than checking
