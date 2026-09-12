@@ -355,7 +355,7 @@ bucketing every `Jaw`-bone sample from the capture by its position in the clip s
 actually stays reared up and far out (up 4+, forward 5.3-6.9) for most of the clip, and only
 descends toward something reachable in its *last* third (age 19-28, up dropping from 4.48 to 0.91,
 forward settling to 4.3-5.5) — that descent is baked in now as a real 4-point path, and the
-active window moved to match it (see `RathianCombatGoal.BITE`'s own doc for the numbers). This also
+active window moved to match it (see `RathianCombatGoal.BITE_RIGHT`'s own doc for the numbers). This also
 explains the "box next to its feet, not its face" report: the round-one point undershot the real
 reach by roughly 4-5 blocks.
 
