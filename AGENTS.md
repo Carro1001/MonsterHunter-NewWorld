@@ -201,7 +201,10 @@ was not told about. Within its own weighted share the region swaps the `PLAINS` 
 slots; nothing global is replaced.
 
 `entity/HuntingSpawnRules.java` owns the automatic-spawn gate for every R1a species — habitat tag plus
-the `naturalSpawning` server config, for **both** `NATURAL` and `CHUNK_GENERATION`. Manual origins
+the `naturalSpawning` server config, for **both** `NATURAL` and `CHUNK_GENERATION`. Its `isFree` tests
+fluid with `containsAnyLiquid` over the whole spawn AABB, not the feet block: `noCollision` ignores
+fluids, and the escort placement shares this helper for a 1.1-block-tall Izuchi, so a feet-only check
+accepted one standing dry with its head underwater. Manual origins
 (eggs, `/summon`, spawners, breeding) are never gated. Spawn entries live only in biome modifiers,
 never in the biome JSON, so there is one owner of them.
 

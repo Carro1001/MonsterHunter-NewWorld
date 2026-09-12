@@ -2,11 +2,11 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 86 tests, all passing**
-(full `.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-12, R1a habitat packet; the suite
-was run three times back to back to rule out flakiness after two fixtures were rewritten). The
-earlier 69- and 75-test figures are superseded — note the R0a round's real observed count was 74,
-not the 75 this line used to claim. The shoreline test that failed under the P5a build passed
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 85 tests, all passing**
+(full `.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-12, R1a habitat packet after its
+adversarial review; the suite was run three times back to back to rule out flakiness after two
+fixtures were rewritten). The earlier 69-, 75- and 86-test figures are superseded — note the R0a
+round's real observed count was 74, not the 75 this line used to claim. The shoreline test that failed under the P5a build passed
 cleanly after the native-controls correction. Client acceptance for that Lagiacrus correction has
 not been rerun by a human yet.
 
@@ -51,9 +51,30 @@ whose content is identical to `origin/master` after PR #3 was merged as `28805f5
 accepted post-R0a mainline, not the handoff's inspection SHA `3fdb760`. Working tree was clean apart
 from the untracked handoff itself. Local `master` is stale behind `origin/master`; ignore it.
 
-**Automated result:** 74/74 passing before, **86/86 passing after**. Twelve tests added, one existing
-fixture adapted (`greatIzuchiNaturalSpawnBringsAnEscort` now paints the habitat biome, because a wild
-pack is habitat-restricted as of this packet — the assertion itself is unchanged).
+**Automated result:** 74/74 passing before, **85/85 passing after**. Eleven tests added net: twelve
+added, and `greatIzuchiNaturalSpawnBringsAnEscort` deleted as a strict subset of the new
+`escortsLandOnGroundInOpenHabitat` (both paint the habitat, drive `finalizeSpawn(NATURAL)` and assert
+1-4 escorts; the new one additionally checks ground and clearance). Nothing replaces it.
+
+### Adversarial review corrections (same day)
+
+Five findings, all legitimate, all fixed. Two mattered:
+
+- **The slope regression was not reaching the raised surface.** The fixture raised the step by three
+  blocks, putting its standable Y at `leaderY + 3` — outside `ESCORT_MAX_RISE` — so every raised-side
+  candidate was rejected and the test was really only observing the untouched flat half, which the old
+  fixed-Y code would also have passed. It now raises the entire escort ring by exactly one block,
+  leaves only the leader's own 3x3 low, and asserts every escort sits at exactly `leaderY + 1`.
+  Confirmed to be a real regression by reintroducing the fixed-Y loop: the test fails.
+- **`isFree` tested fluid at the feet block only.** `noCollision` deliberately ignores fluids, so a
+  1.1-block-tall Izuchi escort could be accepted standing dry with its head underwater — which
+  contradicted the method's own stated body-volume contract. It now uses `containsAnyLiquid` over the
+  same spawn AABB, with a dry-feet/submerged-head case added to the rejection test. Also confirmed by
+  reintroducing the bug.
+
+The other three: the README (the only user-facing entry point) never named the new required
+dependency; the `naturalSpawning` config comment still said "monsters" after R1a extended it to
+passive wildlife; and the subsumed test above.
 
 ### Installation requirement — new, and it affects players
 

@@ -11,9 +11,14 @@ public final class MHNWConfig {
     // --- Server: per-world gameplay settings. ---
     private static final ModConfigSpec.Builder SERVER_BUILDER = new ModConfigSpec.Builder();
 
-    /** A11: natural spawning must be disableable. */
+    /**
+     * A11: natural spawning must be disableable. As of R1a this covers the habitat's passive wildlife
+     * as well as its monsters, and both automatic spawn sources -- see {@code HuntingSpawnRules}.
+     */
     public static final ModConfigSpec.BooleanValue NATURAL_SPAWNING = SERVER_BUILDER
-            .comment("Whether MHNW monsters spawn naturally. Disable to stop all natural spawns.")
+            .comment("Whether MHNW wildlife spawns naturally. Disable to stop all automatic MHNW"
+                    + " spawns (monsters and passive creatures alike). Spawn eggs, /summon and mob"
+                    + " spawners keep working, and vanilla wildlife is unaffected.")
             .define("naturalSpawning", true);
 
     public static final ModConfigSpec SERVER_SPEC = SERVER_BUILDER.build();

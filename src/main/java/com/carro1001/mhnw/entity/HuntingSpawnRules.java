@@ -112,12 +112,17 @@ public final class HuntingSpawnRules {
         return state.isValidSpawn(level, below, type);
     }
 
-    /** The body-sized volume at this position is clear of blocks and of fluid. */
+    /**
+     * The body-sized volume at this position is clear of blocks, entities and fluid.
+     *
+     * <p>The fluid half has to be tested over the whole AABB, not just the block at the feet:
+     * {@code noCollision} deliberately ignores fluids, and an Izuchi escort is 1.1 blocks tall, so a
+     * feet-only check happily accepts one standing dry with its head in water.
+     */
     public static boolean isFree(ServerLevelAccessor level, EntityType<?> type, BlockPos pos) {
-        if (!level.getFluidState(pos).isEmpty()) {
-            return false;
-        }
-        return level.noCollision(type.getSpawnAABB(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D));
+        net.minecraft.world.phys.AABB body =
+                type.getSpawnAABB(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D);
+        return !level.containsAnyLiquid(body) && level.noCollision(body);
     }
 
     private HuntingSpawnRules() {}

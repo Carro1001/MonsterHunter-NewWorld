@@ -68,29 +68,6 @@ public class MHNWGameTests {
     }
 
     /**
-     * A Great Izuchi is a pack leader (handoff feedback: "spawns with 1-4 izuchis around it").
-     * {@code helper.spawn} does not itself call {@code finalizeSpawn} the way a real world spawn
-     * does, so this drives it directly with {@code MobSpawnType.NATURAL} to exercise the same path
-     * {@link GreatIzuchi#finalizeSpawn} guards on.
-     */
-    @GameTest(template = ARENA, timeoutTicks = 40)
-    public static void greatIzuchiNaturalSpawnBringsAnEscort(GameTestHelper helper) {
-        // R1a restricted a wild pack to the habitat selector, so the fixture has to be the habitat
-        // now. The assertion itself is unchanged: a genuine wild spawn still brings 1-4 escorts.
-        helper.setBiome(ModBiomes.VERDANT_HUNTING_GROUNDS);
-        GreatIzuchi monster = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
-        monster.finalizeSpawn(helper.getLevel(),
-                helper.getLevel().getCurrentDifficultyAt(monster.blockPosition()),
-                net.minecraft.world.entity.MobSpawnType.NATURAL, null);
-
-        java.util.List<com.carro1001.mhnw.entity.Izuchi> escorts = helper.getLevel().getEntitiesOfClass(
-                com.carro1001.mhnw.entity.Izuchi.class, monster.getBoundingBox().inflate(8.0D));
-        helper.assertTrue(escorts.size() >= 1 && escorts.size() <= 4,
-                "expected 1-4 escort Izuchi after a natural Great Izuchi spawn, got " + escorts.size());
-        helper.succeed();
-    }
-
-    /**
      * A summoned Great Izuchi (spawn egg, {@code /summon}) does not drag escorts along; only a
      * genuine wild spawn does (see {@link GreatIzuchi#finalizeSpawn}).
      */
@@ -2332,6 +2309,18 @@ public class MHNWGameTests {
             helper.assertTrue(!HuntingSpawnRules.isFree(level, toad,
                             helper.absolutePos(new net.minecraft.core.BlockPos(10, 2, 10))),
                     "surface wildlife accepted a position occupied by a solid block");
+
+            // Dry feet, submerged head. The escort placement shares this helper, and an Izuchi is
+            // 1.1 blocks tall, so a feet-only fluid test would accept this and drown it.
+            EntityType<com.carro1001.mhnw.entity.Izuchi> izuchi = ModEntities.IZUCHI.get();
+            helper.setBlock(12, 1, 12, net.minecraft.world.level.block.Blocks.GRASS_BLOCK);
+            helper.setBlock(12, 3, 12, net.minecraft.world.level.block.Blocks.WATER);
+            net.minecraft.core.BlockPos wetHead =
+                    helper.absolutePos(new net.minecraft.core.BlockPos(12, 2, 12));
+            helper.assertTrue(level.getFluidState(wetHead).isEmpty(),
+                    "fixture is wrong: the feet block should be dry for this case to mean anything");
+            helper.assertTrue(!HuntingSpawnRules.isFree(level, izuchi, wetHead),
+                    "a position with dry feet and the upper body in water was accepted");
         } finally {
             MHNWConfig.NATURAL_SPAWNING.set(restore);
         }
@@ -2364,20 +2353,28 @@ public class MHNWGameTests {
     }
 
     /**
-     * H05: on a step the escort ring straddles, members resolve their own surface Y instead of
-     * inheriting the leader's. This is the regression for the fixed-Y loop R1a replaced -- with that
-     * code an escort on the raised half is created buried in the step.
+     * H05: escorts resolve their own surface Y rather than inheriting the leader's. This is the
+     * regression for the fixed-Y loop R1a replaced -- under that code every escort here is created
+     * buried in the step.
+     *
+     * <p>The fixture raises the entire escort ring by exactly one block and leaves only the leader's
+     * own 3x3 at the lower level, so <em>every</em> valid escort position is a block above the leader
+     * and the assertion can be exact rather than "nothing is buried". An earlier version raised the
+     * step by three blocks, which put its surface at {@code leaderY + 3} -- outside
+     * {@code ESCORT_MAX_RISE} -- so no escort ever stood on it and the test was really only checking
+     * the untouched flat half, which the old fixed-Y code would have passed too.
      */
     @GameTest(template = ARENA, timeoutTicks = 60)
     public static void escortsResolveTheirOwnSurfaceOnSlopedGround(GameTestHelper helper) {
         helper.setBiome(ModBiomes.VERDANT_HUNTING_GROUNDS);
         fillFloor(helper, 1, net.minecraft.world.level.block.Blocks.GRASS_BLOCK);
-        // Raise the half of the arena the escort ring reaches into by three blocks.
-        for (int x = 11; x <= 15; x++) {
+        // One step up everywhere except the leader's own footing.
+        for (int x = 0; x <= 15; x++) {
             for (int z = 0; z <= 15; z++) {
-                for (int y = 2; y <= 4; y++) {
-                    helper.setBlock(x, y, z, net.minecraft.world.level.block.Blocks.STONE);
+                if (Math.abs(x - 8) <= 1 && Math.abs(z - 8) <= 1) {
+                    continue;
                 }
+                helper.setBlock(x, 2, z, net.minecraft.world.level.block.Blocks.STONE);
             }
         }
         GreatIzuchi leader = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
@@ -2387,7 +2384,11 @@ public class MHNWGameTests {
 
         java.util.List<com.carro1001.mhnw.entity.Izuchi> escorts = escortsNear(helper, leader);
         helper.assertTrue(!escorts.isEmpty(), "no escort survived sloped terrain at all");
+        int leaderY = leader.blockPosition().getY();
         for (com.carro1001.mhnw.entity.Izuchi escort : escorts) {
+            helper.assertTrue(escort.blockPosition().getY() == leaderY + 1,
+                    "escort inherited the leader's Y instead of resolving the step: escort at "
+                            + escort.blockPosition() + ", leader Y " + leaderY);
             helper.assertTrue(!escort.level().getBlockState(escort.blockPosition()).isSolid()
                             && escort.level().getBlockState(escort.blockPosition().below()).isSolid(),
                     "escort on sloped ground is buried or floating at " + escort.blockPosition());
