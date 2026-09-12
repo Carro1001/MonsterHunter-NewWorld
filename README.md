@@ -23,4 +23,19 @@ Find the Verdant Hunting Grounds, hunt what lives there, and make something out 
 5. **Wear it.** Bone armor protects like iron, and wearing all four pieces at once adds
    +0.1 knockback resistance. Take one piece off and the bonus goes with it.
 
+## Field preparation
+
+Three things the wildlife is good for besides materials:
+
+- **BBQ spit.** Raw meat plus a stick. Hold right-click for four seconds anywhere and it becomes
+  cooked meat -- no furnace, no fuel, just the time.
+- **Flash bombs.** Right-click a live Flashbug with a glass bottle to catch it, then combine the
+  bottle with paper for one flash bomb (you get the bottle back). Throw it and anything nearby that
+  is looking at it goes blind and slow for two seconds. It never hurts you, and never hurts players
+  at all -- look away, get behind something, or back off and it misses you.
+- **Toads in buckets.** Catch any of the four toad variants with a water bucket and carry it. Put it
+  down where you want it and it sits there, same variant, until something hits it -- then it does
+  what it always did. If you set off a blast toad yourself, the damage it deals counts as yours for
+  carving.
+
 Discord Server: https://discord.gg/6gZxhFr6qy

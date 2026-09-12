@@ -2,9 +2,10 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 123 tests, all passing**
-(full `.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-12, R1 first-hunting-loop packet
-after its PR #6 review round; 121 before that round, 97 before the packet, 85 before R0b). The earlier 69-, 75-, 85-, 86- and 97-test figures are superseded — note the R0a round's
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 144 tests, all passing**
+(full `.\gradlew.bat --no-daemon clean build` then `runGameTestServer`, 2026-09-12, R2
+field-preparation packet; 123 before the packet, 121 before the R1 PR #6 review round, 97 before
+R1, 85 before R0b). The earlier 69-, 75-, 85-, 86- and 97-test figures are superseded — note the R0a round's
 real observed count was 74, not the 75 this line used to claim. The shoreline test that failed under the P5a build passed
 cleanly after the native-controls correction. Client acceptance for that Lagiacrus correction has
 not been rerun by a human yet.
@@ -204,6 +205,124 @@ neighbour scan.
       then `/difficulty normal` and check it resumes. `r1IzuchiHarassmentStopsOnPeaceful` proves the
       precondition, not the live transition — the transition cannot be tested headlessly without
       changing global difficulty underneath every concurrently running test.
+
+## R2 — Field preparation (2026-09-12)
+
+Baseline: `master` at `78bd066`, the PR #6 merge. Branch `r2/field-preparation`.
+
+Three preparation loops, one PR. Nothing in R0/R0a/R0b/R1/R1a changed behaviour: the 123 tests that
+existed before this packet all still pass, unmodified.
+
+```text
+Aptonoth carve -> raw meat -> 80-tick BBQ spit  -> cooked meat
+wild Flashbug  -> glass bottle -> one flash bomb -> one bounded thrown flash
+wild toad      -> water bucket -> same variant on release -> hit once -> existing effect
+```
+
+### What landed
+
+- **`mhnw:bbq_spit`** — shapeless from one `mhnw:raw_meat` plus one stick, stacks to one, held-use
+  pose `BLOCK`, fixed 80-tick server-authoritative use, yields exactly one existing
+  `mhnw:cooked_meat` and a 20-tick cooldown. No block, no GUI, no timing window, no fuel, no rare
+  tier. The three R1 cooking recipes (furnace, smoker, campfire) are untouched.
+- **`mhnw:bottled_flashbug`** — right-click a live Flashbug with a vanilla glass bottle. Stacks to
+  16, crafting remainder is one glass bottle.
+- **`mhnw:flash_bomb`** — shapeless from one bottled flashbug plus one paper; the bottle comes back
+  through ordinary crafting-remainder semantics. Snowball-shaped throw, 10-tick cooldown, releases
+  once on first impact, no damage of any kind, no terrain effect, not recoverable.
+- **`FlashEffect`** — the one shared flash: 5-block radius, line of sight, 0.65 horizontal facing
+  dot product, players never affected, 40 ticks of Blindness 0 and Movement Slowdown II. The wild
+  Flashbug now calls it too, gaining the bounded slowdown while keeping its own hit-only trigger,
+  11-tick telegraph, radius, facing/LOS rule and one-release discard.
+- **Four toad buckets** at the exact preserved legacy ids and icons — `poisontoad_bucket`,
+  `sleeptoad_bucket`, `paratoad_bucket`, `nitrotoad_bucket` — with vanilla water-bucket capture and
+  empty-bucket release. Variant, custom name, health and `FromBucket` survive a round trip. A bare
+  `/give` stack still releases the variant its item id names.
+- **Blastoad attribution** — a player who provokes a toad is retained as the transient source for
+  that fuse; a BLAST release names them as the explosion's causing entity, so the damage reaches
+  `CarveState` through the identical rule as a direct hit.
+
+### Automated results
+
+144/144 passing. 21 new tests covering gates R2-01..R2-11, added next to the existing endemic and R1
+blocks. Commands actually run, in this order:
+
+```powershell
+.\gradlew.bat --no-daemon clean build runGameTestServer   # fresh 123-test baseline, before any edit
+.\gradlew.bat --no-daemon runGameTestServer               # iterating
+.\gradlew.bat --no-daemon clean build
+.\gradlew.bat --no-daemon runGameTestServer
+.\gradlew.bat --no-daemon build runGameTestServer
+git diff --check
+```
+
+The suite was run **eight times in total** after the final code state, all 144 passing every time.
+That repetition is aimed at the scheduling-sensitive new tests specifically: the 40-tick toad fuse
+under a real goal tick, the thrown bomb flying and impacting on its own, and the wild flashbug's
+11-tick telegraph.
+
+### Three fixture lessons worth not rediscovering
+
+1. **`GameTestHelper.makeMockServerPlayerInLevel()` arrives creative.** Its anonymous subclass
+   overrides `isCreative()` to true and its abilities start with `instabuild`. Vanilla's
+   `ItemUtils.createFilledResult` deliberately keeps the input stack under infinite materials, so a
+   survival bucket/bottle transaction tested with that fixture silently asserts the creative path.
+   `setGameMode(SURVIVAL)` before using it; `r2CreativeBottleCaptureNeitherLosesNorDuplicates` is
+   the one test that deliberately does not.
+2. **`Bucketable.bucketMobPickup` casts to `ServerPlayer`** to award `FILLED_BUCKET`. A detached
+   `makeMockPlayer` cannot catch a toad at all — it throws. Capture tests need a level-resident
+   player; release tests do not.
+3. **A mock player's held item is an inventory slot.** Counting the hand separately from
+   `getInventory()` double-counts and makes an exactly-once assertion pass for the wrong reason, or
+   fail for it. Two of these tests were wrong this way before the first run caught them.
+
+### One production fix the tests forced
+
+`BarbecueSpitItem.finishUsingItem` returned a fresh cooked meat even when handed an already-empty
+stack. Not reachable in play — vanilla stops a use the moment its stack runs out — but it meant
+"cannot double-complete" was only true by luck. Guarded.
+
+### Gates: what is closed and what is not
+
+| Gate | Status |
+|---|---|
+| R2-01 registries/data | closed headlessly — ids, entity type, both recipes and the exact variant mapping |
+| R2-02 BBQ transaction | closed headlessly |
+| R2-03 Flashbug capture | closed headlessly, survival and creative |
+| R2-04 flash recipe/container | closed headlessly, through vanilla's own remaining-items path |
+| R2-05 flash impact | closed headlessly — full eligibility matrix plus a genuinely thrown bomb |
+| R2-06 wild regression | closed headlessly |
+| R2-07 toad capture mapping | closed headlessly, all four variants |
+| R2-08 release/round trip | closed headlessly, including a bare `/give` stack and a save/load |
+| R2-09 deployed effects | closed headlessly |
+| R2-10 attribution | closed headlessly — provoked, unprovoked and non-damaging variants |
+| R2-11 regression | closed — all 123 pre-existing tests pass unchanged |
+
+**Not closed, and not claimed:** every item in "What still needs a human — R2" below. No client was
+available during this packet, so none of the appearance, feel, two-client or real-disk-restart
+observations happened. A GameTest is not a substitute for any of them.
+
+### What still needs a human — R2
+
+- [ ] BBQ spit has a readable inventory/held model, the four-second hold reads as cooking rather
+      than eating, and the cancelled hold visibly does nothing
+- [ ] Bottled Flashbug (temporary vanilla experience-bottle sprite) and flash bomb (temporary
+      vanilla firework-star sprite) are distinct and readable from each other and from existing items
+- [ ] The thrown bomb renders throughout its flight and flashes once at impact
+- [ ] Capture a naturally spawned or egg-spawned Flashbug with a real bottle, craft the bomb, throw
+      it at hostile mobs; looking away and taking cover feel like understandable counterplay
+- [ ] Capture and release all four toad variants: the filled icon and name match the creature, the
+      empty bucket returns once, the released texture is unchanged, and it stays idle until hit
+- [ ] In survival, deploy a Blastoad near a carvable monster, retreat during the warning, and
+      confirm its damage counts toward that player's later carve eligibility
+- [ ] Two clients: projectile, flash/effects, toad variant/fuse/removal and every inventory
+      transaction agree for both observers, with no duplicate entities or items
+- [ ] Save, restart and rejoin with filled buckets and released toads; verify variants, names and
+      counts on the real disk
+
+The still-open R0/R0b/R1/R1a human gates below are **not** closed by this packet either — natural
+population, village interaction, the full loop, armor appearance, combat feel, two-client and
+restart observations all remain exactly as open as they were.
 
 ## R0b — client animation lifecycle (2026-09-12)
 

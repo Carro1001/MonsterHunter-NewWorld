@@ -58,6 +58,9 @@ Flashbug, Bug — with GeckoLib-animated models and, for the large monsters, par
 
 As of R1 it also has a survival loop: Great Izuchi, small Izuchi and Aptonoth leave carvable corpses,
 carving is the only way to get their materials, and those materials cook and craft into bone armor.
+As of R2 there are three field-preparation loops on top of that: a portable BBQ spit, glass-bottle
+Flashbug capture into a throwable flash bomb, and water-bucket capture/release of all four toad
+variants.
 
 Species notes that are easy to get wrong from an older doc:
 - **Lagiacrus is ported**, not planned: a limited *movement* baseline (seven native parts, amphibious
@@ -68,8 +71,9 @@ Species notes that are easy to get wrong from an older doc:
   vanilla-melee-only.
 - **Small Izuchi's** missing dedicated attack/death clips are an **accepted first-release
   presentation limitation** (roadmap v4), not a prerequisite for R1. See "Attack timeline" below.
-- **Toad and Flashbug** endemic behaviour ships as-is and is retained; R2 extends it rather than
-  redesigning it.
+- **Toad and Flashbug** endemic behaviour ships as-is and is retained; R2 extended it rather than
+  redesigning it — both are now capturable, and the Flashbug's flash moved into a shared helper,
+  but neither species' trigger, telegraph, radius or one-release discard changed.
 - Still unported: Zinogre, Deviljho, Blango, Blangonga.
 
 ## Build & run
@@ -128,8 +132,8 @@ the risk of restructuring already-shipped code," not an oversight.
   `MHNWConfig` (client/server config, including `debugCombat`), `MHNWGameTests` (the entire GameTest
   suite, one file).
 - `com.carro1001.mhnw.entity`: every entity class, its species-specific `Goal`s, and the shared
-  `MonsterPart`/`AttackProfile`/`CarveState` helpers — flat, not nested under per-species
-  subpackages.
+  `MonsterPart`/`AttackProfile`/`CarveState`/`FlashEffect` helpers — flat, not nested under
+  per-species subpackages. `FlashBombProjectile` lives here too: it is an entity, not an item.
 - `com.carro1001.mhnw.animation`: `ServerTimedAnimationController` (R0b). One class,
   common-loadable by design.
 - `com.carro1001.mhnw.client`: `MHNWClient` (renderer registration; each renderer is a small nested
@@ -144,7 +148,8 @@ the risk of restructuring already-shipped code," not an oversight.
   into the same registry, deliberately: the eggs are shipped registrations whose only fault is
   living in a class named after entities, and moving them buys a prettier name for a rename risk.
 - `com.carro1001.mhnw.item`: `BoneArmorItem` — all four slots, one class, iron stats, and the
-  `mhnw:bone_armor_set_bonus` full-set trait.
+  `mhnw:bone_armor_set_bonus` full-set trait — plus R2's `BarbecueSpitItem`, `FlashBombItem` and
+  `ToadBucketItem`.
 
 ### Multipart hurtboxes: native NeoForge, not a library
 
@@ -333,12 +338,65 @@ Two cancellation paths that are not obvious and were both missed in the first cu
   would freeze for the whole corpse window. The neighbours' `isAlive()` filter is still not
   redundant: it covers a body removed by `discard()`, where `die()` never runs at all.
 
+### R2 field preparation
+
+Three small loops, each built on a vanilla mechanism rather than a framework of ours. The packet's
+own exclusion list is load-bearing: **no** generic consumable base, effect registry, ailment engine,
+cooldown service or deployment/owner model was added, and none should be added to extend these.
+
+**The BBQ spit is vanilla's held-use machinery, not a timer of ours.** `BarbecueSpitItem` declares
+80 ticks from `getUseDuration`; vanilla counts it down and calls `finishUsingItem` exactly once, on
+the server, only on a completed hold. That is why "cancelling consumes nothing" has no cancellation
+code behind it — a release, a swap or a death simply never reaches that call. `stacksTo(1)` is what
+makes the result transactional with no inventory arithmetic: the held stack is always exactly one
+spit, so returning the cooked meat replaces its own slot. `ItemUtils.createFilledResult` supplies
+the creative infinite-materials convention for free.
+
+**`FlashEffect` is one static method with exactly two callers**, extracted only once the thrown
+bomb made the wild Flashbug's flash genuinely repeat. Radius 5, line of sight, 0.65 horizontal
+facing dot, players never affected, 40 ticks of Blindness 0 plus Movement Slowdown II. Its
+line-of-sight test is point-based (`level.clip`) rather than `Entity.hasLineOfSight`, because a
+thrown bomb's flash point is a spot in the air or just off a block face — there is no source entity
+left by the time it runs. Do not turn this into an effect registry.
+
+`FlashBombProjectile` deliberately **does not** override `onHitEntity`. `ThrowableItemProjectile`'s
+own impact path deals no damage (vanilla's `Snowball` adds its own), so leaving the method alone is
+what makes "deals no damage" true structurally, rather than a subtraction someone could delete.
+
+**`ToadBucketItem` extends `BucketItem`, not `MobBucketItem`, for two concrete reasons.** Vanilla's
+`MobBucketItem` keeps its spawn seam private and lets `finalizeSpawn` roll the creature's random
+state *before* the bucket data is applied, so a bare `/give` stack would release a random variant —
+exactly the case the four fixed item ids exist to get right. And its constructor takes an
+`EntityType`, which would force resolving the deferred toad holder while items are still
+registering. So only the tiny spawn seam is reproduced (`checkExtraContent`), and everything else —
+placing the water, returning the empty bucket, the creative rule — stays `BucketItem`'s. The variant
+is a property of the **item**, not the stack: `ModItems.toadBucket(variant)` is the single place the
+enum and the legacy ids (`nitrotoad_bucket` for `BLAST`) are joined. `Toad.finalizeSpawn` also skips
+its random roll for `MobSpawnType.BUCKET`, and `FromBucket` drives the same
+`requiresCustomPersistence`/`removeWhenFarAway` pair vanilla's fish use.
+
+**Blastoad attribution reuses `CarveState`'s rule, it does not add a second one.**
+`CarveState.resolvePlayer` went from `private` to package-visible for this. `Toad.provokerId` is a
+transient uuid recorded on the first hit of a fuse, cleared by `ToadFuseGoal.stop()`, and passed to
+`level.explode` as the source entity — vanilla then builds a `PLAYER_EXPLOSION` damage source whose
+causing entity is that player, so the damage reaches `CarveState` through the identical path as a
+sword swing. A bucket release, a mob-triggered blast or a non-damaging variant credits nobody, and
+nothing here guesses the nearest player.
+
+**Two fixture facts that cost a test round each.**
+`GameTestHelper.makeMockServerPlayerInLevel()` arrives **creative** (its anonymous subclass hard-codes
+`isCreative()`), under which `ItemUtils.createFilledResult` deliberately keeps the input stack — so a
+survival bucket/bottle transaction tested with it silently asserts the creative path instead.
+And `Bucketable.bucketMobPickup` casts to `ServerPlayer` to award `FILLED_BUCKET`, so a detached
+`makeMockPlayer` cannot catch a toad at all. Both are recorded in `docs/TEST_PLAN.md`'s R2 section.
+
 ### Registration and client wiring
 
 `ModEntities` is the one `DeferredRegister` holder (entity types + spawn eggs together); attribute
 suppliers are wired centrally in `MHNW.onAttributeCreation`, not per entity class. `MHNWClient`
 (gated to the client dist by NeoForge's own event timing, not a `DistExecutor` split) registers one
-renderer per entity as a small nested static class — most `extends GeoEntityRenderer<T>` directly
+renderer per entity as a small nested static class — except R2's `flash_bomb`, which points straight
+at vanilla's `ThrownItemRenderer` and needs no class, model or texture of ours — most `extends GeoEntityRenderer<T>` directly
 (GeckoLib 4.x needs no separate `EntityModel` class the way the old renderer pattern did); `Bug` is
 the one exception, a plain `MobRenderer`/`BugModel` pair, since it isn't GeoLib-animated.
 
@@ -383,7 +441,11 @@ the parent exactly one hit, distinct attackers aren't conflated, damage only lan
 attack's active window), state-machine edges (reload cancels transient combat, death removes every
 part exactly once), the R1 carving contract (attribution, per-player quota, atomic inventory,
 persistence and the corpse window), the item/recipe registry, armor stats and the full-set modifier,
-bounded Izuchi harassment, ground pathing across open terrain, an outside corner, a body-width passage, a
+bounded Izuchi harassment, the R2 preparation contract (both recipes and their exact inputs and
+remainder, the 80-tick BBQ transaction and its exactly-once conversion, glass-bottle Flashbug
+capture in survival and creative, the full flash eligibility matrix plus a genuinely thrown bomb,
+all four toad variants' capture/release/round-trip including a bare `/give` stack, and Blastoad
+carve attribution against a real carvable parent), ground pathing across open terrain, an outside corner, a body-width passage, a
 too-narrow passage, a single-block step, and a fully sealed unreachable target, and — as of the R0a
 baseline packet — real-tick timing: that the opening roar counts down one tick per *real* tick for
 its whole clip on all three roaring species, that the disengage re-arm honours its real 100-tick
