@@ -123,9 +123,19 @@ The stored interview response is now also on that branch.
 Branch notes still report 69 passing GameTests; that is historical evidence,
 not a fresh run here. The first two roar tests prove starting/rearming, not a
 tight real-tick completion deadline. R0a fills that specific coverage gap.
-The planning worktree and `master` contain the legacy
-runtime; future implementation plans must start from the accepted revival
-revision, not this planning worktree's old Java files.
+
+**Superseded (2026-09-12), and worth reading before you judge a checkout:** this
+paragraph used to say the planning worktree *and* `master` contain the legacy
+runtime. That is true of the author's own planning worktree, but **`master` is
+now the NeoForge 1.21.1 mainline** — `revival/neoforge-1.21.1` was squash-merged
+into it as [`ab59e19`](https://github.com/Carro1001/MonsterHunter-NewWorld/commit/ab59e19),
+and `master` and the revival branch have identical code. The old Forge runtime
+survives only in history and on `origin/brain`. The original point still stands
+in its corrected form: future implementation plans must start from the accepted
+revival code — today that means `master` or a branch based on it — not from an
+old planning worktree's Java files. Do not reject a checkout as "the obsolete
+Forge version" merely because it is called `master`; check for the NeoForge
+pins and `src/main/java/com/carro1001/mhnw/` layout instead.
 
 | Area | Evidence at the inspected revival revision | Roadmap consequence |
 |---|---|---|

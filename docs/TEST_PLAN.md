@@ -113,7 +113,7 @@ mid-roar); every Markdown cross-link between `docs/ROADMAP.md` and `docs/R0_BASE
 pointed at a nonexistent `docs/plans/` directory (paths corrected, content untouched); this file
 still named the two replaced roar tests and claimed Rathian/Rathalos roar coverage existed only on
 Great Izuchi; and the superseded partial-NBT reload test was left in place beside its own superset.
-Suite after the pass: 74/74.
+Suite after the pass: 74/74. A follow-up review then caught one more time-travel artifact: `docs/ROADMAP.md` §2 still told the next agent that `master` holds the legacy Forge runtime, which would have it reject the correct checkout — now labelled superseded, with the corrected form of the author's original point kept. Prose only, so the green suite was not rerun for it.
 
 ## Lagiacrus (P5a movement baseline, 2026-09-11)
 
