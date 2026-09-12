@@ -207,7 +207,8 @@ baseline packet — real-tick timing: that the opening roar counts down one tick
 its whole clip on all three roaring species, that the disengage re-arm honours its real 100-tick
 interval, that a monster killed mid-roar/mid-attack deals no further damage and leaves NeoForge's
 part lookup, and that a full `saveWithoutId`/`load` round trip keeps health and parts while dropping
-the transient action. Timing tests anchor their deadline to an observed countdown rather than a
+the transient action (saved mid-attack for Great Izuchi, mid-roar for Rathian, so neither
+assertion is vacuous). Timing tests anchor their deadline to an observed countdown rather than a
 broad timeout, so a half-rate countdown fails them (verified by reintroducing the bug). It deliberately does **not** cover whether a texture renders, an animation looks
 right, or a hurtbox visually sits on the body — those need `docs/TEST_PLAN.md`'s human checklist.
 Current test count and pass status are stated at the top of `docs/TEST_PLAN.md`; keep that number in

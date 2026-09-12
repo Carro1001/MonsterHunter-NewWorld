@@ -1,7 +1,7 @@
 # R0a - Preserve and lock the working baseline
 
 **Status: ready to execute. Scope: R0a only.**
-Roadmap: [v4 working direction](../ROADMAP.md).
+Roadmap: [v4 working direction](ROADMAP.md).
 Inspected baseline: `revival/neoforge-1.21.1` at
 `3ca5d46d11a60323170cbd2e7777879af3c421c1`, 2026-09-11.
 Consumers: Claude Code with Opus or Codex with Sol.
@@ -264,7 +264,7 @@ the fact the branch already exists remotely.
 ## 7. Copyable kickoff
 
 ```text
-Implement docs\plans\R0_BASELINE_HANDOFF.md, R0a only, on the current
+Implement docs\R0_BASELINE_HANDOFF.md, R0a only, on the current
 revival/neoforge-1.21.1 code or a contribution branch based on it.
 
 Read this packet and only the relevant current code/status sections it names.

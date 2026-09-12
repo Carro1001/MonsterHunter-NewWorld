@@ -2,7 +2,7 @@
 
 **Status: working roadmap, ready for implementation handoffs.**
 Revision: `mh-nw-roadmap-2026-09-11-v4`.
-First executable packet: [R0a - Preserve and lock the working baseline](plans/R0_BASELINE_HANDOFF.md).
+First executable packet: [R0a - Preserve and lock the working baseline](R0_BASELINE_HANDOFF.md).
 
 Use the maintainer interview as the product direction. The requester witnessed
 the live interview and explicitly authorized sensible PM defaults rather than
@@ -53,7 +53,7 @@ to read the entire historical research packet or repeat the asset audit to
 begin R0a. Use the kickoff in its handoff, or:
 
 ```text
-Implement docs\plans\R0_BASELINE_HANDOFF.md on the current revival branch.
+Implement docs\R0_BASELINE_HANDOFF.md on the current revival branch.
 Use docs\ROADMAP.md v4 as the working direction. Keep existing features;
 do not conduct another interview. Use the stated PM defaults, and record
 reasonable local overrides rather than blocking on them. Complete only R0a,
@@ -217,7 +217,7 @@ and expiry are verified when R1b adds them, not fictitiously closed by R0.
 
 ### R0a - Lock the working baseline
 
-Implement [the first handoff](plans/R0_BASELINE_HANDOFF.md): reconcile the current
+Implement [the first handoff](R0_BASELINE_HANDOFF.md): reconcile the current
 baseline, protect the already-fixed roar timing and inert death/reload behavior
 with focused regressions, fix only demonstrated in-scope defects, and make the
 handoff docs truthful. Preserve the current forest-spawn entry until R1a replaces
@@ -811,7 +811,7 @@ future design; it does not block any current packet.
 
 ## 8. Handoffs, quota and local changes
 
-Start with [R0a](plans/R0_BASELINE_HANDOFF.md). It is deliberately executable
+Start with [R0a](R0_BASELINE_HANDOFF.md). It is deliberately executable
 without a new art export, two-client session or another product interview.
 It locks the working baseline rather than holding progress until every
 pre-release concern is closed.

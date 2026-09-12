@@ -598,64 +598,26 @@ public class MHNWGameTests {
     }
 
     /**
-     * A02: a reload cancels transient combat instead of resuming it.
-     *
-     * <p>This cannot exercise an actual save-quit-reload of the world; a GameTest structure has no
-     * such cycle to trigger. What it does exercise is the exact code path a real reload goes
-     * through for this entity: {@code addAdditionalSaveData} writing NBT from a live, mid-fight
-     * monster, and {@code readAdditionalSaveData} reading it back into a freshly constructed one,
-     * which is what disk persistence actually calls. Section 4.3 rule 7 says loading a creature
-     * must cancel any transient combat and impose a short cooldown rather than replaying an
-     * interrupted attack; this is that promise, checked at the boundary this mod owns.
-     *
-     * <p>Also checks that the reloaded entity has exactly as many parts as it started with. Parts
-     * are always rebuilt fresh in the constructor rather than read from NBT, so a genuine part-list
-     * bug (the previous implementation's parts list that only ever appended, never replaced, a
-     * later part of the same type) would show up here as an unexpected count.
-     */
-    @GameTest(template = ARENA, timeoutTicks = 200)
-    public static void reloadCancelsTransientCombatState(GameTestHelper helper) {
-        GreatIzuchi original = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
-        Cow victim = helper.spawn(EntityType.COW, 8, 2, 10);
-        victim.setNoAi(true);
-
-        original.setRoaredThisEngagement(true); // skips the intro roar; this test is not about it
-        original.setTarget(victim);
-        original.attackCooldown = 0;
-        int originalPartCount = original.monsterParts().length;
-
-        helper.startSequence()
-                .thenWaitUntil(() -> helper.assertTrue(
-                        original.getAttackId() != GreatIzuchi.ATTACK_NONE, "waiting for an attack to start"))
-                .thenExecute(() -> {
-                    CompoundTag saved = new CompoundTag();
-                    original.addAdditionalSaveData(saved);
-
-                    GreatIzuchi reloaded = new GreatIzuchi(ModEntities.GREAT_IZUCHI.get(), helper.getLevel());
-                    reloaded.readAdditionalSaveData(saved);
-
-                    helper.assertTrue(reloaded.getAttackId() == GreatIzuchi.ATTACK_NONE,
-                            "a reloaded monster resumed attack id " + reloaded.getAttackId()
-                                    + " instead of starting idle");
-                    helper.assertTrue(reloaded.attackCooldown > 0,
-                            "a reloaded monster had no cooldown at all, so it could attack instantly");
-                    helper.assertTrue(reloaded.monsterParts().length == originalPartCount,
-                            "reload produced " + reloaded.monsterParts().length + " parts, expected "
-                                    + originalPartCount);
-                })
-                .thenSucceed();
-    }
-
-    /**
      * T04: the same contract through the <em>full</em> vanilla entity save/load path, not just the
      * mod's own additional save data.
      *
-     * <p>{@code reloadCancelsTransientCombatState} above round-trips {@code addAdditionalSaveData}
-     * only, which cannot show whether a vanilla field survives. This goes through
-     * {@code saveWithoutId}/{@code load} on a fresh instance that actually enters the level -- the
-     * same path {@code lagiacrusReloadCancelsPursuitAndPreservesHealth} uses -- starting from a
-     * deliberately reduced, non-default health and a live action, and disposes of the original
-     * first so no duplicate UUID or duplicate part identity enters the level.
+     * <p>Replaces an earlier {@code reloadCancelsTransientCombatState}, which round-tripped
+     * {@code addAdditionalSaveData} alone and could not show whether a vanilla field survives; every
+     * assertion it made is a subset of these. This goes through {@code saveWithoutId}/{@code load}
+     * on a fresh instance that actually enters the level -- the same path
+     * {@code lagiacrusReloadCancelsPursuitAndPreservesHealth} uses -- starting from a deliberately
+     * reduced, non-default health and a live transient state, and disposes of the original first so
+     * no duplicate UUID or duplicate part identity enters the level.
+     *
+     * <p>Section 4.3 rule 7: loading a creature must cancel transient combat and impose a short
+     * cooldown rather than replaying an interrupted action. Parts are rebuilt fresh in the
+     * constructor rather than read from NBT, so a genuine part-list bug (the old implementation's
+     * list that only ever appended, never replaced, a later part of the same type) shows up here as
+     * a wrong count or a wrong name.
+     *
+     * <p>The two fixtures deliberately save in <em>different</em> transient states: Great Izuchi
+     * mid-attack, Rathian mid-roar. Saving both mid-attack would leave {@code getRoarTicks()}
+     * already zero at save time, making the roar assertion unable to fail.
      *
      * <p>Not a claim about a real disk restart: that stays an R0b gate.
      */
@@ -714,23 +676,26 @@ public class MHNWGameTests {
     }
 
     @GameTest(template = ARENA, timeoutTicks = 300)
-    public static void rathianFullReloadKeepsHealthAndPartsButNotTheAction(GameTestHelper helper) {
+    public static void rathianFullReloadKeepsHealthAndPartsButNotTheRoar(GameTestHelper helper) {
         com.carro1001.mhnw.entity.Rathian original = helper.spawn(ModEntities.RATHIAN.get(), 8, 2, 8);
         Cow victim = helper.spawn(EntityType.COW, 8, 2, 12); // BITE_RIGHT's range band
         victim.setNoAi(true);
         victim.setInvulnerable(true);
 
-        original.setRoaredThisEngagement(true);
+        // Saved mid-ROAR, not mid-attack: an attack fixture has getRoarTicks() == 0 at save time,
+        // so its roar assertion could not fail. Great Izuchi's sibling test covers the attack half.
         original.setTarget(victim);
-        original.attackCooldown = 0;
         original.setHealth(41.0F); // deliberately not the 90.0 default
         MonsterPart[] originalParts = original.monsterParts();
 
         helper.startSequence()
-                .thenWaitUntil(() -> helper.assertTrue(
-                        original.getAttackId() != com.carro1001.mhnw.entity.Rathian.ATTACK_NONE,
-                        "waiting for an attack to start"))
+                .thenWaitUntil(() -> {
+                    original.setTarget(victim);
+                    helper.assertTrue(original.getRoarTicks() > 0, "waiting for the opening roar");
+                })
                 .thenExecute(() -> {
+                    helper.assertTrue(original.getRoarTicks() > 0,
+                            "the roar ended before the fixture could save mid-roar");
                     helper.assertTrue(original.getHealth() == 41.0F,
                             "the fixture's own health changed before saving: " + original.getHealth());
                     CompoundTag saved = original.saveWithoutId(new CompoundTag());
@@ -743,10 +708,11 @@ public class MHNWGameTests {
 
                     helper.assertTrue(reloaded.getHealth() == 41.0F,
                             "reload lost parent health: " + reloaded.getHealth() + " instead of 41.0");
+                    helper.assertTrue(reloaded.getRoarTicks() == 0,
+                            "a reloaded Rathian resumed the roar it was saved mid-way through, with "
+                                    + reloaded.getRoarTicks() + " ticks left");
                     helper.assertTrue(reloaded.getAttackId() == com.carro1001.mhnw.entity.Rathian.ATTACK_NONE,
                             "a reloaded Rathian resumed attack id " + reloaded.getAttackId());
-                    helper.assertTrue(reloaded.getRoarTicks() == 0,
-                            "a reloaded Rathian resumed a roar countdown of " + reloaded.getRoarTicks());
                     helper.assertTrue(reloaded.attackCooldown > 0,
                             "a reloaded Rathian had no cooldown at all, so it could attack instantly");
                     assertPartsSurviveReload(helper, originalParts, reloaded.monsterParts());

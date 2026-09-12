@@ -47,9 +47,10 @@ measured for real, stand near one with `debugCombat` on for a few seconds and se
 Packet: `docs/R0_BASELINE_HANDOFF.md` (R0a only), against `master` at `ee5f0a5`, whose code is
 byte-identical to the packet's inspected `3ca5d46`. Working tree was clean at start.
 
-**Automated result:** 69/69 passing before, **75/75 passing after**. Six tests added, four
-strengthened. No production code changed — the added coverage found no defect that this packet
-owns.
+**Automated result:** 69/69 passing before, **74/74 passing after**. Six tests added, four
+strengthened, one deleted as strictly subsumed (`reloadCancelsTransientCombatState`, whose
+partial-NBT round trip is a subset of T04's full one). No production code changed — the added
+coverage found no defect that this packet owns.
 
 What the six new tests establish, all through ordinary AI ticking rather than by calling goal
 methods directly:
@@ -72,9 +73,13 @@ methods directly:
 - **T04, `{greatIzuchi,rathian}FullReloadKeepsHealthAndPartsButNotTheAction`** — a full
   `saveWithoutId`/`load` round trip onto a fresh instance that actually enters the level (original
   discarded first, so no duplicate UUID or part identity), starting from deliberately reduced health
-  (17.0 of 40, 41.0 of 90) and a live action. Health survives; attack id, roar countdown and the
-  action do not; the initial cooldown stays positive; part count, names and lookup registration all
-  hold. The pre-existing test round-tripped only `addAdditionalSaveData`.
+  (17.0 of 40, 41.0 of 90) and a live transient state. Health survives; attack id, roar countdown
+  and the action do not; the initial cooldown stays positive; part count, names and lookup
+  registration all hold. The two fixtures save in deliberately *different* transient states — Great
+  Izuchi mid-attack, Rathian mid-roar — because an attack fixture has `getRoarTicks() == 0` at save
+  time, which would make its roar assertion unable to fail. Replaces the pre-existing
+  `reloadCancelsTransientCombatState`, which round-tripped `addAdditionalSaveData` alone; every
+  assertion it made is a subset of these, so it was deleted rather than left as a weaker duplicate.
 - **T05** — `assertPartsUnregistered` now checks `level().getPartEntities()` (the lookup melee
   picking, projectiles and area damage actually scan) for Great Izuchi, Aptonoth, Rathian and
   Rathalos removal, not just each part's own flags. Lagiacrus's existing helper now delegates to it.
@@ -101,6 +106,14 @@ rights, which remain unresolved.
 - Fresh human confirmation of roar and death playback.
 
 These four are the reason R0a completion is not first-release verification. They do not block R1a.
+
+**Adversarial review pass (2026-09-12).** Four findings on PR #3, all accepted and fixed: the two
+reload fixtures both saved mid-attack, so their roar assertion could not fail (Rathian now saves
+mid-roar); every Markdown cross-link between `docs/ROADMAP.md` and `docs/R0_BASELINE_HANDOFF.md`
+pointed at a nonexistent `docs/plans/` directory (paths corrected, content untouched); this file
+still named the two replaced roar tests and claimed Rathian/Rathalos roar coverage existed only on
+Great Izuchi; and the superseded partial-NBT reload test was left in place beside its own superset.
+Suite after the pass: 74/74.
 
 ## Lagiacrus (P5a movement baseline, 2026-09-11)
 
@@ -168,7 +181,12 @@ a large monster now roars once when it first acquires a target, not again for th
 and only re-arms after a real stretch with no target (5s, provisional), not a one-tick target flicker
 (a dodge, a brief line-of-sight loss). The goal sits above whatever owns combat movement/look, so the
 roar genuinely freezes the fight rather than playing underneath an attack goal that keeps swinging.
-GameTest-covered (`greatIzuchiRoarsOnFirstEngagement`, `greatIzuchiReArmsRoarAfterARealDisengage`);
+GameTest-covered — **superseded as of R0a**: the original `greatIzuchiRoarsOnFirstEngagement` and
+`greatIzuchiReArmsRoarAfterARealDisengage` were replaced by the stricter
+`greatIzuchiRoarRunsForItsRealClipLength` (real-tick countdown across the whole clip) and
+`greatIzuchiReArmsRoarOnlyAfterTheRealDisengageInterval` (the 100-tick interval measured, plus the
+brief-loss restart), and Rathian and Rathalos now have their own roar-duration tests rather than
+relying on the shared goal. See the R0a round above.
 `rally` (a second, distinct clip this species also has, likely for calling its escort) is **not**
 wired — no trigger condition for it has been specified yet, see `docs/DEFERRED.md`.
 
@@ -445,9 +463,11 @@ reach by roughly 4-5 blocks.
       is ordinarily authored as a mirror of one another). Selection alternates rather than always
       picking the same angle — flag it if the left one looks off, since it hasn't been checked live
       on its own.
-- [ ] **New: roars once on first engagement, same mechanic as Great Izuchi** — GameTest coverage
-      lives on Great Izuchi since `RoarGoal` is shared and identical either way; worth a live look
-      here too since Rathian's own roar clip hasn't been watched play yet.
+- [ ] **New: roars once on first engagement, same mechanic as Great Izuchi** — GameTest-covered on
+      this species directly as of R0a (`rathianRoarRunsForItsRealClipLength`: its own 99-tick clip
+      runs down at one tick per real tick, with no attack or damage to an in-range target for the
+      duration), not only via Great Izuchi's shared goal. Still worth a live look — Rathian's own
+      roar clip hasn't been watched play yet, and no GameTest can judge that.
 - [ ] Renders, spawns via egg, idles/walks/runs with correct animation
 - [ ] **F3+B: do the boxes meet edge-to-edge with no visible gap**, and **does the tail chain read as
       roughly centred on the tail across a few seconds of watching it sway**, rather than checking
@@ -488,7 +508,9 @@ clip with no attack-volume mechanics of its own.
 - [ ] Attacks and damages a nearby player using ordinary melee
 - [x] **New: targets pillagers on sight, same as Great Izuchi/Rathian/Izuchi** — GameTest-covered
       (`rathalosTargetsAPillagerOnSight`)
-- [ ] **New: roars once on first engagement** — same mechanic and GameTest coverage as Great Izuchi
-      (shared goal); worth a live look since this species' own roar clip hasn't been watched
+- [ ] **New: roars once on first engagement** — GameTest-covered on this species directly as of R0a
+      (`rathalosRoarRunsForItsRealClipLength`; since Rathalos uses vanilla melee and has no synced
+      attack id, the victim's health is what proves it doesn't attack mid-roar), not only via Great
+      Izuchi's shared goal. Worth a live look since this species' own roar clip hasn't been watched
 - [ ] Death removes the whole creature and all seven parts
 - [ ] No flight yet — ground-bound only; expected, not a bug
