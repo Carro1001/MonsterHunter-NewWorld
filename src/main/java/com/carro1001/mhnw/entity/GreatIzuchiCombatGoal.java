@@ -134,7 +134,12 @@ public class GreatIzuchiCombatGoal extends Goal {
     @Override
     public void tick() {
         if (!this.monster.isAlive()) {
-            // Death overrides every phase, immediately (rule 6).
+            // Death overrides every phase (rule 6) -- though in practice this can't actually fire:
+            // vanilla stops ticking every goal at all, permanently, for the whole corpse-hold window
+            // once isDeadOrDying() is true (see CLAUDE.md's "opening roar" section for the exact
+            // mechanism, found while chasing the identical check in RoarGoal). Kept for parity and
+            // because it's harmless either way -- mainAnim() already checks isDeadOrDying() before
+            // reading any combat state, so presentation is correct regardless.
             stop();
             return;
         }
