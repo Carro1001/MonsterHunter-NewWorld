@@ -1,5 +1,9 @@
 package com.carro1001.mhnw.entity;
 
+import com.carro1001.mhnw.animation.ServerTimedAnimationController;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
@@ -22,7 +26,6 @@ import net.neoforged.neoforge.entity.PartEntity;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
-import software.bernie.geckolib.animation.AnimationController;
 import software.bernie.geckolib.animation.AnimationState;
 import software.bernie.geckolib.animation.PlayState;
 import software.bernie.geckolib.animation.RawAnimation;
@@ -93,6 +96,22 @@ public class Aptonoth extends Animal implements GeoEntity {
     private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.aptonoth.run");
     private static final RawAnimation EAT = RawAnimation.begin().thenLoop("animation.aptonoth.eat");
     private static final RawAnimation DEATH = RawAnimation.begin().thenPlayAndHold("animation.aptonoth.death");
+
+    /** Game time this body's death began, or {@link #NO_DEATH} while alive; see
+     * {@link GreatIzuchi#getDeathStartTime()} for why this anchor exists and how it reconstructs
+     * itself from vanilla's own saved death progress on load. */
+    private static final EntityDataAccessor<Long> DATA_DEATH_START =
+            SynchedEntityData.defineId(Aptonoth.class, EntityDataSerializers.LONG);
+
+    /** Sentinel for {@link #DATA_DEATH_START} while this creature is alive. */
+    public static final long NO_DEATH = Long.MIN_VALUE;
+
+    /**
+     * Ticks spent blending into a newly set clip, and therefore part of the clock contract
+     * {@link ServerTimedAnimationController} honours: an action of age {@code a} samples clip time
+     * {@code a - TRANSITION_TICKS}, which is what an ordinary observer has always been shown.
+     */
+    public static final int TRANSITION_TICKS = 6;
 
     private final AnimatableInstanceCache animCache = GeckoLibUtil.createInstanceCache(this);
     private final MonsterPart[] parts;
@@ -282,6 +301,27 @@ public class Aptonoth extends Animal implements GeoEntity {
     public void tick() {
         super.tick();
         positionParts();
+        stampDeathStart();
+    }
+
+    @Override
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_DEATH_START, NO_DEATH);
+    }
+
+    /** Game time this body's death began, or {@link #NO_DEATH} while alive. Valid on both sides. */
+    public long getDeathStartTime() {
+        return this.entityData.get(DATA_DEATH_START);
+    }
+
+    /** Server: stamp the death anchor once, from {@code gameTime - deathTime}; see
+     * {@link GreatIzuchi#getDeathStartTime()} for why that expression also reconstructs the age of a
+     * body restored from disk without re-running any death, XP or loot processing. */
+    private void stampDeathStart() {
+        if (!level().isClientSide && isDeadOrDying() && getDeathStartTime() == NO_DEATH) {
+            this.entityData.set(DATA_DEATH_START, level().getGameTime() - this.deathTime);
+        }
     }
 
     /** Same contract and the same fairness correction as {@link Rathian#hurt}. */
@@ -320,20 +360,29 @@ public class Aptonoth extends Animal implements GeoEntity {
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "main", 6, this::mainAnim));
+        controllers.add(new ServerTimedAnimationController<>(this, "main", TRANSITION_TICKS, this::mainAnim));
     }
 
+    /**
+     * Death first, then the cosmetic grazing and locomotion, which keep GeckoLib's own clock: only
+     * the authored death is a finite, server-timed presentation a late observer can join part way
+     * through. See {@link ServerTimedAnimationController}.
+     */
     private PlayState mainAnim(AnimationState<Aptonoth> state) {
+        ServerTimedAnimationController<Aptonoth> controller = ServerTimedAnimationController.of(state);
         if (isDeadOrDying()) {
-            return state.setAndContinue(DEATH);
+            long start = getDeathStartTime();
+            double partial = state.getPartialTick();
+            return controller.playTimed(state, DEATH, ServerTimedAnimationController.KIND_DEATH,
+                    start, start == NO_DEATH ? partial : level().getGameTime() - start + partial);
         }
         if (this.eatAnimationTicks > 0) {
-            return state.setAndContinue(EAT);
+            return controller.playFree(state, EAT);
         }
         if (state.isMoving()) {
-            return state.setAndContinue(isAggressive() ? RUN : WALK);
+            return controller.playFree(state, isAggressive() ? RUN : WALK);
         }
-        return state.setAndContinue(IDLE);
+        return controller.playFree(state, IDLE);
     }
 
     @Override

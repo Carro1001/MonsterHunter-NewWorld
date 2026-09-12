@@ -1,5 +1,6 @@
 package com.carro1001.mhnw.entity;
 
+import com.carro1001.mhnw.animation.ServerTimedAnimationController;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -23,7 +24,6 @@ import net.neoforged.neoforge.entity.PartEntity;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
-import software.bernie.geckolib.animation.AnimationController;
 import software.bernie.geckolib.animation.AnimationState;
 import software.bernie.geckolib.animation.PlayState;
 import software.bernie.geckolib.animation.RawAnimation;
@@ -82,6 +82,26 @@ public class Rathalos extends Monster implements GeoEntity, Roarable {
 
     private static final EntityDataAccessor<Integer> DATA_ROAR_TICKS =
             SynchedEntityData.defineId(Rathalos.class, EntityDataSerializers.INT);
+
+    /** Game time the current roar began; see {@link Roarable#getRoarStartTime()}. */
+    private static final EntityDataAccessor<Long> DATA_ROAR_START =
+            SynchedEntityData.defineId(Rathalos.class, EntityDataSerializers.LONG);
+
+    /** Game time this body's death began, or {@link #NO_DEATH} while alive; see
+     * {@link GreatIzuchi#getDeathStartTime()} for why this anchor exists and how it reconstructs
+     * itself from vanilla's own saved death progress on load. */
+    private static final EntityDataAccessor<Long> DATA_DEATH_START =
+            SynchedEntityData.defineId(Rathalos.class, EntityDataSerializers.LONG);
+
+    /** Sentinel for {@link #DATA_DEATH_START} while this creature is alive. */
+    public static final long NO_DEATH = Long.MIN_VALUE;
+
+    /**
+     * Ticks spent blending into a newly set clip, and therefore part of the clock contract
+     * {@link ServerTimedAnimationController} honours: an action of age {@code a} samples clip time
+     * {@code a - TRANSITION_TICKS}, which is what an ordinary observer has always been shown.
+     */
+    public static final int TRANSITION_TICKS = 5;
 
     private final AnimatableInstanceCache animCache = GeckoLibUtil.createInstanceCache(this);
     private final MonsterPart[] parts;
@@ -163,6 +183,8 @@ public class Rathalos extends Monster implements GeoEntity, Roarable {
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         builder.define(DATA_ROAR_TICKS, 0);
+        builder.define(DATA_ROAR_START, 0L);
+        builder.define(DATA_DEATH_START, NO_DEATH);
     }
 
     // ---------------------------------------------------------------- roar (Roarable)
@@ -175,6 +197,30 @@ public class Rathalos extends Monster implements GeoEntity, Roarable {
     @Override
     public void setRoarTicks(int ticks) {
         this.entityData.set(DATA_ROAR_TICKS, ticks);
+    }
+
+    @Override
+    public long getRoarStartTime() {
+        return this.entityData.get(DATA_ROAR_START);
+    }
+
+    @Override
+    public void setRoarStartTime(long gameTime) {
+        this.entityData.set(DATA_ROAR_START, gameTime);
+    }
+
+    /** Game time this body's death began, or {@link #NO_DEATH} while alive. Valid on both sides. */
+    public long getDeathStartTime() {
+        return this.entityData.get(DATA_DEATH_START);
+    }
+
+    /** Server: stamp the death anchor once, from {@code gameTime - deathTime}; see
+     * {@link GreatIzuchi#getDeathStartTime()} for why that expression also reconstructs the age of a
+     * body restored from disk without re-running any death, XP or loot processing. */
+    private void stampDeathStart() {
+        if (!level().isClientSide && isDeadOrDying() && getDeathStartTime() == NO_DEATH) {
+            this.entityData.set(DATA_DEATH_START, level().getGameTime() - this.deathTime);
+        }
     }
 
     @Override
@@ -263,6 +309,7 @@ public class Rathalos extends Monster implements GeoEntity, Roarable {
     public void tick() {
         super.tick();
         positionParts();
+        stampDeathStart();
     }
 
     /** Same contract and the same fairness correction as {@link Rathian#hurt}. */
@@ -301,20 +348,34 @@ public class Rathalos extends Monster implements GeoEntity, Roarable {
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "main", 5, this::mainAnim));
+        controllers.add(new ServerTimedAnimationController<>(this, "main", TRANSITION_TICKS, this::mainAnim));
     }
 
+    /**
+     * Death, then roar, then locomotion. Rathalos still has no custom attack presentation (a
+     * documented P4 gap: its melee clips reference bones its own geometry does not have), so there
+     * is no attack branch here to age -- but its roar and its authored death are aged like every
+     * other species'. See {@link ServerTimedAnimationController}.
+     */
     private PlayState mainAnim(AnimationState<Rathalos> state) {
+        ServerTimedAnimationController<Rathalos> controller = ServerTimedAnimationController.of(state);
+        double partial = state.getPartialTick();
+        long now = level().getGameTime();
+
         if (isDeadOrDying()) {
-            return state.setAndContinue(DEATH);
+            long start = getDeathStartTime();
+            return controller.playTimed(state, DEATH, ServerTimedAnimationController.KIND_DEATH,
+                    start, start == NO_DEATH ? partial : now - start + partial);
         }
         if (isRoaring()) {
-            return state.setAndContinue(ROAR);
+            long start = getRoarStartTime();
+            return controller.playTimed(state, ROAR, ServerTimedAnimationController.KIND_ROAR,
+                    start, now - start + partial);
         }
         if (state.isMoving()) {
-            return state.setAndContinue(isAggressive() ? RUN : WALK);
+            return controller.playFree(state, isAggressive() ? RUN : WALK);
         }
-        return state.setAndContinue(IDLE);
+        return controller.playFree(state, IDLE);
     }
 
     @Override

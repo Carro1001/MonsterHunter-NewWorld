@@ -2,11 +2,10 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 85 tests, all passing**
-(full `.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-12, R1a habitat packet after its
-adversarial review; the suite was run three times back to back to rule out flakiness after two
-fixtures were rewritten). The earlier 69-, 75- and 86-test figures are superseded — note the R0a
-round's real observed count was 74, not the 75 this line used to claim. The shoreline test that failed under the P5a build passed
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 97 tests, all passing**
+(full `.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-12, R0b client-lifecycle packet;
+85 before it). The earlier 69-, 75-, 85- and 86-test figures are superseded — note the R0a round's
+real observed count was 74, not the 75 this line used to claim. The shoreline test that failed under the P5a build passed
 cleanly after the native-controls correction. Client acceptance for that Lagiacrus correction has
 not been rerun by a human yet.
 
@@ -41,6 +40,228 @@ measured numbers as a proxy for now (same skeleton, similar proportions); if you
 measured for real, stand near one with `debugCombat` on for a few seconds and send me
 `logs/latest.log`.
 
+
+---
+
+## R0b — client animation lifecycle (2026-09-12)
+
+**What the packet was for.** A client that started rendering a monster part way through an attack,
+a roar or a death played that clip from its first frame while the server was already landing the
+hit. Presentation could therefore lead contact by up to a clip length — 65 ticks for Great Izuchi's
+scratch — for exactly the observers who joined mid-fight. Server damage, the measured attack paths,
+the timings, the geometry, the assets and the R1a habitat are untouched.
+
+### What landed
+
+- **`animation/ServerTimedAnimationController.java`** — a small version-pinned adapter on GeckoLib's
+  own `AnimationController`. Common-loadable: no `net.minecraft.client` import, no `Minecraft`, no
+  reference to `MHNWClient`.
+- **Presentation anchors.** `Roarable` gained `getRoarStartTime()`/`setRoarStartTime()`, set once in
+  `RoarGoal.start()` and synced by Great Izuchi, Rathian and Rathalos. Great Izuchi, Rathian,
+  Rathalos and Aptonoth each gained a synced death anchor. Attacks reuse the action
+  id/start-time/sequence that already existed.
+- **One priority decision.** Each `mainAnim` now picks the clip, the presentation instance and the
+  clock together (death, then roar, then attack, then locomotion), so a death pose cannot end up
+  driven by a stale attack clock. Idle/locomotion/grazing still use GeckoLib's own clock.
+- **12 new GameTests** (85 → 97) and a client-side sampler probe, `client/AnimationSeekSelfCheck`.
+
+### The calibrated clock-to-clip convention
+
+A controller with transition length `L` blends for its first `L` ticks and only then starts the clip
+at time zero, so an **on-time observer has always shown `clipTime = age - L`**. The adapter
+reproduces exactly that function for every observer rather than inventing a new one:
+
+```
+controllerAge == action age;   clipTime == clamp(age - L, 0, clipLength)
+```
+
+`L` is 5 for Great Izuchi/Rathian/Rathalos and 6 for Aptonoth, named as `TRANSITION_TICKS` on each.
+An on-time controller already satisfies this within a tick and is never touched — which is why the
+measured paths and accepted contact frames are unchanged by construction rather than by promise.
+Feeding raw action age in as clip time instead would have shifted every already-measured attack by
+five ticks; a GameTest now fails if anybody tries it.
+
+Two consequences worth knowing, neither of them new behaviour:
+
+- The action still ends at the profile's `actionEnd`, so the last `L` ticks of each attack clip have
+  never been shown and still are not.
+- Local latency is now removed rather than preserved. Before, an observer watching from the start
+  still lagged by however long the synced action id took to arrive (about a tick locally, more
+  online); the adapter pins everybody to the same authoritative curve, so an on-time observer moves
+  by at most that latency, toward the server rather than away from it.
+
+### How the seek is actually done (GeckoLib 4.9.2 has no public seek)
+
+Verified against the published sources jar, SHA-256
+`009055c5d7b848a8bed826ed8887936d85c5f711d0c19f0fa2547950db99ee41` — the one the handoff names.
+There is no `seek`/`setAnimationTick`; `forceAnimationReset()` requests a *reload*, not a seek; a
+speed modifier multiplies elapsed time rather than moving it. The one real lever is `adjustTick`:
+`clipTime = speed * max(seekTime - tickOffset, 0)`, and `tickOffset` is `protected`. So the adapter
+moves the clip's origin and nothing else. No reflection, no private field, no copied processor, no
+fork.
+
+A cold controller cannot simply be started at a nonzero time: `setAnimation` builds its queue only
+once `lastModel` exists, and `process` polls that queue only while the adjusted tick is zero.
+Advancing it first leaves it TRANSITIONING with no current animation — *a correct number and no
+clip at all*. That is not a hypothetical; the mutation run below reproduced it. So each frame runs
+GeckoLib's own initialization first and only then, if the result is at the wrong age, re-anchors and
+lets GeckoLib sample again in the same render call. The second pass clears and rewrites the bone
+queues, so the first pass's zero-time output never reaches the model. In steady state the second
+pass does not happen at all.
+
+The desired age is clamped just below `L + clipLength`, which does two things the library would not:
+an expired one-shot holds its final pose instead of collapsing to the base skeleton, and a
+`hold_on_last_frame` clip stops advancing `query.anim_time`, so MoLang motion in a held death pose
+does not keep evolving.
+
+### Death anchors, and why nothing is persisted
+
+Vanilla's `deathTime` already counts the corpse hold but is never synced. The anchor is stamped
+once, server-side, as `gameTime - deathTime`, which is correct both for a fresh death (`deathTime`
+0) and for a body restored from disk (vanilla has already read its saved `DeathTime` back). So
+there is no second death state machine, no second saved field, and no second call into `die()` —
+no repeat XP or loot. **No body's lifetime was extended**: Great Izuchi still holds 38 ticks for its
+authored clip and the other three keep vanilla's removal at `deathTime` 20, so Rathian's and
+Rathalos's 50-tick death clips still only get their first ~15 ticks shown. Synchronizing what is
+visible while a body exists was the scope; keeping a body alive to finish a clip was not.
+
+### C03, the sampler — passed, on a real client
+
+The clock can be tested headlessly. The sampler it drives cannot: `GeoModel` references
+`Minecraft`, so NeoForge's `RuntimeDistCleaner` refuses to load it on a dedicated server
+(*"Attempted to load class net/minecraft/client/multiplayer/ClientLevel for invalid dist
+DEDICATED_SERVER"*). That was found by writing the harness as a GameTest first and watching it fail
+— and it is the same architectural fact the rest of this mod is built on. So it lives in
+`client/AnimationSeekSelfCheck`, runs once on the client while `debugCombat` is on, and logs one
+line per check.
+
+It uses Great Izuchi's **own baked `attack_scratch` clip** from the live animation cache — not a
+synthetic one — and compares five controllers over all 26 animated bones. The baselines are **stock
+GeckoLib controllers, not more adapters**: a stock controller advanced from age 0 is literally the
+pre-R0b code path, so matching it is the claim actually being made. Observed `2026-09-12`,
+`./gradlew runClient`:
+
+```
+[anim-selfcheck] clip=animation.great_izuchi.attack_scratch length=65.0 bones=26 joinAge=35 transition=5 expectedAnimTime=1.5
+[anim-selfcheck] stock on-time   left_leg tick=0.0 start=-0.005904972458272415 end=-0.49561713343155017 animTime=1.5
+[anim-selfcheck] adapter on-time left_leg tick=0.0 start=-0.005904972458272415 end=-0.49561713343155017 animTime=1.5
+[anim-selfcheck] adapter late    left_leg tick=0.0 start=-0.005904972458272415 end=-0.49561713343155017 animTime=1.5
+[anim-selfcheck] stock frame 0   left_leg tick=0.0 start=0.020517575069641837 end=0.15378863984192914
+[anim-selfcheck] stock cold      left_leg no sample
+[anim-selfcheck] PASS stock GeckoLib on-time baseline produced a pose
+[anim-selfcheck] PASS that baseline is at the absolute expected sampler time (1.5s, i.e. clip tick 30)
+[anim-selfcheck] PASS the pose at age 35 is distinguishable from the clip's first frame, so the comparisons below can tell a seek from a replay
+[anim-selfcheck] PASS C09: the adapter leaves an ON-TIME observer exactly where stock GeckoLib put it
+[anim-selfcheck] PASS late observer's FIRST frame produced a pose at all
+[anim-selfcheck] PASS late observer's first frame matches the stock on-time pose exactly
+[anim-selfcheck] PASS late observer reached the absolute expected sampler time, not merely the same time as a baseline that could have moved with it (1.5s)
+[anim-selfcheck] PASS late observer did NOT replay the clip's first frame
+[anim-selfcheck] PASS control: an unmodified GeckoLib 4.9.2 controller does NOT reach that pose cold, so the comparisons above are meaningful
+```
+
+The late observer's first frame is the **stock on-time pose** exactly, on every bone, at the
+**absolute** expected sampler time of 1.5 s — which is clip tick 30, which is `35 - 5`. The adapter
+leaves an on-time observer exactly where stock GeckoLib put it, which is the presentation half of
+C09 measured rather than argued. The stock cold control produced **no sample at all**, which is the
+cold-controller trap described above, observed rather than assumed.
+
+**Why the baselines are stock.** The first version of this probe used the adapter as its own on-time
+reference. A Codex review of PR #5 pointed out that a mutation shifting every observer *together*
+would move the comparison and its baseline by the same amount and still pass. That was correct, and
+it is now covered two ways: stock baselines, and an assertion on the absolute expected sampler time
+rather than only on agreement between observers. The mutation table below includes the exact case
+that review described.
+
+### Mutation runs — these tests can actually fail
+
+Every new check was confirmed to fail when the thing it guards is removed. Each was reverted
+immediately after.
+
+| Mutation | Result |
+|---|---|
+| Adapter returns after pass one (no seek) | self-checks FAIL; the late observer produces *no sample*, `animTime` 0.0 vs 1.5 |
+| `controllerTickFor` returns raw action age **and** the adapter re-anchors every frame — the correlated shift the PR review described, which the earlier probe would have passed | self-check FAILs three ways: the adapter moves an **on-time** observer off the stock baseline, the late observer no longer matches it, and the absolute sampler time is 1.75 s instead of 1.5 s. `animationClockMapsActionAgeToClipTime` also fails |
+| `controllerTickFor` returns raw action age | `animationClockMapsActionAgeToClipTime` fails: *"the clip should start exactly when the blend ends, not at 5.0"* |
+| `RoarGoal.start` does not set the anchor | all three roar-anchor tests plus the distinct-instance test fail |
+| Death anchor stamps `gameTime`, not `gameTime - deathTime` | reload test fails: *"the reloaded body restarted its death clip: age went from 10 back to 1"* |
+
+### Gates: what is closed and what is not
+
+| Gate | Status |
+|---|---|
+| C01 build / server isolation | **Passed.** 97/97 GameTests; a real dedicated server (`runServer`) reached `Done (0.251s)` with no class-loading failure; `R0b-02` constructs the adapter on a dedicated server so a stray client import fails the suite |
+| C02 clock snapshots | **Passed**, headlessly. Every instance reconstructible from synced data, repeats distinguishable, no `tickCount` clock, reload cancels transient action while health and death progress survive |
+| C03 actual sampler | **Passed** on a real client, above, against stock-GeckoLib baselines and an absolute expected sampler time |
+| C04 encounter coverage | **Partial.** The mechanism is proven for scratch and is shared verbatim by all three Great Izuchi attacks, both Rathian bites and all three roars. Per-clip human observation is still open |
+| C05 death lifecycle | **Passed** headlessly (anchors, precedence over a frozen attack, no extra death processing, no extended lifetime). Visual acceptance open |
+| C06 render lifecycle | **Partial.** Resource reload and cull/retrack are handled by re-anchoring on deviation, and per-entity clocks make cross-contamination structurally impossible; **not** yet observed live |
+| C07 two actual clients | **NOT MET — code complete, evidence pending.** See below |
+| C08 real restart | **NOT MET — code complete, evidence pending.** See below |
+| C09 no gameplay/asset regression | **Passed.** No attack window, damage value, measured path, hurtbox, model, animation file or biome file was touched; the full suite including every pre-existing R0a/R1a regression passes. The presentation half is now measured too: the self-check asserts the adapter leaves an on-time observer exactly where stock GeckoLib put it |
+
+### What still needs a human — R0b
+
+Nothing below was observed. These are the exact missing observations, not a summary.
+
+- [ ] **C07, two actual clients.** Needs two *distinct* player identities on one dedicated server;
+      two windows sharing a login kick each other and do not count. Not doable from this
+      environment. To run it: `./gradlew runServer`, then two clients logged in as different
+      players. With observer A holding the encounter loaded and observer B outside tracking range,
+      move B in during a known action and check: (1) windup/active/recovery entry for Great Izuchi
+      and Rathian; (2) entry during each of the three roars, then a later distinct roar instance;
+      (3) **frustum culling** (look away while still tracking) and **true untrack/retrack** (leave
+      and re-enter tracking range) separately — they are different conditions; (4) kill a subject
+      mid-action and confirm both clients see the current death phase, with no ghost parts and no
+      replay after removal; (5) a resource reload (F3+T) and two same-species monsters at different
+      action ages; (6) one controlled parent/part hit agreeing on server and both clients. Record
+      both clients' connection state at the start **and end** of the window — R1a's session lost its
+      client partway through.
+- [ ] **C08, a real save/stop/start/rejoin.** The in-memory `saveWithoutId`/`load` tests do **not**
+      close this and are not offered as if they did. A headless attempt was made and does not work:
+      Gradle does not forward stdin to `runServer`, so a dedicated server started that way cannot be
+      driven by console commands. To run it: start a server, summon and injure a few subjects,
+      record their UUIDs/health/variants/part names, `save-all flush`, **stop the server
+      gracefully** (`stop`, not a kill), restart the same world and rejoin. Expect the same entities
+      and data, freshly registered parts, and cancelled transient combat; new runtime numeric entity
+      ids are expected, duplicate parents, extra escort generation and a resumed old attack are not.
+- [ ] **Per-species visual acceptance.** Join mid-action and confirm the pose looks like the middle
+      of the clip rather than its start, for all three Great Izuchi attacks, both Rathian bites, all
+      three roars, and the four authored deaths. Also confirm the deaths still look right given that
+      Rathian's and Rathalos's 50-tick clips are still cut short by vanilla's 20-tick body lifetime,
+      which R0b deliberately did not change.
+
+### PR #5 review round (same day)
+
+A Codex review of `a5046f6` requested changes. All three findings were accepted and fixed; the first
+was a real hole in the evidence rather than in the shipped behaviour.
+
+1. **The sampler probe compared the adapter to itself** (P1). Its "on-time" and "frame zero"
+   references were also `ServerTimedAnimationController`s, so a mutation shifting every observer
+   together would have moved the comparison and its baseline in step and still passed. Fixed by
+   making both baselines stock GeckoLib controllers — the literal pre-R0b code path — adding an
+   assertion that an on-time observer under the adapter still lands exactly where stock GeckoLib put
+   it, and asserting the **absolute** expected sampler time rather than only agreement. The exact
+   mutation the review described now fails three checks; it is in the table above.
+2. **The headless clock test exercised a parallel formula** (P2). `clipTimeFor` was only ever called
+   by the test, while `seekTo` duplicated the same subtraction, so changing the production copy could
+   have left every GameTest green. `clipTimeFor` is deleted; there is now one method,
+   `controllerTickFor`, which runtime seeking calls and the GameTest asserts. Confirmed wired: a
+   mutation to that method alone moved the **runtime** sampler from 1.5 s to 1.75 s.
+3. **`AGENTS.md` was stale** (P2). It was a near-verbatim copy of `CLAUDE.md` and had already drifted
+   before R0b — it still described an attack timeline for "Great Izuchi only" although Rathian's
+   measured bite timeline shipped in P4, and had no R1a section at all. Rather than sync a third
+   divergence by hand, it is now a short pointer to `CLAUDE.md`. One manual, no copies.
+4. **That pointer then told Codex to sign as Claude** (P2, caught on the follow-up pass). The
+   duplicate manual carried exactly one genuinely tool-specific line, the commit/PR attribution
+   trailer, and collapsing it dropped the Codex variant. `CLAUDE.md` now lists both trailers
+   verbatim. A first attempt also generalised them to the running model; that was scope creep on a
+   maintainer policy and was reverted on the next pass.
+
+### R1a carryover — still not observed
+
+R0b did not touch these and did not observe them; they are carried forward verbatim, not closed:
+live natural MH populations in the habitat, a plains village inside it, and human visual acceptance
+of the biome. See the R1a section below and `docs/DEFERRED.md`.
 
 ---
 

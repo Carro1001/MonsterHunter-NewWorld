@@ -42,13 +42,53 @@ specified for; the caveat is commented in the test itself. Pick this up if a liv
 delayed re-roar reading as wrong, not before.
 
 ### R0b / pre-release acceptance gates still open
-Named here so they are not lost between packets. None of these were closed by R0a, and none of them
-block R1a:
-- Correctly aged presentation for a client that starts tracking mid-action (GeckoLib seeking).
-- Two actual clients agreeing on damage, health, parts and death.
-- A real save / stop / restart / rejoin cycle, including part reconstruction from disk. R0a's T04
-  covers an in-memory `saveWithoutId`/`load` round trip only, which is not the same claim.
-- Fresh human confirmation of roar and death playback.
+Named here so they are not lost between packets. Updated after the R0b packet (2026-09-12):
+- ~~Correctly aged presentation for a client that starts tracking mid-action (GeckoLib seeking).~~
+  **Done in R0b** — `animation/ServerTimedAnimationController`, proven through GeckoLib's real
+  sampler on a client (`client/AnimationSeekSelfCheck`, phase gap 0.0 ticks). See
+  `docs/TEST_PLAN.md`'s R0b section.
+- Two actual clients agreeing on damage, health, parts and death. **Still open** — R0b could not
+  reach two distinct player identities from its environment. The exact procedure is written down in
+  `TEST_PLAN.md` under "What still needs a human — R0b".
+- A real save / stop / restart / rejoin cycle, including part reconstruction from disk. **Still
+  open.** R0a's T04 and R0b's own reload test cover in-memory `saveWithoutId`/`load` round trips
+  only, which is not the same claim and is not offered as one. R0b additionally established that a
+  headless attempt is not available: Gradle does not forward stdin to `runServer`, so a dedicated
+  server started that way cannot be driven by console commands.
+- Fresh human confirmation of roar and death playback, now including that a mid-action join shows
+  the middle of the clip rather than its start.
+
+## Found during R0b (2026-09-12), deferred out of that packet
+
+### Rathian's and Rathalos's death clips are still cut short by the vanilla body lifetime
+Both authored death clips are 50 ticks, but neither class overrides `tickDeath`, so vanilla removes
+the body at `deathTime` 20 and only the first ~15 ticks of the clip are ever shown (clip time is
+`age - 5`). Aptonoth's 20-tick clip is cut the same way. Only Great Izuchi holds longer, at 38 ticks
+for its 38-tick clip.
+
+R0b deliberately did not change this: the packet's scope was synchronizing what is visible while a
+body exists, and it was explicitly told not to extend any body's lifetime. Recorded here because the
+right owner is whichever packet decides corpse retention — R1b is already going to decide its own
+ten-minute corpse — and it would be wasteful to change the hold twice.
+
+### The self-check probe cannot run as a GameTest, and that is structural
+`client/AnimationSeekSelfCheck` was written as a GameTest first. It cannot run there: `GeoModel`
+references `Minecraft`, and NeoForge's `RuntimeDistCleaner` refuses to load it on a dedicated server.
+So any future test that needs GeckoLib's real sampler has to be a client-side probe, not a GameTest.
+Worth knowing before somebody spends the same hour rediscovering it.
+
+### `AGENTS.md` is now a pointer, not a copy
+It used to duplicate `CLAUDE.md` almost verbatim and had drifted twice before anyone noticed (missing
+Rathian's P4 attack timeline and the whole R1a habitat section). It is now a few paragraphs pointing
+at `CLAUDE.md`. If a future tool insists on its own instruction file, give it a pointer too — do not
+restore a second copy of the manual.
+
+### The adapter's re-anchor tolerance is one tick, and has not been tuned online
+`TOLERANCE_TICKS` is 1.0: below the two-tick acceptance target, above partial-tick float noise. It
+has only been exercised locally, where a correctly tracking controller never re-anchors at all. On a
+real connection with jitter it may re-anchor more often, which is correct but costs a second
+`process` pass in the frames where it happens. If that ever shows up in a profile, raising it toward
+two ticks is the knob — not widening it until an obvious replay passes.
 
 ## Deferred to the pre-release / survival phase
 
@@ -305,9 +345,11 @@ Not yet demonstrated: that two clients connected to a dedicated server agree on 
 that a second client joining mid-attack sees the current action rather than restarting an old one,
 and that moving a camera away changes nothing about damage or part positions.
 
-Known limitation to verify when this is picked up: a client that starts tracking part way through
-an action begins the clip at its first frame rather than seeking to the action's age, so its
-presentation can lead contact by up to the 65-tick clip length. Contact is unaffected.
+~~Known limitation: a client that starts tracking part way through an action begins the clip at its
+first frame rather than seeking to the action's age.~~ **Fixed in R0b** (2026-09-12) — see
+`animation/ServerTimedAnimationController` and `TEST_PLAN.md`'s R0b section. The multi-client
+*observation* remains open regardless; the fix being in place is not evidence that two clients
+agree, and R0b does not claim it is.
 
 ## Balance values that are testing placeholders, not decisions
 

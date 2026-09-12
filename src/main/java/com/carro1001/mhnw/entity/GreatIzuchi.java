@@ -1,5 +1,6 @@
 package com.carro1001.mhnw.entity;
 
+import com.carro1001.mhnw.animation.ServerTimedAnimationController;
 import com.carro1001.mhnw.registry.ModEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -28,7 +29,6 @@ import net.neoforged.neoforge.entity.PartEntity;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
-import software.bernie.geckolib.animation.AnimationController;
 import software.bernie.geckolib.animation.AnimationState;
 import software.bernie.geckolib.animation.PlayState;
 import software.bernie.geckolib.animation.RawAnimation;
@@ -123,8 +123,37 @@ public class GreatIzuchi extends Monster implements GeoEntity, Roarable {
     /** {@code animation.great_izuchi.roar} is 3.5417s; see {@code docs/ANIMATION_MANIFEST.json}. */
     private static final int ROAR_TICKS = 71;
 
+    /**
+     * Ticks the animation controller spends blending into a newly set clip. Named rather than
+     * inlined because {@link ServerTimedAnimationController} treats it as part of the clock
+     * contract: an action of age {@code a} samples clip time {@code a - TRANSITION_TICKS}, which is
+     * what this controller has always shown an ordinary observer, so aging a late one changes
+     * nothing for everybody else.
+     */
+    public static final int TRANSITION_TICKS = 5;
+
     private static final EntityDataAccessor<Integer> DATA_ROAR_TICKS =
             SynchedEntityData.defineId(GreatIzuchi.class, EntityDataSerializers.INT);
+
+    /** Game time the current roar began; see {@link Roarable#getRoarStartTime()}. */
+    private static final EntityDataAccessor<Long> DATA_ROAR_START =
+            SynchedEntityData.defineId(GreatIzuchi.class, EntityDataSerializers.LONG);
+
+    /**
+     * Game time this body's death began, or {@link #NO_DEATH} while alive.
+     *
+     * <p>Vanilla's own {@code deathTime} counts the corpse hold, but it is never synced, so a client
+     * that starts tracking a body already half way through its death clip would restart that clip.
+     * This is the anchor that fixes it: stamped once, server-side, from {@code gameTime - deathTime},
+     * which makes it correct both for a fresh death (where {@code deathTime} is 0) and for a body
+     * restored from disk (where vanilla has already reloaded its saved {@code DeathTime}), without a
+     * second death state machine, a second saved field, or any second call to {@code die()}.
+     */
+    private static final EntityDataAccessor<Long> DATA_DEATH_START =
+            SynchedEntityData.defineId(GreatIzuchi.class, EntityDataSerializers.LONG);
+
+    /** Sentinel for {@link #DATA_DEATH_START} while this monster is alive. */
+    public static final long NO_DEATH = Long.MIN_VALUE;
 
     private final AnimatableInstanceCache animCache = GeckoLibUtil.createInstanceCache(this);
     private final MonsterPart[] parts;
@@ -135,9 +164,6 @@ public class GreatIzuchi extends Monster implements GeoEntity, Roarable {
     /** De-duplicates one damage source that enumerates several parts within a single tick. */
     private DamageSource lastDamageSource;
     private int lastDamageTick = -1;
-
-    /** Client-only: the action sequence currently being presented. */
-    private int presentedSeq = -1;
 
     /** Server-only source of truth for the action sequence. Never read back from synced data. */
     private int actionSequenceCounter;
@@ -357,6 +383,8 @@ public class GreatIzuchi extends Monster implements GeoEntity, Roarable {
         builder.define(DATA_ATTACK_START, 0L);
         builder.define(DATA_ACTION_SEQ, 0);
         builder.define(DATA_ROAR_TICKS, 0);
+        builder.define(DATA_ROAR_START, 0L);
+        builder.define(DATA_DEATH_START, NO_DEATH);
     }
 
     // ---------------------------------------------------------------- roar (Roarable)
@@ -369,6 +397,16 @@ public class GreatIzuchi extends Monster implements GeoEntity, Roarable {
     @Override
     public void setRoarTicks(int ticks) {
         this.entityData.set(DATA_ROAR_TICKS, ticks);
+    }
+
+    @Override
+    public long getRoarStartTime() {
+        return this.entityData.get(DATA_ROAR_START);
+    }
+
+    @Override
+    public void setRoarStartTime(long gameTime) {
+        this.entityData.set(DATA_ROAR_START, gameTime);
     }
 
     @Override
@@ -405,6 +443,26 @@ public class GreatIzuchi extends Monster implements GeoEntity, Roarable {
 
     public int getActionSequence() {
         return this.entityData.get(DATA_ACTION_SEQ);
+    }
+
+    /** Game time this body's death began, or {@link #NO_DEATH} while alive. Valid on both sides. */
+    public long getDeathStartTime() {
+        return this.entityData.get(DATA_DEATH_START);
+    }
+
+    /**
+     * Server: stamp the death anchor once, the first tick this body is dead.
+     *
+     * <p>Derived from {@code gameTime - deathTime} rather than simply {@code gameTime}, which is the
+     * whole trick: on a fresh death {@code deathTime} is 0 so the two are identical, and on a body
+     * restored from disk vanilla has already read its saved {@code DeathTime} back, so the anchor
+     * reconstructs the death's real age without persisting anything of our own and without calling
+     * {@code die()} -- no second XP drop, no second loot roll, no revived state.
+     */
+    private void stampDeathStart() {
+        if (!level().isClientSide && isDeadOrDying() && getDeathStartTime() == NO_DEATH) {
+            this.entityData.set(DATA_DEATH_START, level().getGameTime() - this.deathTime);
+        }
     }
 
     /** Ticks elapsed in the current action, or -1 when idle. Valid on both sides. */
@@ -518,6 +576,7 @@ public class GreatIzuchi extends Monster implements GeoEntity, Roarable {
             setYRot(this.committedBodyYaw);
         }
         positionParts();
+        stampDeathStart();
         if (!level().isClientSide && this.attackCooldown > 0) {
             this.attackCooldown--;
         }
@@ -615,7 +674,7 @@ public class GreatIzuchi extends Monster implements GeoEntity, Roarable {
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "main", 5, this::mainAnim));
+        controllers.add(new ServerTimedAnimationController<>(this, "main", TRANSITION_TICKS, this::mainAnim));
     }
 
     /**
@@ -623,36 +682,44 @@ public class GreatIzuchi extends Monster implements GeoEntity, Roarable {
      * is synched entity data rather than a one-shot packet, a client that starts tracking mid-fight
      * receives the live action; once the server clears it, nothing replays.
      *
-     * <p>Known limitation: a client that starts tracking part way through an action begins the clip
-     * at its first frame rather than seeking to the action age, so for that one client presentation
-     * can lead contact by up to the 65-tick clip length. Contact is decided server-side and is
-     * unaffected.
+     * <p>Since R0b the clip is also played at its real age rather than from its first frame, so a
+     * client that starts tracking mid-action sees the current phase instead of replaying the windup
+     * while the server is already landing the hit. {@link ServerTimedAnimationController} does that,
+     * and its class doc carries the convention and why it does not move contact timing. Note what is
+     * <em>not</em> changed: the action still ends at the profile's {@code actionEnd}, so the last
+     * {@link #TRANSITION_TICKS} ticks of each attack clip have never been, and still are not, shown.
      */
     private PlayState mainAnim(AnimationState<GreatIzuchi> state) {
+        ServerTimedAnimationController<GreatIzuchi> controller = ServerTimedAnimationController.of(state);
+        double partial = state.getPartialTick();
+        long now = level().getGameTime();
+
+        // One priority decision picks the clip, its instance and its clock together (R0b). Splitting
+        // them is how a death pose ends up driven by a stale attack clock.
         if (isDeadOrDying()) {
-            return state.setAndContinue(DEATH);
+            long start = getDeathStartTime();
+            return controller.playTimed(state, DEATH, ServerTimedAnimationController.KIND_DEATH,
+                    start, start == NO_DEATH ? partial : now - start + partial);
         }
         if (isRoaring()) {
-            return state.setAndContinue(ROAR);
+            long start = getRoarStartTime();
+            return controller.playTimed(state, ROAR, ServerTimedAnimationController.KIND_ROAR,
+                    start, now - start + partial);
         }
         byte attack = getAttackId();
         if (attack != ATTACK_NONE) {
-            if (this.presentedSeq != getActionSequence()) {
-                this.presentedSeq = getActionSequence();
-                state.getController().forceAnimationReset();
-            }
-            return state.setAndContinue(switch (attack) {
+            return controller.playTimed(state, switch (attack) {
                 case ATTACK_TAIL_SWIPE -> TAIL_SWIPE;
                 case ATTACK_TAIL_SLAM -> TAIL_SLAM;
                 default -> SCRATCH;
-            });
+            }, ServerTimedAnimationController.KIND_ATTACK, getActionSequence(), getAttackAge() + partial);
         }
         if (state.isMoving()) {
             // isAggressive() rides the synched mob flags, so it is readable here. getTarget() is
             // server-only state and is always null on a client, which would pin this to WALK.
-            return state.setAndContinue(isAggressive() ? RUN : WALK);
+            return controller.playFree(state, isAggressive() ? RUN : WALK);
         }
-        return state.setAndContinue(IDLE);
+        return controller.playFree(state, IDLE);
     }
 
     @Override

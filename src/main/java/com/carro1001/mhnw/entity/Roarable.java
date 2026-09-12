@@ -15,6 +15,21 @@ public interface Roarable {
 
     void setRoarTicks(int ticks);
 
+    /**
+     * Level game time at which the current roar began; meaningless while not roaring.
+     *
+     * <p>Synced alongside the countdown, and for a different job: the countdown is the server's own
+     * clock (how much longer to stay frozen) while this is a stable <em>presentation anchor</em>, so
+     * a client that starts tracking mid-roar can tell how far in the clip already is, and can tell
+     * one roar instance from the next. Deliberately game time rather than a tick counter, for the
+     * same reason {@code DATA_ATTACK_START} elsewhere in this package is: a client's own
+     * {@code tickCount} starts when the spawn packet arrives and says nothing about the server's.
+     * {@link RoarGoal} sets it once at {@code start()}; nothing reads it back to make a decision.
+     */
+    long getRoarStartTime();
+
+    void setRoarStartTime(long gameTime);
+
     /** Length of this species' own roar clip, in ticks. */
     int roarDurationTicks();
 
