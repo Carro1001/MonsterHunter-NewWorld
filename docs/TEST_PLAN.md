@@ -2,10 +2,11 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, currently 69 tests, all passing as of
-the MHW-style opening roar below (full `build runGameTestServer` run, 2026-09-11) — the shoreline
-test that failed under the P5a build passed cleanly after the native-controls correction. Client
-acceptance for that Lagiacrus correction has not been rerun by a human yet.
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 75 tests, all passing**
+(full `.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-11, R0a baseline packet). The
+earlier 69-test figure is superseded. The shoreline test that failed under the P5a build passed
+cleanly after the native-controls correction. Client acceptance for that Lagiacrus correction has
+not been rerun by a human yet.
 
 `docs/ANIMATION_MANIFEST.json` is a generated inventory of every species' animation clips (name,
 length, loop mode) — regenerate with `node tools/gen_animation_manifest.js`, check it before asking
@@ -14,7 +15,9 @@ length, loop mode) — regenerate with `node tools/gen_animation_manifest.js`, c
 This file is updated as features land. Checked items were confirmed by the maintainer; unchecked
 items are open. When you find a problem, say what you saw and I'll fix it and update this file.
 
-Branch: `revival/neoforge-1.21.1` (local only, not pushed).
+Branch: **superseded** — the revival was squash-merged into `master` (`ab59e19`), and both `master`
+and `revival/neoforge-1.21.1` exist on `origin`. "Local only, not pushed" no longer describes
+reality. Standing rule going forward: no further push or publish without explicit authorization.
 
 ## How to launch
 
@@ -36,7 +39,68 @@ measured numbers as a proxy for now (same skeleton, similar proportions); if you
 measured for real, stand near one with `debugCombat` on for a few seconds and send me
 `logs/latest.log`.
 
+
 ---
+
+## R0a — baseline hardening round (2026-09-11)
+
+Packet: `docs/R0_BASELINE_HANDOFF.md` (R0a only), against `master` at `ee5f0a5`, whose code is
+byte-identical to the packet's inspected `3ca5d46`. Working tree was clean at start.
+
+**Automated result:** 69/69 passing before, **75/75 passing after**. Six tests added, four
+strengthened. No production code changed — the added coverage found no defect that this packet
+owns.
+
+What the six new tests establish, all through ordinary AI ticking rather than by calling goal
+methods directly:
+
+- **T01, `{greatIzuchi,rathian,rathalos}RoarRunsForItsRealClipLength`** — the roar countdown runs at
+  one tick per *real* tick for the species' whole authored clip (70/99/99 ticks observed), with no
+  attack and no damage to a live in-range target for the duration. The deadline is anchored to the
+  first countdown value actually observed, not to a global test tick or a generous timeout.
+  *Negative check performed:* flipping `RoarGoal.requiresUpdateEveryTick()` back to `false` fails
+  exactly these three, at ~6 real ticks in, and the override was restored immediately.
+- **T02, `greatIzuchiReArmsRoarOnlyAfterTheRealDisengageInterval`** — a held target never re-arms; a
+  brief loss and re-acquisition does not re-arm and restarts the clock; a sustained loss re-arms
+  within 100 + 4 ticks measured from the game time the target was actually cleared. The old test
+  proved only that re-arming happened *eventually*.
+- **T03, `greatIzuchiKilledMidRoarLeavesAnInertCorpse` / `rathianKilledMidAttackLeavesAnInertCorpse`**
+  — killed mid-roar and mid-attack respectively, the corpse deals no further melee damage for the
+  whole death hold, is removed, and its parts leave NeoForge's part lookup. Deliberately does *not*
+  assert that the synced attack id or roar countdown clears: goals stop ticking at death, so those
+  fields freeze, which is harmless because `mainAnim` checks death first.
+- **T04, `{greatIzuchi,rathian}FullReloadKeepsHealthAndPartsButNotTheAction`** — a full
+  `saveWithoutId`/`load` round trip onto a fresh instance that actually enters the level (original
+  discarded first, so no duplicate UUID or part identity), starting from deliberately reduced health
+  (17.0 of 40, 41.0 of 90) and a live action. Health survives; attack id, roar countdown and the
+  action do not; the initial cooldown stays positive; part count, names and lookup registration all
+  hold. The pre-existing test round-tripped only `addAdditionalSaveData`.
+- **T05** — `assertPartsUnregistered` now checks `level().getPartEntities()` (the lookup melee
+  picking, projectiles and area damage actually scan) for Great Izuchi, Aptonoth, Rathian and
+  Rathalos removal, not just each part's own flags. Lagiacrus's existing helper now delegates to it.
+
+**One real behaviour found, deliberately not patched here:** `RoarGoal`'s disengage clock lives in
+`canUse()`, and vanilla's `GoalSelector` does not call `canUse()` on a goal whose flags are held by a
+running non-interruptable goal. A committed attack makes `GreatIzuchiCombatGoal` non-interruptable,
+so dropping the target mid-swing delays re-arming by that action's remaining length — measured at
+161 real ticks instead of 100. It costs at most one action's delay before a monster is willing to
+roar again; recorded in `docs/DEFERRED.md` rather than restructured inside a baseline-hardening
+packet. T02 therefore measures a clean disengage (the fixture holds `attackCooldown` high so no
+action commits), which is the case the interval is specified for.
+
+**Packaged license metadata:** `mod_license` moved from `All Rights Reserved` to `GPL-3.0`, matching
+the repository root LICENSE and the maintainer's stated choice. Confirmed in the built artifact:
+`build/libs/mhnw-0.2.0.jar!/META-INF/neoforge.mods.toml` now reads `license = "GPL-3.0"`, with
+`authors` and every other field unchanged. This says nothing about third-party branding or sound
+rights, which remain unresolved.
+
+**Still pending, R0b / pre-release — not closed by this round:**
+- Correctly aged presentation for a client that starts tracking mid-action (GeckoLib seeking).
+- Two actual clients agreeing on damage, health, parts and death.
+- A real save / stop / restart / rejoin cycle, including part reconstruction from disk.
+- Fresh human confirmation of roar and death playback.
+
+These four are the reason R0a completion is not first-release verification. They do not block R1a.
 
 ## Lagiacrus (P5a movement baseline, 2026-09-11)
 
