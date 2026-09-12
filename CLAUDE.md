@@ -28,17 +28,13 @@ missed, not as the current source of truth.
   **no further push or publish without explicit authorization**, per push, not implied by the
   branches already being remote.
 - **Attribution is per agent — sign as whichever one you actually are.** Commits end with a
-  `Co-Authored-By:` trailer naming you, and PRs additionally with a `🤖 Generated with` line:
-  - Claude Code: `Co-Authored-By: Claude <model> <noreply@anthropic.com>` and
-    `🤖 Generated with [Claude Code](https://claude.com/claude-code)`.
-  - Codex: `Co-Authored-By: Codex <model> <noreply@anthropic.com>` and `🤖 Generated with [Codex]`.
+  `Co-Authored-By:` trailer, PRs additionally with a `🤖 Generated with` line:
+  - Claude Code: `Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>`, `🤖 Generated with
+    [Claude Code](https://claude.com/claude-code)`.
+  - Codex: `Co-Authored-By: Codex Sonnet 5 <noreply@anthropic.com>`, `🤖 Generated with [Codex]`.
 
-  This bullet is agent-aware on purpose. `AGENTS.md` used to carry its own copy of it, correctly
-  saying Codex, and when that duplicate manual was collapsed into a pointer the override went with
-  it — so the pointer briefly told Codex to sign as Claude. A PR #5 review caught it. The `<model>`
-  part follows the model actually running, not a fixed string: R0a/R1a were signed `Claude Sonnet 5`
-  and R0b `Claude Opus 5`, and neither is wrong. If your session is handed attribution rules
-  directly, those win over this bullet.
+  Attribution rules handed to your session directly win over this bullet — that is why R0b's own
+  commits say `Claude Opus 5`.
 - KISS/YAGNI: this rewrite is deliberately much smaller than the old `master` codebase (see below) —
   don't reintroduce abstraction layers (a Brain-AI framework, a third-party multipart library, a
   Model/Renderer split per entity) that the port already decided not to carry over, unless a real

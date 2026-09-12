@@ -251,14 +251,11 @@ was a real hole in the evidence rather than in the shipped behaviour.
    before R0b — it still described an attack timeline for "Great Izuchi only" although Rathian's
    measured bite timeline shipped in P4, and had no R1a section at all. Rather than sync a third
    divergence by hand, it is now a short pointer to `CLAUDE.md`. One manual, no copies.
-4. **That pointer then told Codex to sign as Claude** (P2, caught by the review's own follow-up pass
-   on `244394e`). The duplicate manual had carried exactly one genuinely tool-specific line — the
-   commit/PR attribution trailers — and collapsing it dropped the Codex variant along with
-   everything else. Fixed where the rule now lives rather than by restoring a copy: `CLAUDE.md`'s
-   standing constraints state attribution **per agent**, listing the Claude Code and Codex forms,
-   and `AGENTS.md` says so explicitly rather than leaving a reader to notice. The model component is
-   documented as following whatever model is running — R0a/R1a signed `Sonnet 5`, R0b `Opus 5` —
-   which also settles the stale-model mismatch flagged when R0b was first delivered.
+4. **That pointer then told Codex to sign as Claude** (P2, caught on the follow-up pass). The
+   duplicate manual carried exactly one genuinely tool-specific line, the commit/PR attribution
+   trailer, and collapsing it dropped the Codex variant. `CLAUDE.md` now lists both trailers
+   verbatim. A first attempt also generalised them to the running model; that was scope creep on a
+   maintainer policy and was reverted on the next pass.
 
 ### R1a carryover — still not observed
 
