@@ -45,8 +45,10 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * editor, or a new authored clip, before any attack presentation is possible. See
  * {@code docs/DEFERRED.md}.
  *
- * <p>Until then: ordinary vanilla {@link MeleeAttackGoal}, same interim {@link Rathian} and
- * {@link Izuchi} use for the same reason.
+ * <p>Until then: ordinary vanilla {@link MeleeAttackGoal}, same interim {@link Izuchi} still uses
+ * for the same reason (Rathian has since moved off this to {@link RathianCombatGoal}, but only
+ * because {@code attack_charge_bite_right} exists and animates real bones in Rathian's own model;
+ * that option isn't available here until this species' own attack clips are retargeted or replaced).
  *
  * <h2>Hurtboxes</h2>
  * Offline-solved from {@code idle_normal}, same trustworthy channel category (plain constants and

@@ -1120,7 +1120,8 @@ public class MHNWGameTests {
         helper.succeed();
     }
 
-    /** A05: genuinely hostile, unlike every P3 species, using ordinary vanilla melee. */
+    /** A05: genuinely hostile, now via {@link com.carro1001.mhnw.entity.RathianCombatGoal}'s own
+     * bite timeline rather than ordinary vanilla melee. */
     @GameTest(template = ARENA, timeoutTicks = 200)
     public static void rathianAttacksAndDamagesTarget(GameTestHelper helper) {
         com.carro1001.mhnw.entity.Rathian rathian = helper.spawn(ModEntities.RATHIAN.get(), 8, 2, 8);
@@ -1132,6 +1133,38 @@ public class MHNWGameTests {
 
         helper.succeedWhen(() -> helper.assertTrue(victim.getHealth() < startingHealth,
                 "Rathian never damaged a target standing right next to it"));
+    }
+
+    /** The specific fix for "body-slams and only then plays the bite": damage must land inside the
+     * bite's own active window (see {@code RathianCombatGoal.BITE}), not the instant contact is
+     * made the way plain vanilla {@code MeleeAttackGoal} worked before this. */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void rathianBiteDamagesOnlyDuringActiveWindow(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Rathian rathian = helper.spawn(ModEntities.RATHIAN.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
+        victim.setNoAi(true);
+
+        rathian.setTarget(victim);
+        float startingHealth = victim.getHealth();
+        int[] ageAtFirstHit = {Integer.MIN_VALUE};
+
+        helper.startSequence()
+                .thenExecuteFor(150, () -> {
+                    if (ageAtFirstHit[0] == Integer.MIN_VALUE && victim.getHealth() < startingHealth) {
+                        ageAtFirstHit[0] = rathian.getAttackAge();
+                    }
+                })
+                .thenExecute(() -> {
+                    helper.assertTrue(ageAtFirstHit[0] != Integer.MIN_VALUE,
+                            "the bite never connected with a target standing in front of it");
+                    helper.assertTrue(
+                            ageAtFirstHit[0] >= com.carro1001.mhnw.entity.RathianCombatGoal.BITE.activeStart()
+                                    && ageAtFirstHit[0] <= com.carro1001.mhnw.entity.RathianCombatGoal.BITE.activeEnd(),
+                            "damage landed at action age " + ageAtFirstHit[0] + ", outside the active window "
+                                    + com.carro1001.mhnw.entity.RathianCombatGoal.BITE.activeStart() + ".."
+                                    + com.carro1001.mhnw.entity.RathianCombatGoal.BITE.activeEnd());
+                })
+                .thenSucceed();
     }
 
     /** A pillager is a valid target on its own, the same reasoning as Great Izuchi's identical goal:

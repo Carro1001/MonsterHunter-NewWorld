@@ -98,23 +98,37 @@ where the idle pose that was trusted for the hurtbox offsets uses only plain con
 sine waves — the same category of channel that solved Great Izuchi's tail to within 0.05 block of
 the runtime-measured truth.
 
-**The measurement rig for the first attack (`attack_charge_bite_right`) is now wired** — `Rathian`'s
-`doHurtTarget` starts a synced, purely cosmetic 30-tick countdown that plays the clip and switches
-`BoneProbe`'s Rathian logging to every tick while it plays (`Chest`, the bone that clip actually
-animates, was added to the logged bone list). This changes nothing about combat: damage is still the
-same instantaneous `doHurtTarget` call, unconditionally, that vanilla `MeleeAttackGoal` already made.
-It exists purely so a live capture is a single play session (`docs/TEST_PLAN.md` has the exact ask).
+**The first real attack is wired: `RathianCombatGoal`, replacing plain vanilla `MeleeAttackGoal`.**
+The reported problem was cadence: vanilla melee closes to contact range and deals damage the instant
+it touches, which read as a body-slam that only afterward played a bite clip. `RathianCombatGoal` is
+the same windup/active/recovery shape as `GreatIzuchiCombatGoal`: it stops the approach, winds up
+while `attack_charge_bite_right` plays (`Rathian.BITE`/`ATTACK_BITE`, synced attack id/age/sequence,
+same pattern as Great Izuchi's), and only evaluates a hit volume during the active window.
 
-To close it: same playbook as Great Izuchi's tail attacks, now one step closer. With `debugCombat`
-on, provoke a Rathian into biting a few times and capture `logs/latest.log`, then bake measured
-keyframes into a real `AttackProfile` the way `AttackProfile.SCRATCH`'s path was built, and replace
-this cosmetic-only rig with an actual attack-volume goal the same shape as `GreatIzuchiCombatGoal`.
-`attack_tailwhip` and the other clips (`attack_charge_bite_left`, the fireball clips, `attack_backhop`,
-`attack_backflip_ground/flying`) still need the same treatment after this first one. Given Rathian
-likely wants more than one attack eventually, consider whether `AttackProfile` and
-`GreatIzuchiCombatGoal` are worth generalizing the same way `EndemicAreaEffectGoal` was generalized
-from the toad to the flashbug, once a second large-monster attack timeline actually exists to compare
-against, not before.
+**The strike volume and phase timing are still a hand-estimate, not a live capture** — this is the
+part still open, not the cadence fix above. `RathianCombatGoal.BITE`'s path is a single static point
+close in front of the body (forward 1.60, up 1.90), deliberately not `Rathian`'s own already-measured
+`head` hurtbox offset (forward 7.30, the fully-extended resting-neck position, nowhere near where a
+bite lands against something in melee reach), widened generously (volume size 2.2) to cover the guess
+rather than chase a precise centre with no real data yet. The windup/active/recovery split (ticks
+0-10/11-20/21-29 of the clip's 30 ticks) is likewise an estimate of the clip's shape, not measured
+timing.
+
+To close it: same playbook as Great Izuchi's tail attacks, now most of the way there. With
+`debugCombat` on, provoke a Rathian into biting a few times and capture `logs/latest.log` (`BoneProbe`
+already logs every tick while the clip plays), then replace the estimated point/timing above with a
+real baked path the way `AttackProfile.SCRATCH`'s was built. `attack_tailwhip` and the other clips
+(`attack_charge_bite_left`, the fireball clips, `attack_backhop`, `attack_backflip_ground/flying`)
+still need the same treatment after this first one, most likely as additional entries alongside
+`BITE` in the same goal rather than a new one per clip.
+
+`RathianCombatGoal` was written as its own class rather than generalizing `GreatIzuchiCombatGoal`,
+deliberately: this is the second real attack-timeline implementation now, exactly the point this
+section used to say was worth reconsidering that decision at, but doing so now would mean
+restructuring Great Izuchi's already-shipped, player-tested combat at the same time as standing up
+Rathian's first cut, with no way to interactively verify the result beyond GameTests. Revisit once
+Rathian's own timeline has also seen live play and a second Rathian attack (tailwhip, most likely)
+exists to compare against.
 
 The seven hurtbox *offsets* are now measured (see above), but the part *sizes* (width/height) are
 still borrowed from the archived hitbox profile nominally named for this species, which itself

@@ -4,13 +4,11 @@ import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
-import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
@@ -44,35 +42,31 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * are interpolated between measured neighbours to close two gaps the measured positions alone left
  * open, not themselves measurements.
  *
- * <p>The attack clips ({@code attack_charge_bite_left/right}, {@code attack_tailwhip}, the fireball
- * clips, and so on) are deliberately NOT wired to any custom attack volume. Investigating why
- * offline solving diverged for Great Izuchi's claw led to a real, fixed bug in the FK tooling
- * itself (per-keyframe MoLang was being evaluated at the sampled query time instead of each
- * keyframe's own declared time), but fixing that bug did not close the gap against the
- * runtime-measured claw path, so something else about actively-animated, heavily keyframed chains
- * still makes offline solving untrustworthy for motion, not just for this bug. Rathian's attack
- * clips use exactly that pattern (four real keyframes per bone, each carrying its own compound
- * MoLang formula) on the Chest/Neck/Head chain, unlike the idle pose's simple constants, so the
- * same caution applies until one of those clips can be measured live with the bone probe the way
- * Great Izuchi's attacks were. See {@code docs/DEFERRED.md}.
+ * <p>{@code attack_tailwhip} and the fireball/backhop/backflip clips are still NOT wired to any
+ * custom attack volume, and the same caution from before still applies to them: Rathian's attack
+ * clips use four real keyframes per bone, each carrying its own compound MoLang formula, the same
+ * heavily-keyframed pattern that made offline solving untrustworthy for motion (see
+ * {@code docs/DEFERRED.md} and Great Izuchi's own claw-path history). They need the same live
+ * bone-probe capture treatment {@code attack_charge_bite_right} just got, below.
  *
- * <p>Until then, this fights with ordinary vanilla {@link MeleeAttackGoal}, damage through
- * {@code Mob.doHurtTarget}, no custom timeline: the same honest interim {@link Izuchi} uses for the
- * same reason (no attack clip it can currently trust), rather than leaving a multipart monster with
- * no combat behaviour at all.
+ * <h2>Attack timeline: {@code attack_charge_bite_right}</h2>
+ * The first attack this species owns for real, on {@link RathianCombatGoal}: the same
+ * windup/active/recovery shape as {@link GreatIzuchiCombatGoal}, replacing plain vanilla
+ * {@code MeleeAttackGoal}. This was the actual fix for a reported problem, not a cosmetic add-on:
+ * vanilla melee closes to contact range and then deals damage the instant it touches, which reads
+ * as a body-slam followed by a bite clip playing after the fact rather than a bite that connects.
+ * {@link RathianCombatGoal} stops the approach, plants and winds up while the clip plays, and only
+ * evaluates a hit volume during the active window, the same rule 6-shaped contract Great Izuchi's
+ * attacks already follow.
  *
- * <h2>Measurement rig for {@code attack_charge_bite_right}</h2>
- * {@code doHurtTarget} now also starts a synced, purely cosmetic countdown that plays
- * {@code attack_charge_bite_right} for its 30-tick length and, while it plays, switches
- * {@code BoneProbe}'s Rathian logging to every tick instead of the idle sampling interval (see
- * {@code MHNWClient.RathianRenderer}). This changes nothing about combat: damage is still the exact
- * same instantaneous {@code doHurtTarget} call, unconditionally, the same tick the goal would have
- * dealt it anyway. It exists purely so a live capture of this one clip (`debugCombat` on, provoke an
- * attack, save {@code logs/latest.log}) is a single play session instead of also needing a code
- * change first -- the next step described above, now that hurtbox placement is measured rather than
- * guessed. Once a real path is baked from that capture, this rig is replaced by an actual
- * {@code AttackProfile}/attack-volume goal the same shape as {@link GreatIzuchiCombatGoal}, not kept
- * alongside it.
+ * <p><b>The bite's active-window volume is a documented estimate, not a live capture.</b> See
+ * {@link RathianCombatGoal#BITE}'s own doc for the anchor point and why it is deliberately not this
+ * class's already-measured (but far-forward, fully-extended-neck) {@code head} hurtbox offset. The
+ * windup/active/recovery split (ticks 0-10 / 11-20 / 21-29 of the clip's 30-tick length) is
+ * similarly an estimate from the clip's overall shape, not measured timing. Both should be
+ * corrected once a live `debugCombat` capture of this clip (`BoneProbe`'s Rathian logging already
+ * switches to every tick while it plays) gives real keyframes to bake, the same way
+ * {@code AttackProfile.SCRATCH}'s path replaced Great Izuchi's own first estimate.
  */
 public class Rathian extends Monster implements GeoEntity {
 
@@ -85,20 +79,51 @@ public class Rathian extends Monster implements GeoEntity {
     public static final float BODY_WIDTH = 2.2F;
     public static final float BODY_HEIGHT = 3.6F;
 
+    /** No attack in progress. */
+    public static final byte ATTACK_NONE = 0;
+    /** Plays {@code animation.rathian.attack_charge_bite_right}. */
+    public static final byte ATTACK_BITE = 1;
+
+    private static final EntityDataAccessor<Byte> DATA_ATTACK_ID =
+            SynchedEntityData.defineId(Rathian.class, EntityDataSerializers.BYTE);
+    /** Same rationale as {@link GreatIzuchi}'s copy: game time, not tick count, so a client that
+     * starts tracking mid-fight still gets a meaningful {@link #getAttackAge()}. */
+    private static final EntityDataAccessor<Long> DATA_ATTACK_START =
+            SynchedEntityData.defineId(Rathian.class, EntityDataSerializers.LONG);
+    /** Bumped for every new action so that repeating an attack restarts its animation. */
+    private static final EntityDataAccessor<Integer> DATA_ACTION_SEQ =
+            SynchedEntityData.defineId(Rathian.class, EntityDataSerializers.INT);
+
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.rathian.idle_normal");
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.rathian.walk");
     private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.rathian.run");
     private static final RawAnimation BITE = RawAnimation.begin().thenPlay("animation.rathian.attack_charge_bite_right");
     private static final RawAnimation DEATH = RawAnimation.begin().thenPlayAndHold("animation.rathian.death");
 
-    /** {@code attack_charge_bite_right} is 1.5s = 30 ticks (see the measurement-rig doc above). */
-    private static final int BITE_TICKS = 30;
-
-    private static final EntityDataAccessor<Integer> DATA_BITE_TICKS =
-            SynchedEntityData.defineId(Rathian.class, EntityDataSerializers.INT);
-
     private final AnimatableInstanceCache animCache = GeckoLibUtil.createInstanceCache(this);
     private final MonsterPart[] parts;
+
+    /** Server-only: ticks until another attack may start. Never saved, so a reload cools down. */
+    public int attackCooldown = 20;
+
+    /** Client-only: the action sequence currently being presented; see {@link GreatIzuchi}'s copy. */
+    private int presentedSeq = -1;
+
+    /** Server-only source of truth for the action sequence; see {@link GreatIzuchi}'s copy for why
+     * this isn't a read-modify-write of the synced value. */
+    private int actionSequenceCounter;
+
+    /** Same role as {@link GreatIzuchi#setCommittedBodyYaw}: held so the vanilla body-rotation
+     * control cannot undo the goal's aim mid-swing. */
+    private Float committedBodyYaw;
+
+    void setCommittedBodyYaw(Float yaw) {
+        this.committedBodyYaw = yaw;
+    }
+
+    Float getCommittedBodyYaw() {
+        return this.committedBodyYaw;
+    }
 
     /**
      * De-duplicates one damage source that enumerates several parts within a single tick, the same
@@ -191,13 +216,42 @@ public class Rathian extends Monster implements GeoEntity {
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
-        builder.define(DATA_BITE_TICKS, 0);
+        builder.define(DATA_ATTACK_ID, ATTACK_NONE);
+        builder.define(DATA_ATTACK_START, 0L);
+        builder.define(DATA_ACTION_SEQ, 0);
     }
 
-    /** Whether the cosmetic bite-clip countdown is currently running; see the class doc for what
-     * this does and, deliberately, does not yet do. */
-    public boolean isBiting() {
-        return this.entityData.get(DATA_BITE_TICKS) > 0;
+    // ---------------------------------------------------------------- action state (see GreatIzuchi's
+    // identical block for the full rationale of each piece)
+
+    public byte getAttackId() {
+        return this.entityData.get(DATA_ATTACK_ID);
+    }
+
+    public long getAttackStartTime() {
+        return this.entityData.get(DATA_ATTACK_START);
+    }
+
+    public int getActionSequence() {
+        return this.entityData.get(DATA_ACTION_SEQ);
+    }
+
+    /** Ticks elapsed in the current action, or -1 when idle. Valid on both sides. */
+    public int getAttackAge() {
+        return getAttackId() == ATTACK_NONE
+                ? -1
+                : (int) (level().getGameTime() - getAttackStartTime());
+    }
+
+    void beginAttack(byte attackId) {
+        this.actionSequenceCounter++;
+        this.entityData.set(DATA_ATTACK_ID, attackId);
+        this.entityData.set(DATA_ATTACK_START, level().getGameTime());
+        this.entityData.set(DATA_ACTION_SEQ, this.actionSequenceCounter);
+    }
+
+    void endAttack() {
+        this.entityData.set(DATA_ATTACK_ID, ATTACK_NONE);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -211,8 +265,11 @@ public class Rathian extends Monster implements GeoEntity {
 
     @Override
     protected void registerGoals() {
+        // One combat owner, same principle as Great Izuchi (section 4.3): RathianCombatGoal selects,
+        // approaches, orients and executes the attack; no other goal moves this mob toward a target
+        // or deals its damage.
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(1, new MeleeAttackGoal(this, 1.0D, true));
+        this.goalSelector.addGoal(1, new RathianCombatGoal(this));
         this.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 0.7D));
         this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 10.0F));
         this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
@@ -300,28 +357,18 @@ public class Rathian extends Monster implements GeoEntity {
      */
     @Override
     public void tick() {
+        // Same ordering as GreatIzuchi.tick(): apply the goal's committed yaw right after super.tick()
+        // (which is where vanilla's own body-rotation control would otherwise fight it), then position
+        // parts against that final rotation, exactly once.
         super.tick();
+        if (!level().isClientSide && this.committedBodyYaw != null) {
+            this.yBodyRot = this.committedBodyYaw;
+            setYRot(this.committedBodyYaw);
+        }
         positionParts();
-        if (!level().isClientSide) {
-            int ticks = this.entityData.get(DATA_BITE_TICKS);
-            if (ticks > 0) {
-                this.entityData.set(DATA_BITE_TICKS, ticks - 1);
-            }
+        if (!level().isClientSide && this.attackCooldown > 0) {
+            this.attackCooldown--;
         }
-    }
-
-    /**
-     * Starts the cosmetic bite-clip countdown; see the class doc's "Measurement rig" section. This
-     * does not change combat at all -- {@code super.doHurtTarget} still deals damage the exact same
-     * instantaneous way it already did.
-     */
-    @Override
-    public boolean doHurtTarget(Entity target) {
-        boolean result = super.doHurtTarget(target);
-        if (!level().isClientSide) {
-            this.entityData.set(DATA_BITE_TICKS, BITE_TICKS);
-        }
-        return result;
     }
 
     /**
@@ -384,7 +431,11 @@ public class Rathian extends Monster implements GeoEntity {
         if (isDeadOrDying()) {
             return state.setAndContinue(DEATH);
         }
-        if (isBiting()) {
+        if (getAttackId() != ATTACK_NONE) {
+            if (this.presentedSeq != getActionSequence()) {
+                this.presentedSeq = getActionSequence();
+                state.getController().forceAnimationReset();
+            }
             return state.setAndContinue(BITE);
         }
         if (state.isMoving()) {

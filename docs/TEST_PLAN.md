@@ -2,10 +2,10 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, currently 66 tests, all passing as of
-the pillager-targeting rollout below (full `build runGameTestServer` run, 2026-09-11) — the
-shoreline test that failed under the P5a build passed cleanly after the native-controls correction.
-Client acceptance for that Lagiacrus correction has not been rerun by a human yet.
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, currently 67 tests, all passing as of
+Rathian's new bite timeline below (full `build runGameTestServer` run, 2026-09-11) — the shoreline
+test that failed under the P5a build passed cleanly after the native-controls correction. Client
+acceptance for that Lagiacrus correction has not been rerun by a human yet.
 
 This file is updated as features land. Checked items were confirmed by the maintainer; unchecked
 items are open. When you find a problem, say what you saw and I'll fix it and update this file.
@@ -319,22 +319,32 @@ spending real time on a system that may keep needing a wider capture each round;
 multi-minute capture across a full idle cycle (or several) when polishing, rather than another
 short live-tweak loop now.
 
-**No dedicated attack volume yet, but a measurement rig for the first one landed this round.**
-`doHurtTarget` now also starts a synced, purely cosmetic countdown that plays
-`attack_charge_bite_right` (1.5s/30 ticks) and switches `BoneProbe`'s Rathian logging to every tick
-while it plays, instead of the idle sampling interval — `Chest` (the bone that clip actually
-animates, separate from `Torso`) was added to the logged bone list for it. **This changes nothing
-about combat**: damage is still the exact same instantaneous `doHurtTarget` call vanilla
-`MeleeAttackGoal` already made, unconditionally, the same tick it always did. It exists purely so
-capturing this one clip live is a single play session, not a play-session-plus-a-code-change:
+**Real attack timeline landed this round: `RathianCombatGoal`, replacing plain vanilla
+`MeleeAttackGoal`.** The reported problem was cadence, not damage: vanilla melee closes to contact
+range and deals damage the instant it touches, which read as a body-slam that only afterward played
+a bite clip, rather than a bite that actually connects. `RathianCombatGoal` is the same
+windup/active/recovery shape as `GreatIzuchiCombatGoal` (see its own doc): it stops the approach,
+plants and winds up while `attack_charge_bite_right` plays, and only evaluates a hit volume during
+the active window (ticks 11-20 of the clip's 30).
 
-- [ ] **New: with `debugCombat` on, provoke a Rathian into attacking a few times and send back
-      `logs/latest.log`** — once the `Chest`/`Neck1`/`Neck2`/`Head`/`Jaw`/`headHitbox` path is
-      measured across a strike, I'll bake it into a real `AttackProfile` and a dedicated combat
-      goal the same shape as Great Izuchi's, replacing this cosmetic-only rig.
-- [ ] **New: does the bite clip itself play at a sane moment** (roughly when the melee hit lands),
-      even though the timing isn't tuned to anything yet? Flag if it looks badly desynced from the
-      actual hit (e.g. plays well after the target's health already dropped).
+**The strike volume and phase timing are a documented estimate, not a live capture.** The
+anchor point (forward 1.60, up 1.90, a generous 2.2-wide volume) is deliberately not this class's
+already-measured `head` hurtbox offset (forward 7.30) — that's where the head sits at the end of the
+fully-extended resting neck, nowhere near where a bite needs to land against something within melee
+reach — and the windup/active/recovery split is an estimate of the clip's overall shape, not measured
+timing. Both should be corrected once a live capture (`BoneProbe`'s Rathian logging already switches
+to every tick while the clip plays) gives real keyframes to bake, the same way `AttackProfile.SCRATCH`
+replaced Great Izuchi's own first estimate.
+
+- [ ] **New: does the bite actually read as connecting** — windup (plant, no forward drift), a
+      beat, then the jaws closing on the target — rather than the previous body-slam-then-clip?
+      This is the concrete problem this round's change targets; flag if it still reads wrong.
+- [ ] **New: does the strike land at a sane distance** (not way too close, not whiffing at anything
+      past ~2-3 blocks)? The exact reach is a guess pending a live capture — say roughly how far off
+      it feels (too short/too long/about right) so the next pass has a real number to aim for.
+- [ ] **New: with `debugCombat` on, provoke a Rathian into biting a few times and send back
+      `logs/latest.log`** — once a real path is measured across a strike, it replaces the estimated
+      anchor point above with baked keyframes, the same way Great Izuchi's claw/tail paths were built.
 
 - [ ] Renders, spawns via egg, idles/walks/runs with correct animation
 - [ ] **F3+B: do the boxes meet edge-to-edge with no visible gap**, and **does the tail chain read as
@@ -342,8 +352,6 @@ capturing this one clip live is a single play session, not a play-session-plus-a
       only one instant? Flag anything still off and I'll keep adjusting that specific part
 - [ ] Turning away no longer makes the head/neck suddenly vanish while still on screen
 - [ ] Hitting a hurtbox (try the head, then the tail tip) reduces health
-- [ ] Attacks and damages a nearby player using ordinary melee (no special swing yet — this is
-      expected for now, not a bug)
 - [x] **New: targets pillagers on sight, the same as Great Izuchi** — GameTest-covered
       (`rathianTargetsAPillagerOnSight`), also worth a quick look live if a raid/patrol is nearby
 - [ ] Death removes the whole creature and all nine parts
