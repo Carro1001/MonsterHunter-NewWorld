@@ -319,9 +319,19 @@ renders bare feet.
 `entity/IzuchiHarassGoal.java` replaced small Izuchi's vanilla `MeleeAttackGoal`: bounded
 circle → dart → retreat, ordinary `doHurtTarget` damage, no new clip and no attack timeline. At most
 one Izuchi within 12 blocks darts at a time, enforced by reading `Izuchi.isDarting()` off the living
-neighbours — the liveness filter is what stops a member killed mid-dart holding the slot forever,
-since a dead mob's goals never tick again. Every field it owns is transient; a reload starts from
-nothing. It overrides `requiresUpdateEveryTick()` for the same reason `RoarGoal` has to.
+neighbours. Every field it owns is transient; a reload starts from nothing. It overrides
+`requiresUpdateEveryTick()` for the same reason `RoarGoal` has to.
+
+Two cancellation paths that are not obvious and were both missed in the first cut:
+
+- **Peaceful difficulty is part of the goal's own precondition** (`canHarass`). Peaceful only
+  despawns hostile mobs whose `shouldDespawnInPeaceful()` agrees, and `Izuchi` deliberately returns
+  false — so without this a world switched to peaceful keeps the Izuchi, keeps its target, and keeps
+  attacking. Vanilla's `MeleeAttackGoal` had the same hole; the R1 contract is what closes it.
+- **Death clears the phase in `Izuchi.die`, not in the goal.** A dead mob never ticks a goal again
+  (see the lifecycle note above), so `stop()` cannot run for a mob killed mid-dart and its state
+  would freeze for the whole corpse window. The neighbours' `isAlive()` filter is still not
+  redundant: it covers a body removed by `discard()`, where `die()` never runs at all.
 
 ### Registration and client wiring
 

@@ -182,11 +182,25 @@ public class Izuchi extends Monster implements GeoEntity {
                 : carved;
     }
 
-    /** See {@link GreatIzuchi#die}: a corpse must outlive the distance-despawn rule. */
+    /**
+     * Corpse persistence, and the one place the harassment state can still be cleared on death.
+     *
+     * <p>{@code setPersistenceRequired} is the {@link GreatIzuchi#die} reason: a corpse must outlive
+     * the distance-despawn rule. The rest is {@link IzuchiHarassGoal}'s transient state, cleared
+     * here because it cannot clear itself: vanilla stops ticking every goal the instant
+     * {@code isDeadOrDying()} is true, so a mob killed mid-dart never runs {@code stop()} and would
+     * otherwise sit there flagged as darting and aggressive for the whole corpse window. The
+     * neighbours' pack scan already ignores the dead, but that hides the symptom rather than
+     * clearing the state -- and it is the scan's real job to cover the case this hook cannot,
+     * a body removed by {@code discard()} without {@code die()} ever running.
+     */
     @Override
     public void die(DamageSource source) {
         super.die(source);
         setPersistenceRequired();
+        setHarassPhase(null);
+        setAggressive(false);
+        getNavigation().stop();
     }
 
     /**

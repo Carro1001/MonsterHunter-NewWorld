@@ -1,6 +1,7 @@
 package com.carro1001.mhnw.entity;
 
 import java.util.EnumSet;
+import net.minecraft.world.Difficulty;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -86,13 +87,27 @@ public class IzuchiHarassGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        LivingEntity target = this.mob.getTarget();
-        return target != null && target.isAlive() && this.mob.isAlive();
+        return canHarass(this.mob, this.mob.getTarget(), this.mob.level().getDifficulty());
     }
 
     @Override
     public boolean canContinueToUse() {
         return canUse();
+    }
+
+    /**
+     * The whole precondition, as a function of its inputs so a test can state the difficulty
+     * instead of changing the world's.
+     *
+     * <p>The peaceful clause is not redundant with vanilla's own handling. Peaceful despawns hostile
+     * mobs through {@code Mob.checkDespawn}, but only those whose {@code shouldDespawnInPeaceful()}
+     * says so, and {@link Izuchi} deliberately returns false there -- so a world switched to
+     * peaceful mid-fight keeps the Izuchi, keeps its target, and without this would keep circling
+     * and darting at it. Returning false here makes the goal stop, and {@link #stop()} is what
+     * clears the phase and the navigation.
+     */
+    public static boolean canHarass(Izuchi mob, LivingEntity target, Difficulty difficulty) {
+        return target != null && target.isAlive() && mob.isAlive() && difficulty != Difficulty.PEACEFUL;
     }
 
     @Override

@@ -2,9 +2,9 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 121 tests, all passing**
-(full `.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-12, R1 first-hunting-loop packet;
-97 before it, 85 before R0b). The earlier 69-, 75-, 85-, 86- and 97-test figures are superseded — note the R0a round's
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 123 tests, all passing**
+(full `.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-12, R1 first-hunting-loop packet
+after its PR #6 review round; 121 before that round, 97 before the packet, 85 before R0b). The earlier 69-, 75-, 85-, 86- and 97-test figures are superseded — note the R0a round's
 real observed count was 74, not the 75 this line used to claim. The shoreline test that failed under the P5a build passed
 cleanly after the native-controls correction. Client acceptance for that Lagiacrus correction has
 not been rerun by a human yet.
@@ -52,13 +52,15 @@ small-Izuchi harassment.
 ### Commands and results
 
 ```powershell
-.\gradlew.bat --no-daemon build runGameTestServer   # BUILD SUCCESSFUL, 121/121 GameTests passed
+.\gradlew.bat --no-daemon build runGameTestServer   # BUILD SUCCESSFUL, 123/123 GameTests passed
 .\gradlew.bat --no-daemon runServer                 # Done (4.668s), no errors
 git --no-pager diff --check                         # clean
 ```
 
-Baseline before any edit, on this machine, this session: **97/97, BUILD SUCCESSFUL**. After:
-**121/121**. The 24 new tests are the `r1*` block at the end of `MHNWGameTests.java`.
+Baseline before any edit, on this machine, this session: **97/97, BUILD SUCCESSFUL**. After the
+packet: **121/121**. After the PR #6 review round: **123/123**, and the suite was run **eight
+consecutive times with no failure** to answer that round's reproducibility finding. The 26 new tests
+are the `r1*` block at the end of `MHNWGameTests.java`.
 
 The dedicated-server boot was run against a throwaway game directory (`run/serversmoke`, deleted
 afterwards) rather than `run/`, so the maintainer's own `run/world` was never opened. That required
@@ -115,6 +117,51 @@ The fourth mutation is why `r1IzuchiUnreachableDartEndsOnItsDeadline` exists as 
 deadline is never the thing that stops it, and that test passed with the deadline mutated. Sealing
 the target in stone is what makes the deadline the only way out.
 
+### PR #6 adversarial review round (same day)
+
+Three findings, all three accepted and fixed. Suite went 121 → 123.
+
+**1. The unreachable-dart test was nondeterministic.** Its final assertion sampled `isDarting()` at
+the 500-tick observation boundary — an arbitrary instant in a repeating randomized loop, so a
+perfectly legal dart that happened to start just before the window closed failed the test. It did,
+once, in review: one clean run failed with "the Izuchi was still holding the dart slot at the end of
+the run" and an immediate rerun passed. Rewritten to count darts that were observed to *end*, and
+to assert only on those: `completedDarts > 0` and `longestCompletedDart <= 30 + tolerance`. The
+end-of-run sample is gone. The reproducibility claim was re-earned by running the full suite **eight
+consecutive times, 123/123 every time**. The original failure was not itself reproduced on demand —
+the diagnosis is from the assertion's shape, not from a caught repeat.
+
+**2. Peaceful difficulty did not cancel the harassment.** Real, and the packet asks for it
+explicitly. Peaceful discards hostile mobs through `Mob.checkDespawn` only when their
+`shouldDespawnInPeaceful()` agrees, and `Izuchi` deliberately returns false — so a world switched to
+peaceful mid-fight kept both the Izuchi and its target, and the goal, which only checked target and
+liveness, kept circling and darting. `IzuchiHarassGoal.canUse()` now routes through
+`canHarass(mob, target, difficulty)`, which refuses peaceful. Note this was equally true of the
+vanilla `MeleeAttackGoal` it replaced; the packet's contract for the new goal is what puts it in
+scope.
+
+The test passes the difficulty in rather than setting it on the level. Difficulty is global and the
+GameTest world is shared with every test running beside it — flipping it to peaceful even for a few
+ticks discards other tests' vanilla hostile mobs (`r1BoneArmorFullSetAddsOneKnockbackModifier` alone
+would lose its zombie), which is exactly the cross-test interference the arena fixture note below
+already warns about. So `r1IzuchiHarassmentStopsOnPeaceful` asserts the rule against the real
+precondition and that `canUse()` consults the live difficulty. **A genuine in-world peaceful switch
+is a named human check** (below).
+
+**3. Death left the harassment phase and aggressive flag stale for the whole corpse window.** Also
+real, and it is the case an in-goal guard structurally cannot cover: vanilla stops ticking every
+goal the instant `isDeadOrDying()` is true, so `stop()` never runs for a mob killed mid-dart.
+`Izuchi.die` now clears the phase, the aggressive flag and the navigation. The neighbours' pack scan
+keeps its `isAlive()` filter — that is not redundant, it covers the case `die()` cannot: a body
+removed by `discard()` without `die()` ever running.
+
+`r1IzuchiDeathClearsTheHarassmentState` waits for a dart to be genuinely in flight before delivering
+the kill, so a passing run cannot be one where there was nothing to clear.
+
+The review found no dependency or abstraction bloat, and nothing to change about the carving
+composition, the `deathTime` reuse, the iron material reuse, the deterministic reward table or the
+neighbour scan.
+
 ### Gates: what is closed and what is not
 
 | Gate | Status |
@@ -126,7 +173,7 @@ the target in stone is what makes the deadline the only way out.
 | R1-05 persistence/expiry | **Closed in memory** — `r1ParticipationSurvivesALiveRoundTrip`, `r1CorpseRoundTripKeepsCountsAndRemainingTicks`. A real disk restart is still a human gate (below) |
 | R1-06 corpse lifecycle | **Closed** — `r1CorpseWindowIsTwelveThousandTicks`, `r1CorpsesStayInertThenExpireExactlyOnce`, `r1CorpseGrantsExperienceOnlyOnce` |
 | R1-07 armor | **Closed for stats and the modifier** — `r1BoneArmorMatchesIronStats`, `r1BoneArmorFullSetAddsOneKnockbackModifier`. Appearance is a human gate |
-| R1-08 Izuchi harassment | **Closed** — the four `r1Izuchi*` tests |
+| R1-08 Izuchi harassment | **Closed** — six `r1Izuchi*` tests, including the peaceful precondition and death-clears-state cases added in the review round; the live peaceful transition is a human check |
 | R1-09 regression | **Closed** — all 97 prior tests still pass; no measured attack, presentation clock, habitat mapping, spawn guard, endemic effect or roster change |
 
 ### What still needs a human — R1
@@ -152,6 +199,11 @@ the target in stone is what makes the deadline the only way out.
       in-memory NBT round trip and is **not** a substitute for this.
 - [ ] **Carving feel.** Is shift + right-click on a large body discoverable? Do the action-bar
       messages read right and not spam?
+- [ ] **A real in-world peaceful switch.** With an Izuchi actively harassing, run
+      `/difficulty peaceful` and check it stops circling and darting and deals no further damage,
+      then `/difficulty normal` and check it resumes. `r1IzuchiHarassmentStopsOnPeaceful` proves the
+      precondition, not the live transition — the transition cannot be tested headlessly without
+      changing global difficulty underneath every concurrently running test.
 
 ## R0b — client animation lifecycle (2026-09-12)
 

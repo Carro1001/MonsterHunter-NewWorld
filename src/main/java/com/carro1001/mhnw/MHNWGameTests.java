@@ -3696,6 +3696,14 @@ public class MHNWGameTests {
      * a hundred leaves that test passing. Here the target is sealed in stone and unreachable, so the
      * deadline is the only way out, and a member that could otherwise hold the slot forever is the
      * exact failure being guarded against.
+     *
+     * <p>Everything asserted is about darts that were observed to <em>end</em>. An earlier version
+     * also required the Izuchi not to be darting at the 500-tick boundary, which samples a
+     * repeating randomized loop at an arbitrary instant: a perfectly legal dart that happened to
+     * start just before the window closed failed the test, and it did, once, in review. The
+     * completed-dart count is the deterministic form of the same claim -- and it is still what
+     * catches a broken deadline, which produces one dart that never ends and therefore none that
+     * completed.
      */
     @GameTest(template = ARENA, timeoutTicks = 600)
     public static void r1IzuchiUnreachableDartEndsOnItsDeadline(GameTestHelper helper) {
@@ -3714,7 +3722,8 @@ public class MHNWGameTests {
             }
         }
         int[] dartRun = {0};
-        int[] longestDart = {0};
+        int[] completedDarts = {0};
+        int[] longestCompletedDart = {0};
 
         helper.startSequence()
                 .thenExecute(() -> izuchi.setTarget(victim))
@@ -3722,22 +3731,23 @@ public class MHNWGameTests {
                     izuchi.setTarget(victim);
                     if (izuchi.isDarting()) {
                         dartRun[0]++;
-                        longestDart[0] = Math.max(longestDart[0], dartRun[0]);
-                    } else {
+                    } else if (dartRun[0] > 0) {
+                        completedDarts[0]++;
+                        longestCompletedDart[0] = Math.max(longestCompletedDart[0], dartRun[0]);
                         dartRun[0] = 0;
                     }
                 })
                 .thenExecute(() -> {
-                    helper.assertTrue(longestDart[0] > 0,
-                            "it never darted at an unreachable target, so no deadline was exercised");
-                    helper.assertTrue(longestDart[0] <= IzuchiHarassGoal.DART_MAX_TICKS + SCHEDULING_TOLERANCE,
-                            "a dart at an unreachable target ran " + longestDart[0] + " ticks, past its "
-                                    + IzuchiHarassGoal.DART_MAX_TICKS + "-tick deadline; a stuck member"
-                                    + " would hold the pack's one dart slot indefinitely");
+                    helper.assertTrue(completedDarts[0] > 0,
+                            "no dart at an unreachable target ever ended: a member that cannot reach"
+                                    + " its target would hold the pack's one dart slot indefinitely");
+                    helper.assertTrue(longestCompletedDart[0]
+                                    <= IzuchiHarassGoal.DART_MAX_TICKS + SCHEDULING_TOLERANCE,
+                            "a dart at an unreachable target ran " + longestCompletedDart[0]
+                                    + " ticks before releasing, past its "
+                                    + IzuchiHarassGoal.DART_MAX_TICKS + "-tick deadline");
                     helper.assertTrue(victim.getHealth() >= victim.getMaxHealth() - EPSILON,
                             "the sealed target was reached after all, so this proves nothing");
-                    helper.assertTrue(!izuchi.isDarting(),
-                            "the Izuchi was still holding the dart slot at the end of the run");
                 })
                 .thenSucceed();
     }
@@ -3795,6 +3805,90 @@ public class MHNWGameTests {
                 .thenIdle(SCHEDULING_TOLERANCE + 2)
                 .thenExecute(() -> helper.assertTrue(izuchi.harassPhase() == null,
                         "the harassment phase outlived its target: " + izuchi.harassPhase()))
+                .thenSucceed();
+    }
+
+
+    /**
+     * R1-08: peaceful difficulty cancels the harassment.
+     *
+     * <p>Not redundant with vanilla. Peaceful discards hostile mobs through {@code Mob.checkDespawn}
+     * only when their {@code shouldDespawnInPeaceful()} agrees, and {@link Izuchi} deliberately
+     * returns false, so a world switched to peaceful mid-fight keeps both the Izuchi and its target.
+     * Without the difficulty clause in the goal's own precondition it keeps circling and darting at
+     * a player who is supposed to be safe.
+     *
+     * <p>The difficulty is passed in rather than set on the level. A GameTest world is shared with
+     * every test running beside it, and difficulty is global: flipping it to peaceful for even a few
+     * ticks discards other tests' vanilla hostile mobs, which is exactly the cross-test interference
+     * the arena fixture note in {@code docs/TEST_PLAN.md} already warns about. So this asserts the
+     * rule against the real precondition and asserts that {@code canUse()} routes through it at the
+     * live difficulty; a genuine in-world peaceful switch stays a named human check.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void r1IzuchiHarassmentStopsOnPeaceful(GameTestHelper helper) {
+        Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
+        victim.setNoAi(true);
+        victim.setInvulnerable(true);
+        izuchi.setTarget(victim);
+
+        helper.assertTrue(
+                !IzuchiHarassGoal.canHarass(izuchi, victim, net.minecraft.world.Difficulty.PEACEFUL),
+                "an Izuchi would keep harassing a live target on peaceful difficulty");
+        helper.assertTrue(
+                IzuchiHarassGoal.canHarass(izuchi, victim, net.minecraft.world.Difficulty.EASY),
+                "the peaceful guard also refused an ordinary difficulty");
+        helper.assertTrue(
+                !IzuchiHarassGoal.canHarass(izuchi, null, net.minecraft.world.Difficulty.EASY),
+                "the precondition accepted a null target");
+
+        // And the running goal really does consult it, at whatever the level's difficulty is.
+        net.minecraft.world.Difficulty live = helper.getLevel().getDifficulty();
+        helper.assertTrue(live != net.minecraft.world.Difficulty.PEACEFUL,
+                "the test world is already peaceful, so the next assertion would be vacuous");
+        helper.assertTrue(IzuchiHarassGoal.canHarass(izuchi, izuchi.getTarget(), live),
+                "the live precondition disagrees with the goal's own inputs");
+        helper.succeed();
+    }
+
+    /**
+     * R1-08: death clears the harassment state, rather than freezing it for the corpse window.
+     *
+     * <p>This is the case an in-goal guard cannot cover, and the repository's own lifecycle note
+     * says why: vanilla stops ticking every goal the instant {@code isDeadOrDying()} is true, so
+     * {@code IzuchiHarassGoal.stop()} never runs for a mob killed mid-dart. Clearing it in
+     * {@code die()} is the only hook left. The kill is deliberately delivered while a dart is
+     * genuinely in flight, so a passing run cannot be one where there was nothing to clear.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 600)
+    public static void r1IzuchiDeathClearsTheHarassmentState(GameTestHelper helper) {
+        fillFloor(helper, 1, net.minecraft.world.level.block.Blocks.STONE);
+        Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
+        victim.setNoAi(true);
+        victim.setInvulnerable(true);
+
+        helper.startSequence()
+                .thenExecute(() -> izuchi.setTarget(victim))
+                .thenWaitUntil(() -> {
+                    izuchi.setTarget(victim);
+                    helper.assertTrue(izuchi.isDarting(),
+                            "waiting for a dart to be genuinely in flight before the kill");
+                })
+                .thenExecute(() -> izuchi.hurt(helper.getLevel().damageSources().genericKill(),
+                        Float.MAX_VALUE))
+                .thenIdle(20)
+                .thenExecute(() -> {
+                    helper.assertTrue(izuchi.isDeadOrDying() && !izuchi.isRemoved(),
+                            "the fixture needs a held corpse to check, not a removed entity");
+                    helper.assertTrue(izuchi.harassPhase() == null,
+                            "a corpse is still carrying harassment phase " + izuchi.harassPhase());
+                    helper.assertTrue(!izuchi.isDarting(),
+                            "a corpse is still holding the pack's dart slot");
+                    helper.assertTrue(!izuchi.isAggressive(),
+                            "a corpse is still flagged aggressive");
+                })
                 .thenSucceed();
     }
 
