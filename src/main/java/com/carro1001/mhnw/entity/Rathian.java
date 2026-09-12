@@ -65,7 +65,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * something reachable in its last third) and why that moved both the strike point and the
  * active window it had originally been guessed at.
  */
-public class Rathian extends Monster implements GeoEntity {
+public class Rathian extends Monster implements GeoEntity, Roarable {
 
     // Provisional balance constants, not yet tuned.
     public static final double MAX_HEALTH = 90.0D;
@@ -79,7 +79,9 @@ public class Rathian extends Monster implements GeoEntity {
     /** No attack in progress. */
     public static final byte ATTACK_NONE = 0;
     /** Plays {@code animation.rathian.attack_charge_bite_right}. */
-    public static final byte ATTACK_BITE = 1;
+    public static final byte ATTACK_BITE_RIGHT = 1;
+    /** Plays {@code animation.rathian.attack_charge_bite_left}; see {@link RathianCombatGoal#BITE_LEFT}. */
+    public static final byte ATTACK_BITE_LEFT = 2;
 
     private static final EntityDataAccessor<Byte> DATA_ATTACK_ID =
             SynchedEntityData.defineId(Rathian.class, EntityDataSerializers.BYTE);
@@ -91,10 +93,17 @@ public class Rathian extends Monster implements GeoEntity {
     private static final EntityDataAccessor<Integer> DATA_ACTION_SEQ =
             SynchedEntityData.defineId(Rathian.class, EntityDataSerializers.INT);
 
+    private static final EntityDataAccessor<Integer> DATA_ROAR_TICKS =
+            SynchedEntityData.defineId(Rathian.class, EntityDataSerializers.INT);
+    /** {@code animation.rathian.roar} is 5s; see {@code docs/ANIMATION_MANIFEST.json}. */
+    private static final int ROAR_TICKS = 100;
+
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.rathian.idle_normal");
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.rathian.walk");
     private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.rathian.run");
-    private static final RawAnimation BITE = RawAnimation.begin().thenPlay("animation.rathian.attack_charge_bite_right");
+    private static final RawAnimation BITE_RIGHT = RawAnimation.begin().thenPlay("animation.rathian.attack_charge_bite_right");
+    private static final RawAnimation BITE_LEFT = RawAnimation.begin().thenPlay("animation.rathian.attack_charge_bite_left");
+    private static final RawAnimation ROAR = RawAnimation.begin().thenPlay("animation.rathian.roar");
     private static final RawAnimation DEATH = RawAnimation.begin().thenPlayAndHold("animation.rathian.death");
 
     private final AnimatableInstanceCache animCache = GeckoLibUtil.createInstanceCache(this);
@@ -216,6 +225,41 @@ public class Rathian extends Monster implements GeoEntity {
         builder.define(DATA_ATTACK_ID, ATTACK_NONE);
         builder.define(DATA_ATTACK_START, 0L);
         builder.define(DATA_ACTION_SEQ, 0);
+        builder.define(DATA_ROAR_TICKS, 0);
+    }
+
+    // ---------------------------------------------------------------- roar (Roarable)
+
+    @Override
+    public int getRoarTicks() {
+        return this.entityData.get(DATA_ROAR_TICKS);
+    }
+
+    @Override
+    public void setRoarTicks(int ticks) {
+        this.entityData.set(DATA_ROAR_TICKS, ticks);
+    }
+
+    @Override
+    public int roarDurationTicks() {
+        return ROAR_TICKS;
+    }
+
+    public boolean isRoaring() {
+        return getRoarTicks() > 0;
+    }
+
+    /** Server-only AI state, not synced (see {@link Roarable#hasRoaredThisEngagement}). */
+    private boolean roaredThisEngagement;
+
+    @Override
+    public boolean hasRoaredThisEngagement() {
+        return this.roaredThisEngagement;
+    }
+
+    @Override
+    public void setRoaredThisEngagement(boolean roared) {
+        this.roaredThisEngagement = roared;
     }
 
     // ---------------------------------------------------------------- action state (see GreatIzuchi's
@@ -266,7 +310,10 @@ public class Rathian extends Monster implements GeoEntity {
         // approaches, orients and executes the attack; no other goal moves this mob toward a target
         // or deals its damage.
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(1, new RathianCombatGoal(this));
+        // Sits above the combat goal deliberately (see RoarGoal's own doc): the opening roar must
+        // freeze the fight, not play underneath an attack goal that keeps moving/swinging.
+        this.goalSelector.addGoal(1, new RoarGoal<>(this));
+        this.goalSelector.addGoal(2, new RathianCombatGoal(this));
         this.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 0.7D));
         this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 10.0F));
         this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
@@ -428,12 +475,16 @@ public class Rathian extends Monster implements GeoEntity {
         if (isDeadOrDying()) {
             return state.setAndContinue(DEATH);
         }
-        if (getAttackId() != ATTACK_NONE) {
+        if (isRoaring()) {
+            return state.setAndContinue(ROAR);
+        }
+        byte attack = getAttackId();
+        if (attack != ATTACK_NONE) {
             if (this.presentedSeq != getActionSequence()) {
                 this.presentedSeq = getActionSequence();
                 state.getController().forceAnimationReset();
             }
-            return state.setAndContinue(BITE);
+            return state.setAndContinue(attack == ATTACK_BITE_LEFT ? BITE_LEFT : BITE_RIGHT);
         }
         if (state.isMoving()) {
             return state.setAndContinue(isAggressive() ? RUN : WALK);

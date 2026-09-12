@@ -177,6 +177,13 @@ Static datapack-style data (loot tables, spawn placement biome modifiers) lives 
 don't hand-edit files there. GeckoLib assets (`.geo.json`, `.animation.json`, textures) live under
 `src/main/resources/assets/mhnw/{geo,animations,textures}/`.
 
+`docs/ANIMATION_MANIFEST.json` is a generated inventory of every species' animation clips (name,
+length in seconds/ticks, loop mode), covering every `.animation.json` under `assets/mhnw/animations/
+entity/` — including species not yet ported (their assets already exist, entity code doesn't).
+Regenerate it with `node tools/gen_animation_manifest.js` after adding or changing a species'
+animation file; don't hand-edit the JSON itself, same rule as `src/generated/`. Check it before
+asking "does this species have a clip for X" or re-deriving a clip's length by hand.
+
 ## Testing
 
 `MHNWGameTests.java` (one file, `@GameTestHolder(MHNW.MOD_ID)`) is the entire automated suite, run

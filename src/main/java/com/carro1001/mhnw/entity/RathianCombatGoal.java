@@ -16,12 +16,12 @@ import java.util.EnumSet;
 import java.util.List;
 
 /**
- * Rathian's combat owner: approach, orientation, and the {@code attack_charge_bite_right} timeline
- * -- the same windup/active/recovery shape as {@link GreatIzuchiCombatGoal}, and for the same
- * reason. Reported problem this replaced: plain vanilla {@code MeleeAttackGoal} closes to contact
- * range and deals damage the instant it touches, which reads as a body-slam that only afterward
- * plays a bite clip, rather than a bite that actually connects. This goal stops the approach, winds
- * up while the clip plays, and only evaluates a hit volume during the active window.
+ * Rathian's combat owner: approach, orientation, and the two mirrored bite timelines -- the same
+ * windup/active/recovery shape as {@link GreatIzuchiCombatGoal}, and for the same reason. Reported
+ * problem this replaced: plain vanilla {@code MeleeAttackGoal} closes to contact range and deals
+ * damage the instant it touches, which reads as a body-slam that only afterward plays a bite clip,
+ * rather than a bite that actually connects. This goal stops the approach, winds up while the clip
+ * plays, and only evaluates a hit volume during the active window.
  *
  * <p>Duplicated from {@link GreatIzuchiCombatGoal} rather than shared through a generalized base:
  * this is the second real attack-timeline implementation in the codebase, which is exactly the
@@ -29,15 +29,12 @@ import java.util.List;
  * would mean restructuring Great Izuchi's already-shipped, player-tested combat at the same time as
  * standing up Rathian's first cut, with no way to interactively verify the result beyond GameTests.
  * Revisit once this one has also seen live play.
- *
- * <p>{@link #BITE} is a single, hand-estimated profile, not a live bone-probe capture -- see
- * {@link Rathian}'s own class doc for exactly what is and is not measured about it yet.
  */
 public class RathianCombatGoal extends Goal {
 
     /**
-     * The one attack this species owns for real so far, now with a real measured path baked from a
-     * live capture (see {@code docs/TEST_PLAN.md}) instead of the round-one hand-estimate.
+     * A real path baked from a live capture (see {@code docs/TEST_PLAN.md}), not the round-one
+     * hand-estimate it replaced.
      *
      * <p>Bucketing every {@code Jaw}-bone sample from that capture by its position in the clip
      * showed the earlier guess was wrong on both counts it was estimated: the jaw does not dip down
@@ -53,13 +50,34 @@ public class RathianCombatGoal extends Goal {
      * (forward 4.26-5.52, padded by the volume's own half-width); previously this fired from as
      * close as touching distance, which is well short of where this path lands.
      */
-    public static final AttackProfile BITE = new AttackProfile(
-            Rathian.ATTACK_BITE,
+    public static final AttackProfile BITE_RIGHT = new AttackProfile(
+            Rathian.ATTACK_BITE_RIGHT,
             18, 19, 28, 29,
             25, 1, 1.8D, Rathian.ATTACK_DAMAGE, 0.0F, 0.05D,
             2.0D, 6.0D,
             new double[][][] {{
                     // age    left      up   forward
+                    {19, 0.00D, 4.48D, 5.52D},
+                    {22, 0.00D, 2.51D, 5.48D},
+                    {25, 0.00D, 1.38D, 4.26D},
+                    {28, 0.00D, 0.91D, 4.37D},
+            }});
+
+    /**
+     * {@code attack_charge_bite_left} mirrored from {@link #BITE_RIGHT}'s own measured path, not a
+     * separate capture: {@code left} was already 0 throughout the right bite's real data (any real
+     * per-side asymmetry was smaller than the aiming noise that data itself showed), and a left/right
+     * pair of clips authored as a mirror of one another is the ordinary case, not an assumption
+     * unique to this pair. If a live capture of this specific clip ever shows it isn't a clean
+     * mirror, replace this with its own measured path the same way {@link #BITE_RIGHT} replaced its
+     * own first estimate -- don't just nudge this one by eye.
+     */
+    public static final AttackProfile BITE_LEFT = new AttackProfile(
+            Rathian.ATTACK_BITE_LEFT,
+            BITE_RIGHT.windupEnd(), BITE_RIGHT.activeStart(), BITE_RIGHT.activeEnd(), BITE_RIGHT.actionEnd(),
+            BITE_RIGHT.cooldown(), BITE_RIGHT.strikes(), BITE_RIGHT.volumeSize(), BITE_RIGHT.damage(),
+            BITE_RIGHT.aimOffsetDeg(), BITE_RIGHT.lungeSpeed(), BITE_RIGHT.minRange(), BITE_RIGHT.maxRange(),
+            new double[][][] {{
                     {19, 0.00D, 4.48D, 5.52D},
                     {22, 0.00D, 2.51D, 5.48D},
                     {25, 0.00D, 1.38D, 4.26D},
@@ -73,9 +91,11 @@ public class RathianCombatGoal extends Goal {
     private static final double WINDUP_DAMPING = 0.35D;
     private static final int LUNGE_RAMP_TICKS = 6;
 
-    /** Every attack this species can choose from. One entry today; {@link #chooseAttack} is already
-     * shaped to add more (tailwhip, most likely) without a rewrite. */
-    private static final AttackProfile[] ALL = {BITE};
+    /** Every attack this species can choose from. {@link #chooseAttack} discourages repeating
+     * whichever was used last, so a fight alternates bite angles rather than always picking the
+     * same one -- distance-influenced, never guaranteed, the same shape as
+     * {@link GreatIzuchiCombatGoal}'s selection. */
+    private static final AttackProfile[] ALL = {BITE_RIGHT, BITE_LEFT};
 
     private final Rathian monster;
 
@@ -177,7 +197,7 @@ public class RathianCombatGoal extends Goal {
         // Stays at whatever distance an attack can actually reach from, rather than closing to
         // touching range and then reaching backward for the bite: only approaches while genuinely
         // too far for anything, and only up to the point that changes.
-        if (distance > BITE.maxRange()) {
+        if (distance > furthestRange()) {
             if (--this.repathCooldown <= 0) {
                 this.repathCooldown = REPATH_INTERVAL;
                 if (!this.monster.getNavigation().moveTo(target, 1.0D)) {
@@ -190,12 +210,21 @@ public class RathianCombatGoal extends Goal {
         this.monster.getNavigation().stop();
     }
 
+    /** The furthest any candidate attack can reach from, so the approach logic stops once
+     * something is in range rather than assuming one specific profile's own maxRange. */
+    private static double furthestRange() {
+        double max = 0.0D;
+        for (AttackProfile profile : ALL) {
+            max = Math.max(max, profile.maxRange());
+        }
+        return max;
+    }
+
     /**
-     * Picks one attack. With a single candidate this just checks range, but the shape (filter by
-     * range, discourage repeating the last one, break remaining ties randomly) is
-     * {@link GreatIzuchiCombatGoal#chooseAttack}'s, so distance can influence which attack gets
-     * picked once a second one exists without ever guaranteeing the same choice at the same
-     * distance every time -- the actual ask, not simulated for a species that doesn't need it yet.
+     * Picks one attack: filters candidates by range, discourages repeating the last one, breaks
+     * remaining ties randomly -- the same shape as {@link GreatIzuchiCombatGoal#chooseAttack}, so
+     * distance can influence which bite angle gets picked without ever guaranteeing the same choice
+     * at the same distance every time.
      */
     private AttackProfile chooseAttack(double distance) {
         List<AttackProfile> candidates = new ArrayList<>();
@@ -312,7 +341,7 @@ public class RathianCombatGoal extends Goal {
      * {@link AttackProfile#byId} but scoped to this species' own {@link #ALL} so a future id never
      * collides with Great Izuchi's identically-numbered ids in that shared lookup. Public so the
      * developer overlay can look up the active profile's window generically instead of hardcoding
-     * {@link #BITE}, the same way it already does for Great Izuchi via {@link AttackProfile#byId}. */
+     * one attack, the same way it already does for Great Izuchi via {@link AttackProfile#byId}. */
     public static AttackProfile byId(byte id) {
         for (AttackProfile profile : ALL) {
             if (profile.id() == id) {

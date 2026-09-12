@@ -1,0 +1,528 @@
+{
+  "aptonoth": {
+    "walk": {
+      "lengthSeconds": 2,
+      "lengthTicks": 40,
+      "loop": true
+    },
+    "run": {
+      "lengthSeconds": 1,
+      "lengthTicks": 20,
+      "loop": true
+    },
+    "idle": {
+      "lengthSeconds": 2,
+      "lengthTicks": 40,
+      "loop": true
+    },
+    "eat": {
+      "lengthSeconds": 2,
+      "lengthTicks": 40,
+      "loop": false
+    },
+    "attack": {
+      "lengthSeconds": 1,
+      "lengthTicks": 20,
+      "loop": false
+    },
+    "death": {
+      "lengthSeconds": 1,
+      "lengthTicks": 20,
+      "loop": false
+    },
+    "dead": {
+      "lengthSeconds": 0.25,
+      "lengthTicks": 5,
+      "loop": true
+    }
+  },
+  "blango": {
+    "new": {
+      "lengthSeconds": null,
+      "lengthTicks": null,
+      "loop": true
+    }
+  },
+  "blangonga": {
+    "new": {
+      "lengthSeconds": null,
+      "lengthTicks": null,
+      "loop": true
+    }
+  },
+  "bone_armor": {
+    "new": {
+      "lengthSeconds": null,
+      "lengthTicks": null,
+      "loop": "hold_on_last_frame"
+    }
+  },
+  "deviljho": {
+    "animation.deviljoe.new": {
+      "lengthSeconds": null,
+      "lengthTicks": null,
+      "loop": true
+    }
+  },
+  "flashbug": {
+    "animation.flashfly.fly": {
+      "lengthSeconds": 0.54167,
+      "lengthTicks": 11,
+      "loop": false
+    },
+    "fly": {
+      "lengthSeconds": 2,
+      "lengthTicks": 40,
+      "loop": true
+    },
+    "idle": {
+      "lengthSeconds": 1,
+      "lengthTicks": 20,
+      "loop": true
+    }
+  },
+  "great_izuchi": {
+    "pose": {
+      "lengthSeconds": null,
+      "lengthTicks": null,
+      "loop": true
+    },
+    "idle": {
+      "lengthSeconds": 8,
+      "lengthTicks": 160,
+      "loop": true
+    },
+    "sleep": {
+      "lengthSeconds": 8,
+      "lengthTicks": 160,
+      "loop": true
+    },
+    "walk": {
+      "lengthSeconds": 2,
+      "lengthTicks": 40,
+      "loop": true
+    },
+    "run": {
+      "lengthSeconds": 1,
+      "lengthTicks": 20,
+      "loop": true
+    },
+    "roar": {
+      "lengthSeconds": 3.5417,
+      "lengthTicks": 71,
+      "loop": false
+    },
+    "rally": {
+      "lengthSeconds": 3,
+      "lengthTicks": 60,
+      "loop": false
+    },
+    "attack_scratch": {
+      "lengthSeconds": 3.25,
+      "lengthTicks": 65,
+      "loop": false
+    },
+    "attack_tailswipe": {
+      "lengthSeconds": 2.375,
+      "lengthTicks": 48,
+      "loop": false
+    },
+    "attack_tailslam": {
+      "lengthSeconds": 4.375,
+      "lengthTicks": 88,
+      "loop": false
+    },
+    "death": {
+      "lengthSeconds": 1.875,
+      "lengthTicks": 38,
+      "loop": "hold_on_last_frame"
+    }
+  },
+  "izuchi": {
+    "idle": {
+      "lengthSeconds": 8,
+      "lengthTicks": 160,
+      "loop": true
+    },
+    "sleep": {
+      "lengthSeconds": 8,
+      "lengthTicks": 160,
+      "loop": true
+    },
+    "walk": {
+      "lengthSeconds": 1,
+      "lengthTicks": 20,
+      "loop": true
+    },
+    "run": {
+      "lengthSeconds": 0.5,
+      "lengthTicks": 10,
+      "loop": true
+    }
+  },
+  "lagiacrus": {
+    "roar": {
+      "lengthSeconds": 4.68,
+      "lengthTicks": 94,
+      "loop": false
+    },
+    "idle": {
+      "lengthSeconds": 8,
+      "lengthTicks": 160,
+      "loop": true
+    },
+    "walk": {
+      "lengthSeconds": 3,
+      "lengthTicks": 60,
+      "loop": true
+    },
+    "swim_idle": {
+      "lengthSeconds": 12,
+      "lengthTicks": 240,
+      "loop": true
+    },
+    "swim": {
+      "lengthSeconds": 6,
+      "lengthTicks": 120,
+      "loop": true
+    },
+    "run": {
+      "lengthSeconds": 1,
+      "lengthTicks": 20,
+      "loop": true
+    },
+    "swim_fast": {
+      "lengthSeconds": 6,
+      "lengthTicks": 120,
+      "loop": true
+    }
+  },
+  "rathalos": {
+    "idle_normal": {
+      "lengthSeconds": 8,
+      "lengthTicks": 160,
+      "loop": true
+    },
+    "idle_aggro": {
+      "lengthSeconds": 8,
+      "lengthTicks": 160,
+      "loop": true
+    },
+    "idle_lookaround": {
+      "lengthSeconds": 8,
+      "lengthTicks": 160,
+      "loop": "hold_on_last_frame"
+    },
+    "sleep": {
+      "lengthSeconds": 4,
+      "lengthTicks": 80,
+      "loop": true
+    },
+    "walk_normal": {
+      "lengthSeconds": 2,
+      "lengthTicks": 40,
+      "loop": true
+    },
+    "walk_aggro": {
+      "lengthSeconds": 1,
+      "lengthTicks": 20,
+      "loop": true
+    },
+    "roar": {
+      "lengthSeconds": 5,
+      "lengthTicks": 100,
+      "loop": "hold_on_last_frame"
+    },
+    "takeoff": {
+      "lengthSeconds": 1.5,
+      "lengthTicks": 30,
+      "loop": "hold_on_last_frame"
+    },
+    "landing": {
+      "lengthSeconds": 1.5,
+      "lengthTicks": 30,
+      "loop": "hold_on_last_frame"
+    },
+    "fly": {
+      "lengthSeconds": 6,
+      "lengthTicks": 120,
+      "loop": true
+    },
+    "fly_fast": {
+      "lengthSeconds": 6,
+      "lengthTicks": 120,
+      "loop": true
+    },
+    "fly_dive": {
+      "lengthSeconds": 6,
+      "lengthTicks": 120,
+      "loop": true
+    },
+    "hover": {
+      "lengthSeconds": 6,
+      "lengthTicks": 120,
+      "loop": true
+    },
+    "fly_roar": {
+      "lengthSeconds": 5,
+      "lengthTicks": 100,
+      "loop": "hold_on_last_frame"
+    },
+    "fly_turn_left": {
+      "lengthSeconds": 6,
+      "lengthTicks": 120,
+      "loop": true
+    },
+    "fly_turn_right": {
+      "lengthSeconds": 6,
+      "lengthTicks": 120,
+      "loop": true
+    },
+    "attack_fireball_blend": {
+      "lengthSeconds": 2,
+      "lengthTicks": 40,
+      "loop": false
+    },
+    "attack_air_fireball": {
+      "lengthSeconds": 2.0833,
+      "lengthTicks": 42,
+      "loop": "hold_on_last_frame"
+    },
+    "attack_triple_fireball": {
+      "lengthSeconds": 5,
+      "lengthTicks": 100,
+      "loop": "hold_on_last_frame"
+    },
+    "attack_fireball_ground": {
+      "lengthSeconds": 3.5,
+      "lengthTicks": 70,
+      "loop": "hold_on_last_frame"
+    },
+    "attack_flamebreath": {
+      "lengthSeconds": 2,
+      "lengthTicks": 40,
+      "loop": "hold_on_last_frame"
+    },
+    "attack_backhop": {
+      "lengthSeconds": 1.5,
+      "lengthTicks": 30,
+      "loop": "hold_on_last_frame"
+    },
+    "attack_claw_strike": {
+      "lengthSeconds": 4,
+      "lengthTicks": 80,
+      "loop": "hold_on_last_frame"
+    },
+    "attack_claw_scratch": {
+      "lengthSeconds": 4,
+      "lengthTicks": 80,
+      "loop": true
+    },
+    "attack_bite": {
+      "lengthSeconds": 2.25,
+      "lengthTicks": 45,
+      "loop": "hold_on_last_frame"
+    },
+    "attack_tailwhip": {
+      "lengthSeconds": 3,
+      "lengthTicks": 60,
+      "loop": "hold_on_last_frame"
+    },
+    "attack_airsweep": {
+      "lengthSeconds": 3,
+      "lengthTicks": 60,
+      "loop": true
+    },
+    "death": {
+      "lengthSeconds": 2.5,
+      "lengthTicks": 50,
+      "loop": "hold_on_last_frame"
+    },
+    "back": {
+      "lengthSeconds": 5,
+      "lengthTicks": 100,
+      "loop": "hold_on_last_frame"
+    },
+    "pose": {
+      "lengthSeconds": 10,
+      "lengthTicks": 200,
+      "loop": false
+    }
+  },
+  "rathian": {
+    "idle_normal": {
+      "lengthSeconds": 8,
+      "lengthTicks": 160,
+      "loop": true
+    },
+    "idle_aggro": {
+      "lengthSeconds": 8,
+      "lengthTicks": 160,
+      "loop": true
+    },
+    "idle_lookaround": {
+      "lengthSeconds": 8,
+      "lengthTicks": 160,
+      "loop": "hold_on_last_frame"
+    },
+    "sleep": {
+      "lengthSeconds": 4,
+      "lengthTicks": 80,
+      "loop": true
+    },
+    "walk": {
+      "lengthSeconds": 2,
+      "lengthTicks": 40,
+      "loop": true
+    },
+    "run": {
+      "lengthSeconds": 1,
+      "lengthTicks": 20,
+      "loop": true
+    },
+    "roar": {
+      "lengthSeconds": 5,
+      "lengthTicks": 100,
+      "loop": "hold_on_last_frame"
+    },
+    "takeoff": {
+      "lengthSeconds": 1.5,
+      "lengthTicks": 30,
+      "loop": "hold_on_last_frame"
+    },
+    "landing": {
+      "lengthSeconds": 1.5,
+      "lengthTicks": 30,
+      "loop": "hold_on_last_frame"
+    },
+    "fly": {
+      "lengthSeconds": 6,
+      "lengthTicks": 120,
+      "loop": true
+    },
+    "fly_fast": {
+      "lengthSeconds": 6,
+      "lengthTicks": 120,
+      "loop": true
+    },
+    "fly_dive": {
+      "lengthSeconds": 6,
+      "lengthTicks": 120,
+      "loop": true
+    },
+    "fly_hover": {
+      "lengthSeconds": 6,
+      "lengthTicks": 120,
+      "loop": true
+    },
+    "fly_roar": {
+      "lengthSeconds": 5,
+      "lengthTicks": 100,
+      "loop": "hold_on_last_frame"
+    },
+    "fly_turn_left": {
+      "lengthSeconds": 6,
+      "lengthTicks": 120,
+      "loop": true
+    },
+    "fly_turn_right": {
+      "lengthSeconds": 6,
+      "lengthTicks": 120,
+      "loop": true
+    },
+    "attack_fireball_blend": {
+      "lengthSeconds": 2,
+      "lengthTicks": 40,
+      "loop": false
+    },
+    "attack_fireball_flying": {
+      "lengthSeconds": 2,
+      "lengthTicks": 40,
+      "loop": "hold_on_last_frame"
+    },
+    "attack_fireball_ground": {
+      "lengthSeconds": 5,
+      "lengthTicks": 100,
+      "loop": "hold_on_last_frame"
+    },
+    "attack_backhop": {
+      "lengthSeconds": 1.5,
+      "lengthTicks": 30,
+      "loop": "hold_on_last_frame"
+    },
+    "attack_backflip_flying": {
+      "lengthSeconds": 2,
+      "lengthTicks": 40,
+      "loop": "hold_on_last_frame"
+    },
+    "attack_backflip_ground": {
+      "lengthSeconds": 3,
+      "lengthTicks": 60,
+      "loop": "hold_on_last_frame"
+    },
+    "attack_charge": {
+      "lengthSeconds": 0.75,
+      "lengthTicks": 15,
+      "loop": true
+    },
+    "attack_charge_bite_left": {
+      "lengthSeconds": 1.5,
+      "lengthTicks": 30,
+      "loop": "hold_on_last_frame"
+    },
+    "attack_charge_bite_right": {
+      "lengthSeconds": 1.5,
+      "lengthTicks": 30,
+      "loop": "hold_on_last_frame"
+    },
+    "attack_tailwhip": {
+      "lengthSeconds": 3,
+      "lengthTicks": 60,
+      "loop": "hold_on_last_frame"
+    },
+    "death": {
+      "lengthSeconds": 2.5,
+      "lengthTicks": 50,
+      "loop": "hold_on_last_frame"
+    },
+    "runSpeedDemo": {
+      "lengthSeconds": 8,
+      "lengthTicks": 160,
+      "loop": true
+    },
+    "flySpeedDemo": {
+      "lengthSeconds": 12,
+      "lengthTicks": 240,
+      "loop": true
+    },
+    "fly_hover_slow": {
+      "lengthSeconds": 6,
+      "lengthTicks": 120,
+      "loop": true
+    }
+  },
+  "toad": {
+    "walk": {
+      "lengthSeconds": 2,
+      "lengthTicks": 40,
+      "loop": true
+    },
+    "idle": {
+      "lengthSeconds": 2,
+      "lengthTicks": 40,
+      "loop": true
+    },
+    "fuse": {
+      "lengthSeconds": 2,
+      "lengthTicks": 40,
+      "loop": true
+    }
+  },
+  "zinogre": {
+    "new": {
+      "lengthSeconds": null,
+      "lengthTicks": null,
+      "loop": true
+    }
+  }
+}

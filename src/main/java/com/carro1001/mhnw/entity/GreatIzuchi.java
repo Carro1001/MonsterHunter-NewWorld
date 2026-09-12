@@ -72,7 +72,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * <p>Known limitations: a static local offset cannot track a tail that swings sideways during
  * locomotion, so the tail boxes approximate a swept envelope rather than the instantaneous tail.
  */
-public class GreatIzuchi extends Monster implements GeoEntity {
+public class GreatIzuchi extends Monster implements GeoEntity, Roarable {
 
     // Provisional balance constants. Tuning is a later packet; the behaviour itself is finished.
     // ponytail: 40 HP is a deliberately low testing value so a slice can be killed quickly during
@@ -118,7 +118,14 @@ public class GreatIzuchi extends Monster implements GeoEntity {
     private static final RawAnimation SCRATCH = RawAnimation.begin().thenPlay("animation.great_izuchi.attack_scratch");
     private static final RawAnimation TAIL_SWIPE = RawAnimation.begin().thenPlay("animation.great_izuchi.attack_tailswipe");
     private static final RawAnimation TAIL_SLAM = RawAnimation.begin().thenPlay("animation.great_izuchi.attack_tailslam");
+    private static final RawAnimation ROAR = RawAnimation.begin().thenPlay("animation.great_izuchi.roar");
     private static final RawAnimation DEATH = RawAnimation.begin().thenPlayAndHold("animation.great_izuchi.death");
+
+    /** {@code animation.great_izuchi.roar} is 3.5417s; see {@code docs/ANIMATION_MANIFEST.json}. */
+    private static final int ROAR_TICKS = 71;
+
+    private static final EntityDataAccessor<Integer> DATA_ROAR_TICKS =
+            SynchedEntityData.defineId(GreatIzuchi.class, EntityDataSerializers.INT);
 
     private final AnimatableInstanceCache animCache = GeckoLibUtil.createInstanceCache(this);
     private final MonsterPart[] parts;
@@ -240,7 +247,10 @@ public class GreatIzuchi extends Monster implements GeoEntity {
         // One combat owner. GreatIzuchiCombatGoal selects, approaches, orients and executes the
         // attack; no other goal moves this mob toward a target or deals its damage (section 4.3).
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(1, new GreatIzuchiCombatGoal(this));
+        // Sits above the combat goal deliberately (section on RoarGoal): the opening roar must
+        // freeze the fight, not play underneath an attack goal that keeps moving/swinging.
+        this.goalSelector.addGoal(1, new RoarGoal<>(this));
+        this.goalSelector.addGoal(2, new GreatIzuchiCombatGoal(this));
         this.goalSelector.addGoal(7, new WaterAvoidingRandomStrollGoal(this, 0.8D));
         this.goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 12.0F));
         this.goalSelector.addGoal(9, new RandomLookAroundGoal(this));
@@ -258,6 +268,41 @@ public class GreatIzuchi extends Monster implements GeoEntity {
         builder.define(DATA_ATTACK_ID, ATTACK_NONE);
         builder.define(DATA_ATTACK_START, 0L);
         builder.define(DATA_ACTION_SEQ, 0);
+        builder.define(DATA_ROAR_TICKS, 0);
+    }
+
+    // ---------------------------------------------------------------- roar (Roarable)
+
+    @Override
+    public int getRoarTicks() {
+        return this.entityData.get(DATA_ROAR_TICKS);
+    }
+
+    @Override
+    public void setRoarTicks(int ticks) {
+        this.entityData.set(DATA_ROAR_TICKS, ticks);
+    }
+
+    @Override
+    public int roarDurationTicks() {
+        return ROAR_TICKS;
+    }
+
+    public boolean isRoaring() {
+        return getRoarTicks() > 0;
+    }
+
+    /** Server-only AI state, not synced (see {@link Roarable#hasRoaredThisEngagement}). */
+    private boolean roaredThisEngagement;
+
+    @Override
+    public boolean hasRoaredThisEngagement() {
+        return this.roaredThisEngagement;
+    }
+
+    @Override
+    public void setRoaredThisEngagement(boolean roared) {
+        this.roaredThisEngagement = roared;
     }
 
     // ---------------------------------------------------------------- action state
@@ -498,6 +543,9 @@ public class GreatIzuchi extends Monster implements GeoEntity {
     private PlayState mainAnim(AnimationState<GreatIzuchi> state) {
         if (isDeadOrDying()) {
             return state.setAndContinue(DEATH);
+        }
+        if (isRoaring()) {
+            return state.setAndContinue(ROAR);
         }
         byte attack = getAttackId();
         if (attack != ATTACK_NONE) {

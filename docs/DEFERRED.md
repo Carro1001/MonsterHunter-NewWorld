@@ -7,6 +7,20 @@ Acceptance IDs refer to the matrix in `REVIVAL_HANDOFF.md` section 4.6.
 
 ## Deferred to the pre-release / survival phase
 
+### Great Izuchi — `rally` clip not wired
+**Status:** the species ships a second roar-family clip, `animation.great_izuchi.rally` (3s, distinct
+from the 3.5417s `roar` `RoarGoal` now plays on first engagement — see `docs/TEST_PLAN.md`), that
+nothing triggers yet.
+
+MHW's own rally roars are usually a monster calling in help or re-engaging with a boosted state, and
+this species is specifically a pack leader (spawns 1-4 escort Izuchi) — a natural fit, but no trigger
+condition for it has actually been specified. To close it: get an explicit design call on when this
+should fire (rallying its own escort on some cue? a second, angrier roar past a rage/health
+threshold? something else?), then wire it the same way `roar` was — a synced ticks-remaining field,
+an animation branch, and either a variant of `RoarGoal` or a small addition to it if the trigger turns
+out to be roar-shaped. Don't invent a trigger condition and ship it silently; this is exactly the kind
+of behaviour worth confirming before building, not after.
+
 ### Lagiacrus — remaining P5 after the P5a movement baseline (2026-09-11)
 **Status:** P5a implemented; maintainer reported build success and 62/63 tests passing, with the
 bidirectional shoreline test failing. The narrowed shoreline test and compilation passed after
@@ -124,18 +138,27 @@ filter-by-range/discourage-repeat/random-tiebreak shape as `GreatIzuchiCombatGoa
 direction that distance should influence but never guarantee which attack a fight uses once a second
 one exists.
 
-Still open: `attack_tailwhip` and the other clips (`attack_charge_bite_left`, the fireball clips,
-`attack_backhop`, `attack_backflip_ground/flying`) need the same live-capture treatment as `BITE`
-just got, most likely as additional entries in `RathianCombatGoal`'s `ALL` array rather than a new
-goal per clip -- the selection machinery is already shaped for that.
+**`attack_charge_bite_left` is now wired too** (`RathianCombatGoal.BITE_LEFT`), mirrored from
+`BITE_RIGHT`'s own measured path rather than a separate capture -- see `BITE_LEFT`'s own doc for why
+that's a reasonable inference (the right bite's real data already showed no consistent left/right
+bias) and what would replace it if a live capture of the left clip ever shows it isn't a clean mirror.
+Attack selection (`chooseAttack`) now has two real candidates to alternate between.
+
+Still open: `attack_tailwhip` and the other clips (`attack_charge`, the fireball clips,
+`attack_backhop`, `attack_backflip_ground/flying`) need the same live-capture treatment `BITE_RIGHT`
+got, as additional entries in `RathianCombatGoal`'s `ALL` array -- the selection machinery is already
+shaped for that, and now proven with two entries, not just one.
 
 `RathianCombatGoal` was written as its own class rather than generalizing `GreatIzuchiCombatGoal`,
 deliberately: this is the second real attack-timeline implementation now, exactly the point this
 section used to say was worth reconsidering that decision at, but doing so now would mean
 restructuring Great Izuchi's already-shipped, player-tested combat at the same time as standing up
 Rathian's first cut, with no way to interactively verify the result beyond GameTests. Revisit once
-Rathian's own timeline has also seen live play and a second Rathian attack (tailwhip, most likely)
-exists to compare against.
+Rathian's own timeline has also seen live play and a second real Rathian attack (tailwhip, most
+likely, not just the mirrored left bite) exists to compare against.
+
+**The MHW-style opening roar is wired for this species too** (shared `RoarGoal`/`Roarable`, see the
+Great Izuchi section above) -- not deferred, closed this round.
 
 The seven hurtbox *offsets* are now measured (see above), but the part *sizes* (width/height) are
 still borrowed from the archived hitbox profile nominally named for this species, which itself
@@ -173,6 +196,10 @@ the referenced bones were simply renamed (in which case a rename-back or a data 
 animation file might fully fix it) or never existed at all (in which case retargeting each clip's
 keyframes onto the real skeleton is real authoring work). Only after that is done would a
 bone-probe measurement pass make sense, the same order Great Izuchi's attacks were done in.
+
+**The MHW-style opening roar works independently of all this** (shared `RoarGoal`/`Roarable`, see
+the Great Izuchi section above) and is wired -- it's just a presentation clip, no attack-volume
+mechanics of its own, so the broken melee clips above don't block it.
 
 ## Deferred to the polishing phase
 

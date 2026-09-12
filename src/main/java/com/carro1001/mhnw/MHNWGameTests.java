@@ -87,6 +87,38 @@ public class MHNWGameTests {
         helper.succeed();
     }
 
+    /** MHW-style opening roar (RoarGoal): fires the moment a target is first acquired, and no
+     * attack may start while it's still playing -- the roar goal outranks the combat goal for
+     * exactly this reason (see RoarGoal's own doc). */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void greatIzuchiRoarsOnFirstEngagement(GameTestHelper helper) {
+        GreatIzuchi monster = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 10);
+        victim.setNoAi(true);
+
+        monster.setTarget(victim);
+
+        helper.succeedWhen(() -> {
+            helper.assertTrue(monster.isRoaring(), "never started roaring on first engagement");
+            helper.assertTrue(monster.hasRoaredThisEngagement(),
+                    "hasRoaredThisEngagement wasn't set once roaring started");
+            helper.assertTrue(monster.getAttackId() == GreatIzuchi.ATTACK_NONE,
+                    "started an attack while still supposed to be roaring");
+        });
+    }
+
+    /** The re-arm half of the same mechanic: a real stretch with no target (not a one-tick target
+     * flicker) resets {@code hasRoaredThisEngagement}, so the next fight roars again. No victim
+     * needed here -- nothing to acquire as a target is the point. */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void greatIzuchiReArmsRoarAfterARealDisengage(GameTestHelper helper) {
+        GreatIzuchi monster = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
+        monster.setRoaredThisEngagement(true); // simulate a fight that already roared and just ended
+
+        helper.succeedWhen(() -> helper.assertTrue(!monster.hasRoaredThisEngagement(),
+                "never re-armed after a real stretch with no target"));
+    }
+
     /** A03: a hit on a named part reduces the parent's health, once. */
     @GameTest(template = ARENA, timeoutTicks = 120)
     public static void partDamageReachesParent(GameTestHelper helper) {
@@ -164,6 +196,7 @@ public class MHNWGameTests {
         Cow victim = helper.spawn(EntityType.COW, 8, 2, 10);
         victim.setNoAi(true);
 
+        monster.setRoaredThisEngagement(true); // skips the intro roar; this test is not about it
         monster.setTarget(victim);
         monster.attackCooldown = 0;
 
@@ -201,6 +234,7 @@ public class MHNWGameTests {
         victim.setNoAi(true);
         victim.setInvulnerable(false);
 
+        monster.setRoaredThisEngagement(true); // skips the intro roar; this test is not about it
         monster.setTarget(victim);
         monster.attackCooldown = 0;
 
@@ -247,6 +281,7 @@ public class MHNWGameTests {
         victim.setInvulnerable(false);
         victim.setHealth(victim.getMaxHealth() * 30.0F);
 
+        monster.setRoaredThisEngagement(true); // skips the intro roar; this test is not about it
         monster.setTarget(victim);
         monster.attackCooldown = 0;
 
@@ -290,6 +325,7 @@ public class MHNWGameTests {
         Cow victim = helper.spawn(EntityType.COW, 8, 2, 10);
         victim.setNoAi(true);
 
+        monster.setRoaredThisEngagement(true); // skips the intro roar; this test is not about it
         monster.setTarget(victim);
         monster.attackCooldown = 0;
 
@@ -318,6 +354,7 @@ public class MHNWGameTests {
         victim.setInvulnerable(false);
         victim.setHealth(victim.getMaxHealth() * 4);
 
+        monster.setRoaredThisEngagement(true); // skips the intro roar; this test is not about it
         monster.setTarget(victim);
         monster.attackCooldown = 0;
 
@@ -432,6 +469,7 @@ public class MHNWGameTests {
         Cow victim = helper.spawn(EntityType.COW, 8, 2, 10);
         victim.setNoAi(true);
 
+        original.setRoaredThisEngagement(true); // skips the intro roar; this test is not about it
         original.setTarget(victim);
         original.attackCooldown = 0;
         int originalPartCount = original.monsterParts().length;
@@ -488,6 +526,7 @@ public class MHNWGameTests {
         Cow victim = helper.spawn(EntityType.COW, 13, 2, 8);
         victim.setNoAi(true);
 
+        monster.setRoaredThisEngagement(true); // skips the intro roar; this test is not about it
         monster.setTarget(victim);
 
         helper.succeedWhen(() -> helper.assertTrue(
@@ -520,6 +559,7 @@ public class MHNWGameTests {
             }
         }
 
+        monster.setRoaredThisEngagement(true); // skips the intro roar; this test is not about it
         monster.setTarget(victim);
 
         helper.succeedWhen(() -> helper.assertTrue(
@@ -546,6 +586,7 @@ public class MHNWGameTests {
             }
         }
 
+        monster.setRoaredThisEngagement(true); // skips the intro roar; this test is not about it
         monster.setTarget(victim);
 
         helper.succeedWhen(() -> helper.assertTrue(
@@ -578,6 +619,7 @@ public class MHNWGameTests {
             }
         }
 
+        monster.setRoaredThisEngagement(true); // skips the intro roar; this test is not about it
         monster.setTarget(victim);
 
         helper.runAtTickTime(280, () -> {
@@ -603,6 +645,7 @@ public class MHNWGameTests {
             }
         }
 
+        monster.setRoaredThisEngagement(true); // skips the intro roar; this test is not about it
         monster.setTarget(victim);
 
         helper.succeedWhen(() -> helper.assertTrue(
@@ -637,6 +680,7 @@ public class MHNWGameTests {
             }
         }
 
+        monster.setRoaredThisEngagement(true); // skips the intro roar; this test is not about it
         monster.setTarget(victim);
 
         helper.runAtTickTime(280, () -> {
@@ -1125,11 +1169,12 @@ public class MHNWGameTests {
     @GameTest(template = ARENA, timeoutTicks = 200)
     public static void rathianAttacksAndDamagesTarget(GameTestHelper helper) {
         com.carro1001.mhnw.entity.Rathian rathian = helper.spawn(ModEntities.RATHIAN.get(), 8, 2, 8);
-        // Within RathianCombatGoal.BITE's real range band (2.0-6.0), not touching distance: this
+        // Within RathianCombatGoal.BITE_RIGHT's real range band (2.0-6.0), not touching distance: this
         // attack now deliberately does not fire from point-blank (see that profile's own doc).
         Cow victim = helper.spawn(EntityType.COW, 8, 2, 12);
         victim.setNoAi(true);
 
+        rathian.setRoaredThisEngagement(true); // skips the intro roar; this test is not about it
         rathian.setTarget(victim);
         float startingHealth = victim.getHealth();
 
@@ -1138,7 +1183,7 @@ public class MHNWGameTests {
     }
 
     /** The specific fix for "body-slams and only then plays the bite": damage must land inside the
-     * bite's own active window (see {@code RathianCombatGoal.BITE}), not the instant contact is
+     * bite's own active window (see {@code RathianCombatGoal.BITE_RIGHT}), not the instant contact is
      * made the way plain vanilla {@code MeleeAttackGoal} worked before this. */
     @GameTest(template = ARENA, timeoutTicks = 200)
     public static void rathianBiteDamagesOnlyDuringActiveWindow(GameTestHelper helper) {
@@ -1146,6 +1191,7 @@ public class MHNWGameTests {
         Cow victim = helper.spawn(EntityType.COW, 8, 2, 12);
         victim.setNoAi(true);
 
+        rathian.setRoaredThisEngagement(true); // skips the intro roar; this test is not about it
         rathian.setTarget(victim);
         float startingHealth = victim.getHealth();
         int[] ageAtFirstHit = {Integer.MIN_VALUE};
@@ -1160,11 +1206,11 @@ public class MHNWGameTests {
                     helper.assertTrue(ageAtFirstHit[0] != Integer.MIN_VALUE,
                             "the bite never connected with a target standing in front of it");
                     helper.assertTrue(
-                            ageAtFirstHit[0] >= com.carro1001.mhnw.entity.RathianCombatGoal.BITE.activeStart()
-                                    && ageAtFirstHit[0] <= com.carro1001.mhnw.entity.RathianCombatGoal.BITE.activeEnd(),
+                            ageAtFirstHit[0] >= com.carro1001.mhnw.entity.RathianCombatGoal.BITE_RIGHT.activeStart()
+                                    && ageAtFirstHit[0] <= com.carro1001.mhnw.entity.RathianCombatGoal.BITE_RIGHT.activeEnd(),
                             "damage landed at action age " + ageAtFirstHit[0] + ", outside the active window "
-                                    + com.carro1001.mhnw.entity.RathianCombatGoal.BITE.activeStart() + ".."
-                                    + com.carro1001.mhnw.entity.RathianCombatGoal.BITE.activeEnd());
+                                    + com.carro1001.mhnw.entity.RathianCombatGoal.BITE_RIGHT.activeStart() + ".."
+                                    + com.carro1001.mhnw.entity.RathianCombatGoal.BITE_RIGHT.activeEnd());
                 })
                 .thenSucceed();
     }
@@ -1248,6 +1294,7 @@ public class MHNWGameTests {
         Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
         victim.setNoAi(true);
 
+        rathalos.setRoaredThisEngagement(true); // skips the intro roar; this test is not about it
         rathalos.setTarget(victim);
         float startingHealth = victim.getHealth();
 

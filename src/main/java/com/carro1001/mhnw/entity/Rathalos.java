@@ -1,5 +1,8 @@
 package com.carro1001.mhnw.entity;
 
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -57,7 +60,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * species (unlike Rathian's, which pointed at the wrong file), so these are the real authored
  * values, not a borrowed approximation.
  */
-public class Rathalos extends Monster implements GeoEntity {
+public class Rathalos extends Monster implements GeoEntity, Roarable {
 
     // Provisional balance constants, not yet tuned.
     public static final double MAX_HEALTH = 85.0D;
@@ -71,7 +74,14 @@ public class Rathalos extends Monster implements GeoEntity {
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.rathalos.idle_normal");
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.rathalos.walk_normal");
     private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.rathalos.walk_aggro");
+    private static final RawAnimation ROAR = RawAnimation.begin().thenPlay("animation.rathalos.roar");
     private static final RawAnimation DEATH = RawAnimation.begin().thenPlayAndHold("animation.rathalos.death");
+
+    /** {@code animation.rathalos.roar} is 5s; see {@code docs/ANIMATION_MANIFEST.json}. */
+    private static final int ROAR_TICKS = 100;
+
+    private static final EntityDataAccessor<Integer> DATA_ROAR_TICKS =
+            SynchedEntityData.defineId(Rathalos.class, EntityDataSerializers.INT);
 
     private final AnimatableInstanceCache animCache = GeckoLibUtil.createInstanceCache(this);
     private final MonsterPart[] parts;
@@ -134,7 +144,10 @@ public class Rathalos extends Monster implements GeoEntity {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(1, new MeleeAttackGoal(this, 1.0D, true));
+        // Sits above the melee goal deliberately (see RoarGoal's own doc): the opening roar must
+        // freeze the fight, not play underneath an attack goal that keeps moving/swinging.
+        this.goalSelector.addGoal(1, new RoarGoal<>(this));
+        this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.0D, true));
         this.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 0.7D));
         this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 10.0F));
         this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
@@ -144,6 +157,46 @@ public class Rathalos extends Monster implements GeoEntity {
         // Same reasoning as Great Izuchi's/Rathian's identical goal: pillagers make the attack
         // observable from outside the fight, and a large monster does not care who you are.
         this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, AbstractIllager.class, true));
+    }
+
+    @Override
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_ROAR_TICKS, 0);
+    }
+
+    // ---------------------------------------------------------------- roar (Roarable)
+
+    @Override
+    public int getRoarTicks() {
+        return this.entityData.get(DATA_ROAR_TICKS);
+    }
+
+    @Override
+    public void setRoarTicks(int ticks) {
+        this.entityData.set(DATA_ROAR_TICKS, ticks);
+    }
+
+    @Override
+    public int roarDurationTicks() {
+        return ROAR_TICKS;
+    }
+
+    public boolean isRoaring() {
+        return getRoarTicks() > 0;
+    }
+
+    /** Server-only AI state, not synced (see {@link Roarable#hasRoaredThisEngagement}). */
+    private boolean roaredThisEngagement;
+
+    @Override
+    public boolean hasRoaredThisEngagement() {
+        return this.roaredThisEngagement;
+    }
+
+    @Override
+    public void setRoaredThisEngagement(boolean roared) {
+        this.roaredThisEngagement = roared;
     }
 
     // ---------------------------------------------------------------- multipart
@@ -254,6 +307,9 @@ public class Rathalos extends Monster implements GeoEntity {
     private PlayState mainAnim(AnimationState<Rathalos> state) {
         if (isDeadOrDying()) {
             return state.setAndContinue(DEATH);
+        }
+        if (isRoaring()) {
+            return state.setAndContinue(ROAR);
         }
         if (state.isMoving()) {
             return state.setAndContinue(isAggressive() ? RUN : WALK);

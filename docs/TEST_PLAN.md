@@ -2,10 +2,14 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, currently 67 tests, all passing as of
-Rathian's new bite timeline below (full `build runGameTestServer` run, 2026-09-11) — the shoreline
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, currently 69 tests, all passing as of
+the MHW-style opening roar below (full `build runGameTestServer` run, 2026-09-11) — the shoreline
 test that failed under the P5a build passed cleanly after the native-controls correction. Client
 acceptance for that Lagiacrus correction has not been rerun by a human yet.
+
+`docs/ANIMATION_MANIFEST.json` is a generated inventory of every species' animation clips (name,
+length, loop mode) — regenerate with `node tools/gen_animation_manifest.js`, check it before asking
+"does this species have a clip for X."
 
 This file is updated as features land. Checked items were confirmed by the maintainer; unchecked
 items are open. When you find a problem, say what you saw and I'll fix it and update this file.
@@ -95,6 +99,15 @@ New this pass, per your feedback ("Great izuchi spawns with 1-4 izuchis around i
 spawner-spawned Great Izuchi now brings 1-4 escort Izuchi along with it. A spawn-egg/`/summon`'d one
 does not (deliberately — that's a placed, not a wild, spawn).
 
+**MHW-style opening roar, this round**, and shared with Rathian/Rathalos (see `RoarGoal`/`Roarable`):
+a large monster now roars once when it first acquires a target, not again for the rest of that fight,
+and only re-arms after a real stretch with no target (5s, provisional), not a one-tick target flicker
+(a dodge, a brief line-of-sight loss). The goal sits above whatever owns combat movement/look, so the
+roar genuinely freezes the fight rather than playing underneath an attack goal that keeps swinging.
+GameTest-covered (`greatIzuchiRoarsOnFirstEngagement`, `greatIzuchiReArmsRoarAfterARealDisengage`);
+`rally` (a second, distinct clip this species also has, likely for calling its escort) is **not**
+wired — no trigger condition for it has been specified yet, see `docs/DEFERRED.md`.
+
 Also new this pass: it (and Rathian/Rathalos) no longer stops rendering when the hitbox center
 leaves the camera frustum while the long neck/tail is still visibly on screen — see the culling note
 under Rathian/Rathalos below, same fix applies here too.
@@ -105,6 +118,10 @@ under Rathian/Rathalos below, same fix applies here too.
 - [x] Scratch, tail swipe, tail slam all fire, connect, and look reasonable in sequence
 - [x] Windup plant + active-phase pace read as a real wind-up and follow-through
 - [x] Death plays its authored clip fully before the corpse is removed
+- [ ] **New: roars once when it first notices you, doesn't roar again mid-fight, and roars again
+      if you break off long enough and re-engage** — GameTest-covered for the state machine itself;
+      worth a live look for whether it *reads* right (does it actually freeze/plant during the roar,
+      does the timing feel right)
 - [ ] **New: turning away from a close-up Great Izuchi no longer makes its head/neck vanish
       mid-turn** — this was a real bug (see Rathian/Rathalos note below), fixed for all three
 - [ ] **New: a naturally-spawned Great Izuchi has 1-4 regular Izuchi nearby when you first find it**
@@ -352,6 +369,15 @@ reach by roughly 4-5 blocks.
       to contact first? **Confirmed live** — every attack fired from 5.4-6.0 blocks out (the edge of
       the new range band), 8 of 9 landed; the one miss at max range is expected variance for a path
       from a single capture, not a bug.
+- [ ] **New: bites from both sides now** — `attack_charge_bite_left` was added alongside
+      `attack_charge_bite_right`, mirrored from the same measured path (not a separate capture: the
+      right bite's real data already showed no consistent left/right bias, and a left/right clip pair
+      is ordinarily authored as a mirror of one another). Selection alternates rather than always
+      picking the same angle — flag it if the left one looks off, since it hasn't been checked live
+      on its own.
+- [ ] **New: roars once on first engagement, same mechanic as Great Izuchi** — GameTest coverage
+      lives on Great Izuchi since `RoarGoal` is shared and identical either way; worth a live look
+      here too since Rathian's own roar clip hasn't been watched play yet.
 - [ ] Renders, spawns via egg, idles/walks/runs with correct animation
 - [ ] **F3+B: do the boxes meet edge-to-edge with no visible gap**, and **does the tail chain read as
       roughly centred on the tail across a few seconds of watching it sway**, rather than checking
@@ -379,6 +405,10 @@ it's even worth wiring.
 
 Also fixed a few rounds ago: same culling fix as Rathian/Great Izuchi.
 
+**MHW-style opening roar wired this round**, same shared `RoarGoal`/`Roarable` mechanic as Great
+Izuchi/Rathian — works independently of the broken attack clips above, since it's just a presentation
+clip with no attack-volume mechanics of its own.
+
 - [ ] Renders, spawns via egg, idles/walks/runs (walk uses `walk_normal`/`walk_aggro`, no separate
       "run" clip exists for this species — expected, not a bug)
 - [ ] **F3+B: closer now?** Flag any part that's still clearly off — that's the one worth a live
@@ -388,5 +418,7 @@ Also fixed a few rounds ago: same culling fix as Rathian/Great Izuchi.
 - [ ] Attacks and damages a nearby player using ordinary melee
 - [x] **New: targets pillagers on sight, same as Great Izuchi/Rathian/Izuchi** — GameTest-covered
       (`rathalosTargetsAPillagerOnSight`)
+- [ ] **New: roars once on first engagement** — same mechanic and GameTest coverage as Great Izuchi
+      (shared goal); worth a live look since this species' own roar clip hasn't been watched
 - [ ] Death removes the whole creature and all seven parts
 - [ ] No flight yet — ground-bound only; expected, not a bug
