@@ -275,6 +275,16 @@ path is sound.
       in-memory NBT round trip and is **not** a substitute for this.
 - [ ] **Carving feel.** Is shift + right-click on a large body discoverable? Do the action-bar
       messages read right and not spam?
+- [ ] **Corpse presentation (2026-09-12 fix, needs eyes).** Three things at once on a fresh kill of
+      each carvable species: no red tint on the body for the whole window (GeckoLib tints anything
+      with `deathTime > 0`, which for us is 12,000 ticks); the body stays down after its death clip
+      rather than popping upright (Aptonoth did — its clip rolls the body -90 about Z and vanilla's
+      own flop added +90 over the same ~20 ticks, so they cancelled; `getDeathMaxRotation` is now
+      zero for it, as it already was for Great Izuchi, Rathian and Rathalos); and shift +
+      right-click lands on the model itself, not on a box floating where the living creature stood.
+      `r1CorpsePartsDropToTheGround` proves the boxes come down to ground level, not that they
+      visually cover the fallen model — parts keep their standing horizontal spread, so a species
+      whose clip throws the body sideways may still read badly. That is the case to watch for.
 - [ ] **A real in-world peaceful switch.** With an Izuchi actively harassing, run
       `/difficulty peaceful` and check it stops circling and darting and deals no further damage,
       then `/difficulty normal` and check it resumes. `r1IzuchiHarassmentStopsOnPeaceful` proves the

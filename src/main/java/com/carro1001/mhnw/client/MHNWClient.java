@@ -134,6 +134,18 @@ public final class MHNWClient {
             BoneProbe.maybeLog("aptonoth", entity, getGeoModel(), BoneProbe.APTONOTH_BONES, false);
         }
 
+        /**
+         * Same reason Great Izuchi zeroes this, with a sharper symptom. Aptonoth's death clip rolls
+         * the body -90 degrees about Z over its 20 ticks; vanilla's own flop adds +90 about the same
+         * axis over its own ~20, so the two cancel and the corpse ends the clip standing upright
+         * again (sunk into the floor by the clip's own -1.125 block body drop). The clip already
+         * lays the body down -- vanilla must not also.
+         */
+        @Override
+        protected float getDeathMaxRotation(Aptonoth entity) {
+            return 0.0F;
+        }
+
         /** Corpses stay carvable for a long time; no red death tint. @see #overlayWithoutDeathTint */
         @Override
         public int getPackedOverlay(Aptonoth animatable, float u, float partialTick) {

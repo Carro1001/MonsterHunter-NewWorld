@@ -115,4 +115,23 @@ public class MonsterPart extends PartEntity<Mob> {
     public double halfHeight() {
         return this.size.height() / 2.0;
     }
+
+    /**
+     * Where this part's box actually belongs, given the centre its owner's local frame put it at.
+     *
+     * <p>Alive, that is the centre, converted to the foot position {@code setPos} wants. Dead, it
+     * is the ground under the parent: the standing offsets stop being true the moment an authored
+     * death clip lays the body down, because position and yaw freeze at death while the model keeps
+     * moving, so a head box would hang in the air where the living head used to be with nothing
+     * clickable over the body itself. That matters most for a carvable species -- carving is only
+     * reachable through a part ({@link #interactAt}) -- but a floating hurtbox is wrong for every
+     * species, so the rule lives here rather than in the three owners that care most.
+     *
+     * <p>Only the vertical is dropped. The horizontal spread still covers the fallen body's
+     * footprint, which is as close as static offsets can get without measuring where each limb
+     * lands in each species' own death clip.
+     */
+    public double restingY(double centreY) {
+        return getParent().isDeadOrDying() ? getParent().getY() : centreY - halfHeight();
+    }
 }

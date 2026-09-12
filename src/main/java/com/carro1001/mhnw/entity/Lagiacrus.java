@@ -150,7 +150,7 @@ public class Lagiacrus extends Monster implements GeoEntity {
         for (MonsterPart part : this.parts) {
             part.setOldPosAndRot();
             Vec3 centre = localToWorld(part.localLeft, part.localUp, part.localForward);
-            part.setPos(centre.x, centre.y - part.halfHeight(), centre.z);
+            part.setPos(centre.x, part.restingY(centre.y), centre.z);
         }
     }
 
