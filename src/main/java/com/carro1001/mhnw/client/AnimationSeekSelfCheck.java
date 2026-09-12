@@ -44,16 +44,24 @@ import java.util.Map;
  * Nothing synthetic: it loads Great Izuchi's own baked {@code attack_scratch} clip out of the live
  * animation cache and drives two controllers over it.
  * <ul>
- *   <li>an <em>on-time</em> observer, processed every tick from action age 0 to
- *       {@value #JOIN_AGE} -- exactly what a client already watching the fight gets;</li>
- *   <li>a <em>late</em> observer, processed for the very first time at age {@value #JOIN_AGE},
- *       cold: no model, no queue, no current animation. That is the state in which naively advancing
- *       a controller produces a correct age and no clip at all.</li>
+ *   <li>a <em>stock</em> {@link AnimationController} processed every tick from action age 0 --
+ *       literally the pre-R0b code path, and therefore the baseline the packet promises not to
+ *       move;</li>
+ *   <li>the same stock controller driven only to clip time zero, which is the "replayed the
+ *       windup" pose a broken seek would land on;</li>
+ *   <li>an <em>on-time</em> adapter, to show the adapter leaves such an observer alone;</li>
+ *   <li>a <em>late</em> adapter, processed for the very first time at age {@value #JOIN_AGE},
+ *       cold: no model, no queue, no current animation. That is the state in which naively
+ *       advancing a controller produces a correct age and no clip at all.</li>
+ *   <li>a stock controller in that same cold situation, as a control.</li>
  * </ul>
- * Their <em>first</em> comparable frames are then compared -- not the second, not after settling.
- * A stock {@link AnimationController} is run through the identical situation as a control, so a
- * pass cannot be a pass by accident: if unmodified GeckoLib ever samples the right phase on its
- * first frame, this reports that too, and the adapter can be deleted rather than kept.
+ * Their <em>first</em> comparable frames are compared -- not the second, not after settling.
+ *
+ * <p>Two things make this more than a self-consistency check. The baselines are stock GeckoLib
+ * rather than more adapters, so a mutation that shifts every observer together cannot move the
+ * comparison and its reference by the same amount; and the absolute expected sampler time
+ * ({@code (35 - 5) / 20 = 1.5s}) is asserted outright, not just agreement between observers. An
+ * earlier version of this probe had neither, and a correlated shift would have passed it.
  *
  * <p>Read-only and self-disabling: it runs once, only while {@code debugCombat} is on, touches no
  * entity, no world and no renderer, and logs one line per check. It is a measuring instrument in
@@ -67,6 +75,9 @@ final class AnimationSeekSelfCheck {
 
     /** Phase agreement required between the two observers, in ticks (the R0b acceptance target). */
     private static final double PHASE_TOLERANCE_TICKS = 2.0D;
+
+    /** The same tolerance expressed in seconds, which is the unit {@code query.anim_time} uses. */
+    private static final double ANIM_TIME_TOLERANCE = PHASE_TOLERANCE_TICKS / 20.0D;
 
     private static final String CLIP = "animation.great_izuchi.attack_scratch";
     private static final RawAnimation SCRATCH = RawAnimation.begin().thenPlay(CLIP);
@@ -123,13 +134,18 @@ final class AnimationSeekSelfCheck {
             return;
         }
 
-        // Three observers over the same real clip. The whole pose is captured each time rather than
-        // one bone: which single bone happens to sit on a keyframe boundary at a given clip time is
-        // an accident of the authoring, and a comparison that depends on it proves nothing.
-        Map<String, AnimationPoint> onTime = runTo(model, bones, JOIN_AGE);
-        double onTimeAnimTime = animTime();
-        Map<String, AnimationPoint> frameZero = runTo(model, bones, GreatIzuchi.TRANSITION_TICKS);
-        double frameZeroAnimTime = animTime();
+        // The baselines are STOCK GeckoLib controllers, not adapters. That distinction is the whole
+        // value of this probe: an earlier version used the adapter as its own on-time reference,
+        // which meant a mutation shifting every observer together -- re-anchoring each frame onto
+        // raw action age, say -- moved the comparison and its baseline by the same amount and still
+        // passed. A stock controller advanced from age 0 is literally the pre-R0b code path, so
+        // matching it is the claim actually being made: existing observers are untouched.
+        Map<String, AnimationPoint> stockOnTime = runStockTo(model, bones, JOIN_AGE);
+        double stockOnTimeAnimTime = animTime();
+        Map<String, AnimationPoint> stockFrameZero = runStockTo(model, bones, GreatIzuchi.TRANSITION_TICKS);
+
+        Map<String, AnimationPoint> adapterOnTime = runAdapterTo(model, bones, JOIN_AGE);
+        double adapterOnTimeAnimTime = animTime();
 
         ServerTimedAnimationController<GreatIzuchi> late = new ServerTimedAnimationController<>(
                 null, "selfcheck_late", GreatIzuchi.TRANSITION_TICKS,
@@ -138,52 +154,86 @@ final class AnimationSeekSelfCheck {
         Map<String, AnimationPoint> lateFirstFrame = sample(late, model, bones, JOIN_AGE);
         double lateAnimTime = animTime();
 
-        AnimationController<GreatIzuchi> stock = new AnimationController<>(null, "selfcheck_stock",
+        AnimationController<GreatIzuchi> stockCold = new AnimationController<>(null, "selfcheck_cold",
                 GreatIzuchi.TRANSITION_TICKS, state -> state.setAndContinue(SCRATCH));
-        Map<String, AnimationPoint> stockFirstFrame = sample(stock, model, bones, JOIN_AGE);
+        Map<String, AnimationPoint> stockColdFirstFrame = sample(stockCold, model, bones, JOIN_AGE);
 
-        // Name a bone the clip actually rotates, so the logged lines carry a real pose rather
-        // than "no sample" from a bone that only has position keyframes.
-        String probe = onTime.isEmpty() ? bones.keySet().iterator().next()
-                : onTime.keySet().iterator().next();
-        MHNW.LOG.info("[anim-selfcheck] clip={} length={} bones={} joinAge={} transition={}",
-                clip.name(), clip.length(), bones.size(), JOIN_AGE, GreatIzuchi.TRANSITION_TICKS);
-        MHNW.LOG.info("[anim-selfcheck] on-time   {} {} animTime={}", probe,
-                describe(onTime.get(probe)), onTimeAnimTime);
-        MHNW.LOG.info("[anim-selfcheck] late      {} {} animTime={}", probe,
+        // The absolute value the sampler must reach, independent of any observer: clip time is the
+        // action age minus the blend, and query.anim_time is that in seconds. Pose equality alone
+        // cannot catch a shift that moves every observer at once; this can.
+        double expectedAnimTime = (JOIN_AGE - GreatIzuchi.TRANSITION_TICKS) / 20.0D;
+
+        String probe = stockOnTime.isEmpty() ? bones.keySet().iterator().next()
+                : stockOnTime.keySet().iterator().next();
+        MHNW.LOG.info("[anim-selfcheck] clip={} length={} bones={} joinAge={} transition={} expectedAnimTime={}",
+                clip.name(), clip.length(), bones.size(), JOIN_AGE, GreatIzuchi.TRANSITION_TICKS,
+                expectedAnimTime);
+        MHNW.LOG.info("[anim-selfcheck] stock on-time   {} {} animTime={}", probe,
+                describe(stockOnTime.get(probe)), stockOnTimeAnimTime);
+        MHNW.LOG.info("[anim-selfcheck] adapter on-time {} {} animTime={}", probe,
+                describe(adapterOnTime.get(probe)), adapterOnTimeAnimTime);
+        MHNW.LOG.info("[anim-selfcheck] adapter late    {} {} animTime={}", probe,
                 describe(lateFirstFrame.get(probe)), lateAnimTime);
-        MHNW.LOG.info("[anim-selfcheck] frame 0   {} {} animTime={}", probe,
-                describe(frameZero.get(probe)), frameZeroAnimTime);
-        MHNW.LOG.info("[anim-selfcheck] stock     {} {}", probe, describe(stockFirstFrame.get(probe)));
+        MHNW.LOG.info("[anim-selfcheck] stock frame 0   {} {}", probe, describe(stockFrameZero.get(probe)));
+        MHNW.LOG.info("[anim-selfcheck] stock cold      {} {}", probe, describe(stockColdFirstFrame.get(probe)));
 
-        report("on-time observer produced a pose", !onTime.isEmpty());
+        report("stock GeckoLib on-time baseline produced a pose", !stockOnTime.isEmpty());
+        report("that baseline is at the absolute expected sampler time (" + expectedAnimTime
+                        + "s, i.e. clip tick " + (JOIN_AGE - GreatIzuchi.TRANSITION_TICKS) + ")",
+                Math.abs(stockOnTimeAnimTime - expectedAnimTime) <= ANIM_TIME_TOLERANCE);
         report("the pose at age " + JOIN_AGE + " is distinguishable from the clip's first frame, so"
                         + " the comparisons below can tell a seek from a replay",
-                differs(onTime, frameZero));
+                differs(stockOnTime, stockFrameZero));
+        if (stockOnTime.isEmpty()) {
+            return;
+        }
+
+        report("C09: the adapter leaves an ON-TIME observer exactly where stock GeckoLib put it",
+                !adapterOnTime.isEmpty() && !differs(adapterOnTime, stockOnTime)
+                        && Math.abs(adapterOnTimeAnimTime - expectedAnimTime) <= ANIM_TIME_TOLERANCE);
         report("late observer's FIRST frame produced a pose at all", !lateFirstFrame.isEmpty());
-        report("late observer's first frame matches the on-time pose exactly",
-                !lateFirstFrame.isEmpty() && !differs(lateFirstFrame, onTime));
+        report("late observer's first frame matches the stock on-time pose exactly",
+                !lateFirstFrame.isEmpty() && !differs(lateFirstFrame, stockOnTime));
+        report("late observer reached the absolute expected sampler time, not merely the same time"
+                        + " as a baseline that could have moved with it (" + lateAnimTime + "s)",
+                Math.abs(lateAnimTime - expectedAnimTime) <= ANIM_TIME_TOLERANCE);
         report("late observer did NOT replay the clip's first frame",
-                !lateFirstFrame.isEmpty() && differs(lateFirstFrame, frameZero));
-        report("query.anim_time agrees between the two observers (" + lateAnimTime + " vs "
-                        + onTimeAnimTime + ")",
-                Math.abs(lateAnimTime - onTimeAnimTime) <= PHASE_TOLERANCE_TICKS / 20.0D);
+                !lateFirstFrame.isEmpty() && differs(lateFirstFrame, stockFrameZero));
         report("control: an unmodified GeckoLib 4.9.2 controller does NOT reach that pose cold, so"
                         + " the comparisons above are meaningful",
-                stockFirstFrame.isEmpty() || differs(stockFirstFrame, onTime));
+                stockColdFirstFrame.isEmpty() || differs(stockColdFirstFrame, stockOnTime));
     }
 
-    /** An observer that has been rendering since the action began, driven tick by tick to an age. */
-    private static Map<String, AnimationPoint> runTo(GeoModel<GreatIzuchi> model,
-                                                     Map<String, GeoBone> bones, int targetAge) {
+    /** The pre-R0b code path: an unmodified controller that has been rendering since the action began. */
+    private static Map<String, AnimationPoint> runStockTo(GeoModel<GreatIzuchi> model,
+                                                          Map<String, GeoBone> bones, int targetAge) {
+        AnimationController<GreatIzuchi> controller = new AnimationController<>(null,
+                "selfcheck_stock_" + targetAge, GreatIzuchi.TRANSITION_TICKS,
+                state -> state.setAndContinue(SCRATCH));
+        return runTo(controller, model, bones, targetAge);
+    }
+
+    /** The same thing under the adapter, to show an on-time observer is not disturbed by it. */
+    private static Map<String, AnimationPoint> runAdapterTo(GeoModel<GreatIzuchi> model,
+                                                            Map<String, GeoBone> bones, int targetAge) {
         int[] age = {0};
         ServerTimedAnimationController<GreatIzuchi> controller = new ServerTimedAnimationController<>(
-                null, "selfcheck_ontime_" + targetAge, GreatIzuchi.TRANSITION_TICKS,
+                null, "selfcheck_adapter_" + targetAge, GreatIzuchi.TRANSITION_TICKS,
                 state -> ServerTimedAnimationController.of(state).playTimed(state, SCRATCH,
                         ServerTimedAnimationController.KIND_ATTACK, 1L, age[0]));
         Map<String, AnimationPoint> pose = Map.of();
         for (age[0] = 0; age[0] <= targetAge; age[0]++) {
             pose = sample(controller, model, bones, age[0]);
+        }
+        return pose;
+    }
+
+    private static Map<String, AnimationPoint> runTo(AnimationController<GreatIzuchi> controller,
+                                                     GeoModel<GreatIzuchi> model,
+                                                     Map<String, GeoBone> bones, int targetAge) {
+        Map<String, AnimationPoint> pose = Map.of();
+        for (int age = 0; age <= targetAge; age++) {
+            pose = sample(controller, model, bones, age);
         }
         return pose;
     }

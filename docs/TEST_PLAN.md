@@ -136,29 +136,41 @@ DEDICATED_SERVER"*). That was found by writing the harness as a GameTest first a
 line per check.
 
 It uses Great Izuchi's **own baked `attack_scratch` clip** from the live animation cache — not a
-synthetic one — and compares three observers over all 26 animated bones: one rendering since age 0,
-one whose *first ever* frame is at age 35, and one driven only to clip time zero. Observed
-`2026-09-12`, `./gradlew runClient`:
+synthetic one — and compares five controllers over all 26 animated bones. The baselines are **stock
+GeckoLib controllers, not more adapters**: a stock controller advanced from age 0 is literally the
+pre-R0b code path, so matching it is the claim actually being made. Observed `2026-09-12`,
+`./gradlew runClient`:
 
 ```
-[anim-selfcheck] clip=animation.great_izuchi.attack_scratch length=65.0 bones=26 joinAge=35 transition=5
-[anim-selfcheck] on-time   left_leg tick=0.0 start=-0.005904972458272415 end=-0.49561713343155017 animTime=1.5
-[anim-selfcheck] late      left_leg tick=0.0 start=-0.005904972458272415 end=-0.49561713343155017 animTime=1.5
-[anim-selfcheck] frame 0   left_leg tick=0.0 start=0.020517575069641837 end=0.15378863984192914 animTime=0.0
-[anim-selfcheck] stock     left_leg no sample
-[anim-selfcheck] PASS on-time observer produced a pose
+[anim-selfcheck] clip=animation.great_izuchi.attack_scratch length=65.0 bones=26 joinAge=35 transition=5 expectedAnimTime=1.5
+[anim-selfcheck] stock on-time   left_leg tick=0.0 start=-0.005904972458272415 end=-0.49561713343155017 animTime=1.5
+[anim-selfcheck] adapter on-time left_leg tick=0.0 start=-0.005904972458272415 end=-0.49561713343155017 animTime=1.5
+[anim-selfcheck] adapter late    left_leg tick=0.0 start=-0.005904972458272415 end=-0.49561713343155017 animTime=1.5
+[anim-selfcheck] stock frame 0   left_leg tick=0.0 start=0.020517575069641837 end=0.15378863984192914
+[anim-selfcheck] stock cold      left_leg no sample
+[anim-selfcheck] PASS stock GeckoLib on-time baseline produced a pose
+[anim-selfcheck] PASS that baseline is at the absolute expected sampler time (1.5s, i.e. clip tick 30)
 [anim-selfcheck] PASS the pose at age 35 is distinguishable from the clip's first frame, so the comparisons below can tell a seek from a replay
+[anim-selfcheck] PASS C09: the adapter leaves an ON-TIME observer exactly where stock GeckoLib put it
 [anim-selfcheck] PASS late observer's FIRST frame produced a pose at all
-[anim-selfcheck] PASS late observer's first frame matches the on-time pose exactly
+[anim-selfcheck] PASS late observer's first frame matches the stock on-time pose exactly
+[anim-selfcheck] PASS late observer reached the absolute expected sampler time, not merely the same time as a baseline that could have moved with it (1.5s)
 [anim-selfcheck] PASS late observer did NOT replay the clip's first frame
-[anim-selfcheck] PASS query.anim_time agrees between the two observers (1.5 vs 1.5)
 [anim-selfcheck] PASS control: an unmodified GeckoLib 4.9.2 controller does NOT reach that pose cold, so the comparisons above are meaningful
 ```
 
-Phase gap **0.0 ticks**, against a target of two — the late observer's first frame is the on-time
-pose exactly, on every bone, and `query.anim_time` is 1.5 s, which is clip tick 30, which is
-`35 - 5`. The stock control produced **no sample at all**, which is the cold-controller trap
-described above, observed rather than assumed.
+The late observer's first frame is the **stock on-time pose** exactly, on every bone, at the
+**absolute** expected sampler time of 1.5 s — which is clip tick 30, which is `35 - 5`. The adapter
+leaves an on-time observer exactly where stock GeckoLib put it, which is the presentation half of
+C09 measured rather than argued. The stock cold control produced **no sample at all**, which is the
+cold-controller trap described above, observed rather than assumed.
+
+**Why the baselines are stock.** The first version of this probe used the adapter as its own on-time
+reference. A Codex review of PR #5 pointed out that a mutation shifting every observer *together*
+would move the comparison and its baseline by the same amount and still pass. That was correct, and
+it is now covered two ways: stock baselines, and an assertion on the absolute expected sampler time
+rather than only on agreement between observers. The mutation table below includes the exact case
+that review described.
 
 ### Mutation runs — these tests can actually fail
 
@@ -167,8 +179,9 @@ immediately after.
 
 | Mutation | Result |
 |---|---|
-| Adapter returns after pass one (no seek) | 4 of 7 self-checks FAIL; the late observer produces *no sample*, `animTime` 0.0 vs 1.5 |
-| `clipTimeFor` returns raw action age | `animationClockMapsActionAgeToClipTime` fails: *"the clip should start exactly when the blend ends, not at 5.0"* |
+| Adapter returns after pass one (no seek) | self-checks FAIL; the late observer produces *no sample*, `animTime` 0.0 vs 1.5 |
+| `controllerTickFor` returns raw action age **and** the adapter re-anchors every frame — the correlated shift the PR review described, which the earlier probe would have passed | self-check FAILs three ways: the adapter moves an **on-time** observer off the stock baseline, the late observer no longer matches it, and the absolute sampler time is 1.75 s instead of 1.5 s. `animationClockMapsActionAgeToClipTime` also fails |
+| `controllerTickFor` returns raw action age | `animationClockMapsActionAgeToClipTime` fails: *"the clip should start exactly when the blend ends, not at 5.0"* |
 | `RoarGoal.start` does not set the anchor | all three roar-anchor tests plus the distinct-instance test fail |
 | Death anchor stamps `gameTime`, not `gameTime - deathTime` | reload test fails: *"the reloaded body restarted its death clip: age went from 10 back to 1"* |
 
@@ -178,13 +191,13 @@ immediately after.
 |---|---|
 | C01 build / server isolation | **Passed.** 97/97 GameTests; a real dedicated server (`runServer`) reached `Done (0.251s)` with no class-loading failure; `R0b-02` constructs the adapter on a dedicated server so a stray client import fails the suite |
 | C02 clock snapshots | **Passed**, headlessly. Every instance reconstructible from synced data, repeats distinguishable, no `tickCount` clock, reload cancels transient action while health and death progress survive |
-| C03 actual sampler | **Passed** on a real client, above |
+| C03 actual sampler | **Passed** on a real client, above, against stock-GeckoLib baselines and an absolute expected sampler time |
 | C04 encounter coverage | **Partial.** The mechanism is proven for scratch and is shared verbatim by all three Great Izuchi attacks, both Rathian bites and all three roars. Per-clip human observation is still open |
 | C05 death lifecycle | **Passed** headlessly (anchors, precedence over a frozen attack, no extra death processing, no extended lifetime). Visual acceptance open |
 | C06 render lifecycle | **Partial.** Resource reload and cull/retrack are handled by re-anchoring on deviation, and per-entity clocks make cross-contamination structurally impossible; **not** yet observed live |
 | C07 two actual clients | **NOT MET — code complete, evidence pending.** See below |
 | C08 real restart | **NOT MET — code complete, evidence pending.** See below |
-| C09 no gameplay/asset regression | **Passed.** No attack window, damage value, measured path, hurtbox, model, animation file or biome file was touched; the full suite including every pre-existing R0a/R1a regression passes |
+| C09 no gameplay/asset regression | **Passed.** No attack window, damage value, measured path, hurtbox, model, animation file or biome file was touched; the full suite including every pre-existing R0a/R1a regression passes. The presentation half is now measured too: the self-check asserts the adapter leaves an on-time observer exactly where stock GeckoLib put it |
 
 ### What still needs a human — R0b
 
@@ -216,6 +229,28 @@ Nothing below was observed. These are the exact missing observations, not a summ
       three roars, and the four authored deaths. Also confirm the deaths still look right given that
       Rathian's and Rathalos's 50-tick clips are still cut short by vanilla's 20-tick body lifetime,
       which R0b deliberately did not change.
+
+### PR #5 review round (same day)
+
+A Codex review of `a5046f6` requested changes. All three findings were accepted and fixed; the first
+was a real hole in the evidence rather than in the shipped behaviour.
+
+1. **The sampler probe compared the adapter to itself** (P1). Its "on-time" and "frame zero"
+   references were also `ServerTimedAnimationController`s, so a mutation shifting every observer
+   together would have moved the comparison and its baseline in step and still passed. Fixed by
+   making both baselines stock GeckoLib controllers — the literal pre-R0b code path — adding an
+   assertion that an on-time observer under the adapter still lands exactly where stock GeckoLib put
+   it, and asserting the **absolute** expected sampler time rather than only agreement. The exact
+   mutation the review described now fails three checks; it is in the table above.
+2. **The headless clock test exercised a parallel formula** (P2). `clipTimeFor` was only ever called
+   by the test, while `seekTo` duplicated the same subtraction, so changing the production copy could
+   have left every GameTest green. `clipTimeFor` is deleted; there is now one method,
+   `controllerTickFor`, which runtime seeking calls and the GameTest asserts. Confirmed wired: a
+   mutation to that method alone moved the **runtime** sampler from 1.5 s to 1.75 s.
+3. **`AGENTS.md` was stale** (P2). It was a near-verbatim copy of `CLAUDE.md` and had already drifted
+   before R0b — it still described an attack timeline for "Great Izuchi only" although Rathian's
+   measured bite timeline shipped in P4, and had no R1a section at all. Rather than sync a third
+   divergence by hand, it is now a short pointer to `CLAUDE.md`. One manual, no copies.
 
 ### R1a carryover — still not observed
 

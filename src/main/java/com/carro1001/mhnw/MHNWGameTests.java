@@ -2499,6 +2499,11 @@ public class MHNWGameTests {
     /**
      * R0b-01: the clock contract itself.
      *
+     * <p>Asserts {@code controllerTickFor}, which is the method runtime seeking actually calls --
+     * not a parallel copy of the same arithmetic. An earlier version tested a separate helper that
+     * {@code process} never invoked, so changing the production subtraction could have left every
+     * test green.
+     *
      * <p>An action of age {@code a} samples clip time {@code a - L}, which is not a new convention:
      * it is exactly what a controller with an {@code L}-tick transition has always shown an observer
      * who was already watching when the action began. That is the whole reason aging a late observer
@@ -2507,39 +2512,50 @@ public class MHNWGameTests {
      * handoff's GeckoLib notes warn about, because it silently shifts an already-measured attack by
      * five ticks.
      *
-     * <p>Also pins the terminal clamp: past the end, the sample must stay inside the clip. Landing
-     * on zero there is the one-shot looping back to its first frame; landing on or past the length
-     * is GeckoLib taking its end branch and dropping the pose to the base skeleton.
+     * <p>Also pins the two regimes and the terminal clamp. Below {@code L} the controller's tick is
+     * blend progress rather than clip time, so it must equal the age. Past the end, the sample must
+     * stay inside the clip: landing on zero there is the one-shot looping back to its first frame,
+     * and landing on or past the length is GeckoLib taking its end branch and dropping the pose to
+     * the base skeleton.
      */
     @GameTest(template = ARENA, timeoutTicks = 20)
     public static void animationClockMapsActionAgeToClipTime(GameTestHelper helper) {
-        double blend = ServerTimedAnimationController.clipTimeFor(0.0D, IZUCHI_TRANSITION, SCRATCH_CLIP_TICKS);
+        double blend = tickFor(0.0D);
         helper.assertTrue(blend == 0.0D, "age 0 should still be blending, not at clip time " + blend);
 
-        double atBlendEnd = ServerTimedAnimationController.clipTimeFor(
-                IZUCHI_TRANSITION, IZUCHI_TRANSITION, SCRATCH_CLIP_TICKS);
+        double midBlend = tickFor(3.0D);
+        helper.assertTrue(Math.abs(midBlend - 3.0D) < 1.0E-6D,
+                "inside the blend the controller tick is blend progress, so age 3 should be 3, not "
+                        + midBlend);
+
+        double atBlendEnd = tickFor(IZUCHI_TRANSITION);
         helper.assertTrue(atBlendEnd == 0.0D,
                 "the clip should start exactly when the blend ends, not at " + atBlendEnd);
 
-        double midAction = ServerTimedAnimationController.clipTimeFor(20.0D, IZUCHI_TRANSITION, SCRATCH_CLIP_TICKS);
+        double midAction = tickFor(20.0D);
         helper.assertTrue(Math.abs(midAction - 15.0D) < 1.0E-6D,
                 "age 20 should sample clip time 15 (age minus the " + IZUCHI_TRANSITION
                         + "-tick blend), not " + midAction + "; feeding raw action age straight in"
                         + " as clip time shifts every measured attack");
 
-        double fractional = ServerTimedAnimationController.clipTimeFor(20.5D, IZUCHI_TRANSITION, SCRATCH_CLIP_TICKS);
+        double fractional = tickFor(20.5D);
         helper.assertTrue(fractional > midAction && fractional < midAction + 1.0D,
                 "a partial tick should interpolate between clip times, not snap: " + fractional);
 
-        double negative = ServerTimedAnimationController.clipTimeFor(-4.0D, IZUCHI_TRANSITION, SCRATCH_CLIP_TICKS);
+        double negative = tickFor(-4.0D);
         helper.assertTrue(negative == 0.0D,
                 "a clock reading as ahead of its own start must floor at zero, not " + negative);
 
-        double expired = ServerTimedAnimationController.clipTimeFor(500.0D, IZUCHI_TRANSITION, SCRATCH_CLIP_TICKS);
+        double expired = tickFor(500.0D);
         helper.assertTrue(expired > SCRATCH_CLIP_TICKS - 1.0D && expired < SCRATCH_CLIP_TICKS,
                 "an expired one-shot must hold its last frame, not loop to zero or run off the end: "
                         + expired);
         helper.succeed();
+    }
+
+    private static double tickFor(double ageTicks) {
+        return ServerTimedAnimationController.controllerTickFor(
+                ageTicks, IZUCHI_TRANSITION, SCRATCH_CLIP_TICKS);
     }
 
     /**

@@ -77,6 +77,12 @@ references `Minecraft`, and NeoForge's `RuntimeDistCleaner` refuses to load it o
 So any future test that needs GeckoLib's real sampler has to be a client-side probe, not a GameTest.
 Worth knowing before somebody spends the same hour rediscovering it.
 
+### `AGENTS.md` is now a pointer, not a copy
+It used to duplicate `CLAUDE.md` almost verbatim and had drifted twice before anyone noticed (missing
+Rathian's P4 attack timeline and the whole R1a habitat section). It is now four paragraphs pointing
+at `CLAUDE.md`. If a future tool insists on its own instruction file, give it a pointer too — do not
+restore a second copy of the manual.
+
 ### The adapter's re-anchor tolerance is one tick, and has not been tuned online
 `TOLERANCE_TICKS` is 1.0: below the two-tick acceptance target, above partial-tick float noise. It
 has only been exercised locally, where a correctly tracking controller never re-anchors at all. On a

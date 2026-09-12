@@ -182,7 +182,7 @@ public class ServerTimedAnimationController<T extends GeoAnimatable> extends Ani
             return;
         }
 
-        seekTo(seekTime, desired, speed);
+        seekTo(seekTime, clipLength, speed);
         // Pass two: the real sample. super.process clears and rewrites the bone queues, evaluates
         // the keyframes at the seeked time and sets query.anim_time from it, so this is GeckoLib's
         // own sampler running at the corrected age -- not a number that was logged and hoped for.
@@ -213,31 +213,41 @@ public class ServerTimedAnimationController<T extends GeoAnimatable> extends Ani
         return getAnimationState() == State.TRANSITIONING ? clipTime : this.transitionLength + clipTime;
     }
 
-    /** Move the clip's origin so the next sample lands at {@code desired} ticks into the action. */
-    private void seekTo(double seekTime, double desired, double speed) {
-        double clipTime;
-        if (desired < this.transitionLength) {
-            // Still inside the initial blend; keep blending, just from the right point in it.
-            this.animationState = State.TRANSITIONING;
-            clipTime = desired;
-        } else {
-            this.animationState = State.RUNNING;
-            clipTime = desired - this.transitionLength;
-        }
+    /**
+     * Move the clip's origin so the next sample lands at the requested action age.
+     *
+     * <p>The arithmetic itself lives in {@link #controllerTickFor}, which is also what the GameTest
+     * asserts -- deliberately, so the tested formula and the one actually used at runtime cannot
+     * drift apart. An earlier version duplicated the subtraction here and a change to this copy
+     * would have left every test green.
+     */
+    private void seekTo(double seekTime, double clipLength, double speed) {
+        // Still inside the initial blend means the controller's own tick is blend progress, not clip
+        // time, so GeckoLib has to stay in TRANSITIONING for it to be interpreted that way.
+        boolean blending = desiredAge(this.requestedAge, this.transitionLength, clipLength)
+                < this.transitionLength;
+        this.animationState = blending ? State.TRANSITIONING : State.RUNNING;
         this.shouldResetTick = false;
-        this.tickOffset = seekTime - clipTime / speed;
+        this.tickOffset = seekTime
+                - controllerTickFor(this.requestedAge, this.transitionLength, clipLength) / speed;
     }
 
-    // ------------------------------------------------------------------ headless clock contract
+    // ------------------------------------------------------------------ the clock contract
 
     /**
-     * The clip time this controller will sample for a given action age -- the whole client-side
-     * timing contract, factored out so a GameTest can assert it on a dedicated server where no
-     * controller, model or bone exists. Kept in one place so the server-visible claim and the
-     * client-side behaviour cannot drift apart silently.
+     * The tick this controller is driven to for a given action age -- the whole timing contract, in
+     * one place, called by {@link #seekTo} at runtime and asserted directly by a GameTest on a
+     * dedicated server where no controller, model or bone exists.
+     *
+     * <p>Two regimes, because GeckoLib's adjusted tick means two different things. While the initial
+     * blend is still running it is progress through that blend, so the answer is the action age
+     * itself. Afterwards it is time into the clip, so the answer is the age minus the blend -- which
+     * is exactly what an ordinary on-time observer has always been shown. Past the end it is held
+     * just inside the clip rather than looping to zero or running off it.
      */
-    public static double clipTimeFor(double ageTicks, double transitionLength, double clipLength) {
-        return Math.max(desiredAge(ageTicks, transitionLength, clipLength) - transitionLength, 0.0D);
+    public static double controllerTickFor(double ageTicks, double transitionLength, double clipLength) {
+        double desired = desiredAge(ageTicks, transitionLength, clipLength);
+        return desired < transitionLength ? desired : desired - transitionLength;
     }
 
     /** Action age the controller is driven to: the request, floored at zero and held inside the clip. */

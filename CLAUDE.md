@@ -39,6 +39,9 @@ missed, not as the current source of truth.
   `docs/TEST_PLAN.md`'s own framing of that split.
 - After any code change: rebuild and run the full GameTest suite (see below), update
   `docs/TEST_PLAN.md`/`docs/DEFERRED.md` as needed, then commit.
+- Repository guidance lives **only** in this file. `AGENTS.md` is a pointer to it, on purpose: the
+  two were near-verbatim copies and drifted twice before a PR review caught it. Add guidance here;
+  don't restore a second copy.
 
 ## What this is
 
