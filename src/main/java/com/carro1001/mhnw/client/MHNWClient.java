@@ -19,7 +19,11 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import com.carro1001.mhnw.item.BoneArmorItem;
+import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.model.DefaultedEntityGeoModel;
+import software.bernie.geckolib.model.GeoModel;
+import software.bernie.geckolib.renderer.GeoArmorRenderer;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
 
 /**
@@ -247,6 +251,93 @@ public final class MHNWClient {
                            int packedLight) {
             super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
             BoneProbe.maybeLog("lagiacrus", entity, getGeoModel(), BoneProbe.LAGIACRUS_BONES, false);
+        }
+    }
+
+    /**
+     * The worn bone armor.
+     *
+     * <p>Points at {@code geo/entity/bone_armor.geo.json}, the original complete export, and maps
+     * all eight of its real bone names. GeckoLib's defaults look for {@code armorHead} and friends;
+     * this export predates that convention and uses {@code Head}, {@code Body}, {@code RightArm},
+     * {@code LeftArm}, {@code RightLeg}, {@code LeftLeg}, {@code RightBoot}, {@code LeftBoot}. The
+     * newer {@code geo/item/armor/} copy does use the default names but has no boot bones at all,
+     * so pointing a stock renderer at it would silently render bare feet. See
+     * {@link BoneArmorItem} for the full history.
+     */
+    public static class BoneArmorRenderer extends GeoArmorRenderer<BoneArmorItem> {
+        public BoneArmorRenderer() {
+            super(new BoneArmorModel());
+        }
+
+        @Override
+        public GeoBone getHeadBone(GeoModel<BoneArmorItem> model) {
+            return model.getBone("Head").orElse(null);
+        }
+
+        @Override
+        public GeoBone getBodyBone(GeoModel<BoneArmorItem> model) {
+            return model.getBone("Body").orElse(null);
+        }
+
+        @Override
+        public GeoBone getRightArmBone(GeoModel<BoneArmorItem> model) {
+            return model.getBone("RightArm").orElse(null);
+        }
+
+        @Override
+        public GeoBone getLeftArmBone(GeoModel<BoneArmorItem> model) {
+            return model.getBone("LeftArm").orElse(null);
+        }
+
+        @Override
+        public GeoBone getRightLegBone(GeoModel<BoneArmorItem> model) {
+            return model.getBone("RightLeg").orElse(null);
+        }
+
+        @Override
+        public GeoBone getLeftLegBone(GeoModel<BoneArmorItem> model) {
+            return model.getBone("LeftLeg").orElse(null);
+        }
+
+        @Override
+        public GeoBone getRightBootBone(GeoModel<BoneArmorItem> model) {
+            return model.getBone("RightBoot").orElse(null);
+        }
+
+        @Override
+        public GeoBone getLeftBootBone(GeoModel<BoneArmorItem> model) {
+            return model.getBone("LeftBoot").orElse(null);
+        }
+    }
+
+    /**
+     * Static geometry and one texture. {@code DefaultedItemGeoModel} would resolve the
+     * {@code geo/item/} layout, which is the incomplete copy, so the three paths are stated
+     * outright. The animation file is the preserved empty one -- GeckoLib requires the resource to
+     * exist, and this armor has nothing to animate.
+     */
+    public static class BoneArmorModel extends GeoModel<BoneArmorItem> {
+        private static final ResourceLocation MODEL =
+                ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, "geo/entity/bone_armor.geo.json");
+        private static final ResourceLocation TEXTURE =
+                ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, "textures/item/armor/bone_armor.png");
+        private static final ResourceLocation ANIMATION =
+                ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, "animations/item/armor/bone_armor.animation.json");
+
+        @Override
+        public ResourceLocation getModelResource(BoneArmorItem animatable) {
+            return MODEL;
+        }
+
+        @Override
+        public ResourceLocation getTextureResource(BoneArmorItem animatable) {
+            return TEXTURE;
+        }
+
+        @Override
+        public ResourceLocation getAnimationResource(BoneArmorItem animatable) {
+            return ANIMATION;
         }
     }
 

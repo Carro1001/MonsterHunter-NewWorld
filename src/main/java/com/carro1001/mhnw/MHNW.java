@@ -10,7 +10,9 @@ import com.carro1001.mhnw.entity.Lagiacrus;
 import com.carro1001.mhnw.entity.Rathian;
 import com.carro1001.mhnw.entity.Rathalos;
 import com.carro1001.mhnw.entity.Toad;
+import com.carro1001.mhnw.item.BoneArmorItem;
 import com.carro1001.mhnw.registry.ModEntities;
+import com.carro1001.mhnw.registry.ModItems;
 import net.minecraft.world.entity.SpawnPlacementTypes;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.neoforged.bus.api.IEventBus;
@@ -19,7 +21,9 @@ import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.entity.living.LivingEquipmentChangeEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.RegisterGameTestsEvent;
 import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent;
@@ -36,6 +40,7 @@ public class MHNW {
 
     public MHNW(IEventBus modBus, ModContainer container) {
         ModEntities.register(modBus);
+        ModItems.register(modBus);
         modBus.addListener(MHNW::onAttributeCreation);
         modBus.addListener(MHNW::onRegisterSpawnPlacements);
         modBus.addListener(MHNW::onBuildCreativeTabs);
@@ -43,6 +48,7 @@ public class MHNW {
         modBus.addListener(MHNW::onCommonSetup);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 (RegisterCommandsEvent event) -> MHNWCommands.register(event.getDispatcher()));
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(MHNW::onEquipmentChange);
         container.registerConfig(ModConfig.Type.SERVER, MHNWConfig.SERVER_SPEC);
         container.registerConfig(ModConfig.Type.COMMON, MHNWConfig.COMMON_SPEC);
     }
@@ -115,8 +121,37 @@ public class MHNW {
         event.register(MHNWGameTests.class);
     }
 
+    /**
+     * The only hook the bone-armor set bonus needs.
+     *
+     * <p>NeoForge fires this per changed slot on the server, which covers equipping, unequipping,
+     * dying (every slot empties) and rejoining (every slot fills from nothing). Recomputing the
+     * whole set from what is worn right now, rather than adding on equip and subtracting on
+     * unequip, is what makes it impossible to leave a stale or doubled modifier behind. See
+     * {@link BoneArmorItem#refreshSetBonus}.
+     */
+    private static void onEquipmentChange(LivingEquipmentChangeEvent event) {
+        if (event.getSlot().getType() == EquipmentSlot.Type.HUMANOID_ARMOR) {
+            BoneArmorItem.refreshSetBonus(event.getEntity());
+        }
+    }
+
     @SubscribeEvent
     private static void onBuildCreativeTabs(BuildCreativeModeTabContentsEvent event) {
+        if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
+            event.accept(ModItems.MONSTER_HIDE.get());
+            event.accept(ModItems.MONSTER_CLAW.get());
+        }
+        if (event.getTabKey() == CreativeModeTabs.FOOD_AND_DRINKS) {
+            event.accept(ModItems.RAW_MEAT.get());
+            event.accept(ModItems.COOKED_MEAT.get());
+        }
+        if (event.getTabKey() == CreativeModeTabs.COMBAT) {
+            event.accept(ModItems.BONE_HEAD.get());
+            event.accept(ModItems.BONE_CHESTPLATE.get());
+            event.accept(ModItems.BONE_LEGGING.get());
+            event.accept(ModItems.BONE_BOOTS.get());
+        }
         if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS) {
             event.accept(ModEntities.GREAT_IZUCHI_SPAWN_EGG.get());
             event.accept(ModEntities.APTONOTH_SPAWN_EGG.get());
