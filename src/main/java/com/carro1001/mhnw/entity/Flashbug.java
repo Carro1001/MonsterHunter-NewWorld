@@ -3,6 +3,10 @@ package com.carro1001.mhnw.entity;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import com.carro1001.mhnw.registry.ModItems;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.PathfinderMob;
@@ -16,6 +20,9 @@ import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomFlyingGoal;
 import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemUtils;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
@@ -116,6 +123,32 @@ public class Flashbug extends PathfinderMob implements GeoEntity {
             this.provoked = true;
         }
         return hurt;
+    }
+
+    /**
+     * R2 capture: a vanilla glass bottle takes a live flashbug out of the world without setting it
+     * off, and hands back one {@code bottled_flashbug}. Deliberately narrow -- it is the only
+     * interaction this species gains. Hitting it still runs the existing telegraph/flash/discard
+     * path ({@link FlashbugFlashGoal}), and an empty hand still does nothing at all.
+     *
+     * <p>{@code ItemUtils.createFilledResult} is the whole inventory story: it is the same call
+     * vanilla's own bucket and bottle fills use, so a stacked bottle, a full inventory and creative
+     * mode all behave the way a player already expects, and neither loses nor duplicates anything.
+     * The discard is not a death, so no flash is released.
+     */
+    @Override
+    protected InteractionResult mobInteract(Player player, InteractionHand hand) {
+        ItemStack held = player.getItemInHand(hand);
+        if (!held.is(Items.GLASS_BOTTLE) || !isAlive()) {
+            return super.mobInteract(player, hand);
+        }
+        if (!level().isClientSide) {
+            playSound(SoundEvents.BOTTLE_FILL, 1.0F, 1.0F);
+            player.setItemInHand(hand, ItemUtils.createFilledResult(
+                    held, player, new ItemStack(ModItems.BOTTLED_FLASHBUG.get())));
+            discard();
+        }
+        return InteractionResult.sidedSuccess(level().isClientSide);
     }
 
     /** A flyer never takes fall damage; it has no floor to fall onto in the first place. */

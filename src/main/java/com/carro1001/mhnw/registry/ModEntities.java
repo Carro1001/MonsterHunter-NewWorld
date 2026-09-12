@@ -3,6 +3,7 @@ package com.carro1001.mhnw.registry;
 import com.carro1001.mhnw.MHNW;
 import com.carro1001.mhnw.entity.Aptonoth;
 import com.carro1001.mhnw.entity.Bug;
+import com.carro1001.mhnw.entity.FlashBombProjectile;
 import com.carro1001.mhnw.entity.Flashbug;
 import com.carro1001.mhnw.entity.GreatIzuchi;
 import com.carro1001.mhnw.entity.Izuchi;
@@ -165,6 +166,19 @@ public final class ModEntities {
     public static final DeferredHolder<Item, Item> LAGIACRUS_SPAWN_EGG =
             ITEMS.register("lagiacrus_spawn_egg", () -> new DeferredSpawnEggItem(
                     LAGIACRUS, 0x4A91A6, 0xC9B077, new Item.Properties()));
+
+    /**
+     * R2's thrown flash bomb. {@code MISC} because it is a projectile, not life: it has no
+     * attributes, no spawn placement and no spawn egg, and it is rendered from its own item stack
+     * (see {@code MHNWClient.FlashBombRenderer}).
+     */
+    public static final DeferredHolder<EntityType<?>, EntityType<FlashBombProjectile>> FLASH_BOMB =
+            ENTITY_TYPES.register("flash_bomb", () -> EntityType.Builder
+                    .<FlashBombProjectile>of(FlashBombProjectile::new, MobCategory.MISC)
+                    .sized(0.25F, 0.25F)
+                    .clientTrackingRange(4)
+                    .updateInterval(10)
+                    .build("flash_bomb"));
 
     /** Where natural spawn placement is anchored. Referenced by the spawn placement registration. */
     public static final Heightmap.Types SPAWN_HEIGHTMAP = Heightmap.Types.MOTION_BLOCKING_NO_LEAVES;

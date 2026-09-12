@@ -45,6 +45,10 @@ public final class MHNWClient {
         event.registerEntityRenderer(ModEntities.RATHIAN.get(), RathianRenderer::new);
         event.registerEntityRenderer(ModEntities.RATHALOS.get(), RathalosRenderer::new);
         event.registerEntityRenderer(ModEntities.LAGIACRUS.get(), LagiacrusRenderer::new);
+        // R2's thrown flash bomb. Vanilla's own item-projectile renderer draws it from the stack
+        // the projectile carries, so it needs no model, no class of ours, and no texture.
+        event.registerEntityRenderer(ModEntities.FLASH_BOMB.get(),
+                net.minecraft.client.renderer.entity.ThrownItemRenderer::new);
     }
 
     /**
