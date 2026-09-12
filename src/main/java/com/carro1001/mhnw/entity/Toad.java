@@ -183,16 +183,23 @@ public class Toad extends PathfinderMob implements GeoEntity, Bucketable {
     @Override
     public boolean hurt(DamageSource source, float amount) {
         if (!level().isClientSide) {
-            this.provoked = true;
-            // Attribution belongs to whoever lands the hit that STARTS a fuse, so only hits taken
-            // while no fuse is burning may set it -- including setting it back to nobody. Testing
-            // "provokerId == null" instead would conflate "nothing recorded yet" with the perfectly
-            // valid record of an environmental or mob trigger, and let a player who hit an already
-            // burning toad take credit for a fuse somebody else lit.
-            if (!isFusing()) {
+            // Attribution belongs to whoever lands the hit that STARTS a fuse, and BOTH flags are
+            // needed to say that, because they cover two different windows:
+            //
+            //   !provoked   latches the first hit across the gap between it and the goal actually
+            //               starting. isFusing() is only set by ToadFuseGoal.start(), which the
+            //               goal selector runs on its own every-other-tick cadence, so a second hit
+            //               landing in that gap would otherwise still see !isFusing() and overwrite.
+            //   !isFusing() rejects hits during the burning fuse, where start() has already cleared
+            //               provoked again.
+            //
+            // Recording "nobody" is deliberate: null is a real record of an environmental or mob
+            // trigger, not "not yet asked", so a later player cannot fill an apparently empty slot.
+            if (!this.provoked && !isFusing()) {
                 Player provoker = CarveState.resolvePlayer(source);
                 this.provokerId = provoker == null ? null : provoker.getUUID();
             }
+            this.provoked = true;
         }
         return super.hurt(source, 0.0F);
     }

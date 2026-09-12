@@ -4821,6 +4821,51 @@ public class MHNWGameTests {
                 .thenSucceed();
     }
 
+    /**
+     * R2-10: the first hit is latched before the goal scheduler has even run.
+     *
+     * <p>PR #7 follow-up review. Guarding on {@code !isFusing()} alone is not enough: that flag is
+     * set by {@code ToadFuseGoal.start()}, which the goal selector runs on its own every-other-tick
+     * cadence, so a second hit landing in the gap between the first hit and that call still saw
+     * {@code !isFusing()} and overwrote the record. This test lands both hits back to back, in the
+     * same tick, before anything has ticked the toad -- the exact window the {@code !provoked} half
+     * of the guard exists for.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void r2SecondHitBeforeTheFuseStartsDoesNotStealAttribution(GameTestHelper helper) {
+        net.minecraft.server.level.ServerPlayer latecomer = helper.makeMockServerPlayerInLevel();
+        GreatIzuchi quarry = spawnInert(helper);
+        Toad blastoad = helper.spawn(ModEntities.TOAD.get(), 8, 2, 8);
+        blastoad.setVariant(Toad.Variant.BLAST);
+        latecomer.moveTo(blastoad.getX(), blastoad.getY(), blastoad.getZ() - 1.0D, 0.0F, 0.0F);
+
+        // Both in the same tick: nothing has run the goal selector in between, so isFusing() is
+        // still false for the second hit. Only the latch on provoked can reject it.
+        blastoad.hurt(helper.getLevel().damageSources().generic(), 1.0F);
+        helper.assertTrue(!blastoad.isFusing(),
+                "fixture error: the fuse already started, so this test would not cover the gap it"
+                        + " was written for");
+        blastoad.hurt(helper.getLevel().damageSources().playerAttack(latecomer), 1.0F);
+
+        helper.assertTrue(blastoad.provokerId() == null,
+                "a second hit landing before the goal started stole attribution from the first");
+
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(blastoad.isRemoved(),
+                        "waiting for the blastoad to detonate"))
+                .thenExecute(() -> {
+                    boolean credited = quarry.carveState().isParticipant(latecomer.getUUID());
+                    int participants = quarry.carveState().participantCount();
+                    latecomer.getServer().getPlayerList().remove(latecomer);
+
+                    helper.assertTrue(!credited,
+                            "a player whose hit landed after the fuse was already lit was credited");
+                    helper.assertTrue(participants == 0,
+                            "an unattributed fuse credited " + participants + " participants");
+                })
+                .thenSucceed();
+    }
+
     /** R2-10: a provoked status toad damages nothing, so it credits nobody either. */
     @GameTest(template = ARENA, timeoutTicks = 200)
     public static void r2ProvokedStatusToadCreditsNobody(GameTestHelper helper) {

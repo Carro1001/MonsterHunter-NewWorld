@@ -2,7 +2,7 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 147 tests, all passing**
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 148 tests, all passing**
 (full `.\gradlew.bat --no-daemon clean build` then `runGameTestServer`, 2026-09-12, R2
 field-preparation packet; 123 before the packet, 121 before the R1 PR #6 review round, 97 before
 R1, 85 before R0b). The earlier 69-, 75-, 85-, 86- and 97-test figures are superseded — note the R0a round's
@@ -191,6 +191,28 @@ explicitly rather than leaving the slot open.
 Mutation run: with the two guards reverted and the new tests kept, exactly those two tests fail and
 nothing else does.
 
+### PR #7 follow-up review: the pre-start scheduler gap
+
+A third P1, and the first fix for finding 2 was genuinely incomplete rather than merely narrow.
+
+Guarding attribution on `!isFusing()` alone is not enough. That flag is set by
+`ToadFuseGoal.start()`, which the goal selector runs on its **own every-other-tick cadence**, not
+during `hurt`. So between the hit that sets `provoked = true` and the goal actually starting, there
+is a window of one or two real ticks in which a second hit still sees `!isFusing()` and overwrites
+`provokerId` -- the same theft the first fix was meant to stop, one scheduler tick earlier.
+
+Both flags are now required, and they cover two different windows:
+
+| Guard | Window it covers |
+|---|---|
+| `!provoked` | between the first hit and `start()`, where `isFusing()` is still false |
+| `!isFusing()` | during the burning fuse, where `start()` has already cleared `provoked` again |
+
+`r2SecondHitBeforeTheFuseStartsDoesNotStealAttribution` lands both hits back to back in the same
+tick, with nothing ticking the toad in between, and asserts up front that the fuse has not started
+yet -- so it cannot stop covering the gap it was written for. Mutation run: reverted to the
+`!isFusing()`-only guard, exactly that one test fails and nothing else does.
+
 ### Live crash during the review round, and the coverage gap it exposed
 
 A dev client threw a flash bomb and the integrated server crashed with
@@ -296,7 +318,7 @@ wild toad      -> water bucket -> same variant on release -> hit once -> existin
 
 ### Automated results
 
-147/147 passing. 24 new tests covering gates R2-01..R2-11, added next to the existing endemic and
+148/148 passing. 25 new tests covering gates R2-01..R2-11, added next to the existing endemic and
 R1 blocks (21 in the first cut, 2 more from the PR #7 review round below). Commands actually run, in this order:
 
 ```powershell
@@ -330,6 +352,8 @@ Both were then re-run **strictly serially, with nothing else touching the build 
 | final `clean build`, then `runGameTestServer`, then `build runGameTestServer` | all passing |
 | after the PR #7 review fixes: `clean build runGameTestServer` | **146/146** |
 | after the PR #7 review fixes: 6 repeats, serial | **6/6 — all 146 passing every time** |
+| after the PR #7 follow-up fix: `clean build runGameTestServer` | **148/148** |
+| after the PR #7 follow-up fix: 5 repeats, serial | **5/5 — all 148 passing every time** |
 
 The lesson worth keeping: **do not run `runServer` and `runGameTestServer --rerun-tasks` at the same
 time on this project.** They share one `build/` and one `run/`, and the loser sees a half-written
