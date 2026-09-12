@@ -134,23 +134,34 @@ Rathian/Rathalos constructor comments before changing any hurtbox number — the
 lesson-by-lesson history of what was tried and why it was wrong, and repeating an already-disproved
 approach (a single mean, a flat directional nudge) wastes a full test round.
 
-### Attack timeline: Great Izuchi only, so far
+### Attack timeline: Great Izuchi and Rathian, so far
 
-`GreatIzuchiCombatGoal` (a vanilla `Goal`, not a Brain-system behaviour — there is no SmartBrainLib
-dependency on this branch) is the sole owner of Great Izuchi's combat: target approach, orientation,
-attack selection, and the attack's phase timeline (`WINDUP` → `ACTIVE` → `RECOVERY`, derived from a
-single "action age" counter rather than several counters that could disagree). Everything that
-differs between individual attacks (range band, damage, active window, which part(s) act as the
-attack volume) lives in `AttackProfile`, a small data-only class this goal reads from — see either
-file's own doc comment for the phase table and the exact contract.
+`GreatIzuchiCombatGoal`/`RathianCombatGoal` (vanilla `Goal`s, not a Brain-system behaviour — there is
+no SmartBrainLib dependency on this branch) each own their species' whole combat loop: target
+approach, orientation, attack selection, and the attack's phase timeline (`WINDUP` → `ACTIVE` →
+`RECOVERY`, derived from a single "action age" counter rather than several counters that could
+disagree). Everything that differs between individual attacks (range band, damage, active window,
+the measured limb path) lives in `AttackProfile`, a small data-only record each goal reads from —
+see either goal's own doc comment for the phase table and the exact contract. Rathian's is a
+deliberate duplicate of Great Izuchi's rather than a shared base class — see `RathianCombatGoal`'s
+own doc for why generalizing now would be premature (two implementations isn't the same as knowing
+what they need to share).
 
-Every other current monster (`Izuchi`, `Rathian`, `Rathalos`) fights with ordinary vanilla
-`MeleeAttackGoal`/`Mob.doHurtTarget` and has **no custom attack presentation yet** — this is a
-deliberate, documented P4 gap (`docs/DEFERRED.md`), not an oversight:
-- Rathian's and Rathalos's real attack clips exist in their `.geo.json`/animation files but aren't
-  wired to any attack volume; Rathalos's four melee clips reference 14-17 bone names each that don't
-  exist anywhere in its own geometry (confirmed, not assumed — a model-editor retarget or a new
-  clip is needed before those can play correctly at all).
+Every attack-volume path in either goal is a *measured* keyframe track from a live `BoneProbe`
+capture, not an offline guess — offline solving from keyframed, MoLang-heavy attack clips has been
+tried and confirmed untrustworthy twice (Great Izuchi's claw, then again investigating Rathian's).
+Rathian's `attack_charge_bite_left` is the one exception worth knowing about: it's mirrored from the
+measured `attack_charge_bite_right` path rather than its own capture, on the reasoning that the
+right bite's real data already showed no consistent left/right bias — replace it with its own
+measurement if a capture of the left clip ever shows that assumption was wrong.
+
+Rathalos and Izuchi still fight with ordinary vanilla `MeleeAttackGoal`/`Mob.doHurtTarget` and have
+**no custom attack presentation** — a deliberate, documented P4 gap (`docs/DEFERRED.md`), not an
+oversight:
+- Rathalos's real attack clips exist in its `.geo.json`/animation files but aren't wired to any
+  attack volume; its four melee clips reference 14-17 bone names each that don't exist anywhere in
+  its own geometry (confirmed, not assumed — a model-editor retarget or a new clip is needed before
+  those can play correctly at all).
 - Izuchi (small) has no attack or death clip in its own preserved asset at all (idle/sleep/walk/run
   only). A candidate attack/death set exists on the archived `origin/brain` branch
   (`legacy/candidate-art-brain-branch/izuchi.*`), but every attack/death/roar/rally clip in it
@@ -160,6 +171,37 @@ deliberate, documented P4 gap (`docs/DEFERRED.md`), not an oversight:
   `.geo.json`. This needs either a real retarget, a newly authored clip, or explicit approval to
   reuse an existing clip as a labelled placeholder — a decision left to the maintainer, not made
   unilaterally.
+
+### The opening roar (`RoarGoal`/`Roarable`)
+
+A small MHW-style mechanic shared by Great Izuchi, Rathian and Rathalos: a monster roars once on
+first engaging a target, not again mid-fight, and re-arms only after a real disengage (no target for
+a few real seconds, not a one-tick flicker). `Roarable` is a small marker interface (same generic-goal
+pattern as `MonsterPart`/`BoneProbe`, not a shared base class); `RoarGoal<T extends Mob & Roarable>`
+owns the engage/re-arm state machine and sits above each species' own combat/melee goal in priority
+so the roar genuinely freezes the fight. Works independently of an attack timeline existing at all —
+Rathalos has it despite its broken attack clips, since a roar is just a presentation clip.
+
+**A goal that tracks real elapsed time must override `requiresUpdateEveryTick()` and use game time,
+not a per-call tick counter.** `Mob.serverAiStep()` only polls a *non-running* goal's `canUse()`
+every other real tick, and only ticks a *running* goal's own `tick()` every real tick if that goal's
+`requiresUpdateEveryTick()` returns true (the combat goals already override this for their own
+windup/active/recovery timing). `RoarGoal` initially missed this for its own countdown, which
+silently made the roar take twice as long as the clip's real duration to let go — the clip finished
+and held its last frame (its own authored `hold_on_last_frame` loop mode) well before the goal's
+countdown reached zero, which read live as "froze after the roar."
+
+**A dead entity stops running its goals entirely, permanently, for the whole corpse-hold window a
+species with an authored death clip needs — not just until some in-goal check catches it.**
+`LivingEntity.travel()` gates the call to `serverAiStep()` (which ticks every goal) behind
+`!isImmobile()`, and `isImmobile()` is `isDeadOrDying()`; once that's true, no goal — including one
+that explicitly checks `isAlive()` inside its own `tick()`, as both combat goals and `RoarGoal` do —
+gets ticked again to act on it. A synced field like `getAttackId()`/`getRoarTicks()` therefore simply
+freezes at whatever value it held the instant death began, rather than clearing. This is harmless in
+practice only because `mainAnim()` checks `isDeadOrDying()` before reading any of that state, so
+presentation is correct regardless — but don't expect an in-goal `isAlive()` guard to actually fire
+under normal death; a GameTest that kills a monster mid-action and expects the goal's own synced
+state to self-clear will fail, not because combat is broken, but because goal ticking stopped first.
 
 ### Registration and client wiring
 

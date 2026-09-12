@@ -97,6 +97,20 @@ public class RoarGoal<T extends Mob & Roarable> extends Goal {
 
     @Override
     public void tick() {
+        // Same guard GreatIzuchiCombatGoal.tick() carries, kept for the same reason, but a real
+        // GameTest (killing a monster mid-roar) showed it never actually fires either way: vanilla's
+        // own LivingEntity.travel() stops calling serverAiStep() at all once isDeadOrDying() is
+        // true (isImmobile() short-circuits it), which is also what stops goal ticking entirely for
+        // the whole corpse-hold window a species with an authored death clip needs -- not just this
+        // goal's tick(), every goal's. So a roar (or an attack, in the combat goals) genuinely
+        // freezes at whatever state it was in the instant death began, and stays there; this check
+        // can only matter if that vanilla gate is ever bypassed some other way. Harmless either way:
+        // mainAnim() checks isDeadOrDying() before isRoaring()/getAttackId(), so presentation is
+        // correct regardless of what this internal state reads.
+        if (!this.monster.isAlive()) {
+            stop();
+            return;
+        }
         LivingEntity target = this.monster.getTarget();
         if (target != null) {
             this.monster.getLookControl().setLookAt(target, 30.0F, 30.0F);
