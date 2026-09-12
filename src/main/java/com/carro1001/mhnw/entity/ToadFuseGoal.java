@@ -3,7 +3,9 @@ package com.carro1001.mhnw.entity;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.phys.AABB;
@@ -85,7 +87,14 @@ public class ToadFuseGoal extends EndemicAreaEffectGoal {
 
         if (variant == Toad.Variant.BLAST) {
             // Only the blast variant deals real explosion damage; the others are status-only.
-            level.explode(this.toad, this.toad.getX(), this.toad.getY(), this.toad.getZ(),
+            // Naming the provoking player as the explosion's source is the whole of R2's
+            // attribution change: vanilla then builds a PLAYER_EXPLOSION damage source whose
+            // causing entity is that player, so a monster this blast actually damages credits them
+            // through exactly the same CarveState rule as a sword swing. Without a resolvable
+            // provoker -- a bucket release, a mob-triggered blast, an environmental hit -- the toad
+            // remains the source and nobody is credited. The explosion still happens at the toad,
+            // not at the player: the position is passed explicitly.
+            level.explode(resolveProvoker(), this.toad.getX(), this.toad.getY(), this.toad.getZ(),
                     (float) CLOUD_RADIUS * 0.6F, false, Level.ExplosionInteraction.NONE);
         } else {
             AABB cloud = this.toad.getBoundingBox().inflate(CLOUD_RADIUS);
@@ -115,5 +124,32 @@ public class ToadFuseGoal extends EndemicAreaEffectGoal {
                     this.toad.getX(), this.toad.getY() + 0.3, this.toad.getZ(), 15, 0.3, 0.3, 0.3, 0.05);
         }
         this.toad.discard();
+    }
+
+    /**
+     * The player who provoked this fuse, if they are still around to be credited, else the toad
+     * itself. Resolved now rather than held as a reference so a provoker who logged out or died
+     * during the 40-tick warning simply drops out, leaving an ordinary unattributed explosion.
+     */
+    private Entity resolveProvoker() {
+        if (this.toad.provokerId != null) {
+            Player provoker = this.toad.level().getPlayerByUUID(this.toad.provokerId);
+            if (provoker != null) {
+                return provoker;
+            }
+        }
+        return this.toad;
+    }
+
+    /**
+     * Clearing the provoker here, rather than in {@code clearProvoked()}, is deliberate: that runs
+     * at {@code start()}, when the fuse still needs to remember who lit it. {@code stop()} runs
+     * after {@link #release()}, so the record lasts exactly one fuse and is never an owner
+     * relationship.
+     */
+    @Override
+    public void stop() {
+        super.stop();
+        this.toad.provokerId = null;
     }
 }

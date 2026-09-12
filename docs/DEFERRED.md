@@ -5,6 +5,54 @@ Things consciously postponed, with enough context to pick them up cold. Nothing 
 
 Acceptance IDs refer to the matrix in `REVIVAL_HANDOFF.md` section 4.6.
 
+## Found during R2 (2026-09-12), deferred out of that packet
+
+### The two Flashbug items wear temporary vanilla sprites
+**Status:** deliberate, and named in the R2 packet itself. `mhnw:bottled_flashbug` uses
+`minecraft:item/experience_bottle` and `mhnw:flash_bomb` uses `minecraft:item/firework_star`. There
+is no accepted flash-bomb or bottled-bug icon in the preserved art, and `fulgurbug.png` is
+deliberately **not** repurposed — it is reserved for its own later material identity. Replacing
+these is an art task, not a code one; the model JSONs are one line each to repoint. Whether the two
+read as distinct from each other and from existing items is an open human gate in
+`docs/TEST_PLAN.md`.
+
+### No antidote, ailment engine or input-lock semantics
+**Status:** scheduled elsewhere, not skipped. Roadmap Q17 puts the MH antidote with Rathian in R4,
+and Q18's player-control-loss rule is explicitly not a reason to redesign today's non-locking
+vanilla slowdown/confusion stand-ins. R2 deliberately added neither. The four toad effects and their
+durations are unchanged from P3.
+
+### The flash helper is a helper, not an effect system
+**Status:** deliberate. `FlashEffect` is one static method with two real callers. It has no
+registry, no per-effect subclass and no configuration. If a third caller ever appears that needs a
+different radius or duration, those become parameters before they become a framework.
+
+### Blastoad attribution ignores every hit after the one that lights the fuse
+**Status:** deliberate, and tightened by the PR #7 review. Only a hit taken while `!isFusing()` sets
+`Toad.provokerId`, and a fuse lit by a mob or the environment records "nobody" — permanently, for
+that fuse. A player who joins in afterwards gets no credit, even though their hit is real. That is
+the intended reading of "the provoking player": the one who set it off. If a future packet ever
+wants shared credit for a blast several people contributed to, that is a product decision about
+`CarveState` participation, not a bug in this rule.
+
+### Blastoad attribution is last-fuse only, and does not survive a logout
+**Status:** deliberate, and the narrower choice on purpose. `Toad.provokerId` is a transient uuid
+cleared by `ToadFuseGoal.stop()`. A provoker who logs out or dies during the 40-tick warning simply
+drops out and the blast becomes an ordinary unattributed explosion — rather than being persisted
+into a saved owner relationship, which is what the packet forbids. Only the first hit of a fuse
+records a provoker; a second player hitting the same lit toad does not steal credit.
+
+### Bucket release does not force-load or protect the chunk
+**Status:** same shape as the R1 corpse window, and for the same reason. A released toad gets
+`FromBucket` and so survives vanilla's distance-despawn rule, but nothing here keeps its chunk
+loaded. Deploying one and walking a long way off leaves it where a normal creature would be left.
+
+### No dung bombs, Bitterbug/Fulgurbug collection, or other endemic capture
+**Status:** out of R2 scope by the packet's own exclusion list. `monster_feces.png` and
+`fulgurbug.png` remain unused preserved art. Capture was built for exactly two species because
+exactly two were asked for; it is two narrow `mobInteract` overrides, not a capture framework, so a
+third species is a deliberate decision rather than a free extension.
+
 ## Found during R1 (2026-09-12), deferred out of that packet
 
 ### The corpse window is not configurable

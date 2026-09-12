@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "mhnw:bottled_flashbug"
+    },
+    {
+      "item": "minecraft:paper"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "mhnw:flash_bomb"
+  }
+}

@@ -142,8 +142,11 @@ public final class CarveState {
      * owner actually resolves to a player. A projectile needs no case of its own: vanilla already
      * reports the shooter as the source's causing entity. Nothing here guesses from a name, the
      * nearest player or the last target.
+     *
+     * <p>Package-visible rather than private since R2, so {@link Toad}'s provoker attribution can
+     * ask the identical question instead of inventing a second, subtly different rule.
      */
-    private static Player resolvePlayer(DamageSource source) {
+    static Player resolvePlayer(DamageSource source) {
         Entity attacker = source.getEntity();
         if (attacker instanceof Player player) {
             return player;

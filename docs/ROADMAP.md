@@ -189,7 +189,7 @@ real-world acceptance; the first handoff implements **R0a only**.
 | **R1a - The first habitat** | A custom biome actually generates and hosts the selected wildlife | R0a baseline; habitat/population defaults | Nests, custom structures, ores, replacement world preset |
 | **R1b - Personal corpse carving** | Participants claim three personal carves from a persistent corpse | R0a lifecycle; reward defaults and material contract | Shared death loot, generic economy, universal corpse handling |
 | **R1 - The first hunting loop** | Biome -> Great Izuchi hunt -> carve -> bone armor and cooked meat -> repeat | R0a, R1a, R1b, armor and Q27 harassment; R0b before release | Custom weapons, part breaking, rare-gated basics |
-| **R2 - Field preparation** | Prepared meat/BBQ, flash bombs and bucketed toads | R1 item conventions; agreed endemic/effect behavior | Full slinger, global stamina, generic ailment engine |
+| **R2 - Field preparation** — **implemented 2026-09-12** | Prepared meat/BBQ, flash bombs and bucketed toads | R1 item conventions; agreed endemic/effect behavior | Full slinger, global stamina, generic ailment engine |
 | **R3 - The hunter's armory** | Bone greatsword first; further equipment one item/family at a time | R1 materials; accepted greatsword texture/export | All weapons, decoration engine, R8 combat overhaul |
 | **R4 - Rathian** | A distinctive poison hunt, appropriate counter and useful carves | R1; poison/antidote and accepted attack presentation | Rathalos dependency or an entire aerial-moveset framework |
 | **R4b - Rathalos** | A real flying-wyvern encounter | Relevant R4/shared capabilities and its own valid art/flight | Ground-only release passed off as a finished Rathalos |
@@ -363,6 +363,16 @@ personal rewards. R0 + R1a + R1b + this integration constitute the first release
 each small work packet can finish without pretending the release is finished.
 
 ### R2 - Field preparation
+
+**Implemented 2026-09-12** on `r2/field-preparation`, against the `master` PR #6 merge `78bd066`.
+All three preparation loops ship: the 80-tick `mhnw:bbq_spit`, glass-bottle Flashbug capture into
+`mhnw:bottled_flashbug` and its one-for-one `mhnw:flash_bomb`, and the four preserved toad buckets
+with player-correct Blastoad carve attribution. The existing hit-triggered one-release endemic
+contract is preserved; the wild Flashbug shares the new bounded flash without any change to its
+trigger, radius, facing/LOS rule or lifetime. 144/144 GameTests. This marks the increment
+implemented, **not** a public release: the R2 client, two-client and real-restart observations are
+open human gates in `docs/TEST_PLAN.md`, as are the still-open R0/R1 ones. Antidote/poison-counter
+progression remains scheduled with Rathian in R4.
 
 The second release increment deepens the first hunt with **prepared meat/BBQ**,
 **flashbug-to-flash-bomb progression** and **bucketed toads**. Each can be a small

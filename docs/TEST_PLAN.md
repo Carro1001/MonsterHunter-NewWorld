@@ -2,9 +2,10 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 123 tests, all passing**
-(full `.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-12, R1 first-hunting-loop packet
-after its PR #6 review round; 121 before that round, 97 before the packet, 85 before R0b). The earlier 69-, 75-, 85-, 86- and 97-test figures are superseded — note the R0a round's
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 148 tests, all passing**
+(full `.\gradlew.bat --no-daemon clean build` then `runGameTestServer`, 2026-09-12, R2
+field-preparation packet; 123 before the packet, 121 before the R1 PR #6 review round, 97 before
+R1, 85 before R0b). The earlier 69-, 75-, 85-, 86- and 97-test figures are superseded — note the R0a round's
 real observed count was 74, not the 75 this line used to claim. The shoreline test that failed under the P5a build passed
 cleanly after the native-controls correction. Client acceptance for that Lagiacrus correction has
 not been rerun by a human yet.
@@ -162,6 +163,80 @@ The review found no dependency or abstraction bloat, and nothing to change about
 composition, the `deathTime` reuse, the iron material reuse, the deterministic reward table or the
 neighbour scan.
 
+### PR #7 adversarial review round (same day)
+
+Two P1 correctness findings, both reproduced against the code before fixing and both now guarded by
+a test that fails without the fix.
+
+**1. The five-block flash radius was a ten-block cube.** `FlashEffect.flash` used the inflated
+broad-phase `AABB` as its final eligibility test. An inflated box reaches ~8.7 blocks at its corners,
+so a target on the diagonal at `(+4, +4)` — 6.38 blocks from the flash — was flashed anyway. Fixed
+with one squared-distance guard against `RADIUS * RADIUS`, keeping the box as the cheap query it
+should always have been. This was a **pre-existing P3 bug inherited by R2**, not something the packet
+introduced: the wild flashbug's original `release()` inflated its own bounding box the same way. The
+fix lands in the shared helper, so both callers get it.
+
+The existing out-of-range cow could not have caught this: at `|dx| = 6.5` it is outside the cube and
+never reaches the guard. The new test's cow is deliberately inside the cube (`|dx| = |dz| = 4.5`) and
+outside the radius, and asserts both of those facts about itself first, so it cannot quietly stop
+testing what it was written for.
+
+**2. A latecomer could steal an already-burning fuse.** `Toad.hurt` tested `provokerId == null` to
+mean "nothing recorded yet" — but `null` is also the correct, final record for a fuse lit by a mob or
+the environment. Since `ToadFuseGoal.start()` clears `provoked`, a player who hit the toad during
+that same 40-tick fuse filled in the empty slot and collected carve credit for a blast somebody else
+set off. Attribution is now recorded only by a hit taken while `!isFusing()`, and records "nobody"
+explicitly rather than leaving the slot open.
+
+Mutation run: with the two guards reverted and the new tests kept, exactly those two tests fail and
+nothing else does.
+
+### PR #7 follow-up review: the pre-start scheduler gap
+
+A third P1, and the first fix for finding 2 was genuinely incomplete rather than merely narrow.
+
+Guarding attribution on `!isFusing()` alone is not enough. That flag is set by
+`ToadFuseGoal.start()`, which the goal selector runs on its **own every-other-tick cadence**, not
+during `hurt`. So between the hit that sets `provoked = true` and the goal actually starting, there
+is a window of one or two real ticks in which a second hit still sees `!isFusing()` and overwrites
+`provokerId` -- the same theft the first fix was meant to stop, one scheduler tick earlier.
+
+Both flags are now required, and they cover two different windows:
+
+| Guard | Window it covers |
+|---|---|
+| `!provoked` | between the first hit and `start()`, where `isFusing()` is still false |
+| `!isFusing()` | during the burning fuse, where `start()` has already cleared `provoked` again |
+
+`r2SecondHitBeforeTheFuseStartsDoesNotStealAttribution` lands both hits back to back in the same
+tick, with nothing ticking the toad in between, and asserts up front that the fuse has not started
+yet -- so it cannot stop covering the gap it was written for. Mutation run: reverted to the
+`!isFusing()`-only guard, exactly that one test fails and nothing else does.
+
+### Live crash during the review round, and the coverage gap it exposed
+
+A dev client threw a flash bomb and the integrated server crashed with
+`NoClassDefFoundError: com/carro1001/mhnw/entity/FlashEffect`.
+
+**Cause: the build-directory race again, self-inflicted.** `build/classes` was rewritten at
+16:41:43; the crash was at 16:41:18 — a `clean build` had deleted the directory and had not yet
+written it back while that client was running. `FlashEffect` is referenced only from
+`FlashBombProjectile.onHit`, so it is loaded lazily, on first impact: precisely the class that would
+still be missing. It has no client-only reference of any kind and ships in the jar. Nothing in the
+code is at fault, and no test can defend against a classpath deleted underneath a running process.
+
+This is the same rule as the earlier flake, and it now has two incidents behind it: **do not build
+while a client or server is running against this project's `build/`.**
+
+**The real gap it exposed.** `r2ThrownFlashBombReleasesOnceOnImpact` builds the projectile through
+its `EntityType` constructor and drops it, so it never touched `FlashBombItem.use` or the
+`(Level, LivingEntity)` shooter constructor — the item-to-projectile handoff a player actually
+performs had no coverage at all. `r2FlashBombThrownFromTheHandFliesAndFlashes` now drives the whole
+thing: use the item from a survival hand, consume exactly one, start the cooldown, confirm exactly
+one projectile entered the world, let it fly and hit the floor unaided, and check it flashed a
+facing target and discarded itself. It passes, which is also the positive evidence that the crashed
+path is sound.
+
 ### Gates: what is closed and what is not
 
 | Gate | Status |
@@ -204,6 +279,149 @@ neighbour scan.
       then `/difficulty normal` and check it resumes. `r1IzuchiHarassmentStopsOnPeaceful` proves the
       precondition, not the live transition — the transition cannot be tested headlessly without
       changing global difficulty underneath every concurrently running test.
+
+## R2 — Field preparation (2026-09-12)
+
+Baseline: `master` at `78bd066`, the PR #6 merge. Branch `r2/field-preparation`.
+
+Three preparation loops, one PR. Nothing in R0/R0a/R0b/R1/R1a changed behaviour: the 123 tests that
+existed before this packet all still pass, unmodified.
+
+```text
+Aptonoth carve -> raw meat -> 80-tick BBQ spit  -> cooked meat
+wild Flashbug  -> glass bottle -> one flash bomb -> one bounded thrown flash
+wild toad      -> water bucket -> same variant on release -> hit once -> existing effect
+```
+
+### What landed
+
+- **`mhnw:bbq_spit`** — shapeless from one `mhnw:raw_meat` plus one stick, stacks to one, held-use
+  pose `BLOCK`, fixed 80-tick server-authoritative use, yields exactly one existing
+  `mhnw:cooked_meat` and a 20-tick cooldown. No block, no GUI, no timing window, no fuel, no rare
+  tier. The three R1 cooking recipes (furnace, smoker, campfire) are untouched.
+- **`mhnw:bottled_flashbug`** — right-click a live Flashbug with a vanilla glass bottle. Stacks to
+  16, crafting remainder is one glass bottle.
+- **`mhnw:flash_bomb`** — shapeless from one bottled flashbug plus one paper; the bottle comes back
+  through ordinary crafting-remainder semantics. Snowball-shaped throw, 10-tick cooldown, releases
+  once on first impact, no damage of any kind, no terrain effect, not recoverable.
+- **`FlashEffect`** — the one shared flash: 5-block radius, line of sight, 0.65 horizontal facing
+  dot product, players never affected, 40 ticks of Blindness 0 and Movement Slowdown II. The wild
+  Flashbug now calls it too, gaining the bounded slowdown while keeping its own hit-only trigger,
+  11-tick telegraph, radius, facing/LOS rule and one-release discard.
+- **Four toad buckets** at the exact preserved legacy ids and icons — `poisontoad_bucket`,
+  `sleeptoad_bucket`, `paratoad_bucket`, `nitrotoad_bucket` — with vanilla water-bucket capture and
+  empty-bucket release. Variant, custom name, health and `FromBucket` survive a round trip. A bare
+  `/give` stack still releases the variant its item id names.
+- **Blastoad attribution** — a player who provokes a toad is retained as the transient source for
+  that fuse; a BLAST release names them as the explosion's causing entity, so the damage reaches
+  `CarveState` through the identical rule as a direct hit.
+
+### Automated results
+
+148/148 passing. 25 new tests covering gates R2-01..R2-11, added next to the existing endemic and
+R1 blocks (21 in the first cut, 2 more from the PR #7 review round below). Commands actually run, in this order:
+
+```powershell
+.\gradlew.bat --no-daemon clean build runGameTestServer   # fresh 123-test baseline, before any edit
+.\gradlew.bat --no-daemon runGameTestServer               # iterating
+.\gradlew.bat --no-daemon clean build
+.\gradlew.bat --no-daemon runGameTestServer
+.\gradlew.bat --no-daemon build runGameTestServer
+git diff --check
+```
+
+### Repeats, and the one flake
+
+The repetition targets the scheduling-sensitive new tests specifically: the 40-tick toad fuse under
+a real goal tick, the thrown bomb flying and impacting on its own, and the wild flashbug's 11-tick
+telegraph.
+
+A first batch of seven `--rerun-tasks` repeats gave **6 passed, 1 failed**. The failure fired in the
+same minute a `runServer` had been started **concurrently** with that loop — and `--rerun-tasks`
+rewrites `build/classes` underneath an already-running server. That server run failed too, with
+`Failed to load class com.carro1001.mhnw.MHNW` and
+`NullPointerException: Cannot invoke "java.lang.Class.getName()" because "cls" is null`, which is a
+half-written build directory, not a mod defect.
+
+Both were then re-run **strictly serially, with nothing else touching the build directory**:
+
+| Batch | Result |
+|---|---|
+| 7 repeats, concurrent with a `runServer` start | 6 passed, 1 failed (build-directory race, above) |
+| 8 repeats, serial | **8/8 — all 144 passing every time** |
+| final `clean build`, then `runGameTestServer`, then `build runGameTestServer` | all passing |
+| after the PR #7 review fixes: `clean build runGameTestServer` | **146/146** |
+| after the PR #7 review fixes: 6 repeats, serial | **6/6 — all 146 passing every time** |
+| after the PR #7 follow-up fix: `clean build runGameTestServer` | **148/148** |
+| after the PR #7 follow-up fix: 5 repeats, serial | **5/5 — all 148 passing every time** |
+
+The lesson worth keeping: **do not run `runServer` and `runGameTestServer --rerun-tasks` at the same
+time on this project.** They share one `build/` and one `run/`, and the loser sees a half-written
+class directory. That is a harness rule, not a code bug — but it looks exactly like a flaky test
+until you line up the timestamps.
+
+### Three fixture lessons worth not rediscovering
+
+1. **`GameTestHelper.makeMockServerPlayerInLevel()` arrives creative.** Its anonymous subclass
+   overrides `isCreative()` to true and its abilities start with `instabuild`. Vanilla's
+   `ItemUtils.createFilledResult` deliberately keeps the input stack under infinite materials, so a
+   survival bucket/bottle transaction tested with that fixture silently asserts the creative path.
+   `setGameMode(SURVIVAL)` before using it; `r2CreativeBottleCaptureNeitherLosesNorDuplicates` is
+   the one test that deliberately does not.
+2. **`Bucketable.bucketMobPickup` casts to `ServerPlayer`** to award `FILLED_BUCKET`. A detached
+   `makeMockPlayer` cannot catch a toad at all — it throws. Capture tests need a level-resident
+   player; release tests do not.
+3. **A mock player's held item is an inventory slot.** Counting the hand separately from
+   `getInventory()` double-counts and makes an exactly-once assertion pass for the wrong reason, or
+   fail for it. Two of these tests were wrong this way before the first run caught them.
+
+### One production fix the tests forced
+
+`BarbecueSpitItem.finishUsingItem` returned a fresh cooked meat even when handed an already-empty
+stack. Not reachable in play — vanilla stops a use the moment its stack runs out — but it meant
+"cannot double-complete" was only true by luck. Guarded.
+
+### Gates: what is closed and what is not
+
+| Gate | Status |
+|---|---|
+| R2-01 registries/data | closed headlessly — ids, entity type, both recipes and the exact variant mapping |
+| R2-02 BBQ transaction | closed headlessly |
+| R2-03 Flashbug capture | closed headlessly, survival and creative |
+| R2-04 flash recipe/container | closed headlessly, through vanilla's own remaining-items path |
+| R2-05 flash impact | closed headlessly — full eligibility matrix, a diagonal just-outside-radius case, plus a genuinely thrown bomb |
+| R2-06 wild regression | closed headlessly |
+| R2-07 toad capture mapping | closed headlessly, all four variants |
+| R2-08 release/round trip | closed headlessly, including a bare `/give` stack and a save/load |
+| R2-09 deployed effects | closed headlessly |
+| R2-10 attribution | closed headlessly — provoked, unprovoked, non-damaging variants and mixed-source ordering |
+| R2-11 regression | closed — all 123 pre-existing tests pass unchanged |
+
+**Not closed, and not claimed:** every item in "What still needs a human — R2" below. No client was
+available during this packet, so none of the appearance, feel, two-client or real-disk-restart
+observations happened. A GameTest is not a substitute for any of them.
+
+### What still needs a human — R2
+
+- [ ] BBQ spit has a readable inventory/held model, the four-second hold reads as cooking rather
+      than eating, and the cancelled hold visibly does nothing
+- [ ] Bottled Flashbug (temporary vanilla experience-bottle sprite) and flash bomb (temporary
+      vanilla firework-star sprite) are distinct and readable from each other and from existing items
+- [ ] The thrown bomb renders throughout its flight and flashes once at impact
+- [ ] Capture a naturally spawned or egg-spawned Flashbug with a real bottle, craft the bomb, throw
+      it at hostile mobs; looking away and taking cover feel like understandable counterplay
+- [ ] Capture and release all four toad variants: the filled icon and name match the creature, the
+      empty bucket returns once, the released texture is unchanged, and it stays idle until hit
+- [ ] In survival, deploy a Blastoad near a carvable monster, retreat during the warning, and
+      confirm its damage counts toward that player's later carve eligibility
+- [ ] Two clients: projectile, flash/effects, toad variant/fuse/removal and every inventory
+      transaction agree for both observers, with no duplicate entities or items
+- [ ] Save, restart and rejoin with filled buckets and released toads; verify variants, names and
+      counts on the real disk
+
+The still-open R0/R0b/R1/R1a human gates below are **not** closed by this packet either — natural
+population, village interaction, the full loop, armor appearance, combat feel, two-client and
+restart observations all remain exactly as open as they were.
 
 ## R0b — client animation lifecycle (2026-09-12)
 

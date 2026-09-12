@@ -141,16 +141,27 @@ public class MHNW {
         if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
             event.accept(ModItems.MONSTER_HIDE.get());
             event.accept(ModItems.MONSTER_CLAW.get());
+            event.accept(ModItems.BOTTLED_FLASHBUG.get());
         }
         if (event.getTabKey() == CreativeModeTabs.FOOD_AND_DRINKS) {
             event.accept(ModItems.RAW_MEAT.get());
             event.accept(ModItems.COOKED_MEAT.get());
+            event.accept(ModItems.BBQ_SPIT.get());
         }
         if (event.getTabKey() == CreativeModeTabs.COMBAT) {
             event.accept(ModItems.BONE_HEAD.get());
             event.accept(ModItems.BONE_CHESTPLATE.get());
             event.accept(ModItems.BONE_LEGGING.get());
             event.accept(ModItems.BONE_BOOTS.get());
+            event.accept(ModItems.FLASH_BOMB.get());
+        }
+        // The filled toad buckets sit with the other functional buckets, not with spawn eggs: in
+        // survival they are a tool a player carries and deploys, not a creative-only spawner.
+        if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
+            event.accept(ModItems.POISONTOAD_BUCKET.get());
+            event.accept(ModItems.SLEEPTOAD_BUCKET.get());
+            event.accept(ModItems.PARATOAD_BUCKET.get());
+            event.accept(ModItems.NITROTOAD_BUCKET.get());
         }
         if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS) {
             event.accept(ModEntities.GREAT_IZUCHI_SPAWN_EGG.get());

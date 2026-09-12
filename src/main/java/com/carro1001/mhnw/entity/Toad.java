@@ -1,12 +1,21 @@
 package com.carro1001.mhnw.entity;
 
+import com.carro1001.mhnw.registry.ModItems;
+import java.util.UUID;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.animal.Bucketable;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -14,6 +23,8 @@ import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
@@ -33,7 +44,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * when something gets close or hurts it, then goes on cooldown. See that class for the timeline
  * and for why each variant's effect is only a labelled provisional stand-in.
  */
-public class Toad extends PathfinderMob implements GeoEntity {
+public class Toad extends PathfinderMob implements GeoEntity, Bucketable {
 
     public static final double MAX_HEALTH = 4.0D;
     public static final float BODY_WIDTH = 0.8F;
@@ -67,6 +78,9 @@ public class Toad extends PathfinderMob implements GeoEntity {
     /** Client presentation only: whether the fuse telegraph is currently playing. */
     private static final EntityDataAccessor<Boolean> DATA_FUSING =
             SynchedEntityData.defineId(Toad.class, EntityDataSerializers.BOOLEAN);
+    /** Whether this toad was released from a bucket, and so must not distance-despawn. */
+    private static final EntityDataAccessor<Boolean> DATA_FROM_BUCKET =
+            SynchedEntityData.defineId(Toad.class, EntityDataSerializers.BOOLEAN);
 
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.toad.idle");
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.toad.walk");
@@ -76,6 +90,27 @@ public class Toad extends PathfinderMob implements GeoEntity {
 
     /** Set by {@link #hurt}, read and cleared by {@link ToadFuseGoal}. Transient, not saved. */
     boolean provoked;
+
+    /**
+     * The player behind the provocation that started the current fuse, if one resolved. Transient,
+     * not saved, held as a uuid rather than a reference so a logout mid-fuse cannot keep a stale
+     * player alive. Retained for the whole fuse -- a second hit does not steal credit -- and
+     * cleared by {@link ToadFuseGoal#stop()}, so it is a provocation record, not an owner.
+     *
+     * <p>Only {@code BLAST} does anything with it: its explosion names that player as the causing
+     * entity, which is the one path by which a deployed toad's damage can count toward that
+     * player's carve eligibility, through exactly the same {@link CarveState} rule as a direct hit.
+     *
+     * <p>Set only by a hit taken while no fuse is burning (see {@link #hurt}), so it records the
+     * trigger that actually started this fuse and not a later opportunist; {@code null} is a real
+     * record meaning "nobody", not "not yet asked".
+     */
+    UUID provokerId;
+
+    /** The player this toad is currently holding responsible for its fuse, if any. For tests. */
+    public UUID provokerId() {
+        return this.provokerId;
+    }
 
     public Toad(EntityType<? extends PathfinderMob> type, Level level) {
         super(type, level);
@@ -93,7 +128,11 @@ public class Toad extends PathfinderMob implements GeoEntity {
             net.minecraft.world.DifficultyInstance difficulty,
             net.minecraft.world.entity.MobSpawnType spawnType,
             net.minecraft.world.entity.SpawnGroupData groupData) {
-        setVariant(Variant.byId(this.random.nextInt(Variant.values().length)));
+        // A bucket release already knows its variant (it is a property of the bucket item), so a
+        // random one here would silently overwrite it.
+        if (spawnType != MobSpawnType.BUCKET) {
+            setVariant(Variant.byId(this.random.nextInt(Variant.values().length)));
+        }
         return super.finalizeSpawn(level, difficulty, spawnType, groupData);
     }
 
@@ -115,6 +154,7 @@ public class Toad extends PathfinderMob implements GeoEntity {
         super.defineSynchedData(builder);
         builder.define(DATA_VARIANT, (byte) 0);
         builder.define(DATA_FUSING, false);
+        builder.define(DATA_FROM_BUCKET, false);
     }
 
     public Variant getVariant() {
@@ -143,6 +183,22 @@ public class Toad extends PathfinderMob implements GeoEntity {
     @Override
     public boolean hurt(DamageSource source, float amount) {
         if (!level().isClientSide) {
+            // Attribution belongs to whoever lands the hit that STARTS a fuse, and BOTH flags are
+            // needed to say that, because they cover two different windows:
+            //
+            //   !provoked   latches the first hit across the gap between it and the goal actually
+            //               starting. isFusing() is only set by ToadFuseGoal.start(), which the
+            //               goal selector runs on its own every-other-tick cadence, so a second hit
+            //               landing in that gap would otherwise still see !isFusing() and overwrite.
+            //   !isFusing() rejects hits during the burning fuse, where start() has already cleared
+            //               provoked again.
+            //
+            // Recording "nobody" is deliberate: null is a real record of an environmental or mob
+            // trigger, not "not yet asked", so a later player cannot fill an apparently empty slot.
+            if (!this.provoked && !isFusing()) {
+                Player provoker = CarveState.resolvePlayer(source);
+                this.provokerId = provoker == null ? null : provoker.getUUID();
+            }
             this.provoked = true;
         }
         return super.hurt(source, 0.0F);
@@ -152,6 +208,7 @@ public class Toad extends PathfinderMob implements GeoEntity {
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         tag.putByte("Variant", (byte) getVariant().ordinal());
+        tag.putBoolean("FromBucket", fromBucket());
     }
 
     @Override
@@ -160,6 +217,69 @@ public class Toad extends PathfinderMob implements GeoEntity {
         if (tag.contains("Variant")) {
             setVariant(Variant.byId(tag.getByte("Variant")));
         }
+        setFromBucket(tag.getBoolean("FromBucket"));
+    }
+
+    // ---------------------------------------------------------------- capture and release (R2)
+
+    /**
+     * A vanilla water bucket catches a live toad; everything else keeps its existing behaviour.
+     * {@code Bucketable.bucketMobPickup} owns the whole transaction -- consume the water bucket,
+     * hand back the filled one through vanilla's filled-container rule, discard the entity -- so
+     * nothing here does slot arithmetic, and a capture never routes through {@link #hurt}, which is
+     * why catching a toad cannot light its fuse.
+     */
+    @Override
+    protected InteractionResult mobInteract(Player player, InteractionHand hand) {
+        return Bucketable.bucketMobPickup(player, hand, this).orElse(super.mobInteract(player, hand));
+    }
+
+    @Override
+    public boolean fromBucket() {
+        return this.entityData.get(DATA_FROM_BUCKET);
+    }
+
+    @Override
+    public void setFromBucket(boolean fromBucket) {
+        this.entityData.set(DATA_FROM_BUCKET, fromBucket);
+    }
+
+    /** Vanilla's own bucket payload (custom name, health, the no-AI style flags) plus the variant. */
+    @Override
+    public void saveToBucketTag(ItemStack stack) {
+        Bucketable.saveDefaultDataToBucketTag(this, stack);
+        CustomData.update(DataComponents.BUCKET_ENTITY_DATA, stack,
+                tag -> tag.putByte("Variant", (byte) getVariant().ordinal()));
+    }
+
+    @Override
+    public void loadFromBucketTag(CompoundTag tag) {
+        Bucketable.loadDefaultDataFromBucketTag(this, tag);
+        if (tag.contains("Variant")) {
+            setVariant(Variant.byId(tag.getByte("Variant")));
+        }
+    }
+
+    @Override
+    public ItemStack getBucketItemStack() {
+        return new ItemStack(ModItems.toadBucket(getVariant()).get());
+    }
+
+    @Override
+    public SoundEvent getPickupSound() {
+        return SoundEvents.BUCKET_FILL_FISH;
+    }
+
+    /** Same pair of rules vanilla's fish use, and for the same reason: a deliberately placed
+     * creature must not vanish because the player walked away. */
+    @Override
+    public boolean requiresCustomPersistence() {
+        return super.requiresCustomPersistence() || fromBucket();
+    }
+
+    @Override
+    public boolean removeWhenFarAway(double distanceToClosestPlayer) {
+        return !fromBucket() && !hasCustomName();
     }
 
     @Override
