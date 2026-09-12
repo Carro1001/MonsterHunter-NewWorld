@@ -2,9 +2,9 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 97 tests, all passing**
-(full `.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-12, R0b client-lifecycle packet;
-85 before it). The earlier 69-, 75-, 85- and 86-test figures are superseded — note the R0a round's
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 121 tests, all passing**
+(full `.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-12, R1 first-hunting-loop packet;
+97 before it, 85 before R0b). The earlier 69-, 75-, 85-, 86- and 97-test figures are superseded — note the R0a round's
 real observed count was 74, not the 75 this line used to claim. The shoreline test that failed under the P5a build passed
 cleanly after the native-controls correction. Client acceptance for that Lagiacrus correction has
 not been rerun by a human yet.
@@ -42,6 +42,116 @@ measured for real, stand near one with `debugCombat` on for a few seconds and se
 
 
 ---
+
+## R1 — the first hunting loop (2026-09-12)
+
+Branch `r1/first-hunting-loop`, off accepted `master` at `516884c` (PR #5). The rest of R1 after
+R1a's habitat and R0b's presentation: carvable corpses, the material/food economy, bone armor, and
+small-Izuchi harassment.
+
+### Commands and results
+
+```powershell
+.\gradlew.bat --no-daemon build runGameTestServer   # BUILD SUCCESSFUL, 121/121 GameTests passed
+.\gradlew.bat --no-daemon runServer                 # Done (4.668s), no errors
+git --no-pager diff --check                         # clean
+```
+
+Baseline before any edit, on this machine, this session: **97/97, BUILD SUCCESSFUL**. After:
+**121/121**. The 24 new tests are the `r1*` block at the end of `MHNWGameTests.java`.
+
+The dedicated-server boot was run against a throwaway game directory (`run/serversmoke`, deleted
+afterwards) rather than `run/`, so the maintainer's own `run/world` was never opened. That required
+a temporary `gameDirectory` line in `build.gradle`'s server run block and a dev-server
+`eula.txt=true`; both were reverted/removed, and `git status` on `build.gradle` is clean. Noted as a
+local override.
+
+Jar inspection of `build/libs/mhnw-0.2.0.jar`: all eight new item models present, each resolving to
+a texture that is actually packaged; seven recipes (four shaped armor, three cooking) and three
+empty entity loot tables present; all eight item names and all five carve messages present in
+`en_us.json`. Checked programmatically, not by eye.
+
+### What landed
+
+- **Carving.** `entity/CarveState.java`, one contract held by composition in `GreatIzuchi`,
+  `Izuchi` and `Aptonoth`. Sneak + main-hand use on a corpse, three personal carves per eligible
+  player, deterministic reward table, all-or-nothing inventory insertion, ten-tick per-player
+  debounce, localized action-bar feedback.
+- **Corpse window.** 12,000 entity-ticking ticks, counted in vanilla's own `deathTime` rather than
+  a second saved field. `setPersistenceRequired()` at death keeps the distance-despawn rule from
+  deleting a body early. Parts stay parent-owned for the whole window and unregister once with it.
+- **Economy.** `mhnw:monster_hide`, `monster_claw`, `raw_meat`, `cooked_meat` and the four legacy
+  armor ids, in existing vanilla creative tabs. Furnace/smoker/campfire cooking, four shaped armor
+  recipes, three empty loot tables.
+- **Bone armor.** `ArmorMaterials.IRON` verbatim for stats; `mhnw:bone_armor_set_bonus` +0.1
+  knockback resistance as a transient modifier recomputed on every armor-slot equipment change.
+  Worn model is the complete eight-bone `geo/entity/bone_armor.geo.json` with all eight bone getters
+  mapped in `MHNWClient.BoneArmorRenderer`.
+- **Small-Izuchi harassment.** `entity/IzuchiHarassGoal.java` replaced `MeleeAttackGoal`: circle at
+  5–8 blocks, a randomized 40–80 tick opportunity window, a dart of at most 30 ticks landing at most
+  one ordinary hit, then a 20–40 tick retreat. At most one darter within 12 blocks.
+
+### Correction to the packet's own arithmetic
+
+The handoff gives the four armor patterns and then summarises the full set as "7 hide, 4 claws and
+13 bones". The patterns as written actually cost **5 hide, 4 claws, 15 bones**. The patterns are the
+concrete spec and were implemented verbatim; the summary line is an arithmetic slip. Product intent
+is unaffected — two fully carved Great Izuchi still cover the hide and claws, and ordinary skeleton
+bones finish the set. README quotes the real cost.
+
+### Mutation runs — these tests can actually fail
+
+Each mutation was applied, the suite run, then reverted:
+
+| Mutation | Caught by |
+|---|---|
+| `CarveState.fits` always returns true | `r1fullinventoryconsumesnothing` — "a carve into a full inventory was still counted" |
+| debounce check removed | `r1debouncerejectsarepeatedclick` — "carved twice inside the 10-tick debounce" |
+| pack scan never sees a neighbour darting | `r1izuchipackkeepsonedarteratatime` — "2 Izuchi darted at once" |
+| dart deadline × 100 | `r1izuchiunreachabledartendsonitsdeadline` — "a dart ran 449 ticks, past its 30-tick deadline" |
+
+The fourth mutation is why `r1IzuchiUnreachableDartEndsOnItsDeadline` exists as a separate test: in
+`r1IzuchiCirclesDartsAndRetreats` the dart always reaches melee range and ends on its hit, so the
+deadline is never the thing that stops it, and that test passed with the deadline mutated. Sealing
+the target in stone is what makes the deadline the only way out.
+
+### Gates: what is closed and what is not
+
+| Gate | Status |
+|---|---|
+| R1-01 registry/economy | **Closed headlessly** — `r1ItemIdsResolve`, `r1RawMeatCooksInEveryStation`, `r1BoneArmorRecipesCraft`, `r1CarvableSpeciesDropNoDeathItems`, plus the jar inspection above |
+| R1-02 attribution | **Closed** — `r1AttributionCreditsOnlyRealPlayerDamage`, `…AProjectilesOwner`, `…AnOwnedAttackersPlayer`, `…IgnoresAnOwnerlessAttacker` |
+| R1-03 personal quota | **Closed** — `r1TwoPlayersEachGetTheirOwnThreeCarves`, `r1CarveGatesAreEnforcedServerSide`, `r1DebounceRejectsARepeatedClick` |
+| R1-04 atomic inventory | **Closed** — `r1FullInventoryConsumesNothing` |
+| R1-05 persistence/expiry | **Closed in memory** — `r1ParticipationSurvivesALiveRoundTrip`, `r1CorpseRoundTripKeepsCountsAndRemainingTicks`. A real disk restart is still a human gate (below) |
+| R1-06 corpse lifecycle | **Closed** — `r1CorpseWindowIsTwelveThousandTicks`, `r1CorpsesStayInertThenExpireExactlyOnce`, `r1CorpseGrantsExperienceOnlyOnce` |
+| R1-07 armor | **Closed for stats and the modifier** — `r1BoneArmorMatchesIronStats`, `r1BoneArmorFullSetAddsOneKnockbackModifier`. Appearance is a human gate |
+| R1-08 Izuchi harassment | **Closed** — the four `r1Izuchi*` tests |
+| R1-09 regression | **Closed** — all 97 prior tests still pass; no measured attack, presentation clock, habitat mapping, spawn guard, endemic effect or roster change |
+
+### What still needs a human — R1
+
+- [ ] **Fresh-world end-to-end.** Without commands: find the habitat, meet the roster naturally,
+      hunt a Great Izuchi with its escorts, carve, cook, craft and wear the full set, hunt again.
+- [ ] **Bone armor appearance.** All four pieces visible in the correct slots on a normal player,
+      following it through walking and crouching, first and third person. Specifically: **the boots
+      must be visible.** That is the whole reason the complete `geo/entity/` export is used instead
+      of the `geo/item/armor/` migration copy, which has no boot bones — the code path is proven
+      headlessly, the pixels are not. Also check for gross mirroring, z-fighting or a missing
+      texture.
+- [ ] **Izuchi pack feel.** Does it read as circling and picking, with real pauses, rather than four
+      rushers? Does target loss and rough terrain feel fair? The timings (40–80 window, 30-tick
+      dart, 20–40 retreat) are initial tuning values; a small evidence-backed adjustment is allowed
+      and should be recorded here.
+- [ ] **Two distinct clients on one dedicated server.** Each gets only their own three carves;
+      both agree on the body, its parts and its removal; simultaneous or both-hand interaction
+      cannot duplicate a grant. This extends the R0b two-client gate rather than replacing it.
+- [ ] **Real disk restart.** `save-all flush` → graceful stop → restart → rejoin, and check that
+      living participation, carve counters and remaining corpse time all survive, with no duplicate
+      escorts, XP, rewards or resumed combat. `r1CorpseRoundTripKeepsCountsAndRemainingTicks` is an
+      in-memory NBT round trip and is **not** a substitute for this.
+- [ ] **Carving feel.** Is shift + right-click on a large body discoverable? Do the action-bar
+      messages read right and not spam?
 
 ## R0b — client animation lifecycle (2026-09-12)
 

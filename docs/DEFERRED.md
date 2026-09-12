@@ -5,6 +5,33 @@ Things consciously postponed, with enough context to pick them up cold. Nothing 
 
 Acceptance IDs refer to the matrix in `REVIVAL_HANDOFF.md` section 4.6.
 
+## Found during R1 (2026-09-12), deferred out of that packet
+
+### The corpse window is not configurable
+**Status:** deliberate. 12,000 entity-ticking ticks is a constant (`CarveState.CORPSE_TICKS`), not a
+server config entry, because nobody has asked to tune it and the packet's own contract states one
+number. `MHNWConfig` is where it would go if a server operator ever wants it; the tests read the
+constant, so a config would need one of them to read the config instead.
+
+### Carving has no animation, sound or particle
+**Status:** deliberate, R1 scope. A carve is instant and reports itself on the action bar. A carve
+progress bar, a swing clip or a sound cue is presentation work with no authored asset behind it, and
+R1's product contract asks only for localized bounded messages.
+
+### The handoff's full-set cost summary was wrong; the patterns were implemented
+**Status:** resolved by picking the concrete spec, recorded here so it is not "fixed" back.
+`R1_FIRST_HUNTING_LOOP_HANDOFF.md` section 3 gives four shaped patterns and then says the full set
+costs "7 hide, 4 claws and 13 bones". Those patterns actually cost **5 hide, 4 claws, 15 bones**.
+The patterns were implemented verbatim. If the intent really was 7/4/13, that is a product change to
+the patterns, not a recipe bug.
+
+### `MonsterPart` is collidable while it is a corpse
+**Status:** unchanged from before R1, but now visible for longer. A held body's hurtboxes still
+return true from `canBeCollidedWith`, so a Great Izuchi corpse is something you bump into for the
+whole carving window rather than for 38 ticks. Left alone on purpose: a solid body is arguably
+correct for a thing you walk up to and carve, and the swept-envelope roughness already noted in
+`MonsterPart` is the same issue. Revisit if a live session says a corpse is in the way.
+
 ## Found during R1a (2026-09-12), deferred out of that packet
 
 ### The habitat is rare: ~1.2% of the surface at region weight 2
@@ -42,7 +69,12 @@ specified for; the caveat is commented in the test itself. Pick this up if a liv
 delayed re-roar reading as wrong, not before.
 
 ### R0b / pre-release acceptance gates still open
-Named here so they are not lost between packets. Updated after the R0b packet (2026-09-12):
+Named here so they are not lost between packets. Updated after the R0b packet, and again after R1
+(2026-09-12). **R1 widened two of these rather than closing them:** the two-client gate now also has
+to show that each client gets only their own three carves and that a simultaneous or both-hand
+interaction cannot duplicate a grant, and the disk-restart gate now also has to show that living
+participation, per-player carve counters and remaining corpse time all survive. Both procedures are
+written out in `TEST_PLAN.md` under "What still needs a human — R1".
 - ~~Correctly aged presentation for a client that starts tracking mid-action (GeckoLib seeking).~~
   **Done in R0b** — `animation/ServerTimedAnimationController`, proven through GeckoLib's real
   sampler on a client (`client/AnimationSeekSelfCheck`, phase gap 0.0 ticks). See
@@ -178,8 +210,10 @@ walk a few villages and check the biome underfoot, and confirm one generates in 
 normal. A structure-tag assertion on its own is explicitly not proof, which is why this is listed.
 
 ### Izuchi (small) — attack and death animation
-**Status:** genuinely hostile and damaging (ordinary vanilla `MeleeAttackGoal`/`Mob.doHurtTarget`,
-no custom timeline), but with no dedicated attack or death clip to present. This is a P4 decision
+**Status:** genuinely hostile and damaging (ordinary `Mob.doHurtTarget` through R1's
+`IzuchiHarassGoal`, no custom timeline), but with no dedicated attack or death clip to present. R1
+changed *when* it closes in, not what it plays while doing so: the circle/dart/retreat loop is
+presented with the existing walk/run clips, and the gap below is untouched. This is a P4 decision
 point per the handoff, not an oversight: the preserved master-branch asset has only idle/sleep/
 walk/run. A candidate attack/death set exists on the archived `brain` branch
 (`legacy/candidate-art-brain-branch/izuchi.animation.json`), but the handoff's own audit (section
@@ -332,6 +366,13 @@ the same part count it started with, guarding against the previous implementatio
 What is not checked: an actual world save, process restart, and rejoin; whether generated resources
 or other saved data survive that cycle; multiple entities across a real chunk unload/reload. That
 needs a real client/server session, same as A08/A09 below.
+
+R1 added more that rides on this same gate: carving participation is earned while a creature is
+alive and has to survive a chunk unload before the kill, and the 12,000-tick corpse window is
+counted in vanilla's `deathTime`, which is supposed to pause across an offline period rather than
+catch up. `r1ParticipationSurvivesALiveRoundTrip` and
+`r1CorpseRoundTripKeepsCountsAndRemainingTicks` are in-memory NBT round trips and are explicitly not
+offered as the disk claim.
 
 ### A08 / A09 — two-client and dedicated-server agreement
 **Status:** the server-side half is covered; the multi-client half is not, and cannot be from

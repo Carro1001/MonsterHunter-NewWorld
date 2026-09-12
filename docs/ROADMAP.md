@@ -4,6 +4,12 @@
 Revision: `mh-nw-roadmap-2026-09-11-v4`.
 First executable packet: [R0a - Preserve and lock the working baseline](R0_BASELINE_HANDOFF.md).
 
+**Packet status (2026-09-12).** R0a, R1a, R0b and R1 (including R1b's carving contract) are
+implemented on `master`/`r1/first-hunting-loop`; see
+[R1 - Finish the first hunting loop](R1_FIRST_HUNTING_LOOP_HANDOFF.md) and the dated sections of
+`TEST_PLAN.md` for what each one actually delivered and which human gates remain open. The product
+decisions below are unchanged.
+
 Use the maintainer interview as the product direction. The requester witnessed
 the live interview and explicitly authorized sensible PM defaults rather than
 another quota-consuming approval round. **The earlier response's DRAFT wording
