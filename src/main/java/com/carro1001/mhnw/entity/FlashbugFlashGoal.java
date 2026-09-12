@@ -1,6 +1,5 @@
 package com.carro1001.mhnw.entity;
 
-
 /**
  * A flashbug's whole behaviour: notice something close or being hurt, flare for well under a
  * second, then blind whatever can actually see the flash, once, and go dark for a while. See

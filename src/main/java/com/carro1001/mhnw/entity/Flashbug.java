@@ -1,9 +1,9 @@
 package com.carro1001.mhnw.entity;
 
+import com.carro1001.mhnw.registry.ModItems;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import com.carro1001.mhnw.registry.ModItems;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;

@@ -3,6 +3,7 @@ package com.carro1001.mhnw.entity;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -130,7 +131,7 @@ public class ToadFuseGoal extends EndemicAreaEffectGoal {
      * itself. Resolved now rather than held as a reference so a provoker who logged out or died
      * during the 40-tick warning simply drops out, leaving an ordinary unattributed explosion.
      */
-    private net.minecraft.world.entity.Entity resolveProvoker() {
+    private Entity resolveProvoker() {
         if (this.toad.provokerId != null) {
             Player provoker = this.toad.level().getPlayerByUUID(this.toad.provokerId);
             if (provoker != null) {
