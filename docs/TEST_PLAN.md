@@ -2,7 +2,7 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 146 tests, all passing**
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 147 tests, all passing**
 (full `.\gradlew.bat --no-daemon clean build` then `runGameTestServer`, 2026-09-12, R2
 field-preparation packet; 123 before the packet, 121 before the R1 PR #6 review round, 97 before
 R1, 85 before R0b). The earlier 69-, 75-, 85-, 86- and 97-test figures are superseded — note the R0a round's
@@ -191,6 +191,30 @@ explicitly rather than leaving the slot open.
 Mutation run: with the two guards reverted and the new tests kept, exactly those two tests fail and
 nothing else does.
 
+### Live crash during the review round, and the coverage gap it exposed
+
+A dev client threw a flash bomb and the integrated server crashed with
+`NoClassDefFoundError: com/carro1001/mhnw/entity/FlashEffect`.
+
+**Cause: the build-directory race again, self-inflicted.** `build/classes` was rewritten at
+16:41:43; the crash was at 16:41:18 — a `clean build` had deleted the directory and had not yet
+written it back while that client was running. `FlashEffect` is referenced only from
+`FlashBombProjectile.onHit`, so it is loaded lazily, on first impact: precisely the class that would
+still be missing. It has no client-only reference of any kind and ships in the jar. Nothing in the
+code is at fault, and no test can defend against a classpath deleted underneath a running process.
+
+This is the same rule as the earlier flake, and it now has two incidents behind it: **do not build
+while a client or server is running against this project's `build/`.**
+
+**The real gap it exposed.** `r2ThrownFlashBombReleasesOnceOnImpact` builds the projectile through
+its `EntityType` constructor and drops it, so it never touched `FlashBombItem.use` or the
+`(Level, LivingEntity)` shooter constructor — the item-to-projectile handoff a player actually
+performs had no coverage at all. `r2FlashBombThrownFromTheHandFliesAndFlashes` now drives the whole
+thing: use the item from a survival hand, consume exactly one, start the cooldown, confirm exactly
+one projectile entered the world, let it fly and hit the floor unaided, and check it flashed a
+facing target and discarded itself. It passes, which is also the positive evidence that the crashed
+path is sound.
+
 ### Gates: what is closed and what is not
 
 | Gate | Status |
@@ -272,7 +296,7 @@ wild toad      -> water bucket -> same variant on release -> hit once -> existin
 
 ### Automated results
 
-146/146 passing. 23 new tests covering gates R2-01..R2-11, added next to the existing endemic and
+147/147 passing. 24 new tests covering gates R2-01..R2-11, added next to the existing endemic and
 R1 blocks (21 in the first cut, 2 more from the PR #7 review round below). Commands actually run, in this order:
 
 ```powershell

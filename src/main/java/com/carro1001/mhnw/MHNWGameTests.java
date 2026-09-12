@@ -4413,6 +4413,65 @@ public class MHNWGameTests {
                 .thenSucceed();
     }
 
+    /**
+     * R2-05: the whole real throw, from a player's hand.
+     *
+     * <p>Added after a live crash report. The other impact test constructs the projectile through
+     * its {@code EntityType} constructor and drops it, which never touches {@link FlashBombItem} or
+     * the {@code (Level, LivingEntity)} shooter constructor -- so the item-to-projectile handoff a
+     * player actually performs had no coverage at all. This drives it end to end: use the item,
+     * consume one from the stack, start the cooldown, let the thing fly and hit the floor by
+     * itself, and check it flashed and is gone.
+     *
+     * <p>(The crash itself was not this path: it was a {@code NoClassDefFoundError} from a
+     * concurrent {@code clean build} deleting build/classes under a running dev client, which no
+     * test can or should defend against. The coverage gap it exposed is real regardless.)
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void r2FlashBombThrownFromTheHandFliesAndFlashes(GameTestHelper helper) {
+        fillFloor(helper, 1, net.minecraft.world.level.block.Blocks.STONE);
+        net.minecraft.server.level.ServerPlayer thrower = realPreparer(helper, 8, 4, 8);
+        try {
+            Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
+            victim.setNoAi(true);
+            victim.setYRot(180.0F);
+            // Straight down, so it reaches the floor without leaving the arena.
+            thrower.setXRot(90.0F);
+            net.minecraft.world.item.ItemStack bombs =
+                    new net.minecraft.world.item.ItemStack(com.carro1001.mhnw.registry.ModItems.FLASH_BOMB.get(), 2);
+            thrower.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, bombs);
+
+            bombs.use(helper.getLevel(), thrower, net.minecraft.world.InteractionHand.MAIN_HAND);
+
+            helper.assertTrue(bombs.getCount() == 1,
+                    "throwing consumed " + (2 - bombs.getCount()) + " bombs, expected exactly one");
+            helper.assertTrue(thrower.getCooldowns()
+                            .isOnCooldown(com.carro1001.mhnw.registry.ModItems.FLASH_BOMB.get()),
+                    "throwing did not start the flash bomb cooldown");
+
+            java.util.List<com.carro1001.mhnw.entity.FlashBombProjectile> inFlight =
+                    helper.getLevel().getEntitiesOfClass(com.carro1001.mhnw.entity.FlashBombProjectile.class,
+                            thrower.getBoundingBox().inflate(12.0D));
+            helper.assertTrue(inFlight.size() == 1,
+                    "using the item put " + inFlight.size() + " projectiles in the world, expected one");
+            com.carro1001.mhnw.entity.FlashBombProjectile bomb = inFlight.get(0);
+
+            helper.startSequence()
+                    .thenWaitUntil(() -> helper.assertTrue(bomb.isRemoved(),
+                            "waiting for the thrown bomb to impact and discard itself"))
+                    .thenExecute(() -> {
+                        boolean blinded = victim.hasEffect(net.minecraft.world.effect.MobEffects.BLINDNESS);
+                        retire(thrower);
+                        helper.assertTrue(blinded,
+                                "a bomb thrown from the hand did not flash a facing target beside its impact");
+                    })
+                    .thenSucceed();
+        } catch (RuntimeException | AssertionError failure) {
+            retire(thrower);
+            throw failure;
+        }
+    }
+
     // ---------------------------------------------------------------- R2-06 wild regression
 
     /**
