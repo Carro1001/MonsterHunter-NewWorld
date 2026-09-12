@@ -13,6 +13,12 @@ divergence, which was the point at which duplicating the manual stopped being wo
 So there is now one manual and one pointer. If you are about to add repository guidance, add it to
 `CLAUDE.md`; don't restore a copy here.
 
+One thing this file did carry that was genuinely tool-specific, and that the first version of this
+pointer dropped: the commit and PR attribution trailers, which name the agent. That is **not** lost
+— `CLAUDE.md`'s standing-constraints section now states the rule per agent, Codex included, so
+following the pointer gives you your own trailer rather than Claude's. Read it there; don't copy it
+back here.
+
 Where to go from `CLAUDE.md`:
 
 - `docs/ROADMAP.md` scopes the current work and hands out the numbered packets.

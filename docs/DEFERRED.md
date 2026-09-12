@@ -79,9 +79,15 @@ Worth knowing before somebody spends the same hour rediscovering it.
 
 ### `AGENTS.md` is now a pointer, not a copy
 It used to duplicate `CLAUDE.md` almost verbatim and had drifted twice before anyone noticed (missing
-Rathian's P4 attack timeline and the whole R1a habitat section). It is now four paragraphs pointing
+Rathian's P4 attack timeline and the whole R1a habitat section). It is now a few paragraphs pointing
 at `CLAUDE.md`. If a future tool insists on its own instruction file, give it a pointer too — do not
 restore a second copy of the manual.
+
+Worth knowing before collapsing any other duplicated doc: the copy was not *entirely* redundant.
+One line in it — the commit/PR attribution trailer — was legitimately tool-specific, and the first
+version of the pointer silently dropped it, which would have had Codex signing as Claude. The rule
+is now stated per agent in `CLAUDE.md` itself. When you next merge two near-identical files, diff
+them for the handful of lines that genuinely differ *on purpose* before deleting either.
 
 ### The adapter's re-anchor tolerance is one tick, and has not been tuned online
 `TOLERANCE_TICKS` is 1.0: below the two-tick acceptance target, above partial-tick float noise. It
