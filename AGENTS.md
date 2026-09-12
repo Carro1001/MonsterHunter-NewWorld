@@ -88,9 +88,12 @@ This is the only sane way to get real hurtbox/attack numbers — see "Hurtboxes 
 below for why guessing offline doesn't work.
 
 Key versions (`gradle.properties`): Minecraft 1.21.1, NeoForge 21.1.248, Java 21, Parchment mappings
-`2024.11.17`, GeckoLib 4.9.2, Gradle wrapper 9.2.1. Mod group/package is `com.carro1001.mhnw`. These
+`2024.11.17`, GeckoLib 4.9.2, TerraBlender 4.1.0.8, Gradle wrapper 9.2.1. Mod group/package is `com.carro1001.mhnw`. These
 are deliberate, sourced pins (handoff section 7.3) — don't float them to "latest" without checking
-that section first. **GeckoLib is the only external dependency**; the old codebase's MultiHitBoxLib,
+that section first. As of R1a there are **two external dependencies, GeckoLib and TerraBlender** (the latter
+required on both sides, range `[4.1.0.8,4.2)`, from Forge Maven; it is what makes
+`mhnw:verdant_hunting_grounds` actually generate, and it is deliberately not jar-in-jarred);
+the old codebase's MultiHitBoxLib,
 SmartBrainLib, mixin-booster, JEI, and Jade integrations were not carried over (see Architecture).
 
 ## Architecture
@@ -187,6 +190,24 @@ renderer per entity as a small nested static class — most `extends GeoEntityRe
 (GeckoLib 4.x needs no separate `EntityModel` class the way the old renderer pattern did); `Bug` is
 the one exception, a plain `MobRenderer`/`BugModel` pair, since it isn't GeoLib-animated.
 
+### Worldgen: one biome, placed by TerraBlender
+
+`mhnw:verdant_hunting_grounds` (R1a) is a datapack biome — `registry/ModBiomes.java` holds only its
+`ResourceKey` and the `#mhnw:spawns_hunting_wildlife` selector `TagKey`, deliberately not a
+`DeferredRegister<Biome>`, since the data lives in JSON. `worldgen/HuntingGroundsRegion.java` is the
+one TerraBlender region (weight 2) that makes it generate at all: registering a biome JSON and adding
+spawn entries does nothing on its own, because the vanilla Overworld biome source never picks a key it
+was not told about. Within its own weighted share the region swaps the `PLAINS` and `FOREST` climate
+slots; nothing global is replaced.
+
+`entity/HuntingSpawnRules.java` owns the automatic-spawn gate for every R1a species — habitat tag plus
+the `naturalSpawning` server config, for **both** `NATURAL` and `CHUNK_GENERATION`. Its `isFree` tests
+fluid with `containsAnyLiquid` over the whole spawn AABB, not the feet block: `noCollision` ignores
+fluids, and the escort placement shares this helper for a 1.1-block-tall Izuchi, so a feet-only check
+accepted one standing dry with its head underwater. Manual origins
+(eggs, `/summon`, spawners, breeding) are never gated. Spawn entries live only in biome modifiers,
+never in the biome JSON, so there is one owner of them.
+
 ### Data
 
 Static datapack-style data (loot tables, spawn placement biome modifiers) lives under
@@ -213,3 +234,10 @@ broad timeout, so a half-rate countdown fails them (verified by reintroducing th
 right, or a hurtbox visually sits on the body — those need `docs/TEST_PLAN.md`'s human checklist.
 Current test count and pass status are stated at the top of `docs/TEST_PLAN.md`; keep that number in
 sync when adding tests.
+
+**The GameTest arena is enclosed in a barrier cage with a lid.** Its spawn heightmap therefore sits
+above the roof and the whole interior reads as "not the surface" — which is correct, and which is why
+`HuntingSpawnRules`' surface rule cannot be accepted positively inside an arena. Do not "fix" that by
+building a fixture above the lid: that writes outside the test's own bounds into a world shared with
+the tests running concurrently beside it, and it produced real intermittent failures once already. See
+the R1a fixture note in `docs/TEST_PLAN.md`.

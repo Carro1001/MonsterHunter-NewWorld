@@ -17,6 +17,11 @@ sourceSets.main.resources {
 repositories {
     // GeckoLib
     maven { url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/' }
+    // TerraBlender. Maven Central does not serve it; Forge Maven does.
+    maven {
+        url = 'https://maven.minecraftforge.net'
+        content { includeGroup 'com.github.glitchfiend' }
+    }
 }
 
 // Mojang ships Java 21 to end users in 1.21.1, so mods target Java 21.
@@ -70,6 +75,7 @@ neoForge {
 
 dependencies {
     implementation "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
+    implementation "com.github.glitchfiend:TerraBlender-neoforge:${minecraft_version}-${terrablender_version}"
 }
 
 var generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {
@@ -79,6 +85,7 @@ var generateModMetadata = tasks.register('generateModMetadata', ProcessResources
             neo_version            : neo_version,
             loader_version_range   : loader_version_range,
             geckolib_version_range : geckolib_version_range,
+            terrablender_version_range: terrablender_version_range,
             mod_id                 : mod_id,
             mod_name               : mod_name,
             mod_license            : mod_license,

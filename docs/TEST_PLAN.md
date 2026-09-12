@@ -2,9 +2,11 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 75 tests, all passing**
-(full `.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-11, R0a baseline packet). The
-earlier 69-test figure is superseded. The shoreline test that failed under the P5a build passed
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 85 tests, all passing**
+(full `.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-12, R1a habitat packet after its
+adversarial review; the suite was run three times back to back to rule out flakiness after two
+fixtures were rewritten). The earlier 69-, 75- and 86-test figures are superseded — note the R0a
+round's real observed count was 74, not the 75 this line used to claim. The shoreline test that failed under the P5a build passed
 cleanly after the native-controls correction. Client acceptance for that Lagiacrus correction has
 not been rerun by a human yet.
 
@@ -39,6 +41,187 @@ measured numbers as a proxy for now (same skeleton, similar proportions); if you
 measured for real, stand near one with `debugCombat` on for a few seconds and send me
 `logs/latest.log`.
 
+
+---
+
+## R1a — Verdant Hunting Grounds (2026-09-12)
+
+Packet: `docs/R1A_HABITAT_HANDOFF.md`. Starting revision: `dffb374` on `r0a/baseline-hardening`,
+whose content is identical to `origin/master` after PR #3 was merged as `28805f5` — so this is the
+accepted post-R0a mainline, not the handoff's inspection SHA `3fdb760`. Working tree was clean apart
+from the untracked handoff itself. Local `master` is stale behind `origin/master`; ignore it.
+
+**Automated result:** 74/74 passing before, **85/85 passing after**. Eleven tests added net: twelve
+added, and `greatIzuchiNaturalSpawnBringsAnEscort` deleted as a strict subset of the new
+`escortsLandOnGroundInOpenHabitat` (both paint the habitat, drive `finalizeSpawn(NATURAL)` and assert
+1-4 escorts; the new one additionally checks ground and clearance). Nothing replaces it.
+
+### Adversarial review corrections (same day)
+
+Five findings, all legitimate, all fixed. Two mattered:
+
+- **The slope regression was not reaching the raised surface.** The fixture raised the step by three
+  blocks, putting its standable Y at `leaderY + 3` — outside `ESCORT_MAX_RISE` — so every raised-side
+  candidate was rejected and the test was really only observing the untouched flat half, which the old
+  fixed-Y code would also have passed. It now raises the entire escort ring by exactly one block,
+  leaves only the leader's own 3x3 low, and asserts every escort sits at exactly `leaderY + 1`.
+  Confirmed to be a real regression by reintroducing the fixed-Y loop: the test fails.
+- **`isFree` tested fluid at the feet block only.** `noCollision` deliberately ignores fluids, so a
+  1.1-block-tall Izuchi escort could be accepted standing dry with its head underwater — which
+  contradicted the method's own stated body-volume contract. It now uses `containsAnyLiquid` over the
+  same spawn AABB, with a dry-feet/submerged-head case added to the rejection test. Also confirmed by
+  reintroducing the bug.
+
+The other three: the README (the only user-facing entry point) never named the new required
+dependency; the `naturalSpawning` config comment still said "monsters" after R1a extended it to
+passive wildlife; and the subsumed test above.
+
+### Installation requirement — new, and it affects players
+
+The mod now has a **second required dependency: TerraBlender for NeoForge 1.21.1, 4.1.0.8**
+(`com.github.glitchfiend:TerraBlender-neoforge:1.21.1-4.1.0.8`, from Forge Maven — Maven Central does
+not serve it). It is declared required on **both sides**, range `[4.1.0.8,4.2)`. A client without it
+will not connect to a server with it, and neither will start without it. It is not shaded or
+jar-in-jarred, deliberately: TerraBlender coordinates biome placement between every mod that uses it,
+and bundling a private copy is how that coordination breaks.
+
+**Existing worlds do not become the new biome.** Biome placement is decided when a chunk is first
+generated, so the Verdant Hunting Grounds appears only in newly generated terrain. A player adding
+this update to an existing save has to travel to unexplored chunks.
+
+### What landed
+
+- `mhnw:verdant_hunting_grounds` — a temperate, lightly wooded meadow, based on the version-pinned
+  1.21.1 vanilla forest export with one change: the `trees_birch_and_oak` entry in the vegetation step
+  is replaced *in place* (order preserved, to avoid the feature-cycle hazard) with
+  `mhnw:trees_hunting_grounds`, the same configured feature and the same placement-filter order but a
+  constant count of 3 instead of vanilla's weighted 10/11. Vanilla precipitation, temperature 0.7,
+  downfall 0.8, ambience, carvers, ores, caves and vanilla spawn entries are all kept.
+- `mhnw:overworld_hunting_grounds` — one TerraBlender `RegionType.OVERWORLD` region, weight 2,
+  registered once from `FMLCommonSetupEvent.enqueueWork`. Inside its own weighted share it replaces
+  the `Biomes.PLAINS` and `Biomes.FOREST` climate slots; every other mapping passes through. Nothing
+  global is replaced — no preset, no noise settings, no surface rules.
+- Additive (`replace: false`) vanilla tag entries: `is_overworld`, `is_forest`,
+  `has_structure/village_plains`, `has_structure/mineshaft`.
+- `#mhnw:spawns_hunting_wildlife` — the single habitat selector, containing only our biome by default.
+  Both the spawn-entry biome modifiers and the runtime spawn guard read this one tag, so they cannot
+  disagree, and a pack author can extend the habitat without touching code.
+- Spawn entries, owned entirely by biome modifiers (none in the biome JSON): Great Izuchi retargeted
+  from `#minecraft:is_forest` to the selector (MONSTER, weight 2, 1-1), plus one wildlife modifier
+  adding Aptonoth (CREATURE, 8, 2-3), Toad (CREATURE, 2, 1-2), Flashbug (CREATURE, 2, 1-2) and Bug
+  (AMBIENT, 2, 1-2). No independent small-Izuchi entry; Rathian, Rathalos and Lagiacrus stay
+  registered and egg-only.
+- `HuntingSpawnRules` — one shared guard. Automatic spawning (`NATURAL` **and**
+  `CHUNK_GENERATION`) now requires both the `naturalSpawning` server config and selector-tag
+  membership, read at spawn time. Before R1a only `NATURAL` consulted the config, so worldgen-seeded
+  passive spawning walked straight past the off switch. Eggs, `/summon`, spawners, breeding and
+  already-saved entities are untouched by either.
+- Six registered `ON_GROUND` placements on `MOTION_BLOCKING_NO_LEAVES`, including small Izuchi for
+  placement validation. Aptonoth uses vanilla's real `Animal` rules; Toad/Flashbug/Bug are
+  `PathfinderMob`s and get the same shape of check written out (surface by heightmap, solid spawnable
+  ground, clear body volume, no fluid).
+- Terrain-safe escorts. The old loop put every escort at the leader's own Y with no checks at all.
+  Each escort now tries at most eight candidates in the existing 2-5 block ring, and each candidate
+  walks its own column from 2 above the leader to 8 below, taking the first spot with solid ground and
+  a clear body volume. A wild leader's escorts must also be inside the selector; a spawner-placed one
+  keeps its unrestricted behaviour. Zero escorts on genuinely blocked terrain is the correct outcome.
+
+**Local implementation note:** the escort Y was first resolved from the world's spawn heightmap, as
+the handoff suggested. That is wrong in a way worth recording: the heightmap answers "where is the
+sky", so a leader standing in a cave, under an overhang or inside a structure would have had its pack
+placed on the roof above it. The bounded local column scan replaces it. The GameTest arena exposed
+this immediately — see the fixture note below.
+
+### Fixture note: the GameTest arena is a closed box
+
+Worth knowing before touching these tests. The GameTest framework encloses every test structure in a
+barrier cage **with a lid**, so the arena's `MOTION_BLOCKING_NO_LEAVES` heightmap sits above the roof
+and the whole interior is, correctly, "not the surface". That means:
+
+- The composite surface-wildlife accept path cannot be exercised in an arena. Its parts are covered
+  instead: the surface rule's own logic against the arena's real heightmap
+  (`huntingSurfaceRuleFollowsTheSpawnHeightmap`), and its ground/clearance components on a real grass
+  block (`huntingGuardAcceptsValidHabitatPositions`, `huntingSurfaceWildlifeRejectsLiquidAndBlockedSpace`).
+  Aptonoth, whose predicate is habitat plus vanilla animal rules and does not mind being indoors, is
+  driven end to end through its real registered predicate.
+- An earlier version of these two tests built a fixture *above* the cage lid. Do not do that again: it
+  writes blocks outside the test's own bounds into a world shared with the tests running beside it,
+  and it produced exactly the intermittent failures you would expect. The suite was run three times
+  after the rewrite to confirm it is stable.
+
+### Real-world generation evidence (H07) — passed
+
+Three named scratch worlds, normal Overworld settings, `generate-structures=true`, each generated
+fresh and driven over RCON. None of the maintainer's saves were touched; the scratch worlds were
+deleted afterwards.
+
+| Seed | Habitat located at | Distance from spawn | Target | Terrain sampled at the site |
+|---|---|---|---|---|
+| `0` | (384, 65, -320) | **524 blocks** | ≤ 4,096 | grass tops, oak/birch present, surface y 62-72 |
+| `20260911` | (-144, 71, 0) | **101 blocks** | ≤ 4,096 | grass blocks, oak and birch leaves |
+| `8675309` | (-304, 68, 432) | **475 blocks** | ≤ 4,096 | grass blocks, short grass, birch leaves |
+
+All three well inside the 4,096-block target, so the region weight of 2 was left at the handoff's
+default rather than tuned. `/locate biome` found it on every seed, and `execute if biome` confirmed
+the located position after the chunks were actually generated. The terrain is ordinary vanilla
+overworld — grass, dirt, sparse oak and birch, normal elevation variation.
+
+**Measured habitat share:** 2 of 169 positions sampled on a 256-block grid across a 3,072-block box
+around spawn on seed 0, i.e. **roughly 1.2% of the surface**. A patch probe around the seed-0 site
+found 17 habitat chunks in a 225-chunk box. The biome is findable but genuinely rare. This is recorded
+rather than acted on: the stated acceptance criterion is the 4,096-block distance, which all three
+seeds clear comfortably, and raising the region weight is a product-visible density change that is not
+this packet's call to make on a hunch. If playtesting says the habitat is too hard to find, the knob is
+`HuntingGroundsRegion.WEIGHT`.
+
+### Structures (H08, partial)
+
+Tag eligibility is in place and one half was observed for real: on seed `8675309` a
+`minecraft:mineshaft` at (-416, ~, 288) sits **inside** the habitat (`execute if biome` passed). A
+plains village inside the habitat has **not** been observed — the nearest village to each habitat site
+was in a neighbouring biome, which is expected given a ~1.2% habitat share and village spacing, and is
+not evidence against eligibility. Still open; see `docs/DEFERRED.md`.
+
+### Natural wildlife population (H08) — NOT observed, open
+
+Reported honestly: **no MHNW mob has been seen to spawn automatically in a real world.** What was
+actually done and measured:
+
+- **Chunk-generation spawning, no player:** 576 freshly generated chunks around the seed-0 habitat
+  produced 251 vanilla animals (54 cow, 49 pig, 90 chicken, 41 sheep, 17 wolf) and **0 MHNW mobs**.
+  Narrowed to habitat chunks only — 17 of them, isolated with per-chunk volume selectors — the result
+  was 4 sheep and 0 MHNW mobs. At vanilla's 0.1 creature-spawn probability per chunk that is about one
+  or two spawn events total, and Aptonoth's share of the biome's creature weight is 8/57, so a zero
+  here is statistically unremarkable. **It is not evidence of a defect, and it is not evidence the
+  spawning works either.** The sample is simply too small, and the habitat is too sparse to enlarge it
+  cheaply.
+- **Natural spawning with a real player:** a dev client was connected to the scratch server with
+  `--quickPlayMultiplayer` and parked inside the habitat (biome membership confirmed at the player's
+  own position). Two 2,000-game-tick windows were run, one at noon and one at midnight. Both counted
+  0 MHNW mobs — but they also counted **0 vanilla zombies, skeletons, creepers or bats**, which is the
+  tell: the harness was not measuring live spawning at all. The client session ended partway through,
+  so the night window in particular had no eligible player for some of its duration. The numbers from
+  those two windows are therefore discarded, not reported as a result.
+
+This is an **unavailable-observation gap, not a known code defect**. The guard, the resolved spawn
+entries, the categories, the counts and the placement registrations are all verified headlessly by
+GameTests H01/H03/H04, and the disable path is verified there for both automatic sources. What has not
+been done is a long enough live session, with a player who stays connected, inside a habitat patch, to
+see a population appear. That needs a human at a client or a much longer scripted session; it is
+recorded in `docs/DEFERRED.md` rather than claimed.
+
+### Client acceptance — not run
+
+No human has looked at this biome on a screen. Nothing in R1a changes a model, texture, animation,
+hurtbox or attack, so there is no new visual regression surface, but the biome's own look — tree
+density, whether a meadow reads as a meadow, whether the name displays — has not been seen.
+
+- [ ] The biome reads as a temperate, lightly wooded meadow rather than a thinned forest.
+- [ ] Tree density at a constant count of 3 looks right on the ground, not just in the JSON.
+- [ ] The biome name shows as "Verdant Hunting Grounds" (F3 screen, or a `/locate biome` jump).
+- [ ] A plains village and a mineshaft generate somewhere in the habitat and look normal.
+- [ ] Wildlife appears without a spawn egg, at a rarity that does not read as flooding.
+- [ ] `naturalSpawning = false` visibly stops new MH spawns without touching vanilla wildlife.
 
 ---
 

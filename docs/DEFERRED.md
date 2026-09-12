@@ -5,6 +5,22 @@ Things consciously postponed, with enough context to pick them up cold. Nothing 
 
 Acceptance IDs refer to the matrix in `REVIVAL_HANDOFF.md` section 4.6.
 
+## Found during R1a (2026-09-12), deferred out of that packet
+
+### The habitat is rare: ~1.2% of the surface at region weight 2
+**Status:** measured, deliberately left alone.
+
+Sampled on seed `0`: 2 of 169 positions on a 256-block grid across a 3,072-block box around spawn were
+the habitat, and a 225-chunk probe around the located site found 17 habitat chunks. The biome is
+comfortably findable — 524, 101 and 475 blocks from spawn on the three specified seeds, all well inside
+the 4,096-block target — but a player is not going to stumble into one often, and it makes any natural
+population slow to sample.
+
+Left as is on purpose: the agreed acceptance criterion is the distance target, which passes on all
+three seeds, and region weight is a product-visible density decision rather than something to inflate
+because it makes testing easier. The knob is `HuntingGroundsRegion.WEIGHT`. Revisit it with playtest
+feedback about finding the place, not with a test-convenience argument.
+
 ## Found during R0a (2026-09-11), deferred out of that packet
 
 ### `RoarGoal`'s disengage clock stalls while a committed attack holds the goal's flags
@@ -79,16 +95,47 @@ balance tuning are later work. Natural spawning is still deferred under A11; no 
 modifier or spawn placement was added. This packet is not full P5 or release acceptance.
 
 ### A11 — natural spawning
-**Status:** wired but never observed.
+**Status:** built and headlessly verified as of R1a; **a live population has still never been seen.**
 
-A biome spawn entry exists at `data/mhnw/neoforge/biome_modifier/great_izuchi_spawns.json`
-(`#minecraft:is_forest`, weight 2, group of 1), and `GreatIzuchi.checkSpawnRules` consults the
-`naturalSpawning` server config. Neither has ever been seen to work: every monster so far has been
-placed with a spawn egg.
+R1a replaced the guesswork here. Spawn entries now live on `#mhnw:spawns_hunting_wildlife` rather
+than the vanilla forest tag, cover five species with agreed weights and counts, and are gated by
+`HuntingSpawnRules` — which reads the `naturalSpawning` server config for both `NATURAL` and
+`CHUNK_GENERATION` (only `NATURAL` was gated before, so worldgen-seeded passives bypassed the off
+switch). All of that is covered by GameTests: the resolved entries, their categories and counts, the
+absence of entries for small Izuchi and the unfinished wyverns, and the accept/reject behaviour of the
+guard for both automatic sources and every manual origin.
 
-To close it: confirm a monster actually appears without a spawn egg, confirm that flipping
-`naturalSpawning` to false stops it, and check rarity and group size feel right rather than
-flooding a forest. Spawn weight and biome choice are guesses and should be revisited.
+What is still open is the observation, and it is an observation gap rather than a suspected defect.
+See `docs/TEST_PLAN.md`'s R1a section for the actual numbers, but in short: 576 freshly generated
+chunks produced 251 vanilla animals and no MHNW mobs, which sounds alarming until you narrow it to the
+17 chunks that were actually habitat and realise the whole sample amounts to one or two
+chunk-generation spawn events. The habitat is roughly 1.2% of the surface, so enlarging that sample is
+slow. A live player-driven window was attempted with a real dev client connected over
+`--quickPlayMultiplayer`, but it counted zero vanilla monsters as well, so it was measuring nothing
+and its numbers were discarded.
+
+To close it: one long session with a player who stays connected inside a habitat patch — a human at a
+client is the cheap way — confirming that wildlife appears without an egg, that a Great Izuchi turns
+up at night with its escort, that `naturalSpawning = false` stops new MH spawns while vanilla wildlife
+carries on, and that the rarity reads as rare rather than empty or flooded. If the population genuinely
+turns out to be starved once that is observable, the narrow knobs are the per-species weights in
+`data/mhnw/neoforge/biome_modifier/hunting_wildlife_spawns.json`, and `Bug` moving from `AMBIENT` to
+`CREATURE` so it stops competing with bats. Do not reach for global mob caps or a custom spawn
+scheduler.
+
+### A plains village inside the habitat has not been observed
+**Status:** eligible by tag, not yet seen.
+
+`data/minecraft/tags/worldgen/biome/has_structure/village_plains.json` adds the habitat additively, and
+the mineshaft half of the same pair *was* observed for real — a `minecraft:mineshaft` inside the
+habitat on seed `8675309`. No plains village has been found inside the habitat yet: on all three
+sampled seeds the nearest village to the habitat site was in a neighbouring biome. That is what a
+~1.2% habitat share and vanilla village spacing predict, and tag membership is not in doubt, so this is
+a sampling gap rather than a bug.
+
+To close it: on any seed, `/locate structure minecraft:village_plains` from inside a habitat patch, or
+walk a few villages and check the biome underfoot, and confirm one generates in the habitat and looks
+normal. A structure-tag assertion on its own is explicitly not proof, which is why this is listed.
 
 ### Izuchi (small) — attack and death animation
 **Status:** genuinely hostile and damaging (ordinary vanilla `MeleeAttackGoal`/`Mob.doHurtTarget`,
