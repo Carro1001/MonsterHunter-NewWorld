@@ -121,7 +121,13 @@ under Rathian/Rathalos below, same fix applies here too.
 - [ ] **New: roars once when it first notices you, doesn't roar again mid-fight, and roars again
       if you break off long enough and re-engage** — GameTest-covered for the state machine itself;
       worth a live look for whether it *reads* right (does it actually freeze/plant during the roar,
-      does the timing feel right)
+      does the timing feel right). **Fixed a real bug this round**: the countdown that ends the roar
+      only actually ran every other real tick (same throttling `Mob.serverAiStep` applies to
+      re-checking idle goals), so it took roughly twice as long as the clip's own real duration —
+      the clip finished and held its last frame (its own authored loop mode) well before the
+      countdown let go, which read as "froze after the roar." Confirmed live on Rathalos before the
+      fix; needs a fresh look on all three now that the countdown runs every tick like the combat
+      goals already do.
 - [ ] **New: turning away from a close-up Great Izuchi no longer makes its head/neck vanish
       mid-turn** — this was a real bug (see Rathian/Rathalos note below), fixed for all three
 - [ ] **New: a naturally-spawned Great Izuchi has 1-4 regular Izuchi nearby when you first find it**

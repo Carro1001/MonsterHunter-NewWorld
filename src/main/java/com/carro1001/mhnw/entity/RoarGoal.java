@@ -68,6 +68,21 @@ public class RoarGoal<T extends Mob & Roarable> extends Goal {
         return this.monster.getRoarTicks() > 0;
     }
 
+    /**
+     * Without this, {@code tick()} (which decrements the roar countdown) only actually runs every
+     * *other* real tick -- {@code Mob.serverAiStep} only ticks a running goal every tick when it
+     * asks to be, and otherwise skips it on alternate ticks the same way it throttles {@code
+     * canUse()} polling for non-running goals (see {@link #noTargetSince}'s doc). That silently made
+     * the countdown take roughly twice as long as the clip's own real duration, so the clip finished
+     * and held its last frame (its own authored {@code hold_on_last_frame} loop mode) well before
+     * the countdown reached zero and let {@code mainAnim} move off of it -- read as "froze after the
+     * roar." Same reason the combat goals override this.
+     */
+    @Override
+    public boolean requiresUpdateEveryTick() {
+        return true;
+    }
+
     @Override
     public boolean isInterruptable() {
         return false;
