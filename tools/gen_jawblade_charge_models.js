@@ -48,7 +48,15 @@ for (let step = 1; step <= STEPS; step++) {
         const resting = base.display[context] || {};
         const rotation = (resting.rotation || [0, 0, 0]).slice();
         rotation[0] = Math.round((rotation[0] + lean) * 100) / 100;
-        display[context] = Object.assign({}, resting, { rotation });
+
+        // Interpolate translation as weapon leans back (move hand back and up slightly)
+        const translation = (resting.translation || [0, 0, 0]).slice();
+        const zAdjust = Math.round(progress * 2 * 100) / 100; // Move forward (less negative Z)
+        const yAdjust = Math.round(progress * 1.5 * 100) / 100; // Move up slightly
+        translation[1] = Math.round((translation[1] + yAdjust) * 100) / 100;
+        translation[2] = Math.round((translation[2] + zAdjust) * 100) / 100;
+
+        display[context] = Object.assign({}, resting, { rotation, translation });
     }
     const model = {
         comment:

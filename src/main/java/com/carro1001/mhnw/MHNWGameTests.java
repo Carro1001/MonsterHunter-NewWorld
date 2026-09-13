@@ -1419,13 +1419,19 @@ public class MHNWGameTests {
      * actually reaches a target in the authored active window -- and {@code r1IzuchiHarass*}
      * owns the shape of the approach.
      *
-     * <p>The timeout is two of those cycles rather than one. A circle window is randomized 40-80
-     * ticks and a dart that ends in a retreat starts another, so 400 ticks was a coin-flip against
-     * an unlucky pair of long windows -- it failed intermittently on a clean tree. Sizing it for a
-     * retry is not slack: the assertion is still that the damage lands inside the authored active
-     * window, which a longer wait cannot make pass spuriously.
+     * <p>The timeout is eight of those cycles. One cycle is at worst 80 circling + 30 darting + 48
+     * attacking + 40 retreating, so 400 ticks was two cycles and failed intermittently on a clean
+     * tree; 800 still failed about one run in six, measured rather than guessed. A longer wait
+     * cannot make this pass spuriously -- the assertion is unchanged and still pins the damage
+     * inside the authored active window.
+     *
+     * <p><b>The underlying rate is a real signal, not just test noise.</b> Needing several cycles
+     * to land one hit on a stationary adjacent cow means the dart-then-swipe whiffs more often than
+     * it connects; the swipe's active window opens 36 ticks after the attack commits, by which
+     * point the Izuchi has often moved. That is gameplay feel to judge in the alpha, not something
+     * a timeout should be allowed to hide -- see docs/DEFERRED.md.
      */
-    @GameTest(template = ARENA, timeoutTicks = 800)
+    @GameTest(template = ARENA, timeoutTicks = 1600)
     public static void izuchiAttacksAndDamagesTarget(GameTestHelper helper) {
         com.carro1001.mhnw.entity.Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
         Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
@@ -5797,7 +5803,23 @@ public class MHNWGameTests {
         helper.assertTrue(geo.contains("\"group\""),
                 "the geometry has no bone named group, which is the one the clip animates");
 
-        String clip = readPackaged(helper, "/assets/mhnw/animations/item/giant_jawblade.animation.json");
+        // The bone has to pivot on the grip, or the weapon rotates out of the player's hand -- the
+        // first build pivoted on the .bbmodel's untouched default group origin halfway up the
+        // blade and did exactly that. The grip is not a number invented here: the hand-authored 2D
+        // model rotates every one of its elements about it, so the two files are asserted to agree
+        // rather than the value being written down twice.
+        String flat = readPackaged(helper, "/assets/mhnw/models/item/giant_jawblade.json");
+        helper.assertTrue(compact(flat).contains("\"origin\":[8,-3,8]"),
+                "the 2D weapon model no longer rotates about [8,-3,8]; if the artist moved the"
+                        + " grip, move the GeckoLib bone pivot with it");
+        helper.assertTrue(compact(geo).contains("\"pivot\":[0,-3,0]"),
+                "the GeckoLib bone does not pivot on the grip the 2D model rotates about, so the"
+                        + " charge will swing the handle away from the player's hand");
+        helper.assertTrue(!clipHasTrack(helper, "position"),
+                "the charge clip has a position track; translating the bone moves the weapon off"
+                        + " the hand the pivot exists to keep it on. Use more rotation instead");
+
+        String clip = chargeClip(helper);
         helper.assertTrue(clip.contains("\"charge\""), "the animation file has no charge clip");
         String length = seconds(com.carro1001.mhnw.item.GiantJawbladeItem.OVERCHARGE_TICKS);
         helper.assertTrue(clip.contains("\"animation_length\": " + length),
@@ -5810,6 +5832,32 @@ public class MHNWGameTests {
                             + " tiers disagree");
         }
         helper.succeed();
+    }
+
+    /**
+     * Whitespace removed, so a JSON assertion does not depend on how a file happens to be
+     * indented or on whether git checked it out with CRLF. Written as a loop rather than as a
+     * regex on purpose: the backslash in a {@code "\s+"} literal is easy to lose by one level,
+     * and a half-escaped one silently strips spaces but not line breaks -- which is exactly how
+     * this assertion first failed against a file that was correct.
+     */
+    private static String compact(String json) {
+        StringBuilder out = new StringBuilder(json.length());
+        for (int i = 0; i < json.length(); i++) {
+            char c = json.charAt(i);
+            if (!Character.isWhitespace(c)) {
+                out.append(c);
+            }
+        }
+        return out.toString();
+    }
+
+    private static String chargeClip(GameTestHelper helper) {
+        return readPackaged(helper, "/assets/mhnw/animations/item/giant_jawblade.animation.json");
+    }
+
+    private static boolean clipHasTrack(GameTestHelper helper, String track) {
+        return chargeClip(helper).contains("\"" + track + "\"");
     }
 
     /** Ticks as the clip spells them: seconds at 20 ticks each, one decimal place minimum. */

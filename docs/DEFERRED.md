@@ -483,6 +483,25 @@ borrowed placeholder. Nothing here is guessed -- geometry, UVs and pose all came
 **What it takes then:** open the weapon in every context and confirm it reads right. If something is
 still off, the fix is the same one-file `display` edit either way; no code, no id change.
 
+### Small Izuchi whiff far more often than they connect
+**Status:** measured, not fixed, 2026-09-13. `izuchiAttacksAndDamagesTarget` puts a stationary
+no-AI cow one block from an Izuchi and waits for one hit inside the tail swipe's authored active
+window. At a 400-tick budget it failed often; at 800 it still failed roughly one run in six (five
+clean runs observed after the raise, and two failures before it). It is now 1600 -- eight full
+harass cycles -- so the suite stops raising false alarms.
+
+**What the number actually says:** landing one hit on a stationary adjacent target can take several
+complete circle-dart-attack-retreat cycles. `IzuchiHarassGoal` commits to the 48-tick swipe when it
+reaches melee range, but the damage volumes only open at tick 36; over those 36 ticks the Izuchi
+frequently drifts or turns off the target, and the sweep passes through empty air.
+
+**Why it is not being fixed here:** the swipe's timing is a live `BoneProbe` measurement and the
+project has twice thrown away an offline re-solve. Narrowing the gap is a choice between moving the
+commit point later, holding position during the windup, or re-measuring the envelope -- and which
+of those is right depends on how the pack reads in play, which the alpha is what answers.
+
+**Trigger:** alpha feedback on whether Izuchi packs feel threatening or feel like they are missing.
+
 ### Two Giant Jawblades ship in the alpha, and one of them must be deleted
 **Status:** deliberate and temporary, 2026-09-13. `mhnw:giant_jawblade_gecko` is the same
 `GiantJawbladeItem` -- same stats, same timings, same combat code, asserted equal by

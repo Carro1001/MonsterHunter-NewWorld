@@ -47,6 +47,14 @@ import java.util.function.Consumer;
  *
  * <p>{@link #isPerspectiveAware()} is true because the hotbar icon renders continuously alongside
  * the held copy; without it both would share one animation manager and fight over it.
+ *
+ * <h2>The clip rotates and never translates, on purpose</h2>
+ * The bone pivot is the grip ({@code [0,-3,0]} -- the artist's own rotation origin, shared by every
+ * cube and by every element of the hand-authored 2D model), so rotation alone keeps the handle in
+ * the player's hand. The first cut pivoted on the {@code .bbmodel}'s group origin, {@code [0,8,0]},
+ * which is Blockbench's untouched default sitting halfway up the blade; it swung the handle clear
+ * of the hand. Any position track in the clip reintroduces that, so there is none: if the wind-up
+ * needs more travel, give it more rotation.
  */
 public class GiantJawbladeGeoItem extends GiantJawbladeItem implements GeoItem {
 
@@ -88,6 +96,13 @@ public class GiantJawbladeGeoItem extends GiantJawbladeItem implements GeoItem {
                     public PlayState handle(AnimationState<GiantJawbladeGeoItem> state) {
                         ItemStack stack = state.getData(DataTickets.ITEMSTACK);
                         if (stack == null || !isCharging(stack)) {
+                            // Stopping is not rewinding. The controller keeps currentRawAnimation
+                            // across a STOP, and setAnimation only reloads a clip when the reload
+                            // flag is set or a *different* animation is requested -- so without
+                            // this, the second charge resumed the held last frame and the blade
+                            // simply stayed vertical from then on. Observed, and it is why the
+                            // first charge looked right and no later one did.
+                            state.getController().forceAnimationReset();
                             return PlayState.STOP;
                         }
                         return state.setAndContinue(CHARGE);
