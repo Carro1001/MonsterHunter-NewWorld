@@ -46,6 +46,39 @@ measured for real, stand near one with `debugCombat` on for a few seconds and se
 
 ---
 
+## Alpha pass 1 — habitat exclusivity and the herbivore's bone (2026-09-13)
+
+For the friends-and-family alpha. Two gameplay changes and one real test fix; still 174 tests, all
+passing (`.\gradlew.bat --no-daemon build runGameTestServer`, three consecutive clean runs).
+
+- **The Verdant Hunting Grounds no longer spawns vanilla mobs.** Its biome JSON carried a
+  plains/forest roster of its own — sheep/pig/chicken/cow/wolf, eight monsters at weight 95-100
+  each, bats at 10 — while Great Izuchi's modifier adds one entry at **weight 2**. The mod's own
+  creatures were being outbid in their own habitat, so the hunt the biome exists for barely
+  happened. `creature`, `monster` and `ambient` are now empty in the JSON; the biome modifiers are
+  the only thing that fills them, which also makes those modifiers the single owner of the roster
+  the way `CLAUDE.md` already says they should be. `underground_water_creature` (glow squid) is
+  left alone: it competes with nothing of ours. Vanilla dungeon spawners from
+  `minecraft:monster_room` are untouched — that is a structure, not the surface population.
+  `huntingGroundsHasOneEntryPerSpecies` now asserts this per category rather than per species, so a
+  re-added cow fails it too.
+- **Aptonoth's third carve yields 2 bone** (was a second helping of raw meat). The habitat's own
+  bone source, so the armor's vanilla half doesn't send a player back to a skeleton somewhere else.
+  Hide and claw are unchanged and still Izuchi-only: the first Izuchi kill in iron/leather stays
+  the gate on bone armor, which is what then makes Great Izuchi tractable.
+- **`izuchiAttacksAndDamagesTarget` was intermittently failing on a clean tree**, not from this
+  round's changes — confirmed by stashing them and reproducing it. Its 400-tick budget was one
+  harass cycle, and the circle window is randomized 40-80 ticks, so an unlucky pair of long windows
+  plus a retreat ran past it. Now 800. The assertion is unchanged and still pins the damage to the
+  authored active window.
+
+### Still open for the alpha
+
+- Natural-spawn density has not been re-observed in a real world since the vanilla roster came out.
+  H08 below was already open; this makes its numbers stale in the player's favour, not accurate.
+
+---
+
 ## R1 — the first hunting loop (2026-09-12)
 
 Branch `r1/first-hunting-loop`, off accepted `master` at `516884c` (PR #5). The rest of R1 after

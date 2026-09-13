@@ -1418,8 +1418,14 @@ public class MHNWGameTests {
      * timeout is sized for that, not for a rusher. What is asserted is unchanged -- that damage
      * actually reaches a target in the authored active window -- and {@code r1IzuchiHarass*}
      * owns the shape of the approach.
+     *
+     * <p>The timeout is two of those cycles rather than one. A circle window is randomized 40-80
+     * ticks and a dart that ends in a retreat starts another, so 400 ticks was a coin-flip against
+     * an unlucky pair of long windows -- it failed intermittently on a clean tree. Sizing it for a
+     * retry is not slack: the assertion is still that the damage lands inside the authored active
+     * window, which a longer wait cannot make pass spuriously.
      */
-    @GameTest(template = ARENA, timeoutTicks = 400)
+    @GameTest(template = ARENA, timeoutTicks = 800)
     public static void izuchiAttacksAndDamagesTarget(GameTestHelper helper) {
         com.carro1001.mhnw.entity.Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
         Cow victim = helper.spawn(EntityType.COW, 8, 2, 9);
@@ -2182,6 +2188,23 @@ public class MHNWGameTests {
                 ModEntities.FLASHBUG.get(), 2, 1, 2);
         assertOneSpawnEntry(helper, habitat, net.minecraft.world.entity.MobCategory.AMBIENT,
                 ModEntities.BUG.get(), 2, 1, 2);
+
+        // Alpha: the habitat is ours alone. Vanilla's own plains/forest roster used to sit in this
+        // biome's JSON and drown Great Izuchi's weight-2 entry under eight monsters at weight ~100
+        // each, so the hunt the biome exists for barely happened. Asserted per category rather than
+        // per species so a re-added cow fails this too.
+        for (net.minecraft.world.entity.MobCategory category : java.util.List.of(
+                net.minecraft.world.entity.MobCategory.MONSTER,
+                net.minecraft.world.entity.MobCategory.CREATURE,
+                net.minecraft.world.entity.MobCategory.AMBIENT)) {
+            for (net.minecraft.world.level.biome.MobSpawnSettings.SpawnerData entry :
+                    habitat.getMobSettings().getMobs(category).unwrap()) {
+                helper.assertTrue(net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE
+                                .getKey(entry.type).getNamespace().equals(MHNW.MOD_ID),
+                        "a non-mhnw " + category + " spawn entry is back in the hunting grounds: "
+                                + entry.type.getDescriptionId());
+            }
+        }
 
         // No independent small-Izuchi population: it arrives as an escort or not at all.
         assertNoSpawnEntry(helper, habitat, ModEntities.IZUCHI.get());
@@ -3104,6 +3127,11 @@ public class MHNWGameTests {
         assertCrafts(helper, 3, 3, "HCH" + "B B" + "B B",
                 com.carro1001.mhnw.registry.ModItems.BONE_LEGGING.get());
         assertCrafts(helper, 3, 2, "C C" + "B B", com.carro1001.mhnw.registry.ModItems.BONE_BOOTS.get());
+
+        // The bone half of the set comes from the herbivore as well as from vanilla skeletons, so a
+        // player who has found the habitat but not yet beaten an Izuchi is never short of bone.
+        helper.assertTrue(CarveState.Table.APTONOTH.reward(2).is(net.minecraft.world.item.Items.BONE),
+                "Aptonoth's third carve no longer yields bone");
         helper.succeed();
     }
 
