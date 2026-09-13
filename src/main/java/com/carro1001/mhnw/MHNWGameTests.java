@@ -2877,6 +2877,19 @@ public class MHNWGameTests {
     }
 
     /**
+     * Small Izuchi got its own authored death clip with the retargeted animation set, so it now
+     * needs the same anchor the other four have. Before this it had none and fell through to the
+     * idle branch, leaving a corpse standing and breathing for the whole ten-minute carve window.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void izuchiDeathAnchorAgesWithRealTicks(GameTestHelper helper) {
+        Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        izuchi.setNoAi(true);
+        assertDeathAnchorAgesWithRealTicks(helper, izuchi, izuchi::getDeathStartTime,
+                Izuchi.NO_DEATH, 12);
+    }
+
+    /**
      * R0b-06: a reloaded body resumes its death, it does not restart it.
      *
      * <p>The anchor is deliberately not persisted. It is reconstructed on the first tick after load

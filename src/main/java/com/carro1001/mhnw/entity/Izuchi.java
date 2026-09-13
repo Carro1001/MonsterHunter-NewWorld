@@ -85,12 +85,26 @@ public class Izuchi extends Monster implements GeoEntity {
     private static final EntityDataAccessor<Boolean> DATA_SLEEPING =
             SynchedEntityData.defineId(Izuchi.class, EntityDataSerializers.BOOLEAN);
 
+    /** Game time this body's death began, or {@link #NO_DEATH} while alive; see
+     * {@link GreatIzuchi#getDeathStartTime()} for why this anchor exists and how it reconstructs
+     * itself on load from vanilla's own saved {@code DeathTime} without persisting anything. */
+    private static final EntityDataAccessor<Long> DATA_DEATH_START =
+            SynchedEntityData.defineId(Izuchi.class, EntityDataSerializers.LONG);
+
+    /** Sentinel for {@link #DATA_DEATH_START} while this creature is alive. */
+    public static final long NO_DEATH = Long.MIN_VALUE;
+
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.izuchi.idle");
     private static final RawAnimation SLEEP = RawAnimation.begin().thenLoop("animation.izuchi.sleep");
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.izuchi.walk");
     private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.izuchi.run");
     private static final RawAnimation TAIL_SWIPE =
             RawAnimation.begin().thenPlay("animation.izuchi.attack_tailswipe");
+
+    /** Held on its last frame: the body stays in its final pose for the whole carving window
+     * rather than restarting the fall over and over. */
+    private static final RawAnimation DEATH =
+            RawAnimation.begin().thenPlayAndHold("animation.izuchi.death");
 
     public static final int TRANSITION_TICKS = 5;
 
@@ -154,6 +168,7 @@ public class Izuchi extends Monster implements GeoEntity {
         builder.define(DATA_ATTACK_ID, ATTACK_NONE);
         builder.define(DATA_ATTACK_START, 0L);
         builder.define(DATA_ACTION_SEQUENCE, 0);
+        builder.define(DATA_DEATH_START, NO_DEATH);
     }
 
     public boolean isSleeping() {
@@ -324,9 +339,9 @@ public class Izuchi extends Monster implements GeoEntity {
     }
 
     /**
-     * Hold the body for the R1 carving window; see {@link GreatIzuchi#tickDeath}. Unlike the large
-     * monsters this species has no authored death clip, so the held body is vanilla's ordinary
-     * corpse flop, kept around rather than replaced.
+     * Hold the body for the R1 carving window; see {@link GreatIzuchi#tickDeath}. As of the
+     * retargeted animation set this species has its own authored death clip, held on its last
+     * frame for the rest of the window.
      */
     @Override
     protected void tickDeath() {
@@ -371,6 +386,21 @@ public class Izuchi extends Monster implements GeoEntity {
             setYRot(this.committedBodyYaw);
         }
         positionParts();
+        stampDeathStart();
+    }
+
+    /** Game time this body's death began, or {@link #NO_DEATH} while alive. Valid on both sides. */
+    public long getDeathStartTime() {
+        return this.entityData.get(DATA_DEATH_START);
+    }
+
+    /** Server: stamp the death anchor once, from {@code gameTime - deathTime}; see
+     * {@link GreatIzuchi#getDeathStartTime()} for why that expression also reconstructs the age of
+     * a body restored from disk without re-running any death processing. */
+    private void stampDeathStart() {
+        if (!level().isClientSide && isDeadOrDying() && getDeathStartTime() == NO_DEATH) {
+            this.entityData.set(DATA_DEATH_START, level().getGameTime() - this.deathTime);
+        }
     }
 
     @Override
@@ -381,6 +411,14 @@ public class Izuchi extends Monster implements GeoEntity {
 
     private PlayState mainAnim(AnimationState<Izuchi> state) {
         ServerTimedAnimationController<Izuchi> controller = ServerTimedAnimationController.of(state);
+        // Death first, and from one decision: this species used to fall through to idle while dead,
+        // so a corpse stood there breathing for the whole ten-minute carving window.
+        if (isDeadOrDying()) {
+            long start = getDeathStartTime();
+            double partial = state.getPartialTick();
+            return controller.playTimed(state, DEATH, ServerTimedAnimationController.KIND_DEATH,
+                    start, start == NO_DEATH ? partial : level().getGameTime() - start + partial);
+        }
         if (getAttackId() == ATTACK_TAIL_SWIPE) {
             return controller.playTimed(state, TAIL_SWIPE,
                     ServerTimedAnimationController.KIND_ATTACK, getActionSequence(),

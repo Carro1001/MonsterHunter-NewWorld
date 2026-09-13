@@ -273,6 +273,16 @@ public final class MHNWClient {
         public int getPackedOverlay(Izuchi animatable, float u, float partialTick) {
             return overlayWithoutDeathTint(animatable, u);
         }
+
+        /**
+         * The retargeted death clip rotates {@code root} 90 degrees about Z itself, so vanilla's
+         * own corpse flop would add a second 90 on the same axis -- the exact fault that put
+         * Aptonoth back on its feet. Zero hands the pose entirely to the clip.
+         */
+        @Override
+        protected float getDeathMaxRotation(Izuchi entity) {
+            return 0.0F;
+        }
     }
 
     /**

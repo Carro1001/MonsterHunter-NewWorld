@@ -72,8 +72,11 @@ Species notes that are easy to get wrong from an older doc:
   vanilla-melee-only.
 - **Small Izuchi** has its recovered `origin/brain` tail swipe: a 48-tick server-timed action with
   a live-fitted damage envelope. Its root box is extended by native head and two tail parts,
-  which still need pose acceptance. It still has no dedicated death clip. See "Attack timeline"
-  below.
+  which still need pose acceptance. As of the artist's 2026-09-13 animation delivery it **does**
+  have its own death clip, wired like the other four (synched anchor, `thenPlayAndHold`,
+  `getDeathMaxRotation` zeroed because the clip rotates `root` 90 degrees about Z itself). That
+  delivery also carries `roar`, `rally` and `attack_tailslam`, none of which are wired to anything
+  yet. See "Attack timeline" below.
 - **Toad and Flashbug** endemic behaviour ships as-is and is retained; R2 extended it rather than
   redesigning it — both are now capturable, and the Flashbug's flash moved into a shared helper,
   but neither species' trigger, telegraph, radius or one-release discard changed.

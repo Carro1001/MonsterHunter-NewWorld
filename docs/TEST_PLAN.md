@@ -2,7 +2,7 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 165 tests, all passing**
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 166 tests, all passing**
 (`.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-12, presentation/feel round and the
 corpse-presentation fix, both rebased onto the R3/Izuchi-tail-swipe master; 157 after the corpse fix
 alone, 156 before either, 148 after the R2 field-preparation packet, 123 before that packet, 121
@@ -423,6 +423,45 @@ the artist. Geometry and texture were diffed byte-for-byte against the first del
 unchanged; only the pose is new. `giant_jawblade.json` now carries that geometry and that display
 block verbatim, and **no parent at all**. No separate 2D icon exists, so GUI also renders the real
 3D model, at the artist's own pose.
+
+### Small Izuchi's animation set, redelivered (2026-09-13)
+
+The artist supplied a new `izuchi.animation.json` adding `death`, `roar`, `rally` and
+`attack_tailslam` to the five clips already shipped. It is committed **verbatim except for one
+character**, and that exception is worth knowing about.
+
+**One clip would not load at all.** GeckoLib reported
+`Unable to parse animation: animation.izuchi.attack_tailswipe -> Failed to parse expression
+'-97.4073+16.8822+'` — a MoLang expression truncated mid-term, trailing `+` and nothing after it. A
+malformed expression fails the **whole clip**, so the tail swipe silently ceased to exist while the
+other eight loaded normally; the only symptom in play was "the swipe isn't playing", with no error
+unless you read the client log. The fix was deleting that one `+`, which restores the value
+byte-for-byte to what the previously shipped file had at that exact keyframe — a known-good value,
+not authored animation.
+
+**It may want a different fix upstream.** Neighbouring keyframes on the same bone and axis read
+`…+16.8822+Math.sin((query.anim_time - 1.5) * 180) * 1`, so the export more likely truncated a
+`Math.sin` tail than added a stray operator. If so the correct value is the longer one and the tail
+tip moves slightly differently. That is an art decision, and it needs fixing at source or the next
+export reintroduces it.
+
+**Nothing else is affected.** All 14 animation files were scanned — 13,320 expression strings — for
+trailing operators, doubled operators, unbalanced parentheses and empty expressions. Exactly one
+problem, the one above.
+
+**The phantom bones were left alone, deliberately.** Every new clip animates 8 bones Izuchi's
+geometry does not have (`left_shoulder`, `right_shoulder`, `left_ankle`, `right_ankle`, `mane`,
+`tailblade`, `left_hand`, `right_hand` — Great Izuchi's skeleton). `GeoModel.crashIfBoneMissing()`
+returns `false`, so GeckoLib skips those tracks silently; they are inert, and keeping them means the
+next redelivery diffs cleanly against what the artist actually holds.
+
+**Only `death` is wired.** Small Izuchi previously fell through to the idle branch while dead, so a
+corpse stood there breathing for the entire ten-minute carve window. It now has the same synched
+death anchor the other four species use, played with `thenPlayAndHold` — which matters, because
+`thenPlay` passes `LoopType.DEFAULT` and DEFAULT **defers to the JSON's own `loop` field**, and this
+clip's says `true`. `thenPlayAndHold` sets `HOLD_ON_LAST_FRAME` explicitly and wins.
+`izuchiDeathAnchorAgesWithRealTicks` guards the anchor. `roar`, `rally` and `attack_tailslam` are
+present and unwired.
 
 ### R3 charge rework (2026-09-13): three tiers, held and released
 
