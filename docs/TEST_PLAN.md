@@ -392,15 +392,25 @@ Both are on the human checklist below.
   nothing from `net.minecraft.client`.
 - `git diff --check` clean.
 
+### R3 art landed (2026-09-12): real geometry, transforms not tuned
+
+The artist delivered `giant_jawblade.bbmodel` and its exported Java Item Model JSON. Verified before
+wiring it in: the embedded texture decodes pixel-identical to the atlas already in the repo, so this
+is the model that atlas was actually unwrapped from, not a mismatched delivery. `giant_jawblade.json`
+now carries the real cuboid geometry, `parent: minecraft:item/handheld` for its display contexts, and
+`hand`/`head`/`fixed` transforms borrowed from the old, never-shipped `BoneBlade.bbmodel` (the one
+other same-scale bone-greatsword asset in the project) as a starting pose rather than an authored
+one. `gui`/`ground`/`firstperson_lefthand` are untouched and inherit `item/handheld`'s own short-tool
+defaults. No separate 2D icon exists, so every context renders the real 3D model. 159/159 unchanged
+(`modCreativeTabResolvesWithItsIcon` and `r3JawbladeRegistryAndResources` both still pass; the latter
+only checks the model/atlas are packaged, not their content, so it does not need to change).
+
 ### What still needs a human — R3
 
-The art gate is **not** satisfied and the presentation is a placeholder by explicit maintainer
-decision (2026-09-12), so the visual gates below are open by construction, not by omission.
-
-- [ ] **Accepted art.** There is still no geometry bound to `giant_jawblade_model.png` and no
-      inventory icon. The item currently shows vanilla's iron sword sprite through
-      `minecraft:item/handheld`. Everything in section 8 of the handoff — first/third person, left
-      and right hand, UVs, scale, grip, ground/fixed frames — is untestable until that lands.
+- [ ] **Display transforms.** Every context — first/third person both hands, GUI, ground, item
+      frame — needs eyes now that the geometry is real. Expect the borrowed BoneBlade pose to be
+      wrong to some degree in most of them; `gui`/`ground`/`firstperson_lefthand` were never touched
+      at all. This is the one open item section 8 of the handoff was written for.
 - [ ] **Feel of the charge.** Does 30 ticks read as a deliberate windup rather than a stuck input?
       Is the miss recovery understandable when it happens?
 - [ ] **One cue per strike** (PR #8 P2, not headlessly testable). A landed charge should sound once,

@@ -34,8 +34,9 @@ go early and nothing happens at all. Whether it hits or misses, the weapon needs
 to recover, so it is reach bought with commitment, not a better attack. Ordinary left-click is still
 the faster option up close.
 
-*Its look is temporary:* it currently borrows the iron sword's icon while the real blade art is
-finished.
+*Its pose is still rough:* the blade model is real, but its grip and scale in hand and inventory
+are a first-pass borrowed from an older, never-shipped model at a similar scale, not yet tuned for
+this one.
 
 ## Field preparation
 

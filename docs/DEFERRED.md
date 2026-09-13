@@ -439,23 +439,29 @@ first frame rather than seeking to the action's age.~~ **Fixed in R0b** (2026-09
 *observation* remains open regardless; the fix being in place is not evidence that two clients
 agree, and R0b does not claim it is.
 
-### R3 — the Giant Jawblade's presentation is a placeholder
-**Status:** deliberate, authorized by the maintainer on 2026-09-12, and the only unfinished part of
-the weapon.
+### R3 — the Giant Jawblade's display transforms are a first pass, not tuned
+**Status:** real geometry landed 2026-09-12 (delivered as `giant_jawblade.bbmodel` plus its exported
+Java Item Model JSON, both matching the previously-delivered UV atlas byte-for-byte once decoded).
+`assets/mhnw/models/item/giant_jawblade.json` is that exported geometry with `parent`
+`minecraft:item/handheld` for its display contexts. There is still no separate 2D inventory icon,
+so every context — including GUI/inventory — renders the real 3D model, which is fine: plenty of
+weapon mods do exactly this, and `neoforge:separate_transforms` remains available if a flat icon is
+ever supplied.
 
-`assets/mhnw/models/item/giant_jawblade.json` points at `minecraft:item/iron_sword`. The delivered
-art is only the on-hand UV atlas (`textures/item/giant_jawblade_model.png`, 64x64); there is no
-geometry bound to it and no inventory icon anywhere in the repository or its remotes.
+The `thirdperson_righthand`/`thirdperson_lefthand`/`firstperson_righthand`/`head`/`fixed` transforms
+are **borrowed from the old, never-shipped `BoneBlade.bbmodel`** (`MH_NW_Assets/items/equipment/
+bone/BoneBlade.bbmodel`) rather than authored for this model, because no display block came with the
+delivery and BoneBlade is the one other bone-greatsword-scale asset in the project with hand-tuned
+numbers to start from (both span roughly 40 model units tall, an order taller than a vanilla tool).
+`gui`, `ground` and `firstperson_lefthand` are not overridden at all and fall back to
+`item/handheld`'s own defaults, which assume a much shorter item.
 
-**Trigger:** the accepted held geometry (a runtime model JSON, or the Blockbench source with its
-faces and UVs already bound to that atlas) plus an inventory icon, expected as
-`textures/item/giant_jawblade.png`.
+**Trigger:** a human at a screen. Nothing here is guessed geometry or a guessed UV — only the pose.
 
-**What it takes then:** rewrite that one model JSON — preferably as NeoForge's native
-`neoforge:separate_transforms`, 3D for the hand contexts and the flat icon for GUI/ground/fixed.
-No code, no renderer class, no animation controller and no item id change; the id is already save
-data. Then run the whole of the R3 human checklist in `TEST_PLAN.md`, which is open purely because
-of this.
+**What it takes then:** open the weapon in every context (first/third person both hands, GUI,
+ground, item frame) and adjust `display` entries in that one JSON until it reads right. No code, no
+id change. If a 2D icon is supplied later, split the model with `neoforge:separate_transforms`
+instead of tuning `gui` on the 3D one.
 
 ## Balance values that are testing placeholders, not decisions
 

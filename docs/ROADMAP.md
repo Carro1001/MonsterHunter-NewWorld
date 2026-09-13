@@ -410,10 +410,14 @@ or in any stash — verified, not assumed. The earlier prose about a Drive
 `BoneBlade.bbmodel` is a point-in-time snapshot of a download, not a runtime asset
 and not permission to reconstruct one.
 
-The maintainer therefore authorized a **labelled placeholder**: the item model
-points at vanilla's iron sword sprite so the weapon is usable and testable now.
-Swapping in the real art is a one-file model change, with no code change and no
-item id change. R3's visual acceptance stays open until then.
+The maintainer authorized a labelled placeholder (vanilla's iron sword sprite)
+for the gap; that placeholder is gone as of 2026-09-12, when the artist supplied
+`giant_jawblade.bbmodel` and its exported Java Item Model JSON, matching the
+earlier atlas byte-for-byte once decoded. The weapon now renders its real
+geometry in every context. Its display transforms are a first pass borrowed
+from the old, never-delivered `BoneBlade.bbmodel` at a similar scale, not tuned
+for this model, and there is still no separate 2D inventory icon — see
+`docs/DEFERRED.md`. R3's visual acceptance stays open until a human tunes it.
 
 Start with one accepted weapon presentation and a bounded committed attack,
 using ordinary entity and multipart damage contracts. Do not implement R8

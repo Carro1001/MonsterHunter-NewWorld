@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "minecraft:item/firework_star"
+    "layer0": "mhnw:item/flash_bomb"
   }
 }

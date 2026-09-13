@@ -428,11 +428,16 @@ alternative is the transient state the packet forbids. A GameTest keeps a bystan
 *beside* the target, because the in-line pair never enters sweep range and would never have caught
 it.
 
-**The presentation is a placeholder, by explicit maintainer decision.** Only the on-hand UV atlas
-(`textures/item/giant_jawblade_model.png`) was ever delivered; there is no geometry bound to it and
-no inventory icon, so `models/item/giant_jawblade.json` currently points at vanilla's iron sword
-sprite. Swapping in the real art is a one-file model change -- no code, and no item id change. See
-`docs/DEFERRED.md`.
+**The presentation is real geometry now, with untuned display transforms.** The delivered
+`giant_jawblade.bbmodel`/exported Java Item Model JSON matched the previously-delivered UV atlas
+byte-for-byte once decoded, so `models/item/giant_jawblade.json` is that geometry, `parent`
+`minecraft:item/handheld` for its display contexts. There is still no separate 2D icon, so GUI,
+ground and item-frame contexts render the real 3D model too -- ordinary practice for a weapon mod,
+and `neoforge:separate_transforms` stays available if a flat icon ever arrives. The hand/head/fixed
+transforms are borrowed from the old, never-shipped `BoneBlade.bbmodel` as a same-scale starting
+point, not authored for this model; `gui`/`ground`/`firstperson_lefthand` fall back to
+`item/handheld`'s own (short-tool) defaults untouched. See `docs/DEFERRED.md` for what tuning is
+still open.
 
 ### One creative tab, not five borrowed ones
 
