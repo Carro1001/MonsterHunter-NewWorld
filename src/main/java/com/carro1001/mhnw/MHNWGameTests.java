@@ -181,6 +181,19 @@ public class MHNWGameTests {
                 () -> rathian.getAttackId() != com.carro1001.mhnw.entity.Rathian.ATTACK_NONE);
     }
 
+    /** Fourth {@code Roarable}, and the only small one: the roar freezes the harassment goal rather
+     * than a combat goal, so this also covers that {@code RoarGoal} sits above it. */
+    @GameTest(template = ARENA, timeoutTicks = 300)
+    public static void izuchiRoarRunsForItsRealClipLength(GameTestHelper helper) {
+        Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 10);
+        victim.setNoAi(true);
+        izuchi.setTarget(victim);
+
+        assertRoarRunsAtOneTickPerRealTick(helper, izuchi, victim,
+                () -> izuchi.getAttackId() != Izuchi.ATTACK_NONE);
+    }
+
     /** Third real {@code Roarable}. Rathalos fights with vanilla melee and has no synced attack id
      * to inspect, so the victim's health is the whole "didn't attack while roaring" probe here --
      * inventing a {@code Rathalos.getAttackId()} for a test would be inventing production API. */
@@ -2751,6 +2764,13 @@ public class MHNWGameTests {
         GreatIzuchi monster = helper.spawn(ModEntities.GREAT_IZUCHI.get(), 8, 2, 8);
         monster.setTarget(inertVictim(helper));
         assertRoarAnchorIsStableForTheWholeRoar(helper, monster);
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 300)
+    public static void izuchiRoarAnchorIsStableForTheWholeRoar(GameTestHelper helper) {
+        Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        izuchi.setTarget(inertVictim(helper));
+        assertRoarAnchorIsStableForTheWholeRoar(helper, izuchi);
     }
 
     @GameTest(template = ARENA, timeoutTicks = 300)
@@ -5325,6 +5345,51 @@ public class MHNWGameTests {
     }
 
     /**
+     * A tier lands its stated damage even when the charge begins on a weapon that has just swung.
+     *
+     * <p>PR #10 review, P1. The other tier test cools the attack first, which quietly guarantees the
+     * one condition that matters: {@code Player.attack} scales damage by vanilla's attack-strength
+     * ramp, so a charge released before the swing timer has refilled lands less than the number this
+     * weapon advertises. At 0.8 attack speed the delay is 25 ticks, and vanilla's curve is quadratic
+     * ({@code 0.2 + f*f*0.8}), so a tier-one release 20 ticks after a left-click would land 6.41
+     * rather than 9.0.
+     *
+     * <p>The fix is that the charge is never shorter than the swing timer, so holding one always
+     * refills it -- {@code attackStrengthTicker} counts up during the hold. This test starts the
+     * charge on the same tick as a normal attack, which is the worst case.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void r3ChargeFromAnUncooledWeaponStillLandsItsTier(GameTestHelper helper) {
+        net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 2, 8);
+        float[] tierDamage = com.carro1001.mhnw.item.GiantJawbladeItem.TIER_DAMAGE;
+
+        // A normal swing first, which resets the strength ticker to zero.
+        net.minecraft.world.entity.animal.Cow warmup = inertCow(helper, 8, 2, 10);
+        coolDown(helper, hunter);
+        hunter.attack(warmup);
+        warmup.discard();
+        helper.assertTrue(hunter.getAttackStrengthScale(0.0F) < 1.0F,
+                "fixture error: the weapon is still fully cooled, so this is not the case under test");
+
+        net.minecraft.world.entity.animal.Cow target = inertCow(helper, 8, 2, 10);
+        target.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH)
+                .setBaseValue(200.0D);
+        target.setHealth(200.0F);
+        aimAt(hunter, target.getBoundingBox().getCenter());
+        float before = target.getHealth();
+
+        chargeAndRelease(hunter, com.carro1001.mhnw.item.GiantJawbladeItem.TIER_TICKS[0]);
+
+        float landed = before - target.getHealth();
+        retire(hunter);
+        helper.assertTrue(Math.abs(landed - tierDamage[0]) < 0.51F,
+                "a tier-one charge begun on an uncooled weapon landed " + landed + ", not the"
+                        + " advertised " + tierDamage[0] + "; vanilla's attack-strength ramp scaled"
+                        + " it down because the charge is shorter than the swing timer");
+        helper.succeed();
+    }
+
+    /**
      * R3-04: overcharging wastes the charge rather than banking it. Holding past the overcharge
      * point swings by itself -- vanilla's completion, which is the one path that still runs through
      * {@code finishUsingItem} -- and lands tier one's damage, not tier three's.
@@ -5809,6 +5874,77 @@ public class MHNWGameTests {
         retire(hunter);
         helper.assertTrue(playerLanded && escort.getHealth() < escortBefore,
                 "the guard also blocked a player's hit");
+        helper.succeed();
+    }
+
+    /**
+     * The rally is the call that hands the grudge to the pack, so it plays when there is a pack to
+     * hand it to and not otherwise.
+     *
+     * <p>The lone case is the one worth guarding: an Izuchi shouting at nobody reads as a bug, and
+     * it is the case a naive "play it whenever hurt" implementation gets wrong.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void izuchiRalliesOnlyWhenThereIsAPackToTell(GameTestHelper helper) {
+        Izuchi lone = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        lone.setNoAi(true);
+        net.minecraft.server.level.ServerPlayer hunter = realPreparer(helper, 8, 2, 6);
+
+        lone.hurt(helper.getLevel().damageSources().playerAttack(hunter), 1.0F);
+        boolean loneRallied = lone.isRallying();
+
+        Izuchi caller = helper.spawn(ModEntities.IZUCHI.get(), 12, 2, 12);
+        Izuchi packmate = helper.spawn(ModEntities.IZUCHI.get(), 13, 2, 12);
+        caller.setNoAi(true);
+        packmate.setNoAi(true);
+        caller.hurt(helper.getLevel().damageSources().playerAttack(hunter), 1.0F);
+
+        boolean callerRallied = caller.isRallying();
+        boolean packmateRallied = packmate.isRallying();
+        long anchor = caller.getRallyStartTime();
+        retire(hunter);
+
+        helper.assertTrue(!loneRallied,
+                "an Izuchi with no packmates rallied at nobody");
+        helper.assertTrue(callerRallied,
+                "the Izuchi that was hit did not rally its packmate");
+        helper.assertTrue(!packmateRallied,
+                "the packmate rallied too; the call belongs to whoever took the hit");
+        helper.assertTrue(anchor == helper.getLevel().getGameTime(),
+                "the rally anchor is " + anchor + ", expected the game time the call started");
+        helper.succeed();
+    }
+
+    /**
+     * The tail slam is present, runs on its own longer clock, and lands nothing.
+     *
+     * <p>"Lands nothing" is the point, not an oversight: its damage envelope has not been measured
+     * from a live capture yet, so it is deliberately unarmed and kept out of ordinary combat. This
+     * test is what will fail, loudly and in the right place, the moment somebody fits an envelope
+     * for it without also removing the gate -- or ships a guessed one.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void izuchiTailSlamIsPresentButUnarmed(GameTestHelper helper) {
+        Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        izuchi.setNoAi(true);
+        Cow victim = inertCow(helper, 8, 2, 9);
+        float before = victim.getHealth();
+
+        izuchi.beginTailSlam();
+        helper.assertTrue(izuchi.getAttackId() == Izuchi.ATTACK_TAIL_SLAM,
+                "beginTailSlam did not commit the slam");
+
+        // Every tick of its own action length, including the whole span the swipe would be live in.
+        for (int age = 0; age <= IzuchiHarassGoal.SLAM_ACTION_END; age++) {
+            helper.assertTrue(IzuchiHarassGoal.attackVolumes(izuchi, age).length == 0,
+                    "the slam produced a damage volume at age " + age + "; if it has been measured,"
+                            + " remove the debugCombat gate in IzuchiHarassGoal.chooseAttack and"
+                            + " update this test");
+        }
+
+        helper.assertTrue(IzuchiHarassGoal.SLAM_ACTION_END > IzuchiHarassGoal.ACTION_END,
+                "the slam is meant to run on its own longer clock than the swipe");
+        helper.assertTrue(victim.getHealth() == before, "the unarmed slam hurt something");
         helper.succeed();
     }
 

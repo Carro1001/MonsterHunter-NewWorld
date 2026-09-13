@@ -2,7 +2,7 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 169 tests, all passing**
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 174 tests, all passing**
 (`.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-12, presentation/feel round and the
 corpse-presentation fix, both rebased onto the R3/Izuchi-tail-swipe master; 157 after the corpse fix
 alone, 156 before either, 148 after the R2 field-preparation packet, 123 before that packet, 121
@@ -462,6 +462,38 @@ death anchor the other four species use, played with `thenPlayAndHold` — which
 clip's says `true`. `thenPlayAndHold` sets `HOLD_ON_LAST_FRAME` explicitly and wins.
 `izuchiDeathAnchorAgesWithRealTicks` guards the anchor. `roar`, `rally` and `attack_tailslam` are
 present and unwired.
+
+### PR #10 adversarial review round (2026-09-13)
+
+Three findings against head `9595c01`, all accepted. The reviewer independently reproduced
+`clean build runGameTestServer` at 169/169 with a clean `git diff --check` before raising them.
+
+**P1, and a real defect: tier damage was not stable unless the swing timer happened to be full.**
+`Player.attack` scales damage by vanilla's attack-strength ramp, and at this weapon's 0.8 attack
+speed that timer is 25 ticks -- but tier one was 20. A charge begun right after a left-click
+therefore released undercooled. Measured, not estimated: **6.64 landed against an advertised 9.0**
+(the reviewer's own estimate of ~7.4 was conservative; vanilla's curve is quadratic,
+`0.2 + f*f*0.8`, not linear). `r3ChargeTiersLandTheirStatedDamage` cooled the attack before every
+case, which masked it completely.
+
+The fix keeps `Player.attack` semantics rather than bypassing them: `attackStrengthTicker` counts up
+*during* a hold, so making the shortest charge equal the swing timer means holding one always
+refills it. `TIER_TICKS[0]` 20 -> 25, and every tier now lands its stated damage from any starting
+state. `r3ChargeFromAnUncooledWeaponStillLandsItsTier` was written **before** the fix and observed
+failing at 6.64, then passing at 9.0.
+
+**P1, documentation that would have caused a future agent to undo the work.**
+`docs/R3_BONE_GREATSWORD_HANDOFF.md` still specified the superseded single fixed 30-tick
+auto-firing `SPEAR` strike with no tiers, and `CLAUDE.md` still carried the matching stale bullets
+alongside the new contract -- contradicting itself inside one section. The handoff subsection now
+opens with a SUPERSEDED block and a before/after table pointing at the live contract, rather than
+being quietly edited into agreement; the exclusion list says which exclusion was lifted and which
+still bind.
+
+**P2, death-clip statements contradicting the code** in `CLAUDE.md`, `docs/DEFERRED.md`, this file's
+Izuchi checklist and `Izuchi.java`'s own class javadoc, all still saying no authored death clip
+exists. All four updated, and the deferred entry's old "if a death clip is added later, check
+whether it needs `getDeathMaxRotation` zeroed" is answered in place: it did, and it is.
 
 ### Izuchi pack anger and no-infighting (2026-09-13)
 
@@ -1388,11 +1420,24 @@ the server owns its 48-tick action clock and only permits damage in ticks 36–4
 the exact same live-fitted attack volumes as green developer boxes when debug combat is enabled.
 The maintainer supplied a video confirming the clip plays, and the 2026-09-13 `BoneProbe` capture
 fitted the tail path. The static F3+B envelope is head plus two reduced tail parts after its
-surplus tip part was removed; both envelopes still need a visual acceptance pass. There is no death
-animation, so death remains vanilla's plain corpse flop.
+surplus tip part was removed; both envelopes still need a visual acceptance pass.
+
+**As of the artist's 2026-09-13 redelivery this species has a death clip, a roar and a rally**, all
+wired, so death is no longer vanilla's corpse flop -- the clip lays the body down itself and
+`getDeathMaxRotation` is zeroed accordingly. `attack_tailslam` also arrived and runs as a real timed
+action, but it is deliberately unarmed and gated behind `debugCombat` until its damage envelope gets
+its own live capture; see `docs/DEFERRED.md`.
 
 - [ ] Renders, spawns via egg, idles/walks/runs with correct animation
 - [ ] Notices and attacks a nearby player, dealing real damage
+- [ ] **New: the death clip plays and the body stays down** for the whole carve window, with no
+      red tint and no vanilla flop fighting the clip
+- [ ] **New: the opening roar** plays once per engagement and freezes the circling, and the
+      **rally** plays on whichever one you hit, not on its packmates
+- [ ] **New: hit one and the whole pack comes for you**, and they never hit or anger each other or
+      the Great Izuchi they escort
+- [ ] **Capture needed: the tail slam.** Turn on `debugCombat`, let one play, and record `tail2`
+      and `tail_claw` through its active window so its damage envelope can be fitted
 - [ ] **New: tail swipe plants before contact, and its green boxes follow the tail through the
       active phase** — headless timing/contact and one-hit-per-swing are GameTest-covered; needs a
       live `debugCombat`/F3+B pass to accept the measured path visually

@@ -74,9 +74,8 @@ Species notes that are easy to get wrong from an older doc:
   a live-fitted damage envelope. Its root box is extended by native head and two tail parts,
   which still need pose acceptance. As of the artist's 2026-09-13 animation delivery it **does**
   have its own death clip, wired like the other four (synched anchor, `thenPlayAndHold`,
-  `getDeathMaxRotation` zeroed because the clip rotates `root` 90 degrees about Z itself). That
-  delivery also carries `roar`, `rally` and `attack_tailslam`, none of which are wired to anything
-  yet. It is also a {@code NeutralMob} for its **pack anger** — see below. See "Attack timeline"
+  `getDeathMaxRotation` zeroed because the clip rotates `root` 90 degrees about Z itself). That delivery also carries `roar` and `rally` (both now wired) and `attack_tailslam` (wired but
+  deliberately unarmed -- see "Attack timeline"). It is also a `NeutralMob` for its **pack anger** — see below. See "Attack timeline"
   below.
 - **Toad and Flashbug** endemic behaviour ships as-is and is retained; R2 extended it rather than
   redesigning it — both are now capturable, and the Flashbug's flash moved into a shared helper,
@@ -249,10 +248,14 @@ attack presentation** — a deliberate, documented P4 gap (`docs/DEFERRED.md`), 
   those can play correctly at all).
 - Small Izuchi's approved `origin/brain` `attack_tailswipe` is restored after removing its nine
   invalid Great-Izuchi-only tracks. `IzuchiHarassGoal` commits a synchronized 48-tick action after
-  its dart, damages only in ticks 36–47, and allows one hit per victim. Its two temporary sweep
-  paths are drawn green by `AttackVolumeOverlay` and must be replaced by a live `BoneProbe` capture;
-  do not treat an offline rig solve as a measurement. The other archived clips and a death clip
-  remain deferred.
+  its dart, damages only in ticks 36–47, and allows one hit per victim. Its sweep paths came from
+  the maintainer's live `BoneProbe` capture; do not treat an offline rig solve as a measurement.
+  The 2026-09-13 delivery added `death` (**wired** -- synched anchor, `thenPlayAndHold`,
+  `getDeathMaxRotation` zeroed), `roar` (**wired** -- `Roarable`/`RoarGoal`, same as the other
+  three) and `rally` (**wired** -- fires on whoever took the hit, as it hands the grudge to the
+  pack). `attack_tailslam` is wired as a real timed action but is **deliberately unarmed and gated
+  behind `debugCombat`**: its damage envelope needs its own live capture, and this project has twice
+  thrown away an offline solve. See `docs/DEFERRED.md`.
 
 ### Izuchi pack anger, and why the pack cannot fight itself
 
@@ -441,11 +444,19 @@ swings; releasing below tier one does nothing at all; holding past 100 ticks swi
 tier one's damage, so overcharging wastes the charge rather than banking it. Every part of it is
 borrowed:
 
-- **The charge is vanilla's held use.** 30 ticks from `getUseDuration`, `UseAnim.SPEAR`, and
-  `finishUsingItem` called once on the server only on a completed hold -- the same shape as R2's BBQ
-  spit, for the same reason: "releasing early does nothing" needs no cancellation code, because a
-  release never reaches that method. **Nothing is stored anywhere**: no field, no component, no
-  attachment, no packet, so a reload cannot resume or cash in a charge.
+- **The charge is vanilla's held use.** `getUseDuration` is the 100-tick overcharge window, the
+  pose is `UseAnim.NONE`, and `releaseUsing` is what swings -- `finishUsingItem` fires only on a
+  hold that ran the whole way, which is exactly the overcharge case. Same shape as R2's BBQ spit,
+  for the same reason: "releasing early does nothing" needs no cancellation code, because a release
+  below tier one simply finds no tier to swing. **Nothing is stored anywhere**: no field, no
+  component, no attachment, no packet, so a reload cannot resume or cash in a charge, and the tier
+  is derived from vanilla's own countdown rather than tracked.
+- **Tier one is 25 ticks, not 20, and that is a correctness number rather than a feel one.**
+  `Player.attack` scales damage by vanilla's attack-strength ramp; at 0.8 attack speed the swing
+  timer is 25 ticks, so a 20-tick tier one begun right after a left-click landed 6.64 instead of the
+  advertised 9.0 (PR #10 review). `attackStrengthTicker` counts up during the hold, so making the
+  shortest charge equal the swing timer means holding one always refills it. Keep
+  `TIER_TICKS[0] >= 25` if the attack speed ever changes.
 - **The target query is `ProjectileUtil.getHitResultOnViewVector`**, the same block-clipped trace
   vanilla's projectiles use, out to 4.5 blocks. A wall stops the strike because the trace stops, not
   because of a check of ours, and `Level.getEntities` already includes NeoForge `PartEntity`
@@ -469,9 +480,11 @@ borrowed:
   `CarveState` attribution -- on exactly the path a left-click uses. NeoForge's own patch to that
   method resolves a `PartEntity` to its parent for durability and post-attack effects.
 
-There is no damage multiplier, cone, sweep, charge tier or combo, and no weapon/moveset abstraction:
-one weapon does not tell you what two weapons would share. The 30-tick recovery cooldown applies on
-a hit and on a miss, which is the whole cost of the longer reach.
+There is no cone, sweep, cleave or combo, and no weapon/moveset abstraction: one weapon does not
+tell you what two weapons would share. The 30-tick recovery cooldown applies on a hit and on a miss.
+(Charge tiers and their damage multiplier *were* on that exclusion list until 2026-09-13, when the
+maintainer replaced the packet's single fixed strike after playing it -- the superseded contract is
+marked as such in `docs/R3_BONE_GREATSWORD_HANDOFF.md` rather than left to contradict the code.)
 
 **The weapon answers "no" to `SWORD_SWEEP`, and that is load-bearing.** Vanilla decides to sweep by
 asking the held item, and every `SwordItem` says yes -- so a fully cooled strike dealt 1.0 to every

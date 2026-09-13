@@ -77,9 +77,21 @@ import java.util.function.Predicate;
  */
 public class GiantJawbladeItem extends SwordItem {
 
-    /** Charge ticks needed to reach tier one, two and three: one second, then a bit over two, then
-     * nearly four. A greatsword charge is meant to be a decision you commit to, not a tap. */
-    public static final int[] TIER_TICKS = {20, 45, 75};
+    /**
+     * Charge ticks needed to reach tier one, two and three. A greatsword charge is meant to be a
+     * decision you commit to, not a tap.
+     *
+     * <p>Tier one is <b>25 and not 20 for a reason that is not feel</b>: {@link Player#attack}
+     * scales damage by vanilla's attack-strength ramp, and at this weapon's 0.8 attack speed the
+     * swing timer is 20/0.8 = 25 ticks. A charge shorter than that, begun right after a left-click,
+     * would land scaled-down damage instead of the number this class advertises -- quadratically,
+     * so a 20-tick tier one measured 6.64 rather than 9.0 (PR #10 review, P1). Because
+     * {@code attackStrengthTicker} counts up during the hold, making the shortest charge equal the
+     * swing timer means holding one always refills it, and every tier lands its stated damage from
+     * any starting state. Keep {@code TIER_TICKS[0] >= 25} if the attack speed ever changes;
+     * {@code r3ChargeFromAnUncooledWeaponStillLandsItsTier} fails if it does not.
+     */
+    public static final int[] TIER_TICKS = {25, 45, 75};
 
     /** Total attack damage each tier lands, in the same units the tooltip shows. Tier one is simply
      * the weapon's own 9.0, so a short charge buys reach and a long one buys damage as well. */

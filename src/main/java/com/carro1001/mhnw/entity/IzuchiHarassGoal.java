@@ -75,6 +75,16 @@ public class IzuchiHarassGoal extends Goal {
     public static final int ACTIVE_END = 47;
     public static final int ACTION_END = 47;
 
+    /** The slam clip's own length; see {@code docs/ANIMATION_MANIFEST.json}. It has no active
+     * window here because its damage envelope has not been measured yet -- see
+     * {@link Izuchi#ATTACK_TAIL_SLAM}. */
+    public static final int SLAM_ACTION_END = 87;
+
+    /** How long the action this mob is currently committed to runs for. */
+    private static int actionEnd(Izuchi mob) {
+        return mob.getAttackId() == Izuchi.ATTACK_TAIL_SLAM ? SLAM_ACTION_END : ACTION_END;
+    }
+
     private static final double VOLUME_SIZE = 0.9D;
 
     // Live BoneProbe capture 2026-09-13. The active motion folds sharply through ticks 40-42,
@@ -247,13 +257,31 @@ public class IzuchiHarassGoal extends Goal {
         this.mob.getNavigation().stop();
         this.phaseTicks = 0;
         this.hitThisAttack.clear();
+        chooseAttack();
+        debug("attack start: entity={} seq={} id={}", this.mob.getId(),
+                this.mob.getActionSequence(), this.mob.getAttackId());
+    }
+
+    /**
+     * Which of the two attacks to commit to.
+     *
+     * <p>The slam is behind {@code debugCombat} deliberately and temporarily: its damage envelope
+     * has not been measured, so it lands nothing, and letting it into ordinary combat would mean
+     * half of a pack's attacks silently whiffing. Behind the diagnostics switch it still plays in
+     * full, which is exactly what a {@code BoneProbe} capture of its active window needs. Delete
+     * this gate together with fitting the envelope -- neither is finished without the other.
+     */
+    private void chooseAttack() {
+        if (MHNWConfig.DEBUG_COMBAT.get() && this.mob.getRandom().nextBoolean()) {
+            this.mob.beginTailSlam();
+            return;
+        }
         this.mob.beginTailSwipe();
-        debug("attack start: entity={} seq={}", this.mob.getId(), this.mob.getActionSequence());
     }
 
     private void tickAttack(LivingEntity target) {
         int age = this.mob.getAttackAge();
-        if (age < 0 || age > ACTION_END) {
+        if (age < 0 || age > actionEnd(this.mob)) {
             debug("attack end: entity={} seq={} age={} victims={}", this.mob.getId(),
                     this.mob.getActionSequence(), age, this.hitThisAttack.size());
             this.mob.endAttack();
