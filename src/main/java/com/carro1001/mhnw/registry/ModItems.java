@@ -5,6 +5,7 @@ import com.carro1001.mhnw.entity.Toad;
 import com.carro1001.mhnw.item.BarbecueSpitItem;
 import com.carro1001.mhnw.item.BoneArmorItem;
 import com.carro1001.mhnw.item.FlashBombItem;
+import com.carro1001.mhnw.item.GiantJawbladeItem;
 import com.carro1001.mhnw.item.ToadBucketItem;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.food.Foods;
@@ -100,6 +101,14 @@ public final class ModItems {
 
     public static final DeferredHolder<Item, Item> NITROTOAD_BUCKET =
             ITEMS.register("nitrotoad_bucket", () -> new ToadBucketItem(Toad.Variant.BLAST, bucketProperties()));
+
+    /**
+     * R3's one weapon. Iron tier for its numbers, bone for its repair; see {@link GiantJawbladeItem}
+     * for why the damage and speed live in vanilla's attribute modifiers rather than as constants
+     * read back out of the item.
+     */
+    public static final DeferredHolder<Item, Item> GIANT_JAWBLADE =
+            ITEMS.register("giant_jawblade", () -> new GiantJawbladeItem(new Item.Properties()));
 
     /** Vanilla's own filled-bucket properties: one per stack, and an empty bucket on use. */
     private static Item.Properties bucketProperties() {

@@ -60,7 +60,8 @@ As of R1 it also has a survival loop: Great Izuchi, small Izuchi and Aptonoth le
 carving is the only way to get their materials, and those materials cook and craft into bone armor.
 As of R2 there are three field-preparation loops on top of that: a portable BBQ spit, glass-bottle
 Flashbug capture into a throwable flash bomb, and water-bucket capture/release of all four toad
-variants.
+variants. As of R3 there is one weapon, the Giant Jawblade, crafted from those same carve
+materials.
 
 Species notes that are easy to get wrong from an older doc:
 - **Lagiacrus is ported**, not planned: a limited *movement* baseline (seven native parts, amphibious
@@ -101,8 +102,8 @@ round on this machine takes roughly 30 seconds.
 Combat/behaviour diagnostics: `/mhnw debugcombat` toggles logging in-game (op-only) — see
 `MHNWCommands`/`MHNWConfig`. With it on, `BoneProbe` (client-only) logs every named GeckoLib bone's
 measured world position, converted into the same left/up/forward local frame every species'
-`localToWorld` uses, and `AttackVolumeOverlay` draws Great Izuchi's and small Izuchi's live attack
-volumes with F3+B.
+`localToWorld` uses, and `AttackVolumeOverlay` draws Great Izuchi's, Rathian's and small Izuchi's
+live attack volumes with F3+B.
 This is the only sane way to get real hurtbox/attack numbers — see "Hurtboxes are static offsets"
 below for why guessing offline doesn't work.
 
@@ -389,6 +390,49 @@ survival bucket/bottle transaction tested with it silently asserts the creative 
 And `Bucketable.bucketMobPickup` casts to `ServerPlayer` to award `FILLED_BUCKET`, so a detached
 `makeMockPlayer` cannot catch a toad at all. Both are recorded in `docs/TEST_PLAN.md`'s R2 section.
 
+### R3: one weapon, and it is a vanilla sword
+
+`item/GiantJawbladeItem.java` is the whole packet. `mhnw:giant_jawblade` is a plain `SwordItem` on
+`Tiers.IRON` whose only departures from an iron sword are its numbers -- 9.0 total attack damage and
+0.8 attack speed, both expressed as vanilla's own attribute modifiers rather than constants read
+back out -- and bone as its repair material.
+
+Its one addition is a charged strike, and every part of it is borrowed:
+
+- **The charge is vanilla's held use.** 30 ticks from `getUseDuration`, `UseAnim.SPEAR`, and
+  `finishUsingItem` called once on the server only on a completed hold -- the same shape as R2's BBQ
+  spit, for the same reason: "releasing early does nothing" needs no cancellation code, because a
+  release never reaches that method. **Nothing is stored anywhere**: no field, no component, no
+  attachment, no packet, so a reload cannot resume or cash in a charge.
+- **The target query is `ProjectileUtil.getHitResultOnViewVector`**, the same block-clipped trace
+  vanilla's projectiles use, out to 4.5 blocks. A wall stops the strike because the trace stops, not
+  because of a check of ours, and `Level.getEntities` already includes NeoForge `PartEntity`
+  instances, so a `MonsterPart` is selectable with no multipart-specific code.
+- **The damage is `Player.attack`,** called at most once. That keeps attack events, enchantments,
+  knockback, durability, sounds, stats and the player-caused damage source -- and therefore
+  `CarveState` attribution -- on exactly the path a left-click uses. NeoForge's own patch to that
+  method resolves a `PartEntity` to its parent for durability and post-attack effects.
+
+There is no damage multiplier, cone, sweep, charge tier or combo, and no weapon/moveset abstraction:
+one weapon does not tell you what two weapons would share. The 30-tick recovery cooldown applies on
+a hit and on a miss, which is the whole cost of the longer reach.
+
+**The weapon answers "no" to `SWORD_SWEEP`, and that is load-bearing.** Vanilla decides to sweep by
+asking the held item, and every `SwordItem` says yes -- so a fully cooled strike dealt 1.0 to every
+living thing within a block of the target, which is precisely the attack the charge produces (30
+held ticks against a 25-tick delay is always fully cooled). Refusing the ability in
+`canPerformAction` is the whole fix: no flag around the attack call, no per-player state, nothing
+that can leak to another weapon. It costs this weapon its left-click sweep too, deliberately -- the
+alternative is the transient state the packet forbids. A GameTest keeps a bystander standing
+*beside* the target, because the in-line pair never enters sweep range and would never have caught
+it.
+
+**The presentation is a placeholder, by explicit maintainer decision.** Only the on-hand UV atlas
+(`textures/item/giant_jawblade_model.png`) was ever delivered; there is no geometry bound to it and
+no inventory icon, so `models/item/giant_jawblade.json` currently points at vanilla's iron sword
+sprite. Swapping in the real art is a one-file model change -- no code, and no item id change. See
+`docs/DEFERRED.md`.
+
 ### Registration and client wiring
 
 `ModEntities` is the one `DeferredRegister` holder (entity types + spawn eggs together); attribute
@@ -440,7 +484,10 @@ the parent exactly one hit, distinct attackers aren't conflated, damage only lan
 attack's active window), state-machine edges (reload cancels transient combat, death removes every
 part exactly once), the R1 carving contract (attribution, per-player quota, atomic inventory,
 persistence and the corpse window), the item/recipe registry, armor stats and the full-set modifier,
-bounded Izuchi harassment, the R2 preparation contract (both recipes and their exact inputs and
+bounded Izuchi harassment, the R3 weapon contract (its observed attributes, the exact recipe
+pattern, the 30-tick charge through a really ticked player, range/occlusion/off-axis target
+selection, single-target-only damage against a multipart body, and miss recovery), the R2
+preparation contract (both recipes and their exact inputs and
 remainder, the 80-tick BBQ transaction and its exactly-once conversion, glass-bottle Flashbug
 capture in survival and creative, the full flash eligibility matrix plus a genuinely thrown bomb,
 all four toad variants' capture/release/round-trip including a bare `/give` stack, and Blastoad

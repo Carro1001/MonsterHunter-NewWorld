@@ -154,6 +154,7 @@ public class MHNW {
             event.accept(ModItems.BONE_LEGGING.get());
             event.accept(ModItems.BONE_BOOTS.get());
             event.accept(ModItems.FLASH_BOMB.get());
+            event.accept(ModItems.GIANT_JAWBLADE.get());
         }
         // The filled toad buckets sit with the other functional buckets, not with spawn eggs: in
         // survival they are a tool a player carries and deploys, not a creative-only spawner.

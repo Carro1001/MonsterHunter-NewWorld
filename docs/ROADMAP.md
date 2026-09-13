@@ -398,11 +398,22 @@ not a hit/damage authority. Full slinger/ammunition and stamina systems stay out
 
 ### R3 - The hunter's armory
 
-The **Bone Greatsword (`BoneBlade`) is the selected first custom weapon**,
-replacing the proposal's bow recommendation. Geometry exists; textures and
-bound faces do not. There is no committed art delivery, fallback or date.
-"Assume the art will arrive soon" is not an input an agent may mark ready.
-Keep R3 undated and revisit at selection; R1, R2 and Rathian do not wait for it.
+The **Bone Greatsword is the selected first custom weapon**, replacing the
+proposal's bow recommendation. It shipped on 2026-09-12 as `mhnw:giant_jawblade`,
+**Giant Jawblade** — mechanically complete, presentationally not.
+
+The accepted art is exactly one file: the 64-by-64 on-hand UV atlas
+`assets/mhnw/textures/item/giant_jawblade_model.png`, added direct to master in
+`169234b` ("Greatsword texture (on-hand)", body: "inventory 2d item texture still
+needed"). No geometry is bound to it and no inventory icon exists, on any branch
+or in any stash — verified, not assumed. The earlier prose about a Drive
+`BoneBlade.bbmodel` is a point-in-time snapshot of a download, not a runtime asset
+and not permission to reconstruct one.
+
+The maintainer therefore authorized a **labelled placeholder**: the item model
+points at vanilla's iron sword sprite so the weapon is usable and testable now.
+Swapping in the real art is a one-file model change, with no code change and no
+item id change. R3's visual acceptance stays open until then.
 
 Start with one accepted weapon presentation and a bounded committed attack,
 using ordinary entity and multipart damage contracts. Do not implement R8

@@ -3021,6 +3021,7 @@ public class MHNWGameTests {
                 case 'C' -> new net.minecraft.world.item.ItemStack(
                         com.carro1001.mhnw.registry.ModItems.MONSTER_CLAW.get());
                 case 'B' -> new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BONE);
+                case 'S' -> new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK);
                 default -> net.minecraft.world.item.ItemStack.EMPTY;
             });
         }
@@ -4899,6 +4900,458 @@ public class MHNWGameTests {
                     hunter.getServer().getPlayerList().remove(hunter);
                     helper.assertTrue(participants == 0,
                             "a non-damaging status toad credited carve participation");
+                })
+                .thenSucceed();
+    }
+
+    // ---------------------------------------------------------------- R3 Giant Jawblade
+
+    /** A level-resident survival player holding the weapon. Level-resident because the charge is a
+     * real held use: only a player the server actually ticks can complete one. */
+    private static net.minecraft.server.level.ServerPlayer wielder(GameTestHelper helper,
+                                                                  double x, double y, double z) {
+        net.minecraft.server.level.ServerPlayer player = realPreparer(helper, x, y, z);
+        player.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                new net.minecraft.world.item.ItemStack(com.carro1001.mhnw.registry.ModItems.GIANT_JAWBLADE.get()));
+        return player;
+    }
+
+    /**
+     * Point the player's eyes at something. The previous-tick rotation is set too, deliberately:
+     * {@code ProjectileUtil.getHitResultOnViewVector} asks for the view vector at partial tick
+     * zero, which interpolates from {@code yRotO}/{@code xRotO} -- a fixture that sets only the
+     * current rotation aims one tick into the past and misses for the wrong reason.
+     */
+    private static void aimAt(net.minecraft.server.level.ServerPlayer player,
+                              net.minecraft.world.phys.Vec3 target) {
+        net.minecraft.world.phys.Vec3 to = target.subtract(player.getEyePosition());
+        float yaw = (float) (net.minecraft.util.Mth.atan2(to.z, to.x) * 180.0D / Math.PI) - 90.0F;
+        float pitch = (float) (-(net.minecraft.util.Mth.atan2(to.y, to.horizontalDistance()) * 180.0D / Math.PI));
+        player.moveTo(player.getX(), player.getY(), player.getZ(), yaw, pitch);
+        player.setYHeadRot(yaw);
+        player.yRotO = yaw;
+        player.xRotO = pitch;
+        player.yHeadRotO = yaw;
+    }
+
+    private static net.minecraft.world.entity.animal.Cow inertCow(GameTestHelper helper,
+                                                                  double x, double y, double z) {
+        net.minecraft.world.entity.animal.Cow cow = helper.spawn(EntityType.COW, 8, 2, 8);
+        cow.setNoAi(true);
+        net.minecraft.world.phys.Vec3 at = helper.absoluteVec(new net.minecraft.world.phys.Vec3(x, y, z));
+        cow.moveTo(at.x, at.y, at.z, 0.0F, 0.0F);
+        return cow;
+    }
+
+    /**
+     * One real tick of a fixture player.
+     *
+     * <p>{@code ServerPlayer.tick()} is the <em>connection</em> tick -- menus, camera, the game
+     * mode -- and never runs the entity tick at all; {@code doTick()} is the one that calls
+     * {@code super.tick()} and therefore counts down a held use, expires an item cooldown and
+     * applies equipment attribute modifiers. A mock player is not in the server's ticking player
+     * list either way, so a test that only idles leaves it frozen: three of these tests failed on
+     * exactly that before this existed, and they failed in a way that looked like broken gameplay
+     * rather than a still fixture.
+     */
+    private static void tickOnce(net.minecraft.server.level.ServerPlayer player) {
+        player.doTick();
+    }
+
+    /**
+     * Tick the player until its attack is fully cooled, and say so if it is not.
+     *
+     * <p>This is not housekeeping. Vanilla only sweeps at <em>full</em> attack strength, so a
+     * fixture that drives the charge through the item seam without ticking first quietly tests a
+     * weak attack: the adjacent-bystander case below passed against a genuinely sweeping weapon
+     * until this existed. A real charge is always fully cooled -- 30 held ticks against a 25-tick
+     * delay -- so the cooled state is the honest one to test in.
+     */
+    private static void coolDown(GameTestHelper helper, net.minecraft.server.level.ServerPlayer player) {
+        for (int tick = 0; tick < 40; tick++) {
+            tickOnce(player);
+        }
+        helper.assertTrue(player.getAttackStrengthScale(0.0F) >= 1.0F,
+                "fixture error: the attack is only " + player.getAttackStrengthScale(0.0F)
+                        + " cooled, so vanilla's own sweep could not fire either way");
+    }
+
+    /** Complete one charge through the public item seam, the same one vanilla's completeUsingItem
+     * calls. Used where the geometry is what is under test and the 30-tick wait is not. */
+    private static void completeCharge(GameTestHelper helper, net.minecraft.server.level.ServerPlayer player) {
+        player.getMainHandItem().finishUsingItem(helper.getLevel(), player);
+    }
+
+    /**
+     * R3-01: the item id resolves, its client resources are actually packaged, and the shaped
+     * recipe matches its exact pattern and nothing else.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void r3JawbladeRegistryAndResources(GameTestHelper helper) {
+        helper.assertTrue(net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(
+                        net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(
+                                MHNW.MOD_ID, "giant_jawblade")),
+                "mhnw:giant_jawblade did not resolve in the item registry");
+
+        for (String path : new String[]{
+                "/assets/mhnw/models/item/giant_jawblade.json",
+                "/assets/mhnw/textures/item/giant_jawblade_model.png"}) {
+            try (java.io.InputStream packaged = MHNW.class.getResourceAsStream(path)) {
+                helper.assertTrue(packaged != null, path + " is not packaged");
+            } catch (java.io.IOException failure) {
+                helper.fail("could not read " + path + ": " + failure);
+            }
+        }
+        helper.assertTrue(langContains(helper, "item.mhnw.giant_jawblade"),
+                "the weapon has no en_us entry, so it would show its translation key");
+
+        assertCrafts(helper, 3, 3, "BBC" + "BHC" + "BSH",
+                com.carro1001.mhnw.registry.ModItems.GIANT_JAWBLADE.get());
+
+        // The same nine ingredients with the stick and a hide swapped: the pattern is the
+        // contract, not the bill of materials.
+        java.util.List<net.minecraft.world.item.ItemStack> shuffled = new java.util.ArrayList<>();
+        for (char slot : ("BBC" + "BSC" + "BHH").toCharArray()) {
+            shuffled.add(switch (slot) {
+                case 'H' -> new net.minecraft.world.item.ItemStack(
+                        com.carro1001.mhnw.registry.ModItems.MONSTER_HIDE.get());
+                case 'C' -> new net.minecraft.world.item.ItemStack(
+                        com.carro1001.mhnw.registry.ModItems.MONSTER_CLAW.get());
+                case 'S' -> new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STICK);
+                default -> new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BONE);
+            });
+        }
+        net.minecraft.world.item.crafting.CraftingInput wrong =
+                net.minecraft.world.item.crafting.CraftingInput.of(3, 3, shuffled);
+        helper.assertTrue(helper.getLevel().getServer().getRecipeManager().getRecipeFor(
+                        net.minecraft.world.item.crafting.RecipeType.CRAFTING, wrong, helper.getLevel())
+                        .isEmpty(),
+                "a rearranged grid still crafted the weapon");
+        helper.succeed();
+    }
+
+    private static boolean langContains(GameTestHelper helper, String key) {
+        try (java.io.InputStream lang = MHNW.class.getResourceAsStream("/assets/mhnw/lang/en_us.json")) {
+            if (lang == null) {
+                return false;
+            }
+            return new String(lang.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).contains(key);
+        } catch (java.io.IOException failure) {
+            helper.fail("could not read the language file: " + failure);
+            return false;
+        }
+    }
+
+    /**
+     * R3-02: the weapon's numbers are read off the player who is holding it, not off a constant.
+     * Total attack damage 9.0, attack speed 0.8, 250 durability, bone repair -- and unequipping
+     * takes the modifiers with it, so nothing can be left stacked or stale.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void r3JawbladeHasItsStatedNumbers(GameTestHelper helper) {
+        net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 2, 8);
+        net.minecraft.world.item.ItemStack blade = hunter.getMainHandItem();
+
+        helper.assertTrue(blade.getMaxDamage() == 250,
+                "durability is " + blade.getMaxDamage() + ", expected 250");
+        helper.assertTrue(blade.getItem().isValidRepairItem(blade, new net.minecraft.world.item.ItemStack(
+                        net.minecraft.world.item.Items.BONE)),
+                "bone does not repair the weapon");
+        helper.assertTrue(!blade.getItem().isValidRepairItem(blade, new net.minecraft.world.item.ItemStack(
+                        net.minecraft.world.item.Items.IRON_INGOT)),
+                "iron still repairs the weapon; it is iron-tier for its numbers only");
+
+        helper.startSequence()
+                .thenExecuteFor(2, () -> tickOnce(hunter))
+                .thenExecute(() -> {
+                    double damage = hunter.getAttributeValue(
+                            net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+                    double speed = hunter.getAttributeValue(
+                            net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_SPEED);
+                    helper.assertTrue(Math.abs(damage - 9.0D) < 1.0E-4,
+                            "observed total attack damage " + damage + ", expected 9.0");
+                    helper.assertTrue(Math.abs(speed - 0.8D) < 1.0E-4,
+                            "observed attack speed " + speed + ", expected 0.8");
+                    hunter.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+                            net.minecraft.world.item.ItemStack.EMPTY);
+                })
+                .thenExecuteFor(2, () -> tickOnce(hunter))
+                .thenExecute(() -> {
+                    double bare = hunter.getAttributeValue(
+                            net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+                    retire(hunter);
+                    helper.assertTrue(Math.abs(bare - 1.0D) < 1.0E-4,
+                            "an unequipped weapon left " + bare + " attack damage behind");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * R3-03: an ordinary left-click is the ordinary path. Through a {@code MonsterPart}, because
+     * that is the case a weapon could plausibly break: the parent takes the hit, the blade takes
+     * exactly one point of wear, and carve participation is recorded the same way a bare hand
+     * would record it.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 60)
+    public static void r3OrdinaryAttackRunsTheVanillaPath(GameTestHelper helper) {
+        GreatIzuchi quarry = spawnInert(helper);
+        net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 2, 8);
+        net.neoforged.neoforge.entity.PartEntity<?> part = quarry.getParts()[0];
+        float healthBefore = quarry.getHealth();
+
+        hunter.attack(part);
+
+        int wear = hunter.getMainHandItem().getDamageValue();
+        int participants = quarry.carveState().participantCount();
+        retire(hunter);
+        helper.assertTrue(quarry.getHealth() < healthBefore,
+                "a part hit did not reach the parent's health");
+        helper.assertTrue(wear == 1,
+                "the blade took " + wear + " durability for one hit, expected 1");
+        helper.assertTrue(participants == 1,
+                "a hit through the weapon recorded " + participants + " carve participants");
+        helper.succeed();
+    }
+
+    /**
+     * R3-04: the strike happens after thirty <em>real</em> ticks and not before. Fully ticked --
+     * item in hand, vanilla's own use countdown, vanilla's own completion -- so nothing here can
+     * pass by calling the completion early.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void r3ChargeStrikesOnlyAfterThirtyRealTicks(GameTestHelper helper) {
+        net.minecraft.world.entity.animal.Cow target = inertCow(helper, 8, 2, 11);
+        net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 2, 8);
+        aimAt(hunter, target.getBoundingBox().getCenter());
+        float healthBefore = target.getHealth();
+
+        hunter.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+        helper.assertTrue(hunter.getUseItemRemainingTicks()
+                        == com.carro1001.mhnw.item.GiantJawbladeItem.CHARGE_TICKS,
+                "starting the charge did not arm the full 30 ticks");
+
+        helper.startSequence()
+                .thenExecuteFor(com.carro1001.mhnw.item.GiantJawbladeItem.CHARGE_TICKS - 2, () -> tickOnce(hunter))
+                .thenExecute(() -> {
+                    helper.assertTrue(target.getHealth() == healthBefore,
+                            "the strike landed before the charge completed");
+                    helper.assertTrue(hunter.isUsingItem(), "the charge was dropped part way");
+                })
+                .thenExecuteFor(4, () -> tickOnce(hunter))
+                .thenExecute(() -> {
+                    boolean cooling = hunter.getCooldowns().isOnCooldown(
+                            com.carro1001.mhnw.registry.ModItems.GIANT_JAWBLADE.get());
+                    float after = target.getHealth();
+                    retire(hunter);
+                    helper.assertTrue(after < healthBefore, "the completed charge did not strike");
+                    helper.assertTrue(cooling, "a completed charge started no recovery cooldown");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * R3-04: letting go early is not a weaker strike, it is no strike. No damage, no cooldown, no
+     * wear -- and there is no cancellation code behind that, only vanilla never reaching the
+     * completion.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 80)
+    public static void r3CancelledChargeChangesNothing(GameTestHelper helper) {
+        net.minecraft.world.entity.animal.Cow target = inertCow(helper, 8, 2, 11);
+        net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 2, 8);
+        aimAt(hunter, target.getBoundingBox().getCenter());
+        float healthBefore = target.getHealth();
+
+        hunter.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+
+        helper.startSequence()
+                .thenExecuteFor(10, () -> tickOnce(hunter))
+                .thenExecute(hunter::stopUsingItem)
+                .thenExecuteFor(com.carro1001.mhnw.item.GiantJawbladeItem.CHARGE_TICKS + 5, () -> tickOnce(hunter))
+                .thenExecute(() -> {
+                    boolean cooling = hunter.getCooldowns().isOnCooldown(
+                            com.carro1001.mhnw.registry.ModItems.GIANT_JAWBLADE.get());
+                    int wear = hunter.getMainHandItem().getDamageValue();
+                    float after = target.getHealth();
+                    retire(hunter);
+                    helper.assertTrue(after == healthBefore, "a released charge struck anyway");
+                    helper.assertTrue(!cooling, "a released charge started the recovery cooldown");
+                    helper.assertTrue(wear == 0, "a released charge cost " + wear + " durability");
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * R3-05: the strike reaches 4.5 blocks down the player's own view vector, and nothing else.
+     * Each case proves its own geometry -- the distances are asserted, not assumed -- so a case
+     * cannot pass because a cow happened to be somewhere other than where it was meant to be.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 80)
+    public static void r3ChargeRangeAndOcclusion(GameTestHelper helper) {
+        double reach = com.carro1001.mhnw.item.GiantJawbladeItem.REACH;
+        // Stated separately from the constant the cases are placed against: without this, widening
+        // REACH moves the fixture with the code and the far case reports a fixture error instead of
+        // the behaviour change it actually is (observed, mutating REACH to 50).
+        helper.assertTrue(reach == 4.5D, "the charged strike's reach is " + reach + ", expected 4.5");
+        net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 2, 8);
+
+        net.minecraft.world.entity.animal.Cow near = inertCow(helper, 8, 2, 11);
+        double nearDistance = hunter.getEyePosition().distanceTo(near.getBoundingBox().getCenter());
+        helper.assertTrue(nearDistance < reach,
+                "fixture error: the near cow is " + nearDistance + " blocks away, outside the reach");
+        aimAt(hunter, near.getBoundingBox().getCenter());
+        float nearBefore = near.getHealth();
+        completeCharge(helper, hunter);
+        helper.assertTrue(near.getHealth() < nearBefore,
+                "a centred target " + nearDistance + " blocks away was not struck");
+        near.discard();
+
+        // Out of range: same line, further than the reach.
+        net.minecraft.world.entity.animal.Cow far = inertCow(helper, 8, 2, 14);
+        double farDistance = hunter.getEyePosition().distanceTo(far.getBoundingBox().getCenter());
+        helper.assertTrue(farDistance > reach,
+                "fixture error: the far cow is only " + farDistance + " blocks away");
+        aimAt(hunter, far.getBoundingBox().getCenter());
+        float farBefore = far.getHealth();
+        completeCharge(helper, hunter);
+        helper.assertTrue(far.getHealth() == farBefore,
+                "a target " + farDistance + " blocks away was struck; the reach is " + reach);
+        far.discard();
+
+        // Off axis: well inside the reach, nowhere near the view vector.
+        net.minecraft.world.entity.animal.Cow beside = inertCow(helper, 11, 2, 8);
+        double besideDistance = hunter.getEyePosition().distanceTo(beside.getBoundingBox().getCenter());
+        helper.assertTrue(besideDistance < reach,
+                "fixture error: the flanking cow is " + besideDistance + " blocks away, out of reach anyway");
+        aimAt(hunter, hunter.getEyePosition().add(0.0D, 0.0D, 4.0D));
+        float besideBefore = beside.getHealth();
+        completeCharge(helper, hunter);
+        helper.assertTrue(beside.getHealth() == besideBefore,
+                "a target " + besideDistance + " blocks off the view vector was struck");
+        beside.discard();
+
+        // Occluded: in range, on the line, behind a solid wall.
+        net.minecraft.world.entity.animal.Cow walled = inertCow(helper, 8, 2, 11);
+        for (int y = 2; y <= 4; y++) {
+            for (int x = 6; x <= 10; x++) {
+                helper.setBlock(x, y, 10, net.minecraft.world.level.block.Blocks.STONE);
+            }
+        }
+        aimAt(hunter, walled.getBoundingBox().getCenter());
+        float walledBefore = walled.getHealth();
+        completeCharge(helper, hunter);
+        boolean throughWall = walled.getHealth() < walledBefore;
+        retire(hunter);
+        helper.assertTrue(!throughWall, "the strike went through a solid wall");
+        helper.succeed();
+    }
+
+    /**
+     * R3-06: one strike, one target. Two cows on the same line and a whole multipart monster are
+     * both single hits -- there is no cone, no sweep, and a part does not also hit its parent.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 80)
+    public static void r3ChargeStrikesExactlyOneTarget(GameTestHelper helper) {
+        net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 2, 8);
+        net.minecraft.world.entity.animal.Cow first = inertCow(helper, 8, 2, 10);
+        net.minecraft.world.entity.animal.Cow second = inertCow(helper, 8, 2, 12);
+        float firstBefore = first.getHealth();
+        float secondBefore = second.getHealth();
+
+        aimAt(hunter, first.getBoundingBox().getCenter());
+        completeCharge(helper, hunter);
+
+        helper.assertTrue(first.getHealth() < firstBefore, "the nearest target was not struck");
+        helper.assertTrue(second.getHealth() == secondBefore,
+                "a second target behind the first was struck as well");
+        first.discard();
+        second.discard();
+
+        // Beside the target, not behind it. This is the case vanilla's own sweep reaches and the
+        // in-line pair above does not: sweep collects living entities within one block of the
+        // struck target's box and three of the player, so a bystander at z=12 is never a witness.
+        net.minecraft.world.entity.animal.Cow aimed = inertCow(helper, 8, 2, 10);
+        net.minecraft.world.entity.animal.Cow bystander = inertCow(helper, 9, 2, 10);
+        float aimedBefore = aimed.getHealth();
+        float bystanderBefore = bystander.getHealth();
+        helper.assertTrue(hunter.distanceToSqr(bystander) < 9.0D,
+                "fixture error: the bystander is outside the sweep's own 3-block range, so this"
+                        + " case would pass without proving anything");
+        coolDown(helper, hunter);
+        aimAt(hunter, aimed.getBoundingBox().getCenter());
+        completeCharge(helper, hunter);
+        helper.assertTrue(aimed.getHealth() < aimedBefore, "the aimed target was not struck");
+        helper.assertTrue(bystander.getHealth() == bystanderBefore,
+                "a bystander beside the target lost " + (bystanderBefore - bystander.getHealth())
+                        + " health; the strike swept");
+        aimed.discard();
+        bystander.discard();
+
+        // Against a multipart body, "exactly one hit" has to be a number rather than a hope, so an
+        // ordinary attack is measured first and the charge is held to it.
+        GreatIzuchi quarry = spawnInert(helper);
+        float quarryBefore = quarry.getHealth();
+        coolDown(helper, hunter);
+        hunter.attack(quarry);
+        float singleHit = quarryBefore - quarry.getHealth();
+        quarry.invulnerableTime = 0;
+        float beforeCharge = quarry.getHealth();
+
+        coolDown(helper, hunter);
+        aimAt(hunter, quarry.getBoundingBox().getCenter());
+        completeCharge(helper, hunter);
+
+        float chargeCost = beforeCharge - quarry.getHealth();
+        retire(hunter);
+        helper.assertTrue(singleHit > 0.0F, "fixture error: the reference hit did no damage");
+        helper.assertTrue(chargeCost > 0.0F, "the charge did not reach the monster at all");
+        helper.assertTrue(chargeCost <= singleHit + 1.0E-3F,
+                "the charge cost the monster " + chargeCost + " health against a single hit's "
+                        + singleHit + "; a part and its parent were both hit, or the volume swept");
+        helper.succeed();
+    }
+
+    /**
+     * R3-07/R3-08: a completed miss is still a commitment -- one cooldown, no wear, nothing hurt --
+     * the cooldown genuinely refuses the next charge until it expires, and an item round trip
+     * carries durability but no trace of a charge.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void r3ChargeMissRecoversAndCarriesNoState(GameTestHelper helper) {
+        net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 2, 8);
+        aimAt(hunter, hunter.getEyePosition().add(0.0D, 0.0D, 4.0D));
+
+        completeCharge(helper, hunter);
+        helper.assertTrue(hunter.getMainHandItem().getDamageValue() == 0,
+                "a missed charge cost durability");
+        helper.assertTrue(hunter.getCooldowns().isOnCooldown(
+                        com.carro1001.mhnw.registry.ModItems.GIANT_JAWBLADE.get()),
+                "a missed charge started no recovery cooldown");
+
+        net.minecraft.world.InteractionResultHolder<net.minecraft.world.item.ItemStack> refused =
+                hunter.getMainHandItem().getItem().use(helper.getLevel(), hunter,
+                        net.minecraft.world.InteractionHand.MAIN_HAND);
+        helper.assertTrue(refused.getResult() == net.minecraft.world.InteractionResult.FAIL
+                        && !hunter.isUsingItem(),
+                "a recovering weapon started another charge");
+
+        net.minecraft.world.item.ItemStack worn = hunter.getMainHandItem().copy();
+        worn.setDamageValue(42);
+        net.minecraft.world.item.ItemStack reloaded = net.minecraft.world.item.ItemStack
+                .parse(helper.getLevel().registryAccess(),
+                        worn.save(helper.getLevel().registryAccess()))
+                .orElseThrow();
+        helper.assertTrue(reloaded.getDamageValue() == 42,
+                "an item round trip lost its durability");
+        helper.assertTrue(reloaded.getComponents().equals(worn.getComponents()),
+                "an item round trip changed the weapon's components, so something was stored on it");
+
+        helper.startSequence()
+                .thenExecuteFor(com.carro1001.mhnw.item.GiantJawbladeItem.RECOVERY_TICKS + 2, () -> tickOnce(hunter))
+                .thenExecute(() -> {
+                    boolean stillCooling = hunter.getCooldowns().isOnCooldown(
+                            com.carro1001.mhnw.registry.ModItems.GIANT_JAWBLADE.get());
+                    retire(hunter);
+                    helper.assertTrue(!stillCooling, "the recovery cooldown never expired");
                 })
                 .thenSucceed();
     }
