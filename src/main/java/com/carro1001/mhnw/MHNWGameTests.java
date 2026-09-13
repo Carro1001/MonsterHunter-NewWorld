@@ -1419,17 +1419,17 @@ public class MHNWGameTests {
      * actually reaches a target in the authored active window -- and {@code r1IzuchiHarass*}
      * owns the shape of the approach.
      *
-     * <p><b>The fixture keeps the Izuchi aimed, and that is the point rather than a cheat.</b> This
-     * test is about the damage contract -- that a hit reaches a target only through the shared sweep
-     * volumes and only inside the authored active window -- not about whether the AI happens to
-     * still be facing its victim 36 ticks after committing. Left to itself it frequently is not:
-     * nothing re-aims during the windup, so the sweep passes through empty air and the test failed
-     * intermittently at 400 ticks, then at 800, then at 1600. Raising the budget a fourth time
-     * would have been hiding a real behaviour finding behind a longer wait, so the aim is pinned
-     * here and the finding is written up in docs/DEFERRED.md where it can be acted on deliberately.
+     * <p>The timeout is the original two harass cycles. It was raised to 800 and then 1600
+     * chasing an intermittent failure, and every one of those raises was wrong: the cause was a
+     * stale {@code debugCombat = true} in {@code run/config/}, which used to gate small Izuchi's
+     * unfinished, damage-less tail slam. With logging on the mob picked that slam half the time and
+     * spent 88 ticks landing nothing, so two cycles often produced no damage at all. The gate is
+     * now {@code MHNWConfig.TAIL_SLAM_PREVIEW} and this test no longer depends on a developer's
+     * local config.
      *
-     * <p>Nothing else is pinned. The goal, the volumes, the timing and the damage are all the real
-     * ones, so the assertions cannot pass for a fabricated reason.
+     * <p>The failure message reports how many swipes were started and how many ticks fell inside
+     * the active window, because "never swung" and "swung and never connected" are different
+     * defects and that distinction is what finally located this one.
      */
     @GameTest(template = ARENA, timeoutTicks = 400)
     public static void izuchiAttacksAndDamagesTarget(GameTestHelper helper) {
@@ -1440,16 +1440,30 @@ public class MHNWGameTests {
         izuchi.setTarget(victim);
         float startingHealth = victim.getHealth();
 
-        helper.succeedWhen(() -> {
-            // Face the victim every tick: see the class note above on why this is the fixture's job.
-            float yaw = (float) (net.minecraft.util.Mth.atan2(victim.getZ() - izuchi.getZ(), victim.getX() - izuchi.getX())
-                    * (180F / Math.PI)) - 90.0F;
-            izuchi.setYRot(yaw);
-            izuchi.yBodyRot = yaw;
-            izuchi.yHeadRot = yaw;
+        // Swipes started, and ticks spent inside the authored active window. A failure that says
+        // "never swung" and one that says "swung four times and never connected" are completely
+        // different defects, and the message is the only place that distinction survives.
+        int[] swipes = {0};
+        int[] activeTicks = {0};
+        boolean[] wasSwiping = {false};
 
+        helper.onEachTick(() -> {
+            boolean swiping = izuchi.getAttackId() == Izuchi.ATTACK_TAIL_SWIPE;
+            if (swiping && !wasSwiping[0]) {
+                swipes[0]++;
+            }
+            wasSwiping[0] = swiping;
+            if (swiping && izuchi.getAttackAge() >= IzuchiHarassGoal.ACTIVE_START
+                    && izuchi.getAttackAge() <= IzuchiHarassGoal.ACTIVE_END) {
+                activeTicks[0]++;
+            }
+        });
+
+        helper.succeedWhen(() -> {
             helper.assertTrue(victim.getHealth() < startingHealth,
-                    "Izuchi never damaged a target standing right next to it");
+                    "Izuchi never damaged a target standing right next to it (swipes started: "
+                            + swipes[0] + ", ticks inside the active window: " + activeTicks[0]
+                            + ", phase: " + izuchi.harassPhase() + ")");
             helper.assertTrue(izuchi.getAttackId() == Izuchi.ATTACK_TAIL_SWIPE,
                     "Izuchi damaged a target outside its tail-swipe action");
             helper.assertTrue(izuchi.getAttackAge() >= IzuchiHarassGoal.ACTIVE_START
@@ -5333,8 +5347,8 @@ public class MHNWGameTests {
 
         hunter.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
         helper.assertTrue(hunter.getUseItemRemainingTicks()
-                        == com.carro1001.mhnw.item.GiantJawbladeItem.OVERCHARGE_TICKS,
-                "starting the charge did not arm the full overcharge window");
+                        == com.carro1001.mhnw.item.GiantJawbladeItem.USE_DURATION_TICKS,
+                "starting the charge did not arm the open-ended hold window");
 
         helper.startSequence()
                 .thenExecuteFor(maxTierTicks(), () -> tickOnce(hunter))
@@ -5431,27 +5445,45 @@ public class MHNWGameTests {
     }
 
     /**
-     * R3-04: overcharging wastes the charge rather than banking it. Holding past the overcharge
-     * point swings by itself -- vanilla's completion, which is the one path that still runs through
-     * {@code finishUsingItem} -- and lands tier one's damage, not tier three's.
+     * R3-04: overcharging wastes the charge rather than banking it -- and, since 2026-09-13, wastes
+     * it by fizzling rather than by swinging.
+     *
+     * <p>The weapon used to swing itself at tier one's damage once vanilla's use duration ran out.
+     * That put a hit on the screen the player never asked for, so the use duration is now an hour
+     * ({@code USE_DURATION_TICKS}) and {@code finishUsingItem} is unreachable; past
+     * {@code FIZZLE_TICKS} the charge simply dies. Both halves are asserted, because "no damage"
+     * alone would also pass if the charge had silently stayed live.
      */
-    @GameTest(template = ARENA, timeoutTicks = 200)
-    public static void r3OverchargeSwingsItselfAtTierOne(GameTestHelper helper) {
+    @GameTest(template = ARENA, timeoutTicks = 400)
+    public static void r3OverchargeFizzlesInsteadOfSwinging(GameTestHelper helper) {
+        net.minecraft.world.entity.animal.Cow target = inertCow(helper, 8, 2, 10);
         net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 2, 8);
-        float[] tierDamage = com.carro1001.mhnw.item.GiantJawbladeItem.TIER_DAMAGE;
+        aimAt(hunter, target.getBoundingBox().getCenter());
+        float healthBefore = target.getHealth();
 
-        float overcharged = chargeDamageAt(helper, hunter,
-                com.carro1001.mhnw.item.GiantJawbladeItem.OVERCHARGE_TICKS + 2, 8, 2, 10);
-
-        retire(hunter);
-        helper.assertTrue(overcharged > 0.0F,
-                "holding past the overcharge point never swung at all");
-        helper.assertTrue(Math.abs(overcharged - tierDamage[0]) < 0.51F,
-                "an overcharged swing dealt " + overcharged + ", expected tier one's "
-                        + tierDamage[0]);
-        helper.assertTrue(overcharged < tierDamage[tierDamage.length - 1] - 0.5F,
-                "an overcharged swing still landed full-tier damage, so overcharging costs nothing");
-        helper.succeed();
+        hunter.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+        helper.startSequence()
+                .thenExecuteFor(com.carro1001.mhnw.item.GiantJawbladeItem.FIZZLE_TICKS + 10,
+                        () -> tickOnce(hunter))
+                .thenExecute(() -> {
+                    // Still held: nothing ended the use for us, which is the "no auto release" half.
+                    helper.assertTrue(hunter.isUsingItem(),
+                            "the hold ended by itself, so the weapon can still swing unprompted");
+                    helper.assertTrue(target.getHealth() == healthBefore,
+                            "holding past the fizzle point swung the weapon by itself");
+                    helper.assertTrue(com.carro1001.mhnw.item.GiantJawbladeItem.chargeProgress(
+                                    hunter.getMainHandItem(), hunter) == 0.0F,
+                            "a fizzled charge still reports progress, so the blade stays wound up");
+                    hunter.releaseUsingItem();
+                })
+                .thenExecuteFor(10, () -> tickOnce(hunter))
+                .thenExecute(() -> {
+                    float after = target.getHealth();
+                    retire(hunter);
+                    helper.assertTrue(after == healthBefore,
+                            "releasing a fizzled charge still struck for " + (healthBefore - after));
+                })
+                .thenSucceed();
     }
 
     /**
@@ -5501,7 +5533,10 @@ public class MHNWGameTests {
                 .thenExecuteFor(com.carro1001.mhnw.item.GiantJawbladeItem.TIER_TICKS[0] - 3,
                         () -> tickOnce(hunter))
                 .thenExecute(hunter::releaseUsingItem)
-                .thenExecuteFor(com.carro1001.mhnw.item.GiantJawbladeItem.OVERCHARGE_TICKS + 5,
+                // Long enough that a strike or a cooldown would have shown up -- the recovery
+                // window plus margin. It used to wait out the whole charge window, which since the
+                // fizzle rework is an order of magnitude longer than anything being observed here.
+                .thenExecuteFor(com.carro1001.mhnw.item.GiantJawbladeItem.RECOVERY_TICKS + 10,
                         () -> tickOnce(hunter))
                 .thenExecute(() -> {
                     boolean cooling = hunter.getCooldowns().isOnCooldown(
@@ -5775,7 +5810,7 @@ public class MHNWGameTests {
      *
      * <p>The clip's timing is the part that can rot silently. It carries no seek -- GeckoLib 4.9.2
      * has none -- so it stays in step with the charge only because its length equals
-     * {@code OVERCHARGE_TICKS} and its keyframes sit on {@code TIER_TICKS}. Changing either
+     * {@code FIZZLE_TICKS} and its keyframes sit on {@code TIER_TICKS}. Changing either
      * constant without re-authoring the clip desyncs the wind-up from the damage with nothing
      * visible failing, so the numbers are recomputed here and looked for in the file.
      */
@@ -5841,10 +5876,10 @@ public class MHNWGameTests {
 
         String clip = chargeClip(helper);
         helper.assertTrue(clip.contains("\"charge\""), "the animation file has no charge clip");
-        String length = seconds(com.carro1001.mhnw.item.GiantJawbladeItem.OVERCHARGE_TICKS);
+        String length = seconds(com.carro1001.mhnw.item.GiantJawbladeItem.FIZZLE_TICKS);
         helper.assertTrue(clip.contains("\"animation_length\": " + length),
                 "the charge clip is not " + length + "s long, so it no longer matches the"
-                        + " OVERCHARGE_TICKS window it is kept in step with by duration alone");
+                        + " FIZZLE_TICKS window it is kept in step with by duration alone");
         for (int ticks : com.carro1001.mhnw.item.GiantJawbladeItem.TIER_TICKS) {
             helper.assertTrue(clip.contains("\"" + seconds(ticks) + "\":"),
                     "the charge clip has no keyframe at " + seconds(ticks) + "s, the boundary for a"
@@ -6115,4 +6150,5 @@ public class MHNWGameTests {
             }
         }
     }
+
 }

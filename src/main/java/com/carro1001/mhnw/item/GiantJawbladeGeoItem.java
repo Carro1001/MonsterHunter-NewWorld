@@ -25,10 +25,16 @@ import java.util.function.Consumer;
  * the two is meant to be deleted once the maintainer has looked at both. See {@code docs/DEFERRED.md}.
  *
  * <h2>How the clip stays in step with the charge, without a seek</h2>
- * {@code animations/item/giant_jawblade.animation.json} holds one 5-second {@code charge} clip whose
- * keyframes sit on the real tier boundaries -- 1.25s/2.25s/3.75s for 25/45/75 ticks -- and whose
- * length is exactly {@link GiantJawbladeItem#OVERCHARGE_TICKS}. The controller starts it the tick
- * the hold starts, so clip time and charge time are the same clock and no seek is needed. GeckoLib
+ * {@code animations/item/giant_jawblade.animation.json} holds one {@code charge} clip whose
+ * keyframes sit on the real tier boundaries -- 1.5s/3.5s/6.25s for 30/70/125 ticks -- and whose
+ * length is exactly {@link GiantJawbladeItem#FIZZLE_TICKS}, ending on the slump that reads as the
+ * charge dying. The controller starts it the tick the hold starts, so clip time and charge time are
+ * the same clock and no seek is needed.
+ *
+ * <p>The segments cover less angle as they go -- 40 degrees over the first 1.5s, then 28 over 2.0s,
+ * then 22 over 2.75s -- so the blade visibly decelerates as it loads up. That deceleration lives in
+ * the clip's own keyframe spacing, not in {@link GiantJawbladeItem#chargeProgress}, which stays
+ * linear because the damage tiers and the legacy 48-model lean both read it. GeckoLib
  * 4.9.2 has no public seek and no {@code anim_time_update} MoLang support (both checked in the
  * sources jar, not assumed), so matching the durations is the only way to do this without the
  * re-anchoring machinery {@code animation/ServerTimedAnimationController} exists for on entities.

@@ -35,6 +35,21 @@ public final class MHNWConfig {
             .comment("Log monster attack transitions and accepted/rejected contact. Development aid.")
             .define("debugCombat", false);
 
+    /**
+     * Lets small Izuchi commit to the unfinished tail slam so it can be watched and captured.
+     *
+     * <p>Its own switch rather than a second meaning for {@link #DEBUG_COMBAT}, which is a logging
+     * toggle. The slam lands nothing until its envelope is measured, so choosing it costs the pack
+     * a whole 88-tick action -- a real change to how combat plays. That used to ride on the
+     * diagnostics flag, which meant turning on logging quietly halved a pack's effective attacks;
+     * it also made the GameTest suite depend on whatever was left in {@code run/config/}, where a
+     * stale {@code debugCombat = true} produced an intermittent failure that cost an afternoon to
+     * chase. A switch that changes behaviour and a switch that changes output are two switches.
+     */
+    public static final ModConfigSpec.BooleanValue TAIL_SLAM_PREVIEW = COMMON_BUILDER
+            .comment("Let small Izuchi use the unfinished, damage-less tail slam. Capture aid; degrades combat.")
+            .define("izuchiTailSlamPreview", false);
+
     public static final ModConfigSpec COMMON_SPEC = COMMON_BUILDER.build();
 
     private MHNWConfig() {}

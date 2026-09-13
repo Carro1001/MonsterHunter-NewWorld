@@ -483,32 +483,23 @@ borrowed placeholder. Nothing here is guessed -- geometry, UVs and pose all came
 **What it takes then:** open the weapon in every context and confirm it reads right. If something is
 still off, the fix is the same one-file `display` edit either way; no code, no id change.
 
-### Small Izuchi do not re-aim during the tail swipe's windup, and mostly whiff
-**Status:** root cause confirmed, deliberately not fixed, 2026-09-13.
+### Small Izuchi's tail slam is still unarmed, and is now behind its own switch
+**Status:** unchanged in substance, re-gated 2026-09-13. The slam plays in full but its damage
+envelope has never been measured, so it lands nothing; committing to it costs the pack an 88-tick
+action. Fitting the envelope needs a live `BoneProbe` capture, and this project has twice thrown
+away an offline solve.
 
-`IzuchiHarassGoal.tickAttack` stops navigation and damps velocity for the whole 48-tick action, and
-**nothing re-aims at the target**. The sweep volumes are placed in the mob's own left/up/forward
-frame, so they follow whatever yaw it happened to hold when it committed at melee range, 36 ticks
-before the active window opens. Against anything not directly ahead at commit time, the swipe goes
-through empty air.
+**What changed:** the gate moved from `debugCombat` to `MHNWConfig.TAIL_SLAM_PREVIEW`. A logging
+switch was deciding which attack a monster used, so turning on diagnostics -- which `CLAUDE.md`
+tells you to do for any hurtbox work -- quietly halved a pack's effective attacks. It also made the
+GameTest suite depend on whatever was left in `run/config/`: a stale `debugCombat = true` there is
+what made `izuchiAttacksAndDamagesTarget` fail intermittently, and three timeout raises and four
+fixture theories went past it before the failure message was made to distinguish "never swung" from
+"swung and missed". A switch that changes behaviour and a switch that changes output are two
+switches.
 
-**How it was confirmed, rather than guessed.** `izuchiAttacksAndDamagesTarget` failed intermittently
-against a *stationary, no-AI cow standing one block away*: at a 400-tick budget, then at 800 (about
-one run in six, measured), then again at 1600. Pinning the Izuchi's yaw at the victim in the fixture
-made it pass at the original 400-tick budget, six consecutive runs. The budget was never the
-problem. The test now pins the aim, because its subject is the damage contract -- damage only
-through the shared volumes, only inside the authored window -- and not the AI's aim; raising the
-timeout a fourth time would have buried this.
-
-**Why it is not fixed here.** The obvious change is to keep looking at the target through the
-windup, which is one line. It is a real combat-feel decision, not a bug fix: today the windup can be
-sidestepped, and making the volumes track would remove that. The swipe's envelope is also a live
-`BoneProbe` measurement, and this project has twice thrown away an offline re-solve, so a change
-here wants a play session rather than a patch.
-
-**Trigger:** alpha feedback on whether Izuchi packs feel threatening or feel like they are flailing.
-If they flail, the candidates are: track the target during the windup, commit later (closer to the
-active window), or widen the envelope from a fresh capture -- in that order of cheapness.
+**Trigger:** a live capture of the slam's active window. Delete the gate and the config key together
+with fitting the envelope; neither is finished without the other.
 
 ### Two Giant Jawblades ship in the alpha, and one of them must be deleted
 **Status:** deliberate and temporary, 2026-09-13. `mhnw:giant_jawblade_gecko` is the same

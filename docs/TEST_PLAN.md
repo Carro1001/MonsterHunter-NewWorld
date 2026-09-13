@@ -133,12 +133,17 @@ passing (`.\gradlew.bat --no-daemon build runGameTestServer`, three consecutive 
   Hide and claw are unchanged and still Izuchi-only: the first Izuchi kill in iron/leather stays
   the gate on bone armor, which is what then makes Great Izuchi tractable.
 - **`izuchiAttacksAndDamagesTarget` was intermittently failing on a clean tree**, not from this
-  round's changes — confirmed by stashing them and reproducing it. The first two diagnoses (a
-  too-short budget; raised to 800, then 1600) were **wrong**, and it kept failing. The real cause is
-  that nothing re-aims the Izuchi during the tail swipe's 36-tick windup, so the volumes sweep
-  wherever it was pointing when it committed. The fixture now pins the aim and the budget is back to
-  the original 400, passing six consecutive runs. See `docs/DEFERRED.md` — the whiffing itself is a
-  live gameplay finding, not a test artefact.
+  round's changes. The cause was environmental and took far too long to find: `run/config/mhnw-common.toml`
+  had `debugCombat = true` left over from a play session, and that flag used to gate small Izuchi's
+  unfinished, damage-less tail slam. With logging on the mob picked the slam half the time and spent
+  88 ticks landing nothing. Three timeout raises (400→800→1600) and four fixture theories -- aim
+  pinning, position pinning, tick phase, target re-assertion -- all measured the same ~20% and all
+  missed it. What found it was making the failure message report *swipes started* versus *ticks
+  inside the active window*: `swipes started: 0, phase: ATTACK` pointed straight at attack
+  selection. The gate is now `MHNWConfig.TAIL_SLAM_PREVIEW`, the budget is back to the original 400,
+  and twelve consecutive runs pass **with the stale `debugCombat = true` still in place**.
+  Lesson worth keeping: make the failure message discriminate between distinct defects before
+  touching the timeout.
 
 ### Still open for the alpha
 

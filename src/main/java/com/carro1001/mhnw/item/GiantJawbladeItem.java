@@ -48,8 +48,9 @@ import java.util.function.Predicate;
  * Holding main-hand use builds through three tiers at {@link #TIER_TICKS}, each announced by its
  * own cue. <em>Releasing</em> is what swings, and the tier reached is the damage that lands
  * ({@link #TIER_DAMAGE}). Release before tier one and nothing happens at all -- no strike, no
- * cooldown, no wear. Hold past {@link #OVERCHARGE_TICKS} and the weapon swings by itself, back down
- * at tier one's damage: the charge is wasted, not banked.
+ * cooldown, no wear. Hold past {@link #FIZZLE_TICKS} and the charge dies where it stands: the blade
+ * drops, a dull cue plays, and releasing afterwards does nothing. The weapon never swings by itself:
+ * overcharging costs you the charge rather than spending it badly.
  *
  * <p>Every strike, at every tier, traces {@link #REACH} blocks down the player's own view vector
  * and hits at most one thing. Hit or miss, the item goes on a {@link #RECOVERY_TICKS} cooldown.
@@ -91,14 +92,35 @@ public class GiantJawbladeItem extends SwordItem {
      * any starting state. Keep {@code TIER_TICKS[0] >= 25} if the attack speed ever changes;
      * {@code r3ChargeFromAnUncooledWeaponStillLandsItsTier} fails if it does not.
      */
-    public static final int[] TIER_TICKS = {25, 45, 75};
+    public static final int[] TIER_TICKS = {30, 70, 125};
 
     /** Total attack damage each tier lands, in the same units the tooltip shows. Tier one is simply
      * the weapon's own 9.0, so a short charge buys reach and a long one buys damage as well. */
     public static final float[] TIER_DAMAGE = {9.0F, 12.5F, 16.0F};
 
-    /** Hold this long without releasing and the weapon swings itself, back at tier one's damage. */
-    public static final int OVERCHARGE_TICKS = 100;
+    /**
+     * Hold this long and the charge fizzles out: the weapon does not swing, the blade drops back to
+     * rest, and releasing afterwards does nothing at all.
+     *
+     * <p>It replaced an auto-swing at tier one's damage, which put a hit on the screen that the
+     * player never asked for. Overcharging now costs you the charge instead of spending it badly,
+     * which is the Monster Hunter reading of the same mistake.
+     *
+     * <p>Like every other part of this weapon it is <b>derived, never stored</b>:
+     * {@link #tierFor} simply refuses to name a tier past this point, so "the charge is dead" needs
+     * no field, no component and no packet, and cannot survive a reload.
+     */
+    public static final int FIZZLE_TICKS = TIER_TICKS[TIER_TICKS.length - 1] + 60;
+
+    /**
+     * What {@link #getUseDuration} reports: long enough that vanilla never ends the hold on its own.
+     *
+     * <p>The bow's own value, and for the bow's own reason -- the item wants to be held until the
+     * player decides otherwise. {@link #finishUsingItem} is unreachable in practice as a result,
+     * which is exactly the "it shouldn't auto release" contract; the charge count is still derived
+     * from this number minus vanilla's countdown, so nothing else about the timing changes.
+     */
+    public static final int USE_DURATION_TICKS = 72000;
 
     /**
      * How many discrete lean poses the charge ramps through, matching the generated
@@ -183,6 +205,37 @@ public class GiantJawbladeItem extends SwordItem {
                 && super.canPerformAction(stack, ability);
     }
 
+    /**
+     * The third-person charge stance: the hunter's arms raise the weapon as the charge builds.
+     *
+     * <p>This is what the vanilla {@link UseAnim} options could not give (see the class note above
+     * on why {@code SPEAR} was rejected), and it needs no animation library: {@code ArmPose} is an
+     * extensible enum, and NeoForge asks the held item which one to use. Both jawblades inherit it,
+     * because how the <em>arms</em> move is independent of whether the weapon itself is drawn by
+     * swapped models or by a GeckoLib clip -- keeping the comparison between those two honest.
+     *
+     * <p>Returning {@code null} outside a charge is what leaves an idle hunter in the ordinary item
+     * pose; the custom pose is only ever active while vanilla's own use countdown is running.
+     *
+     * <p>The anonymous class is deliberate and load-bearing, not a style choice --
+     * {@link com.carro1001.mhnw.client.MHNWArmPoses} reaches {@code HumanoidModel}, and naming it
+     * in this class's own method bodies would link a client class on a dedicated server and crash
+     * mod loading. See that class, and {@code docs/WEAPON_POSING.md}.
+     */
+    @Override
+    public void initializeClient(java.util.function.Consumer<
+            net.neoforged.neoforge.client.extensions.common.IClientItemExtensions> consumer) {
+        consumer.accept(new net.neoforged.neoforge.client.extensions.common.IClientItemExtensions() {
+            @Override
+            public net.minecraft.client.model.HumanoidModel.ArmPose getArmPose(
+                    LivingEntity entity, net.minecraft.world.InteractionHand hand, ItemStack stack) {
+                return chargeProgress(stack, entity) > 0.0F
+                        ? com.carro1001.mhnw.client.MHNWArmPoses.greatswordCharge()
+                        : null;
+            }
+        });
+    }
+
     /** Bone, not iron: the tier is iron only for its numbers. */
     @Override
     public boolean isValidRepairItem(ItemStack stack, ItemStack repairCandidate) {
@@ -202,7 +255,7 @@ public class GiantJawbladeItem extends SwordItem {
      */
     @Override
     public int getUseDuration(ItemStack stack, LivingEntity entity) {
-        return OVERCHARGE_TICKS;
+        return USE_DURATION_TICKS;
     }
 
     /**
@@ -234,7 +287,7 @@ public class GiantJawbladeItem extends SwordItem {
         if (level.isClientSide) {
             return;
         }
-        int charged = OVERCHARGE_TICKS - remainingUseDuration;
+        int charged = USE_DURATION_TICKS - remainingUseDuration;
         if (!(level instanceof ServerLevel serverLevel)) {
             return;
         }
@@ -263,6 +316,16 @@ public class GiantJawbladeItem extends SwordItem {
                     blade.x, blade.y, blade.z, 4 + tier * 3, 0.22D, 0.22D, 0.22D, 0.01D);
         }
 
+        // The charge dying is the one moment the player most needs to hear, so it gets its own cue
+        // rather than simply going quiet: a dull failure, deliberately not one of the rising ones.
+        if (charged == FIZZLE_TICKS) {
+            level.playSound(null, entity.getX(), entity.getY(), entity.getZ(),
+                    SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 0.8F, 1.4F);
+            serverLevel.sendParticles(ParticleTypes.SMOKE,
+                    entity.getX(), entity.getEyeY() - 0.2D, entity.getZ(),
+                    12, 0.3D, 0.2D, 0.3D, 0.01D);
+        }
+
         for (int reached = 0; reached < TIER_TICKS.length; reached++) {
             if (charged != TIER_TICKS[reached]) {
                 continue;
@@ -286,7 +349,7 @@ public class GiantJawbladeItem extends SwordItem {
         if (!(entity instanceof Player player) || level.isClientSide) {
             return;
         }
-        int tier = tierFor(OVERCHARGE_TICKS - timeCharged);
+        int tier = tierFor(USE_DURATION_TICKS - timeCharged);
         if (tier < 0) {
             return;
         }
@@ -294,15 +357,16 @@ public class GiantJawbladeItem extends SwordItem {
     }
 
     /**
-     * Held past the overcharge point. Vanilla calls this exactly once, on the server, only on a
-     * hold that ran the whole way -- so this is the "you waited too long" swing, and it lands at
-     * tier one's damage rather than tier three's.
+     * Unreachable in normal play, and deliberately inert.
+     *
+     * <p>{@link #USE_DURATION_TICKS} is an hour of holding, so vanilla never gets here; the weapon
+     * swings only when the player lets go. It used to swing itself at tier one's damage after the
+     * overcharge window, which is the behaviour {@link #FIZZLE_TICKS} replaced. Left overridden
+     * rather than deleted so that the "never swings on its own" rule is stated where someone
+     * lowering the use duration would read it.
      */
     @Override
     public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity entity) {
-        if (entity instanceof Player player && !level.isClientSide) {
-            strike(level, player, 0.0D);
-        }
         return stack;
     }
 
@@ -322,13 +386,25 @@ public class GiantJawbladeItem extends SwordItem {
         if (holder == null || !holder.isUsingItem() || holder.getUseItem() != stack) {
             return 0.0F;
         }
-        int charged = OVERCHARGE_TICKS - holder.getUseItemRemainingTicks();
+        int charged = USE_DURATION_TICKS - holder.getUseItemRemainingTicks();
+        if (charged >= FIZZLE_TICKS) {
+            // Fizzled: the blade drops back to rest, which is the whole visual tell that the
+            // charge is gone. Every consumer of this -- the lean models, the GeckoLib clip and the
+            // arm stance -- reads it, so they cannot disagree about whether a charge is still live.
+            return 0.0F;
+        }
         int fullyWound = TIER_TICKS[TIER_TICKS.length - 1];
         return Math.min(1.0F, charged / (float) fullyWound);
     }
 
-    /** Which tier a given number of charged ticks has reached, or -1 for "not even tier one". */
+    /**
+     * Which tier a given number of charged ticks has reached, or -1 for "no strike": either not yet
+     * tier one, or held so long the charge has fizzled.
+     */
     public static int tierFor(int chargedTicks) {
+        if (chargedTicks >= FIZZLE_TICKS) {
+            return -1;
+        }
         int reached = -1;
         for (int tier = 0; tier < TIER_TICKS.length; tier++) {
             if (chargedTicks >= TIER_TICKS[tier]) {

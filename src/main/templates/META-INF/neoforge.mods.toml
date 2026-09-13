@@ -4,6 +4,11 @@ license = "${mod_license}"
 issueTrackerURL = "https://github.com/Carro1001/MonsterHunter-NewWorld/issues"
 
 [[mods]]
+# Read from the per-mod config, NOT the file root: FML looks this up through
+# IModInfo.getConfig().getConfigElement("enumExtensions"). At the top of the file it is silently
+# ignored -- no warning, no error, and the first symptom is a rendering crash the moment something
+# asks the proxy for its value. See docs/WEAPON_POSING.md section 5.
+enumExtensions = "META-INF/enumextensions.json"
 modId = "${mod_id}"
 version = "${mod_version}"
 displayName = "${mod_name}"
