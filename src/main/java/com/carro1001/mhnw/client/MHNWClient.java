@@ -72,6 +72,28 @@ public final class MHNWClient {
     }
 
     /**
+     * The GeckoLib-rendered comparison jawblade. One {@code DefaultedItemGeoModel} resolves
+     * {@code geo/item/giant_jawblade.geo.json} and {@code animations/item/giant_jawblade.animation.json}
+     * by convention; only the texture needs pointing by hand, because it keeps the legacy
+     * {@code giant_jawblade_model.png} name the original 2D model already referenced.
+     *
+     * <p>Reached through GeckoLib's {@code GeoRenderProvider} rather than registered anywhere --
+     * see {@link com.carro1001.mhnw.item.GiantJawbladeGeoItem#createGeoRenderer}. It is public
+     * only so that item class can name it.
+     */
+    public static final class JawbladeRenderer
+            extends software.bernie.geckolib.renderer.GeoItemRenderer<
+                    com.carro1001.mhnw.item.GiantJawbladeGeoItem> {
+        public JawbladeRenderer() {
+            super(new software.bernie.geckolib.model.DefaultedItemGeoModel<
+                            com.carro1001.mhnw.item.GiantJawbladeGeoItem>(
+                    ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, "giant_jawblade"))
+                    .withAltTexture(ResourceLocation.fromNamespaceAndPath(
+                            MHNW.MOD_ID, "giant_jawblade_model")));
+        }
+    }
+
+    /**
      * The layer definition {@link BugModel} bakes its {@code ModelPart} tree from. Vanilla-style
      * hand-modeled entities register this separately from the renderer itself, unlike the GeckoLib
      * species above, which resolve their geometry straight from the preserved {@code .geo.json}.

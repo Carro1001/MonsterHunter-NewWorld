@@ -5755,6 +5755,70 @@ public class MHNWGameTests {
         helper.succeed();
     }
 
+    /**
+     * The GeckoLib comparison jawblade is the same weapon and a differently-posed one, and both
+     * halves of that are asserted here because a GameTest server loads no assets and can never see
+     * the pose itself.
+     *
+     * <p>The clip's timing is the part that can rot silently. It carries no seek -- GeckoLib 4.9.2
+     * has none -- so it stays in step with the charge only because its length equals
+     * {@code OVERCHARGE_TICKS} and its keyframes sit on {@code TIER_TICKS}. Changing either
+     * constant without re-authoring the clip desyncs the wind-up from the damage with nothing
+     * visible failing, so the numbers are recomputed here and looked for in the file.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void r3GeckoJawbladeMatchesTheWeaponAndItsChargeClock(GameTestHelper helper) {
+        net.minecraft.world.item.Item plain = com.carro1001.mhnw.registry.ModItems.GIANT_JAWBLADE.get();
+        net.minecraft.world.item.Item gecko =
+                com.carro1001.mhnw.registry.ModItems.GIANT_JAWBLADE_GECKO.get();
+
+        // Same fight, different presentation: anything that differs here makes the comparison a
+        // comparison of two weapons rather than of two ways of drawing one.
+        helper.assertTrue(gecko instanceof com.carro1001.mhnw.item.GiantJawbladeItem,
+                "the GeckoLib jawblade is not the same weapon class");
+        helper.assertTrue(new net.minecraft.world.item.ItemStack(gecko)
+                        .getAttributeModifiers().modifiers().equals(
+                                new net.minecraft.world.item.ItemStack(plain)
+                                        .getAttributeModifiers().modifiers()),
+                "the two jawblades no longer share their attribute modifiers");
+
+        // builtin/entity is the correct parent here and builtin/generated is still fatal: this
+        // model carries no elements of its own, because GeckoLib's BEWLR draws the geometry.
+        String model = readPackaged(helper, "/assets/mhnw/models/item/giant_jawblade_gecko.json");
+        helper.assertTrue(model.contains("\"builtin/entity\""),
+                "the GeckoLib jawblade model must parent builtin/entity for vanilla to hand it to"
+                        + " a custom renderer at all");
+        helper.assertTrue(!model.contains("item/generated") && !model.contains("item/handheld"),
+                "the GeckoLib jawblade model parents a flat item model, which discards everything");
+        helper.assertTrue(model.contains("\"display\""),
+                "the GeckoLib jawblade model lost the authored display block");
+
+        String geo = readPackaged(helper, "/assets/mhnw/geo/item/giant_jawblade.geo.json");
+        helper.assertTrue(geo.contains("\"group\""),
+                "the geometry has no bone named group, which is the one the clip animates");
+
+        String clip = readPackaged(helper, "/assets/mhnw/animations/item/giant_jawblade.animation.json");
+        helper.assertTrue(clip.contains("\"charge\""), "the animation file has no charge clip");
+        String length = seconds(com.carro1001.mhnw.item.GiantJawbladeItem.OVERCHARGE_TICKS);
+        helper.assertTrue(clip.contains("\"animation_length\": " + length),
+                "the charge clip is not " + length + "s long, so it no longer matches the"
+                        + " OVERCHARGE_TICKS window it is kept in step with by duration alone");
+        for (int ticks : com.carro1001.mhnw.item.GiantJawbladeItem.TIER_TICKS) {
+            helper.assertTrue(clip.contains("\"" + seconds(ticks) + "\":"),
+                    "the charge clip has no keyframe at " + seconds(ticks) + "s, the boundary for a"
+                            + " " + ticks + "-tick tier; re-author it or the pose and the damage"
+                            + " tiers disagree");
+        }
+        helper.succeed();
+    }
+
+    /** Ticks as the clip spells them: seconds at 20 ticks each, one decimal place minimum. */
+    private static String seconds(int ticks) {
+        double value = ticks / 20.0D;
+        String text = java.math.BigDecimal.valueOf(value).stripTrailingZeros().toPlainString();
+        return text.contains(".") ? text : text + ".0";
+    }
+
     /** Read a packaged client resource as text, or fail the test saying which one was missing. */
     private static String readPackaged(GameTestHelper helper, String path) {
         try (java.io.InputStream packaged = MHNW.class.getResourceAsStream(path)) {

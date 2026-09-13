@@ -162,6 +162,7 @@ public class MHNW {
         event.accept(ModItems.BONE_LEGGING.get());
         event.accept(ModItems.BONE_BOOTS.get());
         event.accept(ModItems.GIANT_JAWBLADE.get());
+        event.accept(ModItems.GIANT_JAWBLADE_GECKO.get());
         event.accept(ModItems.FLASH_BOMB.get());
 
         event.accept(ModItems.POISONTOAD_BUCKET.get());

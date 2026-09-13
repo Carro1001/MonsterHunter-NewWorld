@@ -483,6 +483,25 @@ borrowed placeholder. Nothing here is guessed -- geometry, UVs and pose all came
 **What it takes then:** open the weapon in every context and confirm it reads right. If something is
 still off, the fix is the same one-file `display` edit either way; no code, no id change.
 
+### Two Giant Jawblades ship in the alpha, and one of them must be deleted
+**Status:** deliberate and temporary, 2026-09-13. `mhnw:giant_jawblade_gecko` is the same
+`GiantJawbladeItem` -- same stats, same timings, same combat code, asserted equal by
+`r3GeckoJawbladeMatchesTheWeaponAndItsChargeClock` -- drawn through GeckoLib's `GeoItemRenderer`
+from the maintainer's converted model and a fabricated `charge` clip, instead of by the 48 models
+`tools/gen_jawblade_charge_models.js` generates. It exists so the two can be held one after the
+other and one picked.
+
+**Two weapons that fight identically is not a shipping state.** Whichever loses, delete it and its
+assets in one commit: either `giant_jawblade_gecko` plus `geo/item/giant_jawblade.geo.json`,
+`animations/item/giant_jawblade.animation.json`, `models/item/giant_jawblade_gecko.json` and
+`GiantJawbladeGeoItem`; or the 48 `giant_jawblade_charge_*.json` models, the generator, the
+`mhnw:charge` item property and `CHARGE_POSE_STEPS`.
+
+**Trigger:** the J1-J6 checklist in `TEST_PLAN.md`'s alpha pass 2 section.
+
+**What the GeckoLib side still would not do even if it wins:** it poses the weapon, never the
+player's arms. That is the separate entry below, and picking GeckoLib here does not close it.
+
 ### Player animation: the charge has no two-handed stance, and nothing in-house can give it one
 **Status:** deferred with the options priced, 2026-09-13. The Giant Jawblade's charge is currently
 legible through three channels only -- the 48 generated lean models, the three escalating riptide
@@ -531,8 +550,9 @@ authored.
 
 ## Balance values that are testing placeholders, not decisions
 
-- `GreatIzuchi.MAX_HEALTH` is 40, deliberately low so a slice dies quickly during development.
-  Intended closer to 120.
+- `GreatIzuchi.MAX_HEALTH` is **120 as of 2026-09-13**, the number this entry always named as the
+  intent; it was 40 as a development convenience. Still a playtest value, not a signed-off one --
+  the alpha is what decides whether it stays.
 - `GreatIzuchiCombatGoal.SCRATCH_DAMAGE` is 2.5 per strike, up to 3 strikes.
 - Illagers are targeted alongside players, added to make attacks observable from outside a fight.
   Keep or drop deliberately.

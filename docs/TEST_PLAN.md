@@ -2,7 +2,7 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 174 tests, all passing**
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 175 tests, all passing**
 (`.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-12, presentation/feel round and the
 corpse-presentation fix, both rebased onto the R3/Izuchi-tail-swipe master; 157 after the corpse fix
 alone, 156 before either, 148 after the R2 field-preparation packet, 123 before that packet, 121
@@ -43,6 +43,47 @@ measured numbers as a proxy for now (same skeleton, similar proportions); if you
 measured for real, stand near one with `debugCombat` on for a few seconds and send me
 `logs/latest.log`.
 
+
+---
+
+## Alpha pass 2 — Great Izuchi's real health, and two jawblades to choose between (2026-09-13)
+
+175 tests, all passing.
+
+- **`GreatIzuchi.MAX_HEALTH` is 120**, the number `DEFERRED.md` always named as the intent. 40 was a
+  development convenience; a charged Giant Jawblade ended it in three hits, which leaves no room for
+  the armour-then-rematch arc. Still a playtest number — the alpha decides whether it stays.
+- **`mhnw:giant_jawblade_gecko`** is a second, deliberately temporary weapon: the same
+  `GiantJawbladeItem` with the same stats and the same combat, drawn by GeckoLib from the
+  maintainer's converted model instead of by the 48 generated pose models. Both sit next to each
+  other in the creative tab so the two presentations can be held one after the other. One of them
+  is meant to be deleted.
+
+### What a human has to judge here — neither side of this can be tested headlessly
+
+| | |
+|---|---|
+| **J1** | Hold each jawblade and charge it in **third person**. Does the GeckoLib one wind up more legibly than the 48-model one? |
+| **J2** | Same in **first person**. The clip poses the weapon, never the arms — confirm that still reads as a charge rather than as the blade drifting. |
+| **J3** | The clip's rotation signs are a first guess (`animations/item/giant_jawblade.animation.json`, bone `group`). If the blade leans the wrong way, negate the X rotations — one file, no code. |
+| **J4** | Hotbar icon, dropped item and item frame. `isPerspectiveAware()` gives each context its own animation state; if the GUI icon animates along with the held copy, that flag is not doing its job. |
+| **J5** | Release the charge. The controller stops rather than blending out, so the blade snaps back to rest. Confirm that reads as a swing and not as a glitch. |
+| **J6** | A **second player** charging nearby. Their wind-up is found by stack identity and plays from its own start, so a charge already in progress when you look at it replays from the beginning. Confirm how bad that actually is. |
+
+### Two facts this round established the hard way
+
+- **`runGameTestServer` exits zero when the mod fails to load.** The first cut of the GeckoLib item
+  named `Minecraft` in its own method body, which NeoForge's `RuntimeDistCleaner` refuses on a
+  dedicated server; mod loading threw, no test ran at all, and Gradle still printed BUILD
+  SUCCESSFUL. **A green build is not proof the suite ran** — check for the
+  `GAME TESTS COMPLETE` line, and for `invalid dist` in the log. The fix is in
+  `GiantJawbladeGeoItem.registerControllers`: the predicate is an anonymous class, which is a
+  separate class file and so loads only when the render path runs it. A lambda is not.
+- **GeckoLib 4.9.2 supports no `anim_time_update` MoLang field** (checked in the sources jar, as
+  with the no-public-seek finding). So the charge clip is kept in step with the charge by matching
+  its length to `OVERCHARGE_TICKS` and its keyframes to `TIER_TICKS`, and
+  `r3GeckoJawbladeMatchesTheWeaponAndItsChargeClock` recomputes both from the constants rather than
+  hardcoding seconds.
 
 ---
 
