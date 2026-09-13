@@ -34,9 +34,7 @@ go early and nothing happens at all. Whether it hits or misses, the weapon needs
 to recover, so it is reach bought with commitment, not a better attack. Ordinary left-click is still
 the faster option up close.
 
-*Its pose is still rough:* the blade model is real, but its grip and scale in hand and inventory
-are a first-pass borrowed from an older, never-shipped model at a similar scale, not yet tuned for
-this one.
+*A note on presentation:* the blade model and its held/inventory pose are the artist's own.
 
 ## Field preparation
 

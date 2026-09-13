@@ -439,29 +439,22 @@ first frame rather than seeking to the action's age.~~ **Fixed in R0b** (2026-09
 *observation* remains open regardless; the fix being in place is not evidence that two clients
 agree, and R0b does not claim it is.
 
-### R3 — the Giant Jawblade's display transforms are a first pass, not tuned
-**Status:** real geometry landed 2026-09-12 (delivered as `giant_jawblade.bbmodel` plus its exported
-Java Item Model JSON, both matching the previously-delivered UV atlas byte-for-byte once decoded).
-`assets/mhnw/models/item/giant_jawblade.json` is that exported geometry with `parent`
-`minecraft:item/handheld` for its display contexts. There is still no separate 2D inventory icon,
-so every context — including GUI/inventory — renders the real 3D model, which is fine: plenty of
-weapon mods do exactly this, and `neoforge:separate_transforms` remains available if a flat icon is
-ever supplied.
+### R3 — the Giant Jawblade needs a human's look, not a known defect
+**Status:** the artist's second delivery (2026-09-12, same day) added an authored `display` block --
+`thirdperson_righthand`/`_lefthand`, `firstperson_righthand`/`_lefthand`, `ground`, `gui`, `head`,
+`fixed`, `on_shelf` -- covering every context the first delivery left to `item/handheld`'s own
+short-tool defaults. The geometry and texture are byte-identical to the first delivery (diffed
+before replacing anything); only the pose changed. That first delivery's missing `gui` scale is the
+likely reason the weapon "didn't render at all" as reported: the model spans ~41 units against a
+vanilla tool's ~16, and `item/handheld`'s default 0.625 GUI scale would push most of it outside the
+icon's bounds -- invisible, not broken. There is still no separate 2D inventory icon, so GUI too
+renders the real 3D model at the artist's own tuned pose; ordinary practice for a weapon mod.
 
-The `thirdperson_righthand`/`thirdperson_lefthand`/`firstperson_righthand`/`head`/`fixed` transforms
-are **borrowed from the old, never-shipped `BoneBlade.bbmodel`** (`MH_NW_Assets/items/equipment/
-bone/BoneBlade.bbmodel`) rather than authored for this model, because no display block came with the
-delivery and BoneBlade is the one other bone-greatsword-scale asset in the project with hand-tuned
-numbers to start from (both span roughly 40 model units tall, an order taller than a vanilla tool).
-`gui`, `ground` and `firstperson_lefthand` are not overridden at all and fall back to
-`item/handheld`'s own defaults, which assume a much shorter item.
+**Trigger:** a human at a screen, now that there is a genuine authored pose to judge rather than a
+borrowed placeholder. Nothing here is guessed -- geometry, UVs and pose all came from the delivery.
 
-**Trigger:** a human at a screen. Nothing here is guessed geometry or a guessed UV — only the pose.
-
-**What it takes then:** open the weapon in every context (first/third person both hands, GUI,
-ground, item frame) and adjust `display` entries in that one JSON until it reads right. No code, no
-id change. If a 2D icon is supplied later, split the model with `neoforge:separate_transforms`
-instead of tuning `gui` on the 3D one.
+**What it takes then:** open the weapon in every context and confirm it reads right. If something is
+still off, the fix is the same one-file `display` edit either way; no code, no id change.
 
 ## Balance values that are testing placeholders, not decisions
 

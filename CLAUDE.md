@@ -428,16 +428,14 @@ alternative is the transient state the packet forbids. A GameTest keeps a bystan
 *beside* the target, because the in-line pair never enters sweep range and would never have caught
 it.
 
-**The presentation is real geometry now, with untuned display transforms.** The delivered
-`giant_jawblade.bbmodel`/exported Java Item Model JSON matched the previously-delivered UV atlas
-byte-for-byte once decoded, so `models/item/giant_jawblade.json` is that geometry, `parent`
-`minecraft:item/handheld` for its display contexts. There is still no separate 2D icon, so GUI,
-ground and item-frame contexts render the real 3D model too -- ordinary practice for a weapon mod,
-and `neoforge:separate_transforms` stays available if a flat icon ever arrives. The hand/head/fixed
-transforms are borrowed from the old, never-shipped `BoneBlade.bbmodel` as a same-scale starting
-point, not authored for this model; `gui`/`ground`/`firstperson_lefthand` fall back to
-`item/handheld`'s own (short-tool) defaults untouched. See `docs/DEFERRED.md` for what tuning is
-still open.
+**The presentation is real geometry with a real authored pose.** `models/item/giant_jawblade.json`
+is the artist's exported geometry, `parent` `minecraft:item/handheld`, with every display context
+(`thirdperson`/`firstperson` both hands, `ground`, `gui`, `head`, `fixed`, `on_shelf`) explicitly
+authored rather than inherited. An earlier delivery had the geometry but no display block at all --
+`item/handheld`'s ~16-unit-tool defaults on a ~41-unit model pushed the GUI icon outside its own
+bounds, which is why it reported as invisible rather than merely misposed; the fix was the artist's
+second delivery, not a code change. There is still no separate 2D icon, so GUI renders the real 3D
+model too, at the artist's own tuned pose. See `docs/DEFERRED.md`.
 
 ### One creative tab, not five borrowed ones
 

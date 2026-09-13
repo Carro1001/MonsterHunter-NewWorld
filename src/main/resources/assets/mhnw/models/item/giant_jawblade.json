@@ -552,58 +552,126 @@
   ],
   "display": {
     "thirdperson_righthand": {
-      "rotation": [
-        65,
-        0,
-        0
-      ],
       "translation": [
-        -4.25,
-        4.5,
-        -0.25
+        0,
+        7,
+        1.75
       ]
     },
     "thirdperson_lefthand": {
       "translation": [
-        -7,
-        3,
-        9.25
+        0,
+        7,
+        1.5
       ]
     },
     "firstperson_righthand": {
-      "translation": [
-        8.25,
+      "rotation": [
+        -12.25,
         0,
         0
+      ],
+      "translation": [
+        5.75,
+        0.25,
+        -5.75
+      ],
+      "scale": [
+        0.75,
+        0.75,
+        0.75
+      ]
+    },
+    "firstperson_lefthand": {
+      "rotation": [
+        -12.25,
+        0,
+        0
+      ],
+      "translation": [
+        6,
+        0.25,
+        -5.75
+      ],
+      "scale": [
+        0.75,
+        0.75,
+        0.75
+      ]
+    },
+    "ground": {
+      "translation": [
+        0,
+        6.75,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    "gui": {
+      "rotation": [
+        0,
+        -105,
+        0
+      ],
+      "translation": [
+        -0.25,
+        0,
+        0
+      ],
+      "scale": [
+        0.25,
+        0.25,
+        0.25
       ]
     },
     "head": {
       "rotation": [
-        -34,
+        -180,
         0,
         0
       ],
       "translation": [
-        8,
-        7.5,
-        7
+        0,
+        23.75,
+        0.5
       ]
     },
     "fixed": {
       "rotation": [
-        100,
-        -100,
-        100
+        0,
+        -90,
+        0
       ],
       "translation": [
-        -6.25,
-        -3.75,
-        4.75
+        0,
+        -1.75,
+        0
       ],
       "scale": [
-        0.6,
-        0.6,
-        0.6
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    "on_shelf": {
+      "rotation": [
+        0,
+        -86,
+        0
+      ],
+      "translation": [
+        0,
+        -4.25,
+        0
+      ],
+      "scale": [
+        0.75,
+        0.75,
+        0.75
       ]
     }
   }

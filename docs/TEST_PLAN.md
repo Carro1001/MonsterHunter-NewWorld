@@ -392,25 +392,32 @@ Both are on the human checklist below.
   nothing from `net.minecraft.client`.
 - `git diff --check` clean.
 
-### R3 art landed (2026-09-12): real geometry, transforms not tuned
+### R3 art landed (2026-09-12), in two deliveries
 
-The artist delivered `giant_jawblade.bbmodel` and its exported Java Item Model JSON. Verified before
-wiring it in: the embedded texture decodes pixel-identical to the atlas already in the repo, so this
-is the model that atlas was actually unwrapped from, not a mismatched delivery. `giant_jawblade.json`
-now carries the real cuboid geometry, `parent: minecraft:item/handheld` for its display contexts, and
-`hand`/`head`/`fixed` transforms borrowed from the old, never-shipped `BoneBlade.bbmodel` (the one
-other same-scale bone-greatsword asset in the project) as a starting pose rather than an authored
-one. `gui`/`ground`/`firstperson_lefthand` are untouched and inherit `item/handheld`'s own short-tool
-defaults. No separate 2D icon exists, so every context renders the real 3D model. 159/159 unchanged
-(`modCreativeTabResolvesWithItsIcon` and `r3JawbladeRegistryAndResources` both still pass; the latter
-only checks the model/atlas are packaged, not their content, so it does not need to change).
+The first delivery was `giant_jawblade.bbmodel` and its exported Java Item Model JSON: real cuboid
+geometry, no `display` block at all. Verified before wiring it in: the embedded texture decodes
+pixel-identical to the atlas already in the repo, so this was the model that atlas was actually
+unwrapped from. Wired with `parent: minecraft:item/handheld` and hand/head/fixed transforms borrowed
+from the old, never-shipped `BoneBlade.bbmodel` as a starting pose, since nothing authored existed.
+
+Reported result: **the weapon didn't render at all.** The likely mechanism, not fully confirmed: the
+model spans ~41 units against a vanilla tool's ~16, and the one context still using `item/handheld`'s
+own default rather than a borrowed override — `gui` — has a 0.625 scale tuned for that shorter item,
+which would push most of a model this size outside the icon's render bounds.
+
+The same day, a second delivery added a **fully authored `display` block** — `thirdperson_righthand`/
+`_lefthand`, `firstperson_righthand`/`_lefthand`, `ground`, `gui`, `head`, `fixed`, `on_shelf` — from
+the artist. Geometry and texture were diffed byte-for-byte against the first delivery and are
+unchanged; only the pose is new. `giant_jawblade.json` now carries that geometry and that display
+block verbatim, still `parent: minecraft:item/handheld` as a fallback for any context not covered.
+No separate 2D icon exists, so GUI also renders the real 3D model, at the artist's own pose. 159/159
+unchanged both times (`modCreativeTabResolvesWithItsIcon` and `r3JawbladeRegistryAndResources` only
+check the model/atlas are packaged, not their content).
 
 ### What still needs a human — R3
 
-- [ ] **Display transforms.** Every context — first/third person both hands, GUI, ground, item
-      frame — needs eyes now that the geometry is real. Expect the borrowed BoneBlade pose to be
-      wrong to some degree in most of them; `gui`/`ground`/`firstperson_lefthand` were never touched
-      at all. This is the one open item section 8 of the handoff was written for.
+- [ ] **Confirm it renders and reads right**, now that there is an authored pose rather than a
+      borrowed placeholder or a missing one: first/third person both hands, GUI, ground, item frame.
 - [ ] **Feel of the charge.** Does 30 ticks read as a deliberate windup rather than a stuck input?
       Is the miss recovery understandable when it happens?
 - [ ] **One cue per strike** (PR #8 P2, not headlessly testable). A landed charge should sound once,

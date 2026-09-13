@@ -411,13 +411,14 @@ or in any stash — verified, not assumed. The earlier prose about a Drive
 and not permission to reconstruct one.
 
 The maintainer authorized a labelled placeholder (vanilla's iron sword sprite)
-for the gap; that placeholder is gone as of 2026-09-12, when the artist supplied
-`giant_jawblade.bbmodel` and its exported Java Item Model JSON, matching the
-earlier atlas byte-for-byte once decoded. The weapon now renders its real
-geometry in every context. Its display transforms are a first pass borrowed
-from the old, never-delivered `BoneBlade.bbmodel` at a similar scale, not tuned
-for this model, and there is still no separate 2D inventory icon — see
-`docs/DEFERRED.md`. R3's visual acceptance stays open until a human tunes it.
+for the gap while art was pending. That placeholder is gone as of 2026-09-12,
+when the artist supplied `giant_jawblade.bbmodel` and its exported Java Item
+Model JSON, matching the earlier atlas byte-for-byte once decoded, followed the
+same day by a second delivery adding a fully authored display pose for every
+context. The weapon now renders its real geometry, in the artist's own pose,
+everywhere. There is still no separate 2D inventory icon, so GUI also renders
+the 3D model — see `docs/DEFERRED.md`. R3's visual acceptance is a human
+confirming it reads right, not a known gap to close.
 
 Start with one accepted weapon presentation and a bounded committed attack,
 using ordinary entity and multipart damage contracts. Do not implement R8
