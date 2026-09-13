@@ -2,7 +2,7 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 148 tests, all passing**
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 156 tests, all passing**
 (full `.\gradlew.bat --no-daemon clean build` then `runGameTestServer`, 2026-09-12, R2
 field-preparation packet; 123 before the packet, 121 before the R1 PR #6 review round, 97 before
 R1, 85 before R0b). The earlier 69-, 75-, 85-, 86- and 97-test figures are superseded — note the R0a round's
@@ -279,6 +279,81 @@ path is sound.
       then `/difficulty normal` and check it resumes. `r1IzuchiHarassmentStopsOnPeaceful` proves the
       precondition, not the live transition — the transition cannot be tested headlessly without
       changing global difficulty underneath every concurrently running test.
+
+## R3 — The Giant Jawblade (2026-09-12)
+
+Branch `r3/giant-jawblade`, from `origin/master` `0d972d0` (the PR #7 merge). Fresh baseline on that
+commit before any edit: **148/148**. After the packet: **156/156**, eight new tests.
+
+```powershell
+.\gradlew.bat --no-daemon clean build        # baseline
+.\gradlew.bat --no-daemon runGameTestServer  # 148/148, the accepted R2 tree
+.\gradlew.bat --no-daemon build runGameTestServer   # 156/156 after the packet
+```
+
+### What the tests actually drive
+
+| Gate | Test | What it would catch |
+|---|---|---|
+| R3-01 | `r3JawbladeRegistryAndResources` | id, packaged model/atlas/lang, the exact 3x3 pattern, and a rearranged grid that must **not** craft |
+| R3-02 | `r3JawbladeHasItsStatedNumbers` | the numbers read off a ticked player's attributes (9.0 / 0.8), 250 durability, bone repairs and iron does not, and unequipping leaves nothing behind |
+| R3-03 | `r3OrdinaryAttackRunsTheVanillaPath` | a left-click through a `MonsterPart`: parent health falls, one point of wear, one carve participant |
+| R3-04 | `r3ChargeStrikesOnlyAfterThirtyRealTicks`, `r3CancelledChargeChangesNothing` | nothing at 28 ticks, a strike by 32, and a released hold that costs no damage, cooldown or durability |
+| R3-05 | `r3ChargeRangeAndOcclusion` | in range hits; past 4.5 blocks, off the view vector, and behind a wall all miss — each case asserting its own measured distance |
+| R3-06 | `r3ChargeStrikesExactlyOneTarget` | a second target in line is untouched, and a charge against a multipart body costs no more health than one measured ordinary hit |
+| R3-07/08 | `r3ChargeMissRecoversAndCarriesNoState` | a miss still starts exactly one cooldown and costs no durability, the cooldown genuinely refuses the next charge and then expires, and an item round trip keeps durability while carrying no charge state |
+
+### Mutation runs — these tests can actually fail
+
+| Mutation | Result |
+|---|---|
+| `REACH` 4.5 -> 50 | `r3ChargeRangeAndOcclusion` failed |
+| `addCooldown` deleted from `finishUsingItem` | `r3ChargeMissRecoversAndCarriesNoState` and `r3ChargeStrikesOnlyAfterThirtyRealTicks` failed |
+
+The reach mutation initially failed at the fixture's own distance guard rather than at a behavioural
+assertion, because the guard was written against the constant it was meant to police. The test now
+states 4.5 literally as well, so widening the constant fails as the behaviour change it is.
+
+### The fixture lesson that cost a round
+
+**`ServerPlayer.tick()` is not the entity tick.** It is the connection tick — menus, camera, game
+mode — and `doTick()` is the one that calls `super.tick()`, which is what counts down a held use,
+expires an item cooldown and applies equipment attribute modifiers. A mock player is in the level but
+not in the server's ticking player list, so `thenIdle` leaves it frozen entirely. Three tests failed
+in a way that read as broken gameplay ("observed total attack damage 1.0", "the completed charge did
+not strike", "the recovery cooldown never expired") when the fixture was simply standing still. See
+`tickOnce` in `MHNWGameTests`.
+
+A second one, cheaper: `ProjectileUtil.getHitResultOnViewVector` asks for the view vector at partial
+tick **zero**, which interpolates from `yRotO`/`xRotO`. A fixture that sets only the current rotation
+aims one tick into the past. `aimAt` sets both.
+
+### Build, jar and server evidence
+
+- `build/libs/mhnw-0.2.0.jar` contains `com/carro1001/mhnw/item/GiantJawbladeItem.class`,
+  `assets/mhnw/models/item/giant_jawblade.json`, `assets/mhnw/textures/item/giant_jawblade_model.png`
+  and `data/mhnw/recipe/giant_jawblade.json`.
+- `runServer` reached `Done (0.382s)!` with the mod loaded and no client-class loading error; the
+  process was then killed by the smoke test's own timeout (exit 143). The weapon class imports
+  nothing from `net.minecraft.client`.
+- `git diff --check` clean.
+
+### What still needs a human — R3
+
+The art gate is **not** satisfied and the presentation is a placeholder by explicit maintainer
+decision (2026-09-12), so the visual gates below are open by construction, not by omission.
+
+- [ ] **Accepted art.** There is still no geometry bound to `giant_jawblade_model.png` and no
+      inventory icon. The item currently shows vanilla's iron sword sprite through
+      `minecraft:item/handheld`. Everything in section 8 of the handoff — first/third person, left
+      and right hand, UVs, scale, grip, ground/fixed frames — is untestable until that lands.
+- [ ] **Feel of the charge.** Does 30 ticks read as a deliberate windup rather than a stuck input?
+      Is the miss recovery understandable when it happens?
+- [ ] **F3+B against a real monster.** That the centred strike picks the visible part, does not
+      reach through a wall and does not double-hit the parent — proven headlessly, not visually.
+- [ ] **Two clients and a real restart.** Agreement on pose, target, damage, durability and
+      cooldown; a bystander beside the target is not hit; an item survives a real restart with no
+      resumed charge.
 
 ## R2 — Field preparation (2026-09-12)
 

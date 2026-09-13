@@ -440,6 +440,24 @@ first frame rather than seeking to the action's age.~~ **Fixed in R0b** (2026-09
 *observation* remains open regardless; the fix being in place is not evidence that two clients
 agree, and R0b does not claim it is.
 
+### R3 — the Giant Jawblade's presentation is a placeholder
+**Status:** deliberate, authorized by the maintainer on 2026-09-12, and the only unfinished part of
+the weapon.
+
+`assets/mhnw/models/item/giant_jawblade.json` points at `minecraft:item/iron_sword`. The delivered
+art is only the on-hand UV atlas (`textures/item/giant_jawblade_model.png`, 64x64); there is no
+geometry bound to it and no inventory icon anywhere in the repository or its remotes.
+
+**Trigger:** the accepted held geometry (a runtime model JSON, or the Blockbench source with its
+faces and UVs already bound to that atlas) plus an inventory icon, expected as
+`textures/item/giant_jawblade.png`.
+
+**What it takes then:** rewrite that one model JSON — preferably as NeoForge's native
+`neoforge:separate_transforms`, 3D for the hand contexts and the flat icon for GUI/ground/fixed.
+No code, no renderer class, no animation controller and no item id change; the id is already save
+data. Then run the whole of the R3 human checklist in `TEST_PLAN.md`, which is open purely because
+of this.
+
 ## Balance values that are testing placeholders, not decisions
 
 - `GreatIzuchi.MAX_HEALTH` is 40, deliberately low so a slice dies quickly during development.

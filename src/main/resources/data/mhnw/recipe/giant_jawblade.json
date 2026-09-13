@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "B": {
+      "item": "minecraft:bone"
+    },
+    "C": {
+      "item": "mhnw:monster_claw"
+    },
+    "H": {
+      "item": "mhnw:monster_hide"
+    },
+    "S": {
+      "item": "minecraft:stick"
+    }
+  },
+  "pattern": [
+    "BBC",
+    "BHC",
+    "BSH"
+  ],
+  "result": {
+    "count": 1,
+    "id": "mhnw:giant_jawblade"
+  }
+}
