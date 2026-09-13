@@ -4,6 +4,8 @@ import com.carro1001.mhnw.MHNWConfig;
 import com.carro1001.mhnw.entity.GreatIzuchi;
 import com.carro1001.mhnw.entity.AttackProfile;
 import com.carro1001.mhnw.entity.GreatIzuchiCombatGoal;
+import com.carro1001.mhnw.entity.Izuchi;
+import com.carro1001.mhnw.entity.IzuchiHarassGoal;
 import com.carro1001.mhnw.entity.Rathian;
 import com.carro1001.mhnw.entity.RathianCombatGoal;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -58,6 +60,25 @@ final class AttackVolumeOverlay {
         for (AABB volume : GreatIzuchiCombatGoal.attackVolumes(entity, age)) {
             LevelRenderer.renderLineBox(
                     poseStack, lines, volume.move(-ox, -oy, -oz), 1.0F, 0.15F, 0.1F, 1.0F);
+        }
+    }
+
+    /** Small Izuchi's recovered tail swipe, using the same server-owned volume as contact. */
+    static void render(Izuchi entity, PoseStack poseStack, MultiBufferSource bufferSource,
+                       float partialTick) {
+        int age = entity.getAttackAge();
+        if (!MHNWConfig.DEBUG_COMBAT.get() || age < IzuchiHarassGoal.ACTIVE_START
+                || age > IzuchiHarassGoal.ACTIVE_END) {
+            return;
+        }
+
+        double ox = net.minecraft.util.Mth.lerp(partialTick, entity.xOld, entity.getX());
+        double oy = net.minecraft.util.Mth.lerp(partialTick, entity.yOld, entity.getY());
+        double oz = net.minecraft.util.Mth.lerp(partialTick, entity.zOld, entity.getZ());
+        VertexConsumer lines = bufferSource.getBuffer(RenderType.lines());
+        for (AABB volume : IzuchiHarassGoal.attackVolumes(entity, age)) {
+            LevelRenderer.renderLineBox(
+                    poseStack, lines, volume.move(-ox, -oy, -oz), 0.15F, 1.0F, 0.1F, 1.0F);
         }
     }
 

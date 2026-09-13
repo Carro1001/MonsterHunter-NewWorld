@@ -158,6 +158,11 @@
       "lengthSeconds": 0.5,
       "lengthTicks": 10,
       "loop": true
+    },
+    "attack_tailswipe": {
+      "lengthSeconds": 2.375,
+      "lengthTicks": 48,
+      "loop": false
     }
   },
   "lagiacrus": {

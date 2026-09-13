@@ -335,10 +335,11 @@ intended boundary, not "remove existing status effects."
 
 Q27 adds **ground-based circling and occasional dart-in harassment** for small
 Izuchi, not flight or constant melee pressure. "Hover" describes hanging back.
-Use normal melee damage without an invented attack/death animation. This is the
-reported, explicit escort-presentation exception; it does not waive fairness or
-give new major encounters an animation exception. Group pressure, pauses and
-disengagement need human acceptance; it must not become an unavoidable swarm.
+The later maintainer-approved recovery of the `brain`-branch tail swipe supersedes
+the original normal-melee/no-attack-animation restriction: it uses a bounded,
+server-timed sweep with a pending live volume-fitting pass. There is still no
+death animation. Group pressure, pauses and disengagement need human acceptance;
+it must not become an unavoidable swarm.
 
 Make **bone armor** craftable and wearable using accepted source art,
 vanilla-comparable protection and **one modest hunting-oriented full-set trait**

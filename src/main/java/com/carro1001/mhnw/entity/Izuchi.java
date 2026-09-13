@@ -1,5 +1,6 @@
 package com.carro1001.mhnw.entity;
 
+import com.carro1001.mhnw.animation.ServerTimedAnimationController;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -22,7 +23,6 @@ import net.minecraft.world.phys.Vec3;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
-import software.bernie.geckolib.animation.AnimationController;
 import software.bernie.geckolib.animation.AnimationState;
 import software.bernie.geckolib.animation.PlayState;
 import software.bernie.geckolib.animation.RawAnimation;
@@ -33,34 +33,26 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * a genuinely hostile ground monster, unlike any of the P3 endemic life.
  *
  * <p>A single fitted hurtbox, not multipart: section 4.2 reserves that machinery for large
- * monsters, and this is explicitly the small one. Damage is ordinary {@code Mob.doHurtTarget}, not
- * {@link GreatIzuchiCombatGoal}'s synchronized attack timeline: there is no attack clip to time a
- * swing against (see below), and a creature this size does not need one to be a working "simple
- * independent" monster.
+ * monsters, and this is explicitly the small one. Its recovered tail swipe uses the same
+ * server-owned action clock and server-side damage-volume rule as Great Izuchi, but remains part of
+ * {@link IzuchiHarassGoal}'s bounded pack turn rather than acquiring a second combat goal.
  *
  * <p>R1 replaced the vanilla {@code MeleeAttackGoal} this used to run with
  * {@link IzuchiHarassGoal}: same ordinary damage, but the escorts now circle at a distance and take
- * bounded turns darting in, instead of four of them closing to melee and staying there. The change
- * is behavioural only -- no new clip, no attack timeline, no pack leader.
+ * bounded turns darting in, instead of four of them closing to melee and staying there. Reaching
+ * the target now commits the recovered tail swipe before the member retreats.
  *
  * <h2>Carving</h2>
  * One of R1's three carvable species. Participation, the personal three-carve quota and the corpse
  * window all live in {@link CarveState}; this class forwards damage, interaction, death, save and
  * load to it and owns nothing of that contract itself.
  *
- * <h2>Why there is no attack or death animation</h2>
- * The preserved master-branch asset for this species has exactly four clips: idle, sleep, walk,
- * run. No attack, no death. The handoff's own audit (section 6.1) found a candidate attack/death
- * set on the archived {@code brain} branch, but flagged those clips as referencing bone names
- * ({@code left_shoulder}, {@code left_ankle}, {@code mane}, {@code tailblade}) absent even from
- * their own paired geometry, meaning they need an actual retargeting pass, not just code, before
- * they play correctly, and P4 itself says to obtain an authored clip or explicit approval for a
- * temporary presentation if that retargeting is not attempted, not to fabricate a swing animation
- * to fill the gap. That decision has not been made, so this species has no attack or death
- * presentation yet: it fights using the walk/run clips already in motion, and dies using vanilla's
- * ordinary corpse flop, which is the correct default in the absence of an authored death clip
- * (compare {@link GreatIzuchi}, which explicitly cancels that same vanilla flop, but only because
- * it has an authored clip that would otherwise fight it).
+ * <h2>Recovered attack art</h2>
+ * The archived {@code brain} branch contained a real small-Izuchi tail swipe that had never been
+ * merged into master. The maintainer supplied video of it running and approved restoring it. Its
+ * nine tracks for Great-Izuchi-only bones were removed; the remaining tracks target this model's
+ * actual rig and are played from synchronized action state. The other candidate clips remain
+ * quarantined, and there is still no authored death clip, so vanilla's corpse flop remains.
  *
  * <h2>Sleep</h2>
  * The fourth clip, genuinely used: {@link IzuchiSleepGoal} makes it nap periodically when nothing
@@ -79,6 +71,16 @@ public class Izuchi extends Monster implements GeoEntity {
     public static final float BODY_WIDTH = 0.9F;
     public static final float BODY_HEIGHT = 1.1F;
 
+    public static final byte ATTACK_NONE = 0;
+    public static final byte ATTACK_TAIL_SWIPE = 1;
+
+    private static final EntityDataAccessor<Byte> DATA_ATTACK_ID =
+            SynchedEntityData.defineId(Izuchi.class, EntityDataSerializers.BYTE);
+    private static final EntityDataAccessor<Long> DATA_ATTACK_START =
+            SynchedEntityData.defineId(Izuchi.class, EntityDataSerializers.LONG);
+    private static final EntityDataAccessor<Integer> DATA_ACTION_SEQUENCE =
+            SynchedEntityData.defineId(Izuchi.class, EntityDataSerializers.INT);
+
     private static final EntityDataAccessor<Boolean> DATA_SLEEPING =
             SynchedEntityData.defineId(Izuchi.class, EntityDataSerializers.BOOLEAN);
 
@@ -86,6 +88,10 @@ public class Izuchi extends Monster implements GeoEntity {
     private static final RawAnimation SLEEP = RawAnimation.begin().thenLoop("animation.izuchi.sleep");
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.izuchi.walk");
     private static final RawAnimation RUN = RawAnimation.begin().thenLoop("animation.izuchi.run");
+    private static final RawAnimation TAIL_SWIPE =
+            RawAnimation.begin().thenPlay("animation.izuchi.attack_tailswipe");
+
+    public static final int TRANSITION_TICKS = 5;
 
     private final AnimatableInstanceCache animCache = GeckoLibUtil.createInstanceCache(this);
 
@@ -99,6 +105,8 @@ public class Izuchi extends Monster implements GeoEntity {
      * rule is enforced by reading this field off the neighbours rather than by any shared owner.
      */
     private IzuchiHarassGoal.Phase harassPhase;
+    private int actionSequenceCounter;
+    private Float committedBodyYaw;
 
     public Izuchi(EntityType<? extends Monster> type, Level level) {
         super(type, level);
@@ -132,6 +140,9 @@ public class Izuchi extends Monster implements GeoEntity {
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         builder.define(DATA_SLEEPING, false);
+        builder.define(DATA_ATTACK_ID, ATTACK_NONE);
+        builder.define(DATA_ATTACK_START, 0L);
+        builder.define(DATA_ACTION_SEQUENCE, 0);
     }
 
     public boolean isSleeping() {
@@ -147,9 +158,52 @@ public class Izuchi extends Monster implements GeoEntity {
         this.harassPhase = phase;
     }
 
-    /** Read by neighbouring {@link IzuchiHarassGoal}s to keep at most one darter in a pack. */
+    /** Read by neighbouring {@link IzuchiHarassGoal}s while approaching the target. */
     public boolean isDarting() {
         return this.harassPhase == IzuchiHarassGoal.Phase.DART;
+    }
+
+    /** The one pack slot stays occupied through both approach and committed swing. */
+    public boolean isTakingAttackTurn() {
+        return isDarting() || this.harassPhase == IzuchiHarassGoal.Phase.ATTACK;
+    }
+
+    public byte getAttackId() {
+        return this.entityData.get(DATA_ATTACK_ID);
+    }
+
+    public int getAttackAge() {
+        return getAttackId() == ATTACK_NONE
+                ? -1
+                : (int) (level().getGameTime() - this.entityData.get(DATA_ATTACK_START));
+    }
+
+    public int getActionSequence() {
+        return this.entityData.get(DATA_ACTION_SEQUENCE);
+    }
+
+    void beginTailSwipe() {
+        this.actionSequenceCounter++;
+        this.entityData.set(DATA_ATTACK_ID, ATTACK_TAIL_SWIPE);
+        this.entityData.set(DATA_ATTACK_START, level().getGameTime());
+        this.entityData.set(DATA_ACTION_SEQUENCE, this.actionSequenceCounter);
+        this.committedBodyYaw = this.yBodyRot;
+    }
+
+    void endAttack() {
+        this.entityData.set(DATA_ATTACK_ID, ATTACK_NONE);
+        this.committedBodyYaw = null;
+    }
+
+    /** Rotates a local (left, up, forward) offset into world space using the committed body yaw. */
+    public Vec3 localToWorld(double left, double up, double forward) {
+        double rad = Math.toRadians(this.yBodyRot);
+        double sin = Math.sin(rad);
+        double cos = Math.cos(rad);
+        return new Vec3(
+                getX() + left * cos - forward * sin,
+                getY() + up,
+                getZ() + left * sin + forward * cos);
     }
 
     /** R1 carving state. */
@@ -198,6 +252,7 @@ public class Izuchi extends Monster implements GeoEntity {
     public void die(DamageSource source) {
         super.die(source);
         setPersistenceRequired();
+        endAttack();
         setHarassPhase(null);
         setAggressive(false);
         getNavigation().stop();
@@ -244,18 +299,34 @@ public class Izuchi extends Monster implements GeoEntity {
     }
 
     @Override
+    public void tick() {
+        super.tick();
+        if (!level().isClientSide && this.committedBodyYaw != null) {
+            this.yBodyRot = this.committedBodyYaw;
+            setYRot(this.committedBodyYaw);
+        }
+    }
+
+    @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "main", 5, this::mainAnim));
+        controllers.add(new ServerTimedAnimationController<>(
+                this, "main", TRANSITION_TICKS, this::mainAnim));
     }
 
     private PlayState mainAnim(AnimationState<Izuchi> state) {
+        ServerTimedAnimationController<Izuchi> controller = ServerTimedAnimationController.of(state);
+        if (getAttackId() == ATTACK_TAIL_SWIPE) {
+            return controller.playTimed(state, TAIL_SWIPE,
+                    ServerTimedAnimationController.KIND_ATTACK, getActionSequence(),
+                    getAttackAge() + state.getPartialTick());
+        }
         if (isSleeping()) {
-            return state.setAndContinue(SLEEP);
+            return controller.playFree(state, SLEEP);
         }
         if (state.isMoving()) {
-            return state.setAndContinue(isAggressive() ? RUN : WALK);
+            return controller.playFree(state, isAggressive() ? RUN : WALK);
         }
-        return state.setAndContinue(IDLE);
+        return controller.playFree(state, IDLE);
     }
 
     @Override
