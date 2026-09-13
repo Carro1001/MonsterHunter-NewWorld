@@ -2,7 +2,7 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 158 tests, all passing**
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 159 tests, all passing**
 (`.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-12, presentation/feel round and the
 corpse-presentation fix, both rebased onto the R3/Izuchi-tail-swipe master; 157 after the corpse fix
 alone, 156 before either, 148 after the R2 field-preparation packet, 123 before that packet, 121
@@ -291,6 +291,24 @@ path is sound.
       then `/difficulty normal` and check it resumes. `r1IzuchiHarassmentStopsOnPeaceful` proves the
       precondition, not the live transition — the transition cannot be tested headlessly without
       changing global difficulty underneath every concurrently running test.
+
+## The mod's own creative tab (2026-09-12)
+
+Every MHNW item was scattered across five vanilla tabs (ingredients, food, combat, tools, spawn
+eggs). `ModCreativeTabs.MAIN` replaces that with one tab of its own, icon the Great Izuchi spawn egg;
+`onBuildCreativeTabs` now populates it in one pass instead of five key-matched branches. **159/159**
+after `clean build` / `runGameTestServer` / `build runGameTestServer`.
+
+`modCreativeTabResolvesWithItsIcon` checks the tab resolves in the registry with the intended icon.
+It deliberately does not reconstruct NeoForge's `BuildCreativeModeTabContentsEvent` by hand to prove
+the full accepted-item list and ordering headlessly -- that event needs a live
+`ItemDisplayParameters`/`InsertableLinkedOpenCustomHashSet` pair only the real tab-population path
+constructs, and every item it would check is already proven to resolve by the existing registry
+tests. What it cannot catch is a wrong section or a missing `event.accept` call; that is a
+30-second look at the tab in a running client, which is what actually happened here.
+
+- [ ] **Open the tab.** Every item and spawn egg present, in the intended shelf order, nothing
+      duplicated from a leftover vanilla-tab branch.
 
 ## R3 — The Giant Jawblade (2026-09-12)
 

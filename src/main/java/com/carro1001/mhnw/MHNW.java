@@ -11,10 +11,10 @@ import com.carro1001.mhnw.entity.Rathian;
 import com.carro1001.mhnw.entity.Rathalos;
 import com.carro1001.mhnw.entity.Toad;
 import com.carro1001.mhnw.item.BoneArmorItem;
+import com.carro1001.mhnw.registry.ModCreativeTabs;
 import com.carro1001.mhnw.registry.ModEntities;
 import com.carro1001.mhnw.registry.ModItems;
 import net.minecraft.world.entity.SpawnPlacementTypes;
-import net.minecraft.world.item.CreativeModeTabs;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
@@ -41,6 +41,7 @@ public class MHNW {
     public MHNW(IEventBus modBus, ModContainer container) {
         ModEntities.register(modBus);
         ModItems.register(modBus);
+        ModCreativeTabs.register(modBus);
         modBus.addListener(MHNW::onAttributeCreation);
         modBus.addListener(MHNW::onRegisterSpawnPlacements);
         modBus.addListener(MHNW::onBuildCreativeTabs);
@@ -136,44 +137,46 @@ public class MHNW {
         }
     }
 
+    /**
+     * Everything MHNW adds, in one tab of its own ({@link ModCreativeTabs#MAIN}) rather than spread
+     * across five vanilla ones. Roughly the old grouping, kept as section order within the one tab
+     * rather than as separate {@code CreativeModeTabs} keys: materials, food/preparation, armor and
+     * the weapon, then buckets, then spawn eggs last -- the same shelf order a player would actually
+     * use the items in.
+     */
     @SubscribeEvent
     private static void onBuildCreativeTabs(BuildCreativeModeTabContentsEvent event) {
-        if (event.getTabKey() == CreativeModeTabs.INGREDIENTS) {
-            event.accept(ModItems.MONSTER_HIDE.get());
-            event.accept(ModItems.MONSTER_CLAW.get());
-            event.accept(ModItems.BOTTLED_FLASHBUG.get());
+        if (event.getTabKey() != ModCreativeTabs.MAIN.getKey()) {
+            return;
         }
-        if (event.getTabKey() == CreativeModeTabs.FOOD_AND_DRINKS) {
-            event.accept(ModItems.RAW_MEAT.get());
-            event.accept(ModItems.COOKED_MEAT.get());
-            event.accept(ModItems.BBQ_SPIT.get());
-        }
-        if (event.getTabKey() == CreativeModeTabs.COMBAT) {
-            event.accept(ModItems.BONE_HEAD.get());
-            event.accept(ModItems.BONE_CHESTPLATE.get());
-            event.accept(ModItems.BONE_LEGGING.get());
-            event.accept(ModItems.BONE_BOOTS.get());
-            event.accept(ModItems.FLASH_BOMB.get());
-            event.accept(ModItems.GIANT_JAWBLADE.get());
-        }
-        // The filled toad buckets sit with the other functional buckets, not with spawn eggs: in
-        // survival they are a tool a player carries and deploys, not a creative-only spawner.
-        if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
-            event.accept(ModItems.POISONTOAD_BUCKET.get());
-            event.accept(ModItems.SLEEPTOAD_BUCKET.get());
-            event.accept(ModItems.PARATOAD_BUCKET.get());
-            event.accept(ModItems.NITROTOAD_BUCKET.get());
-        }
-        if (event.getTabKey() == CreativeModeTabs.SPAWN_EGGS) {
-            event.accept(ModEntities.GREAT_IZUCHI_SPAWN_EGG.get());
-            event.accept(ModEntities.APTONOTH_SPAWN_EGG.get());
-            event.accept(ModEntities.TOAD_SPAWN_EGG.get());
-            event.accept(ModEntities.FLASHBUG_SPAWN_EGG.get());
-            event.accept(ModEntities.BUG_SPAWN_EGG.get());
-            event.accept(ModEntities.IZUCHI_SPAWN_EGG.get());
-            event.accept(ModEntities.RATHIAN_SPAWN_EGG.get());
-            event.accept(ModEntities.RATHALOS_SPAWN_EGG.get());
-            event.accept(ModEntities.LAGIACRUS_SPAWN_EGG.get());
-        }
+        event.accept(ModItems.MONSTER_HIDE.get());
+        event.accept(ModItems.MONSTER_CLAW.get());
+        event.accept(ModItems.BOTTLED_FLASHBUG.get());
+
+        event.accept(ModItems.RAW_MEAT.get());
+        event.accept(ModItems.COOKED_MEAT.get());
+        event.accept(ModItems.BBQ_SPIT.get());
+
+        event.accept(ModItems.BONE_HEAD.get());
+        event.accept(ModItems.BONE_CHESTPLATE.get());
+        event.accept(ModItems.BONE_LEGGING.get());
+        event.accept(ModItems.BONE_BOOTS.get());
+        event.accept(ModItems.GIANT_JAWBLADE.get());
+        event.accept(ModItems.FLASH_BOMB.get());
+
+        event.accept(ModItems.POISONTOAD_BUCKET.get());
+        event.accept(ModItems.SLEEPTOAD_BUCKET.get());
+        event.accept(ModItems.PARATOAD_BUCKET.get());
+        event.accept(ModItems.NITROTOAD_BUCKET.get());
+
+        event.accept(ModEntities.GREAT_IZUCHI_SPAWN_EGG.get());
+        event.accept(ModEntities.APTONOTH_SPAWN_EGG.get());
+        event.accept(ModEntities.TOAD_SPAWN_EGG.get());
+        event.accept(ModEntities.FLASHBUG_SPAWN_EGG.get());
+        event.accept(ModEntities.BUG_SPAWN_EGG.get());
+        event.accept(ModEntities.IZUCHI_SPAWN_EGG.get());
+        event.accept(ModEntities.RATHIAN_SPAWN_EGG.get());
+        event.accept(ModEntities.RATHALOS_SPAWN_EGG.get());
+        event.accept(ModEntities.LAGIACRUS_SPAWN_EGG.get());
     }
 }

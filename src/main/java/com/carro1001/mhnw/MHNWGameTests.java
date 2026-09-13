@@ -5412,6 +5412,29 @@ public class MHNWGameTests {
                 .thenSucceed();
     }
 
+    // ---------------------------------------------------------------- creative tab
+
+    /**
+     * The mod's own creative tab resolves, is keyed correctly and points its icon at the intended
+     * item. What actually lands in it (every material/food/armor/weapon/bucket/egg, in the chosen
+     * order) is exercised live every time a human opens the tab in the client this packet also
+     * builds -- reconstructing NeoForge's tab-population event by hand for a headless duplicate of
+     * that would be more machinery than the wiring is worth.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void modCreativeTabResolvesWithItsIcon(GameTestHelper helper) {
+        net.minecraft.resources.ResourceLocation key =
+                net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, "main");
+        helper.assertTrue(net.minecraft.core.registries.BuiltInRegistries.CREATIVE_MODE_TAB.containsKey(key),
+                "mhnw:main did not resolve in the creative mode tab registry");
+        net.minecraft.world.item.CreativeModeTab tab =
+                net.minecraft.core.registries.BuiltInRegistries.CREATIVE_MODE_TAB.get(key);
+        helper.assertTrue(tab != null && tab.getIconItem().is(ModEntities.GREAT_IZUCHI_SPAWN_EGG.get()),
+                "the mod's creative tab icon is " + (tab == null ? "null" : tab.getIconItem())
+                        + ", expected the Great Izuchi spawn egg");
+        helper.succeed();
+    }
+
     private static void fillFloor(GameTestHelper helper, int y, net.minecraft.world.level.block.Block block) {
         for (int x = 0; x <= 15; x++) {
             for (int z = 0; z <= 15; z++) {

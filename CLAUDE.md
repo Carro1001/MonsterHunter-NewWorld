@@ -146,10 +146,11 @@ the risk of restructuring already-shipped code," not an oversight.
   `AnimationSeekSelfCheck` (the R0b sampler probe -- it lives here, not in `MHNWGameTests`, because
   `GeoModel` references `Minecraft` and NeoForge's `RuntimeDistCleaner` refuses to load it on a
   dedicated server; any future test needing GeckoLib's real sampler has to be a client probe too).
-- `com.carro1001.mhnw.registry`: `ModEntities` (entity types + their spawn eggs) and `ModItems`
-  (R1's carve materials, meats and the four bone-armor pieces). Two `DeferredRegister<Item>` holders
-  into the same registry, deliberately: the eggs are shipped registrations whose only fault is
-  living in a class named after entities, and moving them buys a prettier name for a rename risk.
+- `com.carro1001.mhnw.registry`: `ModEntities` (entity types + their spawn eggs), `ModItems`
+  (R1's carve materials, meats and the four bone-armor pieces) and `ModCreativeTabs` (the mod's own
+  tab). Two `DeferredRegister<Item>` holders into the same registry, deliberately: the eggs are
+  shipped registrations whose only fault is living in a class named after entities, and moving them
+  buys a prettier name for a rename risk.
 - `com.carro1001.mhnw.item`: `BoneArmorItem` — all four slots, one class, iron stats, and the
   `mhnw:bone_armor_set_bonus` full-set trait — plus R2's `BarbecueSpitItem`, `FlashBombItem` and
   `ToadBucketItem`.
@@ -432,6 +433,16 @@ it.
 no inventory icon, so `models/item/giant_jawblade.json` currently points at vanilla's iron sword
 sprite. Swapping in the real art is a one-file model change -- no code, and no item id change. See
 `docs/DEFERRED.md`.
+
+### One creative tab, not five borrowed ones
+
+Every MHNW item and spawn egg used to be scattered across vanilla's own ingredients/food/combat/
+tools/spawn-eggs tabs. `ModCreativeTabs.MAIN` (`registry/ModCreativeTabs.java`) is now the one tab,
+icon the Great Izuchi spawn egg -- the roster's first species, and immediately readable as "this is
+the Monster Hunter tab" the way a material or an armor piece would not be.
+`MHNW.onBuildCreativeTabs` populates it in one pass, sectioned in shelf order (materials,
+food/preparation, armor and the weapon, buckets, spawn eggs) rather than five separate handler
+branches keyed to different vanilla `CreativeModeTabs` constants.
 
 ### Registration and client wiring
 
