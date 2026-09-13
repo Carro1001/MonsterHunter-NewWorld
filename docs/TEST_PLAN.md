@@ -1228,13 +1228,18 @@ during testing). Health (1-hit-kill) unchanged from last round.
 ## Izuchi (P4 small monster)
 
 Genuinely hostile, unlike everything in P3 — this is the first thing since Great Izuchi that
-actually attacks the player on sight. **It has no attack or death animation on purpose** — see
-`docs/DEFERRED.md` for why (the only candidate clips reference bones missing from their own
-geometry) — so expect it to fight using its walk/run clip and die with vanilla's plain corpse flop.
-That is the current, deliberate state, not a bug to report.
+actually attacks the player on sight. It now plants for the recovered `brain`-branch tail swipe:
+the server owns its 48-tick action clock and only permits damage in ticks 36–47. The client draws
+the exact same temporary attack volumes as green developer boxes when debug combat is enabled.
+The maintainer supplied a video confirming the clip plays; a live capture is still needed to tune
+the green boxes to the moving tail. There is no death animation, so death remains vanilla's plain
+corpse flop.
 
 - [ ] Renders, spawns via egg, idles/walks/runs with correct animation
 - [ ] Notices and attacks a nearby player, dealing real damage
+- [ ] **New: tail swipe plants before contact, and its green boxes follow the tail through the
+      active phase** — headless timing/contact and one-hit-per-swing are GameTest-covered; needs a
+      live `debugCombat`/F3+B pass to replace the temporary volume path with measured positions
 - [x] **New: targets pillagers on sight, same as Great Izuchi/Rathian/Rathalos** — GameTest-covered
       (`izuchiTargetsAPillagerOnSight`)
 - [ ] Naps occasionally when nothing is around (uses the `sleep` clip) — this is a rare, roughly

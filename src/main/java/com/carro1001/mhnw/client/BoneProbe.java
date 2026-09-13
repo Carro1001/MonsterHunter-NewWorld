@@ -41,6 +41,9 @@ final class BoneProbe {
             "left_foot", "right_foot",
     };
 
+    /** Recovered tail-swipe measurement points for the small Izuchi. */
+    static final String[] IZUCHI_BONES = {"body", "tail1", "tail2", "tail_claw"};
+
     /** Rathian's and Rathalos's own hitbox bones plus their unsuffixed neighbours, for comparison;
      * both species share this skeleton layout (see their .geo.json files). {@code Chest} is the
      * bone {@code attack_charge_bite_right} actually animates (distinct from {@code Torso}), worth

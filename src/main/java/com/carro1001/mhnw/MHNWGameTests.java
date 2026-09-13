@@ -1368,15 +1368,17 @@ public class MHNWGameTests {
     // ---------------------------------------------------------------- Izuchi (P4, small monster)
 
     /**
-     * A03/A05: unlike every P3 species, Izuchi is genuinely hostile, dealing damage through
-     * ordinary {@code Mob.doHurtTarget} with no custom timeline. This is the one concrete proof
-     * that "simple independent targeting" actually connects.
+     * A03/A05: unlike every P3 species, Izuchi is genuinely hostile. Its recovered tail swipe is
+     * server-timed and applies damage only through the shared sweep volumes during their active
+     * window. This is the one concrete proof that "simple independent targeting" actually
+     * connects.
      *
      * <p>R1 replaced the vanilla {@code MeleeAttackGoal} with {@link IzuchiHarassGoal}, so the first
      * hit no longer lands immediately: the Izuchi circles for a randomized 40-80 tick opportunity
      * window before its first dart, and the dart itself has to cross the circling distance. The
      * timeout is sized for that, not for a rusher. What is asserted is unchanged -- that damage
-     * actually reaches a target -- and {@code r1IzuchiHarass*} owns the shape of the approach.
+     * actually reaches a target in the authored active window -- and {@code r1IzuchiHarass*}
+     * owns the shape of the approach.
      */
     @GameTest(template = ARENA, timeoutTicks = 400)
     public static void izuchiAttacksAndDamagesTarget(GameTestHelper helper) {
@@ -1387,8 +1389,16 @@ public class MHNWGameTests {
         izuchi.setTarget(victim);
         float startingHealth = victim.getHealth();
 
-        helper.succeedWhen(() -> helper.assertTrue(victim.getHealth() < startingHealth,
-                "Izuchi never damaged a target standing right next to it"));
+        helper.succeedWhen(() -> {
+            helper.assertTrue(victim.getHealth() < startingHealth,
+                    "Izuchi never damaged a target standing right next to it");
+            helper.assertTrue(izuchi.getAttackId() == Izuchi.ATTACK_TAIL_SWIPE,
+                    "Izuchi damaged a target outside its tail-swipe action");
+            helper.assertTrue(izuchi.getAttackAge() >= IzuchiHarassGoal.ACTIVE_START
+                            && izuchi.getAttackAge() <= IzuchiHarassGoal.ACTIVE_END,
+                    "Izuchi damaged a target at action age " + izuchi.getAttackAge()
+                            + ", outside the tail-swipe active window");
+        });
     }
 
     /** Same pillager-targeting goal as Great Izuchi/Rathian/Rathalos; see {@code rathianTargetsAPillagerOnSight}. */
@@ -3644,7 +3654,7 @@ public class MHNWGameTests {
                 java.util.EnumSet.noneOf(IzuchiHarassGoal.Phase.class);
         int[] dartRun = {0};
         int[] longestDart = {0};
-        int[] hitsThisDart = {0};
+        int[] hitsThisAttack = {0};
         float[] victimHealth = {victim.getHealth()};
 
         helper.startSequence()
@@ -3657,25 +3667,29 @@ public class MHNWGameTests {
                     }
                     if (victim.getHealth() < victimHealth[0] - EPSILON) {
                         victimHealth[0] = victim.getHealth();
-                        hitsThisDart[0]++;
-                        helper.assertTrue(phase == IzuchiHarassGoal.Phase.DART
-                                        || phase == IzuchiHarassGoal.Phase.RETREAT,
+                        hitsThisAttack[0]++;
+                        helper.assertTrue(phase == IzuchiHarassGoal.Phase.ATTACK,
                                 "an Izuchi landed a hit while in phase " + phase
-                                        + "; damage is meant to come from a dart");
+                                        + "; damage is meant to come from its tail swipe");
                     }
                     if (phase == IzuchiHarassGoal.Phase.DART) {
                         dartRun[0]++;
                         longestDart[0] = Math.max(longestDart[0], dartRun[0]);
-                        helper.assertTrue(hitsThisDart[0] <= 1,
-                                "one dart landed " + hitsThisDart[0] + " hits");
                     } else {
                         dartRun[0] = 0;
-                        hitsThisDart[0] = 0;
+                    }
+                    if (phase == IzuchiHarassGoal.Phase.ATTACK) {
+                        helper.assertTrue(hitsThisAttack[0] <= 1,
+                                "one tail swipe landed " + hitsThisAttack[0] + " hits");
+                    } else {
+                        hitsThisAttack[0] = 0;
                     }
                 })
                 .thenExecute(() -> {
                     helper.assertTrue(seen.contains(IzuchiHarassGoal.Phase.CIRCLE), "it never circled");
                     helper.assertTrue(seen.contains(IzuchiHarassGoal.Phase.DART), "it never darted in");
+                    helper.assertTrue(seen.contains(IzuchiHarassGoal.Phase.ATTACK),
+                            "it never committed a tail swipe after darting in");
                     helper.assertTrue(seen.contains(IzuchiHarassGoal.Phase.RETREAT),
                             "it never backed off after a dart; this is the constant-melee regression");
                     helper.assertTrue(longestDart[0] > 0
@@ -3753,7 +3767,7 @@ public class MHNWGameTests {
                 .thenSucceed();
     }
 
-    /** R1-08: at most one member of a nearby pack is mid-dart at any instant. */
+    /** R1-08: at most one member of a nearby pack owns the dart-and-swipe turn at once. */
     @GameTest(template = ARENA, timeoutTicks = 600)
     public static void r1IzuchiPackKeepsOneDarterAtATime(GameTestHelper helper) {
         fillFloor(helper, 1, net.minecraft.world.level.block.Blocks.STONE);
@@ -3768,16 +3782,16 @@ public class MHNWGameTests {
 
         helper.startSequence()
                 .thenExecuteFor(500, () -> {
-                    int darting = 0;
+                    int takingTurn = 0;
                     for (Izuchi member : pack) {
                         member.setTarget(victim);
-                        if (member.isDarting()) {
-                            darting++;
+                        if (member.isTakingAttackTurn()) {
+                            takingTurn++;
                         }
                     }
-                    sawADart[0] |= darting > 0;
-                    helper.assertTrue(darting <= 1,
-                            darting + " Izuchi darted at once; the pack is meant to take turns");
+                    sawADart[0] |= takingTurn > 0;
+                    helper.assertTrue(takingTurn <= 1,
+                            takingTurn + " Izuchi took an attack turn at once; the pack is meant to take turns");
                 })
                 .thenExecute(() -> helper.assertTrue(sawADart[0],
                         "no member of the pack ever darted, so the one-darter rule was never exercised"))

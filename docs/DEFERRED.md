@@ -258,24 +258,23 @@ walk a few villages and check the biome underfoot, and confirm one generates in 
 normal. A structure-tag assertion on its own is explicitly not proof, which is why this is listed.
 
 ### Izuchi (small) — attack and death animation
-**Status:** genuinely hostile and damaging (ordinary `Mob.doHurtTarget` through R1's
-`IzuchiHarassGoal`, no custom timeline), but with no dedicated attack or death clip to present. R1
-changed *when* it closes in, not what it plays while doing so: the circle/dart/retreat loop is
-presented with the existing walk/run clips, and the gap below is untouched. This is a P4 decision
-point per the handoff, not an oversight: the preserved master-branch asset has only idle/sleep/
-walk/run. A candidate attack/death set exists on the archived `brain` branch
-(`legacy/candidate-art-brain-branch/izuchi.animation.json`), but the handoff's own audit (section
-6.1) found those clips reference bone names (`left_shoulder`, `left_ankle`, `mane`, `tailblade`)
-absent even from their own paired geometry — they need an actual retargeting pass in a model
-editor, not code, before they would play correctly at all.
+**Status:** the approved small-Izuchi tail swipe from `origin/brain` is restored. The maintainer's
+video establishes that it visibly plays on this model. Its nine invalid tracks (`left_shoulder`,
+`left_ankle`, `mane`, `tailblade`, and related Great-Izuchi-only names) were removed; the remaining
+tracks all resolve on the current small-Izuchi rig. It runs on a synchronized 48-tick action clock,
+with damage only during ticks 36–47 and green developer boxes drawn from the exact server volume
+calculation.
 
-To close it: either retarget those brain-branch clips against the current geometry (visual review
-required, not something to do blind), or obtain a newly authored attack/death clip, or get explicit
-approval to reuse an existing clip (e.g. a lunge using `run`) as a labelled temporary presentation.
-Whichever is chosen, wire it the same way `GreatIzuchi`/`Toad`/`Flashbug` already do: add the
-`RawAnimation`, branch on it in `mainAnim`, and if a real death clip is added, check whether it
-needs `getDeathMaxRotation` zeroed the way Great Izuchi's does (only add that override if the new
-clip actually fights vanilla's flop the way Great Izuchi's did).
+The collision envelope is intentionally conservative pending a live `BoneProbe` capture while the
+swipe is active. It is an explicit tuning/acceptance gap, not a claim that an offline rig solve is
+authoritative. Confirm the green boxes follow the tail and can strike a nearby target once, then
+replace the two temporary paths with those measured positions. There is still no approved death
+clip; vanilla's corpse flop remains.
+
+The other archived `brain` clips remain deferred: they need a genuine retargeting pass or new art
+before being wired. If an authored death clip is added later, check whether it needs
+`getDeathMaxRotation` zeroed the way Great Izuchi's does (only add that override if it actually
+fights vanilla's flop).
 
 ### Rathian — flight, and the real charge/bite/tailwhip/fireball timeline
 **Status:** ground-only, genuinely hostile via ordinary vanilla melee (no custom attack volume).

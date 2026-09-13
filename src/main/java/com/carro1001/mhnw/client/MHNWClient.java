@@ -178,13 +178,23 @@ public final class MHNWClient {
         }
     }
 
-    /** Plain reuse of the preserved geometry/animations/texture; no death rotation override needed
-     * since this species has no authored death clip for vanilla's own flop to fight. */
+    /** Preserved geometry/texture plus the recovered brain-branch tail swipe. */
     public static class IzuchiRenderer extends GeoEntityRenderer<Izuchi> {
         public IzuchiRenderer(EntityRendererProvider.Context context) {
             super(context, new DefaultedEntityGeoModel<>(
                     ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, "izuchi")));
             this.shadowRadius = 0.5F;
+        }
+
+        @Override
+        public void render(Izuchi entity, float entityYaw, float partialTick,
+                           com.mojang.blaze3d.vertex.PoseStack poseStack,
+                           net.minecraft.client.renderer.MultiBufferSource bufferSource,
+                           int packedLight) {
+            super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
+            boolean attacking = entity.getAttackId() != Izuchi.ATTACK_NONE;
+            BoneProbe.maybeLog("izuchi", entity, getGeoModel(), BoneProbe.IZUCHI_BONES, attacking);
+            AttackVolumeOverlay.render(entity, poseStack, bufferSource, partialTick);
         }
     }
 
