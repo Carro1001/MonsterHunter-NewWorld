@@ -76,7 +76,8 @@ Species notes that are easy to get wrong from an older doc:
   have its own death clip, wired like the other four (synched anchor, `thenPlayAndHold`,
   `getDeathMaxRotation` zeroed because the clip rotates `root` 90 degrees about Z itself). That
   delivery also carries `roar`, `rally` and `attack_tailslam`, none of which are wired to anything
-  yet. See "Attack timeline" below.
+  yet. It is also a {@code NeutralMob} for its **pack anger** — see below. See "Attack timeline"
+  below.
 - **Toad and Flashbug** endemic behaviour ships as-is and is retained; R2 extended it rather than
   redesigning it — both are now capturable, and the Flashbug's flash moved into a shared helper,
   but neither species' trigger, telegraph, radius or one-release discard changed.
@@ -252,6 +253,37 @@ attack presentation** — a deliberate, documented P4 gap (`docs/DEFERRED.md`), 
   paths are drawn green by `AttackVolumeOverlay` and must be replaced by a live `BoneProbe` capture;
   do not treat an offline rig solve as a measurement. The other archived clips and a death clip
   remain deferred.
+
+### Izuchi pack anger, and why the pack cannot fight itself
+
+Small Izuchi implement vanilla's `NeutralMob`, so the grudge, its 20-39 second timer and its NBT
+persistence are all vanilla's own bookkeeping rather than a timer of ours. They stay hostile on
+sight; the anger is additive. Hitting one angers **every Izuchi within 16 blocks at the player who
+did it**, and a targeting goal sitting above the ordinary nearest-player one prefers that player
+over whoever merely happens to be closest.
+
+Two deviations from a literal copy of `ZombifiedPiglin`, both deliberate and both load-bearing:
+
+- **`HurtByTargetGoal.setAlertOthers()` is on but does nothing by itself here.** Vanilla's alert
+  only touches neighbours whose `getTarget() == null`, and a hostile-on-sight species almost never
+  has any. Propagating the *anger* instead reaches them whatever they are already doing.
+- **The struck one angers itself directly** rather than waiting for `HurtByTargetGoal` to notice,
+  because a goal that is not running -- asleep, mid-action -- would otherwise leave the one actually
+  hit as the only member of the pack not angry.
+
+Only players propagate: a monster hitting one Izuchi must not drag the pack into someone else's
+fight.
+
+**The pack does not wound its own, in either direction, Great Izuchi included.** This was a real
+bug: both attack volumes damaged every `LivingEntity` they touched, so a leader's swipe hit its own
+escorts and they retaliated through `HurtByTargetGoal`. The guard is `Izuchi.isPackMember` checked
+in each species' `hurt`, on the **receiving** end -- which makes it true for every route at once
+(the leader's swipe, a tail swipe, a shove, anything added later), and refusing the hit before
+anything is recorded is also what stops the retaliation, since vanilla only sets `lastHurtByMob` on
+a hit it accepted. `isAlliedTo` agrees with the rule so vanilla's own helpers cannot route around
+it. The volume loops skip packmates too, purely because Great Izuchi's zeroes a victim's
+`invulnerableTime` before calling `hurt`, which would otherwise clear it on somebody it never
+damaged.
 
 ### The opening roar (`RoarGoal`/`Roarable`)
 

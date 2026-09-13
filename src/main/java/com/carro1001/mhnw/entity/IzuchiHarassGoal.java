@@ -320,6 +320,9 @@ public class IzuchiHarassGoal extends Goal {
                         || !this.mob.hasLineOfSight(victim)) {
                     continue;
                 }
+                if (Izuchi.isPackMember(victim)) {
+                    continue;
+                }
                 this.hitThisAttack.add(victim.getId());
                 float damage = (float) this.mob.getAttributeValue(Attributes.ATTACK_DAMAGE);
                 victim.hurt(this.mob.damageSources().mobAttack(this.mob), damage);

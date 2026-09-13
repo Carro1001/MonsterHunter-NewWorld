@@ -2,7 +2,7 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 166 tests, all passing**
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 169 tests, all passing**
 (`.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-12, presentation/feel round and the
 corpse-presentation fix, both rebased onto the R3/Izuchi-tail-swipe master; 157 after the corpse fix
 alone, 156 before either, 148 after the R2 field-preparation packet, 123 before that packet, 121
@@ -462,6 +462,25 @@ death anchor the other four species use, played with `thenPlayAndHold` — which
 clip's says `true`. `thenPlayAndHold` sets `HOLD_ON_LAST_FRAME` explicitly and wins.
 `izuchiDeathAnchorAgesWithRealTicks` guards the anchor. `roar`, `rally` and `attack_tailslam` are
 present and unwired.
+
+### Izuchi pack anger and no-infighting (2026-09-13)
+
+Piglin-style anger on small Izuchi, built on vanilla's `NeutralMob`. They stay hostile on sight;
+hitting one makes every Izuchi within 16 blocks hold a grudge against that player for 20-39 seconds,
+surviving loss of sight, chunk unload and reload, and expiring on its own.
+
+`izuchiPackSharesAngerWithWhoeverHitOne` asserts the **grudge**, not the live target, and that is the
+point: this species is hostile on sight, so every neighbour already targets the nearest player and
+"did it target them" would pass with no pack behaviour at all. Mutation-verified by removing the
+propagation (`packmate=false bystander=false`). `izuchiAngerSurvivesReloadAndExpires` covers the
+memory across a save/load round trip and the timer running out.
+
+**A real bug found on the way in:** both attack volumes damaged every `LivingEntity` they touched, so
+a Great Izuchi's swipe hit its own escorts and those escorts retaliated through `HurtByTargetGoal`.
+`izuchiPackDoesNotFightItself` covers all three directions, that nobody records a packmate as an
+attacker, that they read as allied, and that **a player's hit still lands** -- without that last one
+the test would pass against a guard that simply refused everything. Mutation-verified by removing
+the guard (`leader->escort=true escort->escort=true`).
 
 ### R3 charge rework (2026-09-13): three tiers, held and released
 

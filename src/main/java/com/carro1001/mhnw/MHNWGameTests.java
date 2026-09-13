@@ -5676,6 +5676,142 @@ public class MHNWGameTests {
         }
     }
 
+    // ---------------------------------------------------------------- Izuchi pack anger
+
+    /**
+     * Hit one of the pack and the rest hold a grudge against that player specifically.
+     *
+     * <p>What is checked is the anger itself rather than the live target, because this species is
+     * hostile on sight: every neighbour is already targeting the nearest player, so "did it target
+     * them" would pass without any pack behaviour at all. The grudge is the part that is new, and
+     * it is what the priority-2 targeting goal reads.
+     *
+     * <p>This is also why the implementation does not rely on {@code HurtByTargetGoal.setAlertOthers}
+     * alone: vanilla's alert only touches neighbours whose target is null, which here is none of
+     * them.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void izuchiPackSharesAngerWithWhoeverHitOne(GameTestHelper helper) {
+        Izuchi struck = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        Izuchi packmate = helper.spawn(ModEntities.IZUCHI.get(), 10, 2, 8);
+        Izuchi bystander = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 10);
+        for (Izuchi izuchi : new Izuchi[]{struck, packmate, bystander}) {
+            izuchi.setNoAi(true);
+        }
+        net.minecraft.server.level.ServerPlayer hunter = realPreparer(helper, 8, 2, 6);
+
+        helper.assertTrue(!packmate.isAngryAt(hunter),
+                "fixture error: a packmate was already angry before anything hit anyone");
+
+        struck.hurt(helper.getLevel().damageSources().playerAttack(hunter), 1.0F);
+
+        boolean struckAngry = struck.isAngryAt(hunter);
+        boolean packmateAngry = packmate.isAngryAt(hunter);
+        boolean bystanderAngry = bystander.isAngryAt(hunter);
+        java.util.UUID remembered = packmate.getPersistentAngerTarget();
+        int timer = packmate.getRemainingPersistentAngerTime();
+        retire(hunter);
+
+        helper.assertTrue(packmateAngry && bystanderAngry,
+                "the pack did not share the grudge: packmate=" + packmateAngry
+                        + " bystander=" + bystanderAngry);
+        helper.assertTrue(hunter.getUUID().equals(remembered),
+                "a packmate remembered " + remembered + " rather than the player who hit one of them");
+        helper.assertTrue(timer > 0, "the grudge was shared with no time on it");
+        helper.assertTrue(struckAngry, "the one actually hit is not angry at its attacker");
+        helper.succeed();
+    }
+
+    /**
+     * The grudge is a memory: it survives a save/load round trip, and it runs out on its own rather
+     * than lasting forever.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void izuchiAngerSurvivesReloadAndExpires(GameTestHelper helper) {
+        Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        izuchi.setNoAi(true);
+        net.minecraft.server.level.ServerPlayer hunter = realPreparer(helper, 8, 2, 6);
+        izuchi.hurt(helper.getLevel().damageSources().playerAttack(hunter), 1.0F);
+
+        int before = izuchi.getRemainingPersistentAngerTime();
+        helper.assertTrue(before > 0 && izuchi.isAngryAt(hunter),
+                "fixture error: the Izuchi never became angry in the first place");
+
+        net.minecraft.nbt.CompoundTag saved = new net.minecraft.nbt.CompoundTag();
+        izuchi.saveWithoutId(saved);
+        Izuchi reloaded = ModEntities.IZUCHI.get().create(helper.getLevel());
+        reloaded.load(saved);
+
+        java.util.UUID rememberedAfterLoad = reloaded.getPersistentAngerTarget();
+        int timerAfterLoad = reloaded.getRemainingPersistentAngerTime();
+
+        // And it is finite: run the timer out and the grudge clears itself.
+        izuchi.setRemainingPersistentAngerTime(1);
+        izuchi.setTarget(null);
+        izuchi.customServerAiStepForTest();
+        boolean stillAngry = izuchi.getRemainingPersistentAngerTime() > 0;
+        retire(hunter);
+
+        helper.assertTrue(hunter.getUUID().equals(rememberedAfterLoad),
+                "a reloaded Izuchi forgot who it was angry at: " + rememberedAfterLoad);
+        helper.assertTrue(timerAfterLoad > 0,
+                "a reloaded Izuchi kept the target but lost the timer");
+        helper.assertTrue(!stillAngry, "the grudge never expires");
+        helper.succeed();
+    }
+
+    /**
+     * The pack does not wound its own, in either direction, and never turns on itself for trying.
+     *
+     * <p>Both directions matter and neither is hypothetical: a Great Izuchi's attack volume and a
+     * small Izuchi's tail-swipe volume each damaged every {@code LivingEntity} they touched, so an
+     * escort standing in the leader's swing took the hit and then retaliated through
+     * {@code HurtByTargetGoal}.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void izuchiPackDoesNotFightItself(GameTestHelper helper) {
+        GreatIzuchi leader = spawnInert(helper);
+        Izuchi escort = helper.spawn(ModEntities.IZUCHI.get(), 10, 2, 10);
+        Izuchi other = helper.spawn(ModEntities.IZUCHI.get(), 11, 2, 10);
+        escort.setNoAi(true);
+        other.setNoAi(true);
+
+        float escortBefore = escort.getHealth();
+        float leaderBefore = leader.getHealth();
+
+        // Leader swings through its own escort, escort bites back, escort bites escort.
+        boolean leaderHurtEscort = escort.hurt(
+                helper.getLevel().damageSources().mobAttack(leader), 5.0F);
+        boolean escortHurtLeader = leader.hurt(
+                helper.getLevel().damageSources().mobAttack(escort), 5.0F);
+        boolean escortHurtEscort = other.hurt(
+                helper.getLevel().damageSources().mobAttack(escort), 5.0F);
+
+        helper.assertTrue(!leaderHurtEscort && !escortHurtLeader && !escortHurtEscort,
+                "a pack member accepted damage from its own pack: leader->escort="
+                        + leaderHurtEscort + " escort->leader=" + escortHurtLeader
+                        + " escort->escort=" + escortHurtEscort);
+        helper.assertTrue(escort.getHealth() == escortBefore && other.getHealth() == other.getMaxHealth()
+                        && leader.getHealth() == leaderBefore,
+                "pack infighting cost somebody health");
+        helper.assertTrue(escort.getLastHurtByMob() == null && leader.getLastHurtByMob() == null
+                        && other.getLastHurtByMob() == null,
+                "a pack member recorded its own pack as an attacker, so it will retaliate");
+        helper.assertTrue(escort.isAlliedTo(leader) && leader.isAlliedTo(escort)
+                        && escort.isAlliedTo(other),
+                "pack members do not read as allied, so vanilla's own helpers can still pit them"
+                        + " against each other");
+
+        // And a player still gets through, so the guard is not simply refusing everything.
+        net.minecraft.server.level.ServerPlayer hunter = realPreparer(helper, 10, 2, 8);
+        boolean playerLanded = escort.hurt(
+                helper.getLevel().damageSources().playerAttack(hunter), 2.0F);
+        retire(hunter);
+        helper.assertTrue(playerLanded && escort.getHealth() < escortBefore,
+                "the guard also blocked a player's hit");
+        helper.succeed();
+    }
+
     private static void fillFloor(GameTestHelper helper, int y, net.minecraft.world.level.block.Block block) {
         for (int x = 0; x <= 15; x++) {
             for (int z = 0; z <= 15; z++) {

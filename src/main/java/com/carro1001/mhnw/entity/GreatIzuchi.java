@@ -626,8 +626,20 @@ public class GreatIzuchi extends Monster implements GeoEntity, Roarable {
      * the first, which passes either way and therefore never actually exercised the gap; see the
      * corrected version in {@code MHNWGameTests}.
      */
+    /** Allied to its own escorts, so vanilla's own alert and targeting helpers never set the pack
+     * against itself. The {@link #hurt} guard is the rule; this keeps vanilla agreeing with it. */
+    @Override
+    public boolean isAlliedTo(net.minecraft.world.entity.Entity other) {
+        return Izuchi.isPackMember(other) || super.isAlliedTo(other);
+    }
+
     @Override
     public boolean hurt(DamageSource source, float amount) {
+        // The pack does not wound its own; see {@link Izuchi#hurt} for why the guard sits on the
+        // receiving end rather than inside each attack's volume.
+        if (Izuchi.isPackMember(source.getEntity())) {
+            return false;
+        }
         if (!level().isClientSide) {
             if (source == this.lastDamageSource && this.tickCount == this.lastDamageTick) {
                 return false;

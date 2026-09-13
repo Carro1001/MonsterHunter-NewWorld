@@ -7,6 +7,7 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.NeutralMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -61,7 +62,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * independent behaviour rather than pack coordination (that comes later, with the great Izuchi's
  * kin, not this species).
  */
-public class Izuchi extends Monster implements GeoEntity {
+public class Izuchi extends Monster implements GeoEntity, NeutralMob {
 
     // Provisional balance constants, not yet tuned. Deliberately weaker than Great Izuchi.
     public static final double MAX_HEALTH = 20.0D;
@@ -93,6 +94,21 @@ public class Izuchi extends Monster implements GeoEntity {
 
     /** Sentinel for {@link #DATA_DEATH_START} while this creature is alive. */
     public static final long NO_DEATH = Long.MIN_VALUE;
+
+    /**
+     * How long a pack remembers who hit it, matching vanilla's own neutral-mob range. This is the
+     * "memory": whoever provoked the pack stays its preferred target for this long even if someone
+     * else is nearer, and {@link NeutralMob} saves it across a reload.
+     */
+    private static final net.minecraft.util.valueproviders.UniformInt PERSISTENT_ANGER_TIME =
+            net.minecraft.util.TimeUtil.rangeOfSeconds(20, 39);
+
+    /** How far an attack on one pack member carries to the rest, in blocks. */
+    private static final double ANGER_ALERT_RANGE = 16.0D;
+
+    private int remainingPersistentAngerTime;
+    @org.jetbrains.annotations.Nullable
+    private java.util.UUID persistentAngerTarget;
 
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.izuchi.idle");
     private static final RawAnimation SLEEP = RawAnimation.begin().thenLoop("animation.izuchi.sleep");
@@ -154,11 +170,17 @@ public class Izuchi extends Monster implements GeoEntity {
         this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 8.0F));
         this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
 
-        this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
-        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
+        this.targetSelector.addGoal(1, new HurtByTargetGoal(this).setAlertOthers());
+        // Ahead of the ordinary nearest-player goal: a provoked pack goes for whoever provoked it,
+        // not for whoever happens to be closest.
+        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(
+                this, Player.class, 10, true, false, this::isAngryAt));
+        this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, Player.class, true));
+        this.targetSelector.addGoal(4,
+                new net.minecraft.world.entity.ai.goal.target.ResetUniversalAngerTargetGoal<>(this, true));
         // Same reasoning as Great Izuchi's/Rathian's identical goal: pillagers make the attack
         // observable from outside the fight, and a large monster does not care who you are.
-        this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, AbstractIllager.class, true));
+        this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, AbstractIllager.class, true));
     }
 
     @Override
@@ -288,6 +310,14 @@ public class Izuchi extends Monster implements GeoEntity {
      */
     @Override
     public boolean hurt(DamageSource source, float amount) {
+        // The pack does not wound its own. Refusing the damage here rather than filtering each
+        // attack's volume is what makes it true for every route at once -- a tail swipe's volume, a
+        // Great Izuchi's swipe, a knockback shove, anything added later -- and refusing it before
+        // anything is recorded is also what stops the retaliation: vanilla only sets
+        // lastHurtByMob on a hit it accepted, so HurtByTargetGoal never sees a packmate to answer.
+        if (isPackMember(source.getEntity())) {
+            return false;
+        }
         if (!level().isClientSide) {
             if (source == this.lastDamageSource && this.tickCount == this.lastDamageTick) {
                 return false;
@@ -297,6 +327,9 @@ public class Izuchi extends Monster implements GeoEntity {
             }
             this.lastDamageSource = source;
             this.lastDamageTick = this.tickCount;
+            if (CarveState.resolvePlayer(source) instanceof Player provoker) {
+                alertPackTo(provoker);
+            }
         }
         float before = getHealth();
         boolean accepted = super.hurt(source, amount);
@@ -356,12 +389,105 @@ public class Izuchi extends Monster implements GeoEntity {
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         this.carveState.save(tag);
+        addPersistentAngerSaveData(tag);
     }
 
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         this.carveState.load(tag);
+        readPersistentAngerSaveData(level(), tag);
+    }
+
+    /** Allied to its own pack, so vanilla's own alert and targeting helpers never set one of them
+     * against another. The {@link #hurt} guard is the rule; this keeps vanilla agreeing with it. */
+    @Override
+    public boolean isAlliedTo(net.minecraft.world.entity.Entity other) {
+        return isPackMember(other) || super.isAlliedTo(other);
+    }
+
+    // ---------------------------------------------------------------- pack anger
+
+    @Override
+    public int getRemainingPersistentAngerTime() {
+        return this.remainingPersistentAngerTime;
+    }
+
+    @Override
+    public void setRemainingPersistentAngerTime(int time) {
+        this.remainingPersistentAngerTime = time;
+    }
+
+    @Override
+    @org.jetbrains.annotations.Nullable
+    public java.util.UUID getPersistentAngerTarget() {
+        return this.persistentAngerTarget;
+    }
+
+    @Override
+    public void setPersistentAngerTarget(@org.jetbrains.annotations.Nullable java.util.UUID target) {
+        this.persistentAngerTarget = target;
+    }
+
+    @Override
+    public void startPersistentAngerTimer() {
+        setRemainingPersistentAngerTime(PERSISTENT_ANGER_TIME.sample(this.random));
+    }
+
+    /** Counts the anger down and clears it when it runs out; vanilla's own bookkeeping. */
+    @Override
+    protected void customServerAiStep() {
+        super.customServerAiStep();
+        updatePersistentAnger((net.minecraft.server.level.ServerLevel) level(), true);
+    }
+
+    /** Test seam: {@code customServerAiStep} is protected, and a dead-or-idle fixture never reaches
+     * it through the ordinary AI path. */
+    public void customServerAiStepForTest() {
+        customServerAiStep();
+    }
+
+    /**
+     * Hit one of the pack and the rest come for <em>you</em>.
+     *
+     * <p>{@code HurtByTargetGoal.setAlertOthers()} is on as well, but on its own it is not enough
+     * here: vanilla's alert only touches pack members whose {@code getTarget() == null}, and this
+     * species is hostile on sight, so its neighbours almost always already have a target and the
+     * alert skips every one of them. Handing them the <em>anger</em> instead reaches them
+     * regardless -- the priority-2 goal above then prefers that player over whoever is nearest, and
+     * {@link NeutralMob} keeps the grudge across losing sight, an unload and a reload.
+     *
+     * <p>Only players are propagated. A pack turning on the mob that hit one of them is vanilla's
+     * job through the ordinary hurt-by path, and spreading that would make two monsters brawling
+     * near a pack drag the whole pack in.
+     */
+    private void alertPackTo(Player provoker) {
+        // The one actually hit included, and deliberately: taking a hit is what makes this one
+        // angry, not a goal noticing afterwards. Relying on HurtByTargetGoal for its own grudge
+        // would leave it un-angry whenever goals are not running -- asleep, or mid-action.
+        angerAt(provoker);
+        for (Izuchi packmate : level().getEntitiesOfClass(Izuchi.class,
+                getBoundingBox().inflate(ANGER_ALERT_RANGE),
+                other -> other != this && other.isAlive())) {
+            packmate.angerAt(provoker);
+        }
+    }
+
+    /**
+     * One pack: small Izuchi and the Great Izuchi they escort, in either direction.
+     *
+     * <p>Lives here, as a static, because exactly two classes need it and they share no base --
+     * {@link Izuchi} is a {@code Monster} and so is {@link GreatIzuchi}, but the port deliberately
+     * has no common monster type to hang it on. Two callers is not a reason to invent one.
+     */
+    public static boolean isPackMember(net.minecraft.world.entity.Entity entity) {
+        return entity instanceof Izuchi || entity instanceof GreatIzuchi;
+    }
+
+    /** Hold a grudge against this player, starting the memory's clock fresh. */
+    private void angerAt(Player provoker) {
+        setPersistentAngerTarget(provoker.getUUID());
+        startPersistentAngerTimer();
     }
 
     void setSleeping(boolean sleeping) {
