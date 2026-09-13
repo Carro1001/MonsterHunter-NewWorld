@@ -78,11 +78,35 @@ public class GiantJawbladeItem extends SwordItem {
 
     public static final Tier TIER = Tiers.IRON;
 
-    /** Vanilla's own picking rule: anything a projectile could hit, minus spectators. */
-    private static final Predicate<Entity> TARGETS = EntitySelector.NO_SPECTATORS.and(Entity::isPickable);
+    /** Vanilla's own picking rule, narrowed to things an attack can actually land on: the charge
+     * selects the first <em>attackable</em> entity on the view vector, so an unattackable one does
+     * not silently absorb the strike. */
+    private static final Predicate<Entity> TARGETS =
+            EntitySelector.NO_SPECTATORS.and(Entity::isPickable).and(Entity::isAttackable);
 
     public GiantJawbladeItem(Properties properties) {
         super(TIER, properties.attributes(createAttributes(TIER, DAMAGE_MODIFIER, SPEED_MODIFIER)));
+    }
+
+    /**
+     * No sweep, ever -- left-click included.
+     *
+     * <p>Vanilla decides to sweep by asking the held item whether it can
+     * {@code SWORD_SWEEP}, and every {@link SwordItem} says yes, so a fully cooled strike was
+     * dealing 1.0 to every living thing within a block of the target. A charged strike is
+     * contractually one target, and a 30-tick hold is always fully cooled, so the sweep fired on
+     * exactly the attack that must not have it. Answering "no" here is the whole fix: no flag
+     * around the attack call, no per-player state, and nothing that can leak to another weapon.
+     *
+     * <p>It costs this weapon vanilla's left-click sweep too. That is the intended trade rather
+     * than a side effect -- a two-handed bone greatsword swinging at 0.8 a second is a
+     * single-target weapon in both modes -- and the alternative is exactly the transient state the
+     * packet forbids.
+     */
+    @Override
+    public boolean canPerformAction(ItemStack stack, net.neoforged.neoforge.common.ItemAbility ability) {
+        return ability != net.neoforged.neoforge.common.ItemAbilities.SWORD_SWEEP
+                && super.canPerformAction(stack, ability);
     }
 
     /** Bone, not iron: the tier is iron only for its numbers. */
@@ -129,11 +153,14 @@ public class GiantJawbladeItem extends SwordItem {
         }
         HitResult trace = ProjectileUtil.getHitResultOnViewVector(player, TARGETS, REACH);
         if (trace instanceof EntityHitResult entityHit) {
+            // Player.attack plays the hit's own cue -- strong, weak, crit or no-damage -- so
+            // adding one here made a landed strike sound twice.
             player.attack(entityHit.getEntity());
+        } else {
+            level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                    SoundEvents.PLAYER_ATTACK_NODAMAGE, SoundSource.PLAYERS, 1.0F, 0.8F);
         }
         player.swing(InteractionHand.MAIN_HAND, true);
-        level.playSound(null, player.getX(), player.getY(), player.getZ(),
-                SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.PLAYERS, 1.0F, 0.8F);
         player.getCooldowns().addCooldown(this, RECOVERY_TICKS);
         return stack;
     }

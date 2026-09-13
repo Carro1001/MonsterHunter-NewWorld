@@ -418,6 +418,16 @@ There is no damage multiplier, cone, sweep, charge tier or combo, and no weapon/
 one weapon does not tell you what two weapons would share. The 30-tick recovery cooldown applies on
 a hit and on a miss, which is the whole cost of the longer reach.
 
+**The weapon answers "no" to `SWORD_SWEEP`, and that is load-bearing.** Vanilla decides to sweep by
+asking the held item, and every `SwordItem` says yes -- so a fully cooled strike dealt 1.0 to every
+living thing within a block of the target, which is precisely the attack the charge produces (30
+held ticks against a 25-tick delay is always fully cooled). Refusing the ability in
+`canPerformAction` is the whole fix: no flag around the attack call, no per-player state, nothing
+that can leak to another weapon. It costs this weapon its left-click sweep too, deliberately -- the
+alternative is the transient state the packet forbids. A GameTest keeps a bystander standing
+*beside* the target, because the in-line pair never enters sweep range and would never have caught
+it.
+
 **The presentation is a placeholder, by explicit maintainer decision.** Only the on-hand UV atlas
 (`textures/item/giant_jawblade_model.png`) was ever delivered; there is no geometry bound to it and
 no inventory icon, so `models/item/giant_jawblade.json` currently points at vanilla's iron sword

@@ -4944,6 +4944,24 @@ public class MHNWGameTests {
         player.doTick();
     }
 
+    /**
+     * Tick the player until its attack is fully cooled, and say so if it is not.
+     *
+     * <p>This is not housekeeping. Vanilla only sweeps at <em>full</em> attack strength, so a
+     * fixture that drives the charge through the item seam without ticking first quietly tests a
+     * weak attack: the adjacent-bystander case below passed against a genuinely sweeping weapon
+     * until this existed. A real charge is always fully cooled -- 30 held ticks against a 25-tick
+     * delay -- so the cooled state is the honest one to test in.
+     */
+    private static void coolDown(GameTestHelper helper, net.minecraft.server.level.ServerPlayer player) {
+        for (int tick = 0; tick < 40; tick++) {
+            tickOnce(player);
+        }
+        helper.assertTrue(player.getAttackStrengthScale(0.0F) >= 1.0F,
+                "fixture error: the attack is only " + player.getAttackStrengthScale(0.0F)
+                        + " cooled, so vanilla's own sweep could not fire either way");
+    }
+
     /** Complete one charge through the public item seam, the same one vanilla's completeUsingItem
      * calls. Used where the geometry is what is under test and the 30-tick wait is not. */
     private static void completeCharge(GameTestHelper helper, net.minecraft.server.level.ServerPlayer player) {
@@ -5234,15 +5252,37 @@ public class MHNWGameTests {
         first.discard();
         second.discard();
 
+        // Beside the target, not behind it. This is the case vanilla's own sweep reaches and the
+        // in-line pair above does not: sweep collects living entities within one block of the
+        // struck target's box and three of the player, so a bystander at z=12 is never a witness.
+        net.minecraft.world.entity.animal.Cow aimed = inertCow(helper, 8, 2, 10);
+        net.minecraft.world.entity.animal.Cow bystander = inertCow(helper, 9, 2, 10);
+        float aimedBefore = aimed.getHealth();
+        float bystanderBefore = bystander.getHealth();
+        helper.assertTrue(hunter.distanceToSqr(bystander) < 9.0D,
+                "fixture error: the bystander is outside the sweep's own 3-block range, so this"
+                        + " case would pass without proving anything");
+        coolDown(helper, hunter);
+        aimAt(hunter, aimed.getBoundingBox().getCenter());
+        completeCharge(helper, hunter);
+        helper.assertTrue(aimed.getHealth() < aimedBefore, "the aimed target was not struck");
+        helper.assertTrue(bystander.getHealth() == bystanderBefore,
+                "a bystander beside the target lost " + (bystanderBefore - bystander.getHealth())
+                        + " health; the strike swept");
+        aimed.discard();
+        bystander.discard();
+
         // Against a multipart body, "exactly one hit" has to be a number rather than a hope, so an
         // ordinary attack is measured first and the charge is held to it.
         GreatIzuchi quarry = spawnInert(helper);
         float quarryBefore = quarry.getHealth();
+        coolDown(helper, hunter);
         hunter.attack(quarry);
         float singleHit = quarryBefore - quarry.getHealth();
         quarry.invulnerableTime = 0;
         float beforeCharge = quarry.getHealth();
 
+        coolDown(helper, hunter);
         aimAt(hunter, quarry.getBoundingBox().getCenter());
         completeCharge(helper, hunter);
 

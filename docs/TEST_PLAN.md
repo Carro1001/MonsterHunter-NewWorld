@@ -328,6 +328,30 @@ A second one, cheaper: `ProjectileUtil.getHitResultOnViewVector` asks for the vi
 tick **zero**, which interpolates from `yRotO`/`xRotO`. A fixture that sets only the current rotation
 aims one tick into the past. `aimAt` sets both.
 
+### PR #8 adversarial review round (same day)
+
+Two findings, both real, both reproduced locally before being fixed.
+
+**[P1] The charged strike swept.** `Player.attack` with a fully cooled `SwordItem` triggers vanilla's
+sweep, so every living thing within a block of the struck target took 1.0 -- against a contract that
+says single target. Fixed by refusing `SWORD_SWEEP` in `canPerformAction`; see `CLAUDE.md` on why
+that, and not a flag around the attack call.
+
+**The fixture lesson here is the more valuable half.** `r3ChargeStrikesExactlyOneTarget` already had
+a second cow, and it passed against a genuinely sweeping weapon for *two* independent reasons: the
+second cow sat at z=12, outside sweep's own 3-block range, and the test drove the charge through the
+item seam without ticking the player, so the attack was never fully cooled and vanilla would not have
+swept regardless. The test now places a bystander beside the target and calls `coolDown`, which
+ticks to full strength and asserts it got there. Reintroducing the sweep fails it:
+`a bystander beside the target lost 1.0 health; the strike swept`.
+
+**[P2] A landed strike played two attack cues.** `Player.attack` already emits the hit's own cue, and
+`finishUsingItem` added `PLAYER_ATTACK_STRONG` unconditionally on top. The cue now plays only on a
+miss (`PLAYER_ATTACK_NODAMAGE`), and the target filter gained `Entity::isAttackable` to match the
+handoff's own wording. **Neither half is GameTest-covered:** a played sound is not observable
+headlessly, and the `isAttackable` narrowing has no convenient pickable-but-unattackable fixture.
+Both are on the human checklist below.
+
 ### Build, jar and server evidence
 
 - `build/libs/mhnw-0.2.0.jar` contains `com/carro1001/mhnw/item/GiantJawbladeItem.class`,
@@ -349,6 +373,9 @@ decision (2026-09-12), so the visual gates below are open by construction, not b
       and right hand, UVs, scale, grip, ground/fixed frames — is untestable until that lands.
 - [ ] **Feel of the charge.** Does 30 ticks read as a deliberate windup rather than a stuck input?
       Is the miss recovery understandable when it happens?
+- [ ] **One cue per strike** (PR #8 P2, not headlessly testable). A landed charge should sound once,
+      not twice; a miss should sound once. Also worth an ear: that left-click still sounds normal
+      now that this weapon no longer sweeps.
 - [ ] **F3+B against a real monster.** That the centred strike picks the visible part, does not
       reach through a wall and does not double-hit the parent — proven headlessly, not visually.
 - [ ] **Two clients and a real restart.** Agreement on pose, target, damage, durability and
