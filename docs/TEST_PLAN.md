@@ -133,10 +133,12 @@ passing (`.\gradlew.bat --no-daemon build runGameTestServer`, three consecutive 
   Hide and claw are unchanged and still Izuchi-only: the first Izuchi kill in iron/leather stays
   the gate on bone armor, which is what then makes Great Izuchi tractable.
 - **`izuchiAttacksAndDamagesTarget` was intermittently failing on a clean tree**, not from this
-  round's changes — confirmed by stashing them and reproducing it. Its 400-tick budget was one
-  harass cycle, and the circle window is randomized 40-80 ticks, so an unlucky pair of long windows
-  plus a retreat ran past it. Now 800. The assertion is unchanged and still pins the damage to the
-  authored active window.
+  round's changes — confirmed by stashing them and reproducing it. The first two diagnoses (a
+  too-short budget; raised to 800, then 1600) were **wrong**, and it kept failing. The real cause is
+  that nothing re-aims the Izuchi during the tail swipe's 36-tick windup, so the volumes sweep
+  wherever it was pointing when it committed. The fixture now pins the aim and the budget is back to
+  the original 400, passing six consecutive runs. See `docs/DEFERRED.md` — the whiffing itself is a
+  live gameplay finding, not a test artefact.
 
 ### Still open for the alpha
 

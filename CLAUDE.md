@@ -553,6 +553,12 @@ Static datapack-style data (loot tables, spawn placement biome modifiers) lives 
 don't hand-edit files there. GeckoLib assets (`.geo.json`, `.animation.json`, textures) live under
 `src/main/resources/assets/mhnw/{geo,animations,textures}/`.
 
+`docs/WEAPON_POSING.md` is the reference for making a held weapon move: where the hand actually is
+(a derived number, not the artist's modelling origin), what can move the player's arms and what
+cannot, the GeckoLib-on-an-item wiring and its three traps, and how a clip is kept in step with a
+gameplay clock given GeckoLib has no seek. Read it before posing a second weapon — it exists so the
+Giant Jawblade's two playtest rounds don't repeat.
+
 `docs/ANIMATION_MANIFEST.json` is a generated inventory of every species' animation clips (name,
 length in seconds/ticks, loop mode), covering every `.animation.json` under `assets/mhnw/animations/
 entity/` — including species not yet ported (their assets already exist, entity code doesn't).

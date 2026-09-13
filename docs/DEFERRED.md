@@ -483,24 +483,32 @@ borrowed placeholder. Nothing here is guessed -- geometry, UVs and pose all came
 **What it takes then:** open the weapon in every context and confirm it reads right. If something is
 still off, the fix is the same one-file `display` edit either way; no code, no id change.
 
-### Small Izuchi whiff far more often than they connect
-**Status:** measured, not fixed, 2026-09-13. `izuchiAttacksAndDamagesTarget` puts a stationary
-no-AI cow one block from an Izuchi and waits for one hit inside the tail swipe's authored active
-window. At a 400-tick budget it failed often; at 800 it still failed roughly one run in six (five
-clean runs observed after the raise, and two failures before it). It is now 1600 -- eight full
-harass cycles -- so the suite stops raising false alarms.
+### Small Izuchi do not re-aim during the tail swipe's windup, and mostly whiff
+**Status:** root cause confirmed, deliberately not fixed, 2026-09-13.
 
-**What the number actually says:** landing one hit on a stationary adjacent target can take several
-complete circle-dart-attack-retreat cycles. `IzuchiHarassGoal` commits to the 48-tick swipe when it
-reaches melee range, but the damage volumes only open at tick 36; over those 36 ticks the Izuchi
-frequently drifts or turns off the target, and the sweep passes through empty air.
+`IzuchiHarassGoal.tickAttack` stops navigation and damps velocity for the whole 48-tick action, and
+**nothing re-aims at the target**. The sweep volumes are placed in the mob's own left/up/forward
+frame, so they follow whatever yaw it happened to hold when it committed at melee range, 36 ticks
+before the active window opens. Against anything not directly ahead at commit time, the swipe goes
+through empty air.
 
-**Why it is not being fixed here:** the swipe's timing is a live `BoneProbe` measurement and the
-project has twice thrown away an offline re-solve. Narrowing the gap is a choice between moving the
-commit point later, holding position during the windup, or re-measuring the envelope -- and which
-of those is right depends on how the pack reads in play, which the alpha is what answers.
+**How it was confirmed, rather than guessed.** `izuchiAttacksAndDamagesTarget` failed intermittently
+against a *stationary, no-AI cow standing one block away*: at a 400-tick budget, then at 800 (about
+one run in six, measured), then again at 1600. Pinning the Izuchi's yaw at the victim in the fixture
+made it pass at the original 400-tick budget, six consecutive runs. The budget was never the
+problem. The test now pins the aim, because its subject is the damage contract -- damage only
+through the shared volumes, only inside the authored window -- and not the AI's aim; raising the
+timeout a fourth time would have buried this.
 
-**Trigger:** alpha feedback on whether Izuchi packs feel threatening or feel like they are missing.
+**Why it is not fixed here.** The obvious change is to keep looking at the target through the
+windup, which is one line. It is a real combat-feel decision, not a bug fix: today the windup can be
+sidestepped, and making the volumes track would remove that. The swipe's envelope is also a live
+`BoneProbe` measurement, and this project has twice thrown away an offline re-solve, so a change
+here wants a play session rather than a patch.
+
+**Trigger:** alpha feedback on whether Izuchi packs feel threatening or feel like they are flailing.
+If they flail, the candidates are: track the target during the windup, commit later (closer to the
+active window), or widen the envelope from a fresh capture -- in that order of cheapness.
 
 ### Two Giant Jawblades ship in the alpha, and one of them must be deleted
 **Status:** deliberate and temporary, 2026-09-13. `mhnw:giant_jawblade_gecko` is the same
@@ -531,6 +539,12 @@ two-handed-looking, it was tried, and it was rejected on sight: it raises the we
 overhead like a trident throw, which reads nothing like shouldering a greatsword. That rejection is
 recorded in `GiantJawbladeItem`'s own class doc; do not re-propose it. `BOW` and `CROSSBOW` pose a
 drawing hand, `BLOCK` a shield arm, and none of the rest are closer.
+
+**Superseded in part, 2026-09-13:** NeoForge does expose arm posing with no library at all --
+`IClientItemExtensions.getArmPose` with a custom extensible `HumanoidModel.ArmPose` for third
+person, and `applyForgeHandTransform` for first. Both are verified APIs, both are still untried
+here, and `docs/WEAPON_POSING.md` section 5 carries the details. What remains true below is that
+posing the player's **whole body** needs a library; the arms do not.
 
 **GeckoLib cannot reach it either, and this is worth knowing before someone tries.** GeckoLib 4.9.2
 does ship `GeoItem` and `GeoItemRenderer` (verified in the installed jar), so the weapon's *own*
