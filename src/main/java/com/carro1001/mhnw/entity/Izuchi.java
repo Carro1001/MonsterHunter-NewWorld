@@ -7,6 +7,7 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.NeutralMob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -20,6 +21,7 @@ import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.entity.PartEntity;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
@@ -32,10 +34,10 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * The small Izuchi: P4's "simple independent movement/targeting" species (handoff section 5, P4),
  * a genuinely hostile ground monster, unlike any of the P3 endemic life.
  *
- * <p>A single fitted hurtbox, not multipart: section 4.2 reserves that machinery for large
- * monsters, and this is explicitly the small one. Its recovered tail swipe uses the same
- * server-owned action clock and server-side damage-volume rule as Great Izuchi, but remains part of
- * {@link IzuchiHarassGoal}'s bounded pack turn rather than acquiring a second combat goal.
+ * <p>The root box covers the torso, with a head and two tail parts extending the long model. Its
+ * recovered tail swipe uses the same server-owned action clock and server-side damage-volume rule
+ * as Great Izuchi, but remains part of {@link IzuchiHarassGoal}'s bounded pack turn rather than
+ * acquiring a second combat goal.
  *
  * <p>R1 replaced the vanilla {@code MeleeAttackGoal} this used to run with
  * {@link IzuchiHarassGoal}: same ordinary damage, but the escorts now circle at a distance and take
@@ -51,8 +53,13 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * The archived {@code brain} branch contained a real small-Izuchi tail swipe that had never been
  * merged into master. The maintainer supplied video of it running and approved restoring it. Its
  * nine tracks for Great-Izuchi-only bones were removed; the remaining tracks target this model's
- * actual rig and are played from synchronized action state. The other candidate clips remain
- * quarantined, and there is still no authored death clip, so vanilla's corpse flop remains.
+ * actual rig and are played from synchronized action state.
+ *
+ * <p>The artist's 2026-09-13 redelivery added four more clips. {@code death}, {@code roar} and
+ * {@code rally} are wired; {@code attack_tailslam} runs as a real timed action but is deliberately
+ * unarmed and kept out of ordinary combat until its damage envelope is measured -- see
+ * {@link #ATTACK_TAIL_SLAM}. Vanilla's corpse flop no longer applies: the death clip lays the body
+ * down itself, so {@code getDeathMaxRotation} is zeroed for this species too.
  *
  * <h2>Sleep</h2>
  * The fourth clip, genuinely used: {@link IzuchiSleepGoal} makes it nap periodically when nothing
@@ -60,7 +67,7 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * independent behaviour rather than pack coordination (that comes later, with the great Izuchi's
  * kin, not this species).
  */
-public class Izuchi extends Monster implements GeoEntity {
+public class Izuchi extends Monster implements GeoEntity, NeutralMob, Roarable {
 
     // Provisional balance constants, not yet tuned. Deliberately weaker than Great Izuchi.
     public static final double MAX_HEALTH = 20.0D;
@@ -74,6 +81,18 @@ public class Izuchi extends Monster implements GeoEntity {
     public static final byte ATTACK_NONE = 0;
     public static final byte ATTACK_TAIL_SWIPE = 1;
 
+    /**
+     * The tail slam, matching Great Izuchi's own second attack.
+     *
+     * <p>**Its damage envelope is not fitted yet, so it deals nothing**, and it is therefore
+     * selected only while {@code debugCombat} is on -- see {@link IzuchiHarassGoal#chooseAttack}.
+     * A volume for this clip has to come from a live {@code BoneProbe} capture of the slam's own
+     * active window, the same way the swipe's did; this project has twice tried solving one offline
+     * from the MoLang-heavy clip data and thrown the result away, so the attack plays unarmed until
+     * the capture exists rather than shipping a third guess.
+     */
+    public static final byte ATTACK_TAIL_SLAM = 2;
+
     private static final EntityDataAccessor<Byte> DATA_ATTACK_ID =
             SynchedEntityData.defineId(Izuchi.class, EntityDataSerializers.BYTE);
     private static final EntityDataAccessor<Long> DATA_ATTACK_START =
@@ -84,6 +103,52 @@ public class Izuchi extends Monster implements GeoEntity {
     private static final EntityDataAccessor<Boolean> DATA_SLEEPING =
             SynchedEntityData.defineId(Izuchi.class, EntityDataSerializers.BOOLEAN);
 
+    /** Game time this body's death began, or {@link #NO_DEATH} while alive; see
+     * {@link GreatIzuchi#getDeathStartTime()} for why this anchor exists and how it reconstructs
+     * itself on load from vanilla's own saved {@code DeathTime} without persisting anything. */
+    private static final EntityDataAccessor<Long> DATA_DEATH_START =
+            SynchedEntityData.defineId(Izuchi.class, EntityDataSerializers.LONG);
+
+    /** Sentinel for {@link #DATA_DEATH_START} while this creature is alive. */
+    public static final long NO_DEATH = Long.MIN_VALUE;
+
+    /**
+     * How long a pack remembers who hit it, matching vanilla's own neutral-mob range. This is the
+     * "memory": whoever provoked the pack stays its preferred target for this long even if someone
+     * else is nearer, and {@link NeutralMob} saves it across a reload.
+     */
+    private static final net.minecraft.util.valueproviders.UniformInt PERSISTENT_ANGER_TIME =
+            net.minecraft.util.TimeUtil.rangeOfSeconds(20, 39);
+
+    /** How far an attack on one pack member carries to the rest, in blocks. */
+    private static final double ANGER_ALERT_RANGE = 16.0D;
+
+    private int remainingPersistentAngerTime;
+    @org.jetbrains.annotations.Nullable
+    private java.util.UUID persistentAngerTarget;
+
+    /** Length of this species' own roar clip; see {@code docs/ANIMATION_MANIFEST.json}. */
+    private static final int ROAR_TICKS = 71;
+
+    /** Length of the rally clip -- the call that hands the grudge to the rest of the pack. */
+    private static final int RALLY_TICKS = 60;
+
+    private static final EntityDataAccessor<Integer> DATA_ROAR_TICKS =
+            SynchedEntityData.defineId(Izuchi.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Long> DATA_ROAR_START =
+            SynchedEntityData.defineId(Izuchi.class, EntityDataSerializers.LONG);
+
+    /** Game time the current rally call began, or {@link #NO_RALLY} when not rallying. Synced for
+     * the same reason the roar anchor is: a client that starts tracking part way through needs to
+     * know how far into the clip it already is. */
+    private static final EntityDataAccessor<Long> DATA_RALLY_START =
+            SynchedEntityData.defineId(Izuchi.class, EntityDataSerializers.LONG);
+
+    public static final long NO_RALLY = Long.MIN_VALUE;
+
+    /** Plain AI state, not synced, exactly as the other roaring species keep it. */
+    private boolean roaredThisEngagement;
+
     private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.izuchi.idle");
     private static final RawAnimation SLEEP = RawAnimation.begin().thenLoop("animation.izuchi.sleep");
     private static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.izuchi.walk");
@@ -91,9 +156,20 @@ public class Izuchi extends Monster implements GeoEntity {
     private static final RawAnimation TAIL_SWIPE =
             RawAnimation.begin().thenPlay("animation.izuchi.attack_tailswipe");
 
+    /** Held on its last frame: the body stays in its final pose for the whole carving window
+     * rather than restarting the fall over and over. */
+    private static final RawAnimation DEATH =
+            RawAnimation.begin().thenPlayAndHold("animation.izuchi.death");
+
+    private static final RawAnimation TAIL_SLAM =
+            RawAnimation.begin().thenPlay("animation.izuchi.attack_tailslam");
+    private static final RawAnimation ROAR = RawAnimation.begin().thenPlay("animation.izuchi.roar");
+    private static final RawAnimation RALLY = RawAnimation.begin().thenPlay("animation.izuchi.rally");
+
     public static final int TRANSITION_TICKS = 5;
 
     private final AnimatableInstanceCache animCache = GeckoLibUtil.createInstanceCache(this);
+    private final MonsterPart[] parts;
 
     /** R1 carving: participants, personal counters and the deterministic reward table. */
     private final CarveState carveState = new CarveState(CarveState.Table.IZUCHI);
@@ -107,9 +183,18 @@ public class Izuchi extends Monster implements GeoEntity {
     private IzuchiHarassGoal.Phase harassPhase;
     private int actionSequenceCounter;
     private Float committedBodyYaw;
+    private DamageSource lastDamageSource;
+    private int lastDamageTick = -1;
 
     public Izuchi(EntityType<? extends Monster> type, Level level) {
         super(type, level);
+        // F3+B acceptance 2026-09-13: the far tip box read as surplus; two smaller tail segments
+        // give the visible tail a more faithful, less intrusive static picking envelope.
+        this.parts = new MonsterPart[] {
+                new MonsterPart(this, "head",      0.70F, 0.70F, 0.00D, 1.35D,  0.80D),
+                new MonsterPart(this, "tail_base", 0.95F, 0.60F, 0.00D, 1.25D, -1.00D),
+                new MonsterPart(this, "tail_mid",  0.85F, 0.60F, 0.00D, 1.25D, -1.95D),
+        };
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -123,17 +208,27 @@ public class Izuchi extends Monster implements GeoEntity {
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(1, new IzuchiHarassGoal(this));
-        this.goalSelector.addGoal(2, new IzuchiSleepGoal(this));
+        // Above the harassment goal for the same reason the other species put it above their combat
+        // goals: the opening roar has to freeze the fight rather than play underneath a goal that
+        // keeps circling and darting.
+        this.goalSelector.addGoal(1, new RoarGoal<>(this));
+        this.goalSelector.addGoal(2, new IzuchiHarassGoal(this));
+        this.goalSelector.addGoal(3, new IzuchiSleepGoal(this));
         this.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 0.7D));
         this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 8.0F));
         this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
 
-        this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
-        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
+        this.targetSelector.addGoal(1, new HurtByTargetGoal(this).setAlertOthers());
+        // Ahead of the ordinary nearest-player goal: a provoked pack goes for whoever provoked it,
+        // not for whoever happens to be closest.
+        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(
+                this, Player.class, 10, true, false, this::isAngryAt));
+        this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, Player.class, true));
+        this.targetSelector.addGoal(4,
+                new net.minecraft.world.entity.ai.goal.target.ResetUniversalAngerTargetGoal<>(this, true));
         // Same reasoning as Great Izuchi's/Rathian's identical goal: pillagers make the attack
         // observable from outside the fight, and a large monster does not care who you are.
-        this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, AbstractIllager.class, true));
+        this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, AbstractIllager.class, true));
     }
 
     @Override
@@ -143,6 +238,10 @@ public class Izuchi extends Monster implements GeoEntity {
         builder.define(DATA_ATTACK_ID, ATTACK_NONE);
         builder.define(DATA_ATTACK_START, 0L);
         builder.define(DATA_ACTION_SEQUENCE, 0);
+        builder.define(DATA_DEATH_START, NO_DEATH);
+        builder.define(DATA_ROAR_TICKS, 0);
+        builder.define(DATA_ROAR_START, 0L);
+        builder.define(DATA_RALLY_START, NO_RALLY);
     }
 
     public boolean isSleeping() {
@@ -183,8 +282,18 @@ public class Izuchi extends Monster implements GeoEntity {
     }
 
     void beginTailSwipe() {
+        beginAttack(ATTACK_TAIL_SWIPE);
+    }
+
+    /** Public, unlike its sibling, because the slam is gated out of ordinary combat while it is
+     * unarmed -- so this is the only way to reach it, for a measurement session or a test. */
+    public void beginTailSlam() {
+        beginAttack(ATTACK_TAIL_SLAM);
+    }
+
+    private void beginAttack(byte attack) {
         this.actionSequenceCounter++;
-        this.entityData.set(DATA_ATTACK_ID, ATTACK_TAIL_SWIPE);
+        this.entityData.set(DATA_ATTACK_ID, attack);
         this.entityData.set(DATA_ATTACK_START, level().getGameTime());
         this.entityData.set(DATA_ACTION_SEQUENCE, this.actionSequenceCounter);
         this.committedBodyYaw = this.yBodyRot;
@@ -206,18 +315,83 @@ public class Izuchi extends Monster implements GeoEntity {
                 getZ() + left * sin + forward * cos);
     }
 
+    @Override
+    public boolean isMultipartEntity() {
+        return true;
+    }
+
+    @Override
+    public PartEntity<?>[] getParts() {
+        return this.parts;
+    }
+
+    @Override
+    public void setId(int id) {
+        super.setId(id);
+        for (int i = 0; i < this.parts.length; i++) {
+            this.parts[i].setId(id + i + 1);
+        }
+    }
+
+    public MonsterPart[] monsterParts() {
+        return this.parts;
+    }
+
+    public MonsterPart part(String name) {
+        for (MonsterPart part : this.parts) {
+            if (part.partName.equals(name)) {
+                return part;
+            }
+        }
+        throw new IllegalArgumentException("no such part: " + name);
+    }
+
+    private void positionParts() {
+        for (MonsterPart part : this.parts) {
+            part.setOldPosAndRot();
+            Vec3 centre = localToWorld(part.localLeft, part.localUp, part.localForward);
+            part.setPos(centre.x, part.restingY(centre.y), centre.z);
+        }
+    }
+
+    @Override
+    public void onAddedToLevel() {
+        super.onAddedToLevel();
+        positionParts();
+    }
+
     /** R1 carving state. */
     public CarveState carveState() {
         return this.carveState;
     }
 
     /**
-     * R1: credit the attacking player only when the hit is accepted and health genuinely falls.
-     * This species is not multipart, so there is no duplicate-part case to guard, but the
-     * accepted-and-harmful rule is the same one {@link GreatIzuchi#hurt} applies.
+     * Parts forward here, so one source touching the root and several parts in a tick still costs
+     * one hit while two distinct attackers remain independent.
      */
     @Override
     public boolean hurt(DamageSource source, float amount) {
+        // The pack does not wound its own. Refusing the damage here rather than filtering each
+        // attack's volume is what makes it true for every route at once -- a tail swipe's volume, a
+        // Great Izuchi's swipe, a knockback shove, anything added later -- and refusing it before
+        // anything is recorded is also what stops the retaliation: vanilla only sets
+        // lastHurtByMob on a hit it accepted, so HurtByTargetGoal never sees a packmate to answer.
+        if (isPackMember(source.getEntity())) {
+            return false;
+        }
+        if (!level().isClientSide) {
+            if (source == this.lastDamageSource && this.tickCount == this.lastDamageTick) {
+                return false;
+            }
+            if (source != this.lastDamageSource) {
+                this.invulnerableTime = 0;
+            }
+            this.lastDamageSource = source;
+            this.lastDamageTick = this.tickCount;
+            if (CarveState.resolvePlayer(source) instanceof Player provoker) {
+                alertPackTo(provoker);
+            }
+        }
         float before = getHealth();
         boolean accepted = super.hurt(source, amount);
         if (accepted && !level().isClientSide && getHealth() < before) {
@@ -259,9 +433,9 @@ public class Izuchi extends Monster implements GeoEntity {
     }
 
     /**
-     * Hold the body for the R1 carving window; see {@link GreatIzuchi#tickDeath}. Unlike the large
-     * monsters this species has no authored death clip, so the held body is vanilla's ordinary
-     * corpse flop, kept around rather than replaced.
+     * Hold the body for the R1 carving window; see {@link GreatIzuchi#tickDeath}. As of the
+     * retargeted animation set this species has its own authored death clip, held on its last
+     * frame for the rest of the window.
      */
     @Override
     protected void tickDeath() {
@@ -276,12 +450,170 @@ public class Izuchi extends Monster implements GeoEntity {
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         this.carveState.save(tag);
+        addPersistentAngerSaveData(tag);
     }
 
     @Override
     public void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
         this.carveState.load(tag);
+        readPersistentAngerSaveData(level(), tag);
+    }
+
+    // ---------------------------------------------------------------- roar
+
+    @Override
+    public int getRoarTicks() {
+        return this.entityData.get(DATA_ROAR_TICKS);
+    }
+
+    @Override
+    public void setRoarTicks(int ticks) {
+        this.entityData.set(DATA_ROAR_TICKS, ticks);
+    }
+
+    @Override
+    public long getRoarStartTime() {
+        return this.entityData.get(DATA_ROAR_START);
+    }
+
+    @Override
+    public void setRoarStartTime(long gameTime) {
+        this.entityData.set(DATA_ROAR_START, gameTime);
+    }
+
+    @Override
+    public int roarDurationTicks() {
+        return ROAR_TICKS;
+    }
+
+    @Override
+    public boolean hasRoaredThisEngagement() {
+        return this.roaredThisEngagement;
+    }
+
+    @Override
+    public void setRoaredThisEngagement(boolean roared) {
+        this.roaredThisEngagement = roared;
+    }
+
+    public boolean isRoaring() {
+        return getRoarTicks() > 0;
+    }
+
+    // ---------------------------------------------------------------- rally
+
+    /** Game time this rally call began, or {@link #NO_RALLY}. Valid on both sides. */
+    public long getRallyStartTime() {
+        return this.entityData.get(DATA_RALLY_START);
+    }
+
+    /**
+     * Whether the rally call is still running. Derived from the anchor rather than counted down
+     * separately, so there is one clock and it cannot disagree with the clip.
+     */
+    public boolean isRallying() {
+        long start = getRallyStartTime();
+        return start != NO_RALLY && level().getGameTime() - start < RALLY_TICKS;
+    }
+
+    /** Allied to its own pack, so vanilla's own alert and targeting helpers never set one of them
+     * against another. The {@link #hurt} guard is the rule; this keeps vanilla agreeing with it. */
+    @Override
+    public boolean isAlliedTo(net.minecraft.world.entity.Entity other) {
+        return isPackMember(other) || super.isAlliedTo(other);
+    }
+
+    // ---------------------------------------------------------------- pack anger
+
+    @Override
+    public int getRemainingPersistentAngerTime() {
+        return this.remainingPersistentAngerTime;
+    }
+
+    @Override
+    public void setRemainingPersistentAngerTime(int time) {
+        this.remainingPersistentAngerTime = time;
+    }
+
+    @Override
+    @org.jetbrains.annotations.Nullable
+    public java.util.UUID getPersistentAngerTarget() {
+        return this.persistentAngerTarget;
+    }
+
+    @Override
+    public void setPersistentAngerTarget(@org.jetbrains.annotations.Nullable java.util.UUID target) {
+        this.persistentAngerTarget = target;
+    }
+
+    @Override
+    public void startPersistentAngerTimer() {
+        setRemainingPersistentAngerTime(PERSISTENT_ANGER_TIME.sample(this.random));
+    }
+
+    /** Counts the anger down and clears it when it runs out; vanilla's own bookkeeping. */
+    @Override
+    protected void customServerAiStep() {
+        super.customServerAiStep();
+        updatePersistentAnger((net.minecraft.server.level.ServerLevel) level(), true);
+    }
+
+    /** Test seam: {@code customServerAiStep} is protected, and a dead-or-idle fixture never reaches
+     * it through the ordinary AI path. */
+    public void customServerAiStepForTest() {
+        customServerAiStep();
+    }
+
+    /**
+     * Hit one of the pack and the rest come for <em>you</em>.
+     *
+     * <p>{@code HurtByTargetGoal.setAlertOthers()} is on as well, but on its own it is not enough
+     * here: vanilla's alert only touches pack members whose {@code getTarget() == null}, and this
+     * species is hostile on sight, so its neighbours almost always already have a target and the
+     * alert skips every one of them. Handing them the <em>anger</em> instead reaches them
+     * regardless -- the priority-2 goal above then prefers that player over whoever is nearest, and
+     * {@link NeutralMob} keeps the grudge across losing sight, an unload and a reload.
+     *
+     * <p>Only players are propagated. A pack turning on the mob that hit one of them is vanilla's
+     * job through the ordinary hurt-by path, and spreading that would make two monsters brawling
+     * near a pack drag the whole pack in.
+     */
+    private void alertPackTo(Player provoker) {
+        // The one actually hit included, and deliberately: taking a hit is what makes this one
+        // angry, not a goal noticing afterwards. Relying on HurtByTargetGoal for its own grudge
+        // would leave it un-angry whenever goals are not running -- asleep, or mid-action.
+        angerAt(provoker);
+        int told = 0;
+        for (Izuchi packmate : level().getEntitiesOfClass(Izuchi.class,
+                getBoundingBox().inflate(ANGER_ALERT_RANGE),
+                other -> other != this && other.isAlive())) {
+            packmate.angerAt(provoker);
+            told++;
+        }
+        // The rally is the call that hands the grudge over, so it plays only when there was
+        // somebody to hand it to -- a lone Izuchi shouting at nobody reads as a bug, and a second
+        // hit on an already-rallying one should not restart the call either.
+        if (told > 0 && !isRallying()) {
+            this.entityData.set(DATA_RALLY_START, level().getGameTime());
+        }
+    }
+
+    /**
+     * One pack: small Izuchi and the Great Izuchi they escort, in either direction.
+     *
+     * <p>Lives here, as a static, because exactly two classes need it and they share no base --
+     * {@link Izuchi} is a {@code Monster} and so is {@link GreatIzuchi}, but the port deliberately
+     * has no common monster type to hang it on. Two callers is not a reason to invent one.
+     */
+    public static boolean isPackMember(net.minecraft.world.entity.Entity entity) {
+        return entity instanceof Izuchi || entity instanceof GreatIzuchi;
+    }
+
+    /** Hold a grudge against this player, starting the memory's clock fresh. */
+    private void angerAt(Player provoker) {
+        setPersistentAngerTarget(provoker.getUUID());
+        startPersistentAngerTimer();
     }
 
     void setSleeping(boolean sleeping) {
@@ -305,6 +637,22 @@ public class Izuchi extends Monster implements GeoEntity {
             this.yBodyRot = this.committedBodyYaw;
             setYRot(this.committedBodyYaw);
         }
+        positionParts();
+        stampDeathStart();
+    }
+
+    /** Game time this body's death began, or {@link #NO_DEATH} while alive. Valid on both sides. */
+    public long getDeathStartTime() {
+        return this.entityData.get(DATA_DEATH_START);
+    }
+
+    /** Server: stamp the death anchor once, from {@code gameTime - deathTime}; see
+     * {@link GreatIzuchi#getDeathStartTime()} for why that expression also reconstructs the age of
+     * a body restored from disk without re-running any death processing. */
+    private void stampDeathStart() {
+        if (!level().isClientSide && isDeadOrDying() && getDeathStartTime() == NO_DEATH) {
+            this.entityData.set(DATA_DEATH_START, level().getGameTime() - this.deathTime);
+        }
     }
 
     @Override
@@ -315,10 +663,32 @@ public class Izuchi extends Monster implements GeoEntity {
 
     private PlayState mainAnim(AnimationState<Izuchi> state) {
         ServerTimedAnimationController<Izuchi> controller = ServerTimedAnimationController.of(state);
-        if (getAttackId() == ATTACK_TAIL_SWIPE) {
-            return controller.playTimed(state, TAIL_SWIPE,
+        // Death first, and from one decision: this species used to fall through to idle while dead,
+        // so a corpse stood there breathing for the whole ten-minute carving window.
+        if (isDeadOrDying()) {
+            long start = getDeathStartTime();
+            double partial = state.getPartialTick();
+            return controller.playTimed(state, DEATH, ServerTimedAnimationController.KIND_DEATH,
+                    start, start == NO_DEATH ? partial : level().getGameTime() - start + partial);
+        }
+        if (isRoaring()) {
+            long start = getRoarStartTime();
+            return controller.playTimed(state, ROAR, ServerTimedAnimationController.KIND_ROAR,
+                    start, level().getGameTime() - start + state.getPartialTick());
+        }
+        byte attack = getAttackId();
+        if (attack != ATTACK_NONE) {
+            return controller.playTimed(state,
+                    attack == ATTACK_TAIL_SLAM ? TAIL_SLAM : TAIL_SWIPE,
                     ServerTimedAnimationController.KIND_ATTACK, getActionSequence(),
                     getAttackAge() + state.getPartialTick());
+        }
+        // Below the attack on purpose: a rallying Izuchi that gets its turn to dart should show the
+        // dart. The call is not a commitment, unlike the roar above it.
+        if (isRallying()) {
+            long start = getRallyStartTime();
+            return controller.playTimed(state, RALLY, ServerTimedAnimationController.KIND_RALLY,
+                    start, level().getGameTime() - start + state.getPartialTick());
         }
         if (isSleeping()) {
             return controller.playFree(state, SLEEP);

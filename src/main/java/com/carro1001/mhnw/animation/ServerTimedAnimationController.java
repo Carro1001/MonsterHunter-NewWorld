@@ -83,6 +83,11 @@ public class ServerTimedAnimationController<T extends GeoAnimatable> extends Ani
     public static final int KIND_ROAR = 2;
     public static final int KIND_ATTACK = 3;
 
+    /** Small Izuchi's rally call. Its own kind rather than reusing {@link #KIND_ROAR}: the two are
+     * different clips on the same species, and the kind is what stops one instance identifier being
+     * mistaken for the other's. */
+    public static final int KIND_RALLY = 4;
+
     /**
      * How far the controller may sit from its authoritative age before being re-anchored, in ticks.
      * One tick: below the handoff's two-tick acceptance target, and comfortably above the float

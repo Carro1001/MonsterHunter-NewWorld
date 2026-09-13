@@ -71,8 +71,12 @@ Species notes that are easy to get wrong from an older doc:
 - **Rathian** has a real measured/mirrored bite timeline and the opening roar; it is not
   vanilla-melee-only.
 - **Small Izuchi** has its recovered `origin/brain` tail swipe: a 48-tick server-timed action with
-  a temporary, live-fitting-pending damage envelope. It still has no dedicated death clip. See
-  "Attack timeline" below.
+  a live-fitted damage envelope. Its root box is extended by native head and two tail parts,
+  which still need pose acceptance. As of the artist's 2026-09-13 animation delivery it **does**
+  have its own death clip, wired like the other four (synched anchor, `thenPlayAndHold`,
+  `getDeathMaxRotation` zeroed because the clip rotates `root` 90 degrees about Z itself). That delivery also carries `roar` and `rally` (both now wired) and `attack_tailslam` (wired but
+  deliberately unarmed -- see "Attack timeline"). It is also a `NeutralMob` for its **pack anger** — see below. See "Attack timeline"
+  below.
 - **Toad and Flashbug** endemic behaviour ships as-is and is retained; R2 extended it rather than
   redesigning it — both are now capturable, and the Flashbug's flash moved into a shared helper,
   but neither species' trigger, telegraph, radius or one-release discard changed.
@@ -244,10 +248,45 @@ attack presentation** — a deliberate, documented P4 gap (`docs/DEFERRED.md`), 
   those can play correctly at all).
 - Small Izuchi's approved `origin/brain` `attack_tailswipe` is restored after removing its nine
   invalid Great-Izuchi-only tracks. `IzuchiHarassGoal` commits a synchronized 48-tick action after
-  its dart, damages only in ticks 36–47, and allows one hit per victim. Its two temporary sweep
-  paths are drawn green by `AttackVolumeOverlay` and must be replaced by a live `BoneProbe` capture;
-  do not treat an offline rig solve as a measurement. The other archived clips and a death clip
-  remain deferred.
+  its dart, damages only in ticks 36–47, and allows one hit per victim. Its sweep paths came from
+  the maintainer's live `BoneProbe` capture; do not treat an offline rig solve as a measurement.
+  The 2026-09-13 delivery added `death` (**wired** -- synched anchor, `thenPlayAndHold`,
+  `getDeathMaxRotation` zeroed), `roar` (**wired** -- `Roarable`/`RoarGoal`, same as the other
+  three) and `rally` (**wired** -- fires on whoever took the hit, as it hands the grudge to the
+  pack). `attack_tailslam` is wired as a real timed action but is **deliberately unarmed and gated
+  behind `debugCombat`**: its damage envelope needs its own live capture, and this project has twice
+  thrown away an offline solve. See `docs/DEFERRED.md`.
+
+### Izuchi pack anger, and why the pack cannot fight itself
+
+Small Izuchi implement vanilla's `NeutralMob`, so the grudge, its 20-39 second timer and its NBT
+persistence are all vanilla's own bookkeeping rather than a timer of ours. They stay hostile on
+sight; the anger is additive. Hitting one angers **every Izuchi within 16 blocks at the player who
+did it**, and a targeting goal sitting above the ordinary nearest-player one prefers that player
+over whoever merely happens to be closest.
+
+Two deviations from a literal copy of `ZombifiedPiglin`, both deliberate and both load-bearing:
+
+- **`HurtByTargetGoal.setAlertOthers()` is on but does nothing by itself here.** Vanilla's alert
+  only touches neighbours whose `getTarget() == null`, and a hostile-on-sight species almost never
+  has any. Propagating the *anger* instead reaches them whatever they are already doing.
+- **The struck one angers itself directly** rather than waiting for `HurtByTargetGoal` to notice,
+  because a goal that is not running -- asleep, mid-action -- would otherwise leave the one actually
+  hit as the only member of the pack not angry.
+
+Only players propagate: a monster hitting one Izuchi must not drag the pack into someone else's
+fight.
+
+**The pack does not wound its own, in either direction, Great Izuchi included.** This was a real
+bug: both attack volumes damaged every `LivingEntity` they touched, so a leader's swipe hit its own
+escorts and they retaliated through `HurtByTargetGoal`. The guard is `Izuchi.isPackMember` checked
+in each species' `hurt`, on the **receiving** end -- which makes it true for every route at once
+(the leader's swipe, a tail swipe, a shove, anything added later), and refusing the hit before
+anything is recorded is also what stops the retaliation, since vanilla only sets `lastHurtByMob` on
+a hit it accepted. `isAlliedTo` agrees with the rule so vanilla's own helpers cannot route around
+it. The volume loops skip packmates too, purely because Great Izuchi's zeroes a victim's
+`invulnerableTime` before calling `hurt`, which would otherwise clear it on somebody it never
+damaged.
 
 ### The opening roar (`RoarGoal`/`Roarable`)
 
@@ -398,25 +437,54 @@ And `Bucketable.bucketMobPickup` casts to `ServerPlayer` to award `FILLED_BUCKET
 0.8 attack speed, both expressed as vanilla's own attribute modifiers rather than constants read
 back out -- and bone as its repair material.
 
-Its one addition is a charged strike, and every part of it is borrowed:
+Its one addition is a charged strike -- **three tiers, held and released**, which deliberately
+overrides the R3 packet's own "no charge tiers, no damage multiplier" contract at the maintainer's
+direction after play. Tiers land at 25/45/75 ticks for 9.0/12.5/16.0 damage; releasing is what
+swings; releasing below tier one does nothing at all; holding past 100 ticks swings by itself at
+tier one's damage, so overcharging wastes the charge rather than banking it. Every part of it is
+borrowed:
 
-- **The charge is vanilla's held use.** 30 ticks from `getUseDuration`, `UseAnim.SPEAR`, and
-  `finishUsingItem` called once on the server only on a completed hold -- the same shape as R2's BBQ
-  spit, for the same reason: "releasing early does nothing" needs no cancellation code, because a
-  release never reaches that method. **Nothing is stored anywhere**: no field, no component, no
-  attachment, no packet, so a reload cannot resume or cash in a charge.
+- **The charge is vanilla's held use.** `getUseDuration` is the 100-tick overcharge window, the
+  pose is `UseAnim.NONE`, and `releaseUsing` is what swings -- `finishUsingItem` fires only on a
+  hold that ran the whole way, which is exactly the overcharge case. Same shape as R2's BBQ spit,
+  for the same reason: "releasing early does nothing" needs no cancellation code, because a release
+  below tier one simply finds no tier to swing. **Nothing is stored anywhere**: no field, no
+  component, no attachment, no packet, so a reload cannot resume or cash in a charge, and the tier
+  is derived from vanilla's own countdown rather than tracked.
+- **Tier one is 25 ticks, not 20, and that is a correctness number rather than a feel one.**
+  `Player.attack` scales damage by vanilla's attack-strength ramp; at 0.8 attack speed the swing
+  timer is 25 ticks, so a 20-tick tier one begun right after a left-click landed 6.64 instead of the
+  advertised 9.0 (PR #10 review). `attackStrengthTicker` counts up during the hold, so making the
+  shortest charge equal the swing timer means holding one always refills it. Keep
+  `TIER_TICKS[0] >= 25` if the attack speed ever changes.
 - **The target query is `ProjectileUtil.getHitResultOnViewVector`**, the same block-clipped trace
   vanilla's projectiles use, out to 4.5 blocks. A wall stops the strike because the trace stops, not
   because of a check of ours, and `Level.getEntities` already includes NeoForge `PartEntity`
   instances, so a `MonsterPart` is selectable with no multipart-specific code.
+- **The tier bonus is a transient `ATTACK_DAMAGE` modifier** applied around the attack call and
+  removed in a `finally`, rather than a damage number of ours -- so enchantment scaling, the attack
+  event, durability and the hit's own sound all see one coherent larger hit instead of a base hit
+  plus a correction, and the modifier cannot outlive the call even if the attack throws.
+- **The lean is 48 generated pose models** picked by a `mhnw:charge` item property
+  (`tools/gen_jawblade_charge_models.js` -- generated, don't hand-edit). An item property function
+  is the **only** render hook that receives the holder: a BEWLR and a baked-model wrapper both get
+  the stack alone, and on a server would pose every player's weapon from the local player's charge.
+  Property functions select whole models, so a smooth lean is spelled as many small steps, exactly
+  as vanilla spells `bow_pulling_0..2`, just finer.
+- **The charging crawl is a per-tick multiply on existing motion**, not a movement-speed modifier.
+  A modifier would have to be removed again on every path that can end a charge -- release,
+  completion, swap, death, dropping the weapon mid-hold -- and one missed path leaves a player
+  permanently slowed with no way to clear it.
 - **The damage is `Player.attack`,** called at most once. That keeps attack events, enchantments,
   knockback, durability, sounds, stats and the player-caused damage source -- and therefore
   `CarveState` attribution -- on exactly the path a left-click uses. NeoForge's own patch to that
   method resolves a `PartEntity` to its parent for durability and post-attack effects.
 
-There is no damage multiplier, cone, sweep, charge tier or combo, and no weapon/moveset abstraction:
-one weapon does not tell you what two weapons would share. The 30-tick recovery cooldown applies on
-a hit and on a miss, which is the whole cost of the longer reach.
+There is no cone, sweep, cleave or combo, and no weapon/moveset abstraction: one weapon does not
+tell you what two weapons would share. The 30-tick recovery cooldown applies on a hit and on a miss.
+(Charge tiers and their damage multiplier *were* on that exclusion list until 2026-09-13, when the
+maintainer replaced the packet's single fixed strike after playing it -- the superseded contract is
+marked as such in `docs/R3_BONE_GREATSWORD_HANDOFF.md` rather than left to contradict the code.)
 
 **The weapon answers "no" to `SWORD_SWEEP`, and that is load-bearing.** Vanilla decides to sweep by
 asking the held item, and every `SwordItem` says yes -- so a fully cooled strike dealt 1.0 to every
@@ -428,14 +496,17 @@ alternative is the transient state the packet forbids. A GameTest keeps a bystan
 *beside* the target, because the in-line pair never enters sweep range and would never have caught
 it.
 
-**The presentation is real geometry with a real authored pose.** `models/item/giant_jawblade.json`
-is the artist's exported geometry, `parent` `minecraft:item/handheld`, with every display context
+**The presentation is real geometry with a real authored pose, and it must declare no `parent`.**
+`models/item/giant_jawblade.json` is the artist's exported geometry with every display context
 (`thirdperson`/`firstperson` both hands, `ground`, `gui`, `head`, `fixed`, `on_shelf`) explicitly
-authored rather than inherited. An earlier delivery had the geometry but no display block at all --
-`item/handheld`'s ~16-unit-tool defaults on a ~41-unit model pushed the GUI icon outside its own
-bounds, which is why it reported as invisible rather than merely misposed; the fix was the artist's
-second delivery, not a code change. There is still no separate 2D icon, so GUI renders the real 3D
-model too, at the artist's own tuned pose. See `docs/DEFERRED.md`.
+authored rather than inherited. **Giving it `parent: minecraft:item/handheld` to inherit hand transforms made it render nothing at
+all** -- a working item with an entity shadow and no geometry, logging nothing. That parent roots at
+`builtin/generated`, and `ModelBakery.bakeUncached` routes such a model through `ItemModelGenerator`,
+which discards `elements` and builds quads from `layer0`..`layer4`; a cuboid model names its texture
+`"0"`, so it baked zero quads. `r3JawbladeModelDoesNotInheritTheFlatItemChain` guards this as text,
+since model baking is client-only. The charge-tier models are the one place a parent belongs, and it
+must be ours. There is still no separate 2D icon, so GUI renders the real 3D model too, at the
+artist's own pose. See `docs/DEFERRED.md`.
 
 ### One creative tab, not five borrowed ones
 

@@ -2,7 +2,7 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 159 tests, all passing**
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 174 tests, all passing**
 (`.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-12, presentation/feel round and the
 corpse-presentation fix, both rebased onto the R3/Izuchi-tail-swipe master; 157 after the corpse fix
 alone, 156 before either, 148 after the R2 field-preparation packet, 123 before that packet, 121
@@ -31,10 +31,10 @@ reality. Standing rule going forward: no further push or publish without explici
 
 Combat/behaviour diagnostics: run `/mhnw debugcombat` in-game to toggle (op-only), or set
 `debugCombat = true` in `run/config/mhnw-common.toml` before launching if you'd rather it start on.
-Either way it logs attack transitions and contact accepted/rejected, and — for Great Izuchi
-specifically — draws the live attack volume with F3+B.
+Either way it logs attack transitions and contact accepted/rejected, and draws Great Izuchi's and
+small Izuchi's live attack volumes with F3+B.
 
-**Bone probe**: with `debugCombat` on, Great Izuchi, Rathian, Rathalos, Aptonoth and Lagiacrus log their
+**Bone probe**: with `debugCombat` on, Great Izuchi, small Izuchi, Rathian, Rathalos, Aptonoth and Lagiacrus log their
 actual runtime bone positions to the game log every ~2 seconds (or every tick for Great Izuchi
 while it's mid-attack), in the same left/up/forward frame the hurtbox offsets use. This is what
 actually fixed Rathian's and Aptonoth's hurtboxes this round (see their sections below) — real
@@ -400,26 +400,156 @@ pixel-identical to the atlas already in the repo, so this was the model that atl
 unwrapped from. Wired with `parent: minecraft:item/handheld` and hand/head/fixed transforms borrowed
 from the old, never-shipped `BoneBlade.bbmodel` as a starting pose, since nothing authored existed.
 
-Reported result: **the weapon didn't render at all.** The likely mechanism, not fully confirmed: the
-model spans ~41 units against a vanilla tool's ~16, and the one context still using `item/handheld`'s
-own default rather than a borrowed override — `gui` — has a 0.625 scale tuned for that shorter item,
-which would push most of a model this size outside the icon's render bounds.
+Reported result: **the weapon didn't render at all** — in hand, in the inventory and on the ground,
+where it still cast a shadow. An earlier revision of this document blamed the `gui` display scale.
+**That was wrong**, and it is recorded here because it is the more useful half of the round.
+
+The real cause was `parent: minecraft:item/handheld`, added by the implementing agent to inherit hand
+transforms. `item/handheld` parents `item/generated` parents `builtin/generated`, and
+`ModelBakery.bakeUncached` routes any model whose **root** parent is that marker through
+`ItemModelGenerator` — which discards the model's own `elements` entirely and builds quads from
+`layer0`..`layer4` (`ItemModelGenerator.LAYERS`). A cuboid model names its texture `"0"`, so the
+generator found no layers, emitted **zero quads**, and produced a working item that renders nothing
+while still casting an entity shadow. Nothing is logged on this path, which is why two rounds of
+inspection found no error.
+
+A 3D item model therefore declares **no parent** and carries its own `display` block.
+`r3JawbladeModelDoesNotInheritTheFlatItemChain` now enforces exactly that, as text, because model
+baking is client-only and a dedicated server cannot bake the model to count its quads.
 
 The same day, a second delivery added a **fully authored `display` block** — `thirdperson_righthand`/
 `_lefthand`, `firstperson_righthand`/`_lefthand`, `ground`, `gui`, `head`, `fixed`, `on_shelf` — from
 the artist. Geometry and texture were diffed byte-for-byte against the first delivery and are
 unchanged; only the pose is new. `giant_jawblade.json` now carries that geometry and that display
-block verbatim, still `parent: minecraft:item/handheld` as a fallback for any context not covered.
-No separate 2D icon exists, so GUI also renders the real 3D model, at the artist's own pose. 159/159
-unchanged both times (`modCreativeTabResolvesWithItsIcon` and `r3JawbladeRegistryAndResources` only
-check the model/atlas are packaged, not their content).
+block verbatim, and **no parent at all**. No separate 2D icon exists, so GUI also renders the real
+3D model, at the artist's own pose.
+
+### Small Izuchi's animation set, redelivered (2026-09-13)
+
+The artist supplied a new `izuchi.animation.json` adding `death`, `roar`, `rally` and
+`attack_tailslam` to the five clips already shipped. It is committed **verbatim except for one
+character**, and that exception is worth knowing about.
+
+**One clip would not load at all.** GeckoLib reported
+`Unable to parse animation: animation.izuchi.attack_tailswipe -> Failed to parse expression
+'-97.4073+16.8822+'` — a MoLang expression truncated mid-term, trailing `+` and nothing after it. A
+malformed expression fails the **whole clip**, so the tail swipe silently ceased to exist while the
+other eight loaded normally; the only symptom in play was "the swipe isn't playing", with no error
+unless you read the client log. The fix was deleting that one `+`, which restores the value
+byte-for-byte to what the previously shipped file had at that exact keyframe — a known-good value,
+not authored animation.
+
+**It may want a different fix upstream.** Neighbouring keyframes on the same bone and axis read
+`…+16.8822+Math.sin((query.anim_time - 1.5) * 180) * 1`, so the export more likely truncated a
+`Math.sin` tail than added a stray operator. If so the correct value is the longer one and the tail
+tip moves slightly differently. That is an art decision, and it needs fixing at source or the next
+export reintroduces it.
+
+**Nothing else is affected.** All 14 animation files were scanned — 13,320 expression strings — for
+trailing operators, doubled operators, unbalanced parentheses and empty expressions. Exactly one
+problem, the one above.
+
+**The phantom bones were left alone, deliberately.** Every new clip animates 8 bones Izuchi's
+geometry does not have (`left_shoulder`, `right_shoulder`, `left_ankle`, `right_ankle`, `mane`,
+`tailblade`, `left_hand`, `right_hand` — Great Izuchi's skeleton). `GeoModel.crashIfBoneMissing()`
+returns `false`, so GeckoLib skips those tracks silently; they are inert, and keeping them means the
+next redelivery diffs cleanly against what the artist actually holds.
+
+**Only `death` is wired.** Small Izuchi previously fell through to the idle branch while dead, so a
+corpse stood there breathing for the entire ten-minute carve window. It now has the same synched
+death anchor the other four species use, played with `thenPlayAndHold` — which matters, because
+`thenPlay` passes `LoopType.DEFAULT` and DEFAULT **defers to the JSON's own `loop` field**, and this
+clip's says `true`. `thenPlayAndHold` sets `HOLD_ON_LAST_FRAME` explicitly and wins.
+`izuchiDeathAnchorAgesWithRealTicks` guards the anchor. `roar`, `rally` and `attack_tailslam` are
+present and unwired.
+
+### PR #10 adversarial review round (2026-09-13)
+
+Three findings against head `9595c01`, all accepted. The reviewer independently reproduced
+`clean build runGameTestServer` at 169/169 with a clean `git diff --check` before raising them.
+
+**P1, and a real defect: tier damage was not stable unless the swing timer happened to be full.**
+`Player.attack` scales damage by vanilla's attack-strength ramp, and at this weapon's 0.8 attack
+speed that timer is 25 ticks -- but tier one was 20. A charge begun right after a left-click
+therefore released undercooled. Measured, not estimated: **6.64 landed against an advertised 9.0**
+(the reviewer's own estimate of ~7.4 was conservative; vanilla's curve is quadratic,
+`0.2 + f*f*0.8`, not linear). `r3ChargeTiersLandTheirStatedDamage` cooled the attack before every
+case, which masked it completely.
+
+The fix keeps `Player.attack` semantics rather than bypassing them: `attackStrengthTicker` counts up
+*during* a hold, so making the shortest charge equal the swing timer means holding one always
+refills it. `TIER_TICKS[0]` 20 -> 25, and every tier now lands its stated damage from any starting
+state. `r3ChargeFromAnUncooledWeaponStillLandsItsTier` was written **before** the fix and observed
+failing at 6.64, then passing at 9.0.
+
+**P1, documentation that would have caused a future agent to undo the work.**
+`docs/R3_BONE_GREATSWORD_HANDOFF.md` still specified the superseded single fixed 30-tick
+auto-firing `SPEAR` strike with no tiers, and `CLAUDE.md` still carried the matching stale bullets
+alongside the new contract -- contradicting itself inside one section. The handoff subsection now
+opens with a SUPERSEDED block and a before/after table pointing at the live contract, rather than
+being quietly edited into agreement; the exclusion list says which exclusion was lifted and which
+still bind.
+
+**P2, death-clip statements contradicting the code** in `CLAUDE.md`, `docs/DEFERRED.md`, this file's
+Izuchi checklist and `Izuchi.java`'s own class javadoc, all still saying no authored death clip
+exists. All four updated, and the deferred entry's old "if a death clip is added later, check
+whether it needs `getDeathMaxRotation` zeroed" is answered in place: it did, and it is.
+
+### Izuchi pack anger and no-infighting (2026-09-13)
+
+Piglin-style anger on small Izuchi, built on vanilla's `NeutralMob`. They stay hostile on sight;
+hitting one makes every Izuchi within 16 blocks hold a grudge against that player for 20-39 seconds,
+surviving loss of sight, chunk unload and reload, and expiring on its own.
+
+`izuchiPackSharesAngerWithWhoeverHitOne` asserts the **grudge**, not the live target, and that is the
+point: this species is hostile on sight, so every neighbour already targets the nearest player and
+"did it target them" would pass with no pack behaviour at all. Mutation-verified by removing the
+propagation (`packmate=false bystander=false`). `izuchiAngerSurvivesReloadAndExpires` covers the
+memory across a save/load round trip and the timer running out.
+
+**A real bug found on the way in:** both attack volumes damaged every `LivingEntity` they touched, so
+a Great Izuchi's swipe hit its own escorts and those escorts retaliated through `HurtByTargetGoal`.
+`izuchiPackDoesNotFightItself` covers all three directions, that nobody records a packmate as an
+attacker, that they read as allied, and that **a player's hit still lands** -- without that last one
+the test would pass against a guard that simply refused everything. Mutation-verified by removing
+the guard (`leader->escort=true escort->escort=true`).
+
+### R3 charge rework (2026-09-13): three tiers, held and released
+
+**This overrides the R3 packet's own locked contract**, at the maintainer's direction after playing
+it. `R3_BONE_GREATSWORD_HANDOFF.md` section 4 specifies one fixed 30-tick hold that fires by itself,
+with "no damage multiplier" and an explicit exclusion of "charge tiers". All three are now gone:
+
+| | Packet contract | Now |
+|---|---|---|
+| Firing | auto-fires when the 30-tick hold completes | **release to swing** |
+| Tiers | none, explicitly excluded | **three**, at 25 / 45 / 75 ticks |
+| Damage | fixed 9.0, "reach not damage" | **9.0 / 12.5 / 16.0** by tier |
+| Overhold | n/a | **100 ticks auto-swings at tier one's damage** — the charge is wasted |
+| Pose | `UseAnim.SPEAR` | `UseAnim.NONE` — SPEAR is the trident raise and read wrong |
+| Movement | vanilla's 20% input scaling only | that **× 0.35 per tick**, a heavy crawl |
+
+What did **not** change: one `Player.attack` per swing, one target, 4.5 blocks, block-clipped trace,
+no sweep, 30-tick recovery on hit or miss. The tier bonus is a transient `ATTACK_DAMAGE` modifier
+applied around that one call and removed in a `finally`, so enchantments, durability, attack events
+and carve attribution still scale on vanilla's own pipeline rather than on arithmetic of ours.
+
+The charge lean is 48 generated pose models selected by a `mhnw:charge` item property —
+`tools/gen_jawblade_charge_models.js`, don't hand-edit the output. **An item property function is
+the only render hook that receives the holder**; a BEWLR and a baked-model wrapper both get the
+stack alone and would pose every player's weapon from the local player's charge. Property functions
+select whole models, so a smooth lean is spelled as many small steps, the same way vanilla spells
+`bow_pulling_0..2` — just finer. 16 steps read as visibly jagged in play; 48 (a change every ~1.56
+ticks of the wind-up) did not.
 
 ### What still needs a human — R3
 
 - [ ] **Confirm it renders and reads right**, now that there is an authored pose rather than a
       borrowed placeholder or a missing one: first/third person both hands, GUI, ground, item frame.
-- [ ] **Feel of the charge.** Does 30 ticks read as a deliberate windup rather than a stuck input?
-      Is the miss recovery understandable when it happens?
+- [ ] **Feel of the charge.** Do 25/45/75-tick tiers read as a deliberate wind-up? Is the lean
+      smooth at 48 steps, and does the crawl feel like commitment rather than like a bug?
+- [ ] **Tier cues.** Rising riptide sound per tier, particles off the weapon side that are visible
+      in first person, and `ENCHANTED_HIT` instead of `CRIT` once waiting stops paying.
 - [ ] **One cue per strike** (PR #8 P2, not headlessly testable). A landed charge should sound once,
       not twice; a miss should sound once. Also worth an ear: that left-click still sounds normal
       now that this weapon no longer sweeps.
@@ -1287,16 +1417,30 @@ during testing). Health (1-hit-kill) unchanged from last round.
 Genuinely hostile, unlike everything in P3 — this is the first thing since Great Izuchi that
 actually attacks the player on sight. It now plants for the recovered `brain`-branch tail swipe:
 the server owns its 48-tick action clock and only permits damage in ticks 36–47. The client draws
-the exact same temporary attack volumes as green developer boxes when debug combat is enabled.
-The maintainer supplied a video confirming the clip plays; a live capture is still needed to tune
-the green boxes to the moving tail. There is no death animation, so death remains vanilla's plain
-corpse flop.
+the exact same live-fitted attack volumes as green developer boxes when debug combat is enabled.
+The maintainer supplied a video confirming the clip plays, and the 2026-09-13 `BoneProbe` capture
+fitted the tail path. The static F3+B envelope is head plus two reduced tail parts after its
+surplus tip part was removed; both envelopes still need a visual acceptance pass.
+
+**As of the artist's 2026-09-13 redelivery this species has a death clip, a roar and a rally**, all
+wired, so death is no longer vanilla's corpse flop -- the clip lays the body down itself and
+`getDeathMaxRotation` is zeroed accordingly. `attack_tailslam` also arrived and runs as a real timed
+action, but it is deliberately unarmed and gated behind `debugCombat` until its damage envelope gets
+its own live capture; see `docs/DEFERRED.md`.
 
 - [ ] Renders, spawns via egg, idles/walks/runs with correct animation
 - [ ] Notices and attacks a nearby player, dealing real damage
+- [ ] **New: the death clip plays and the body stays down** for the whole carve window, with no
+      red tint and no vanilla flop fighting the clip
+- [ ] **New: the opening roar** plays once per engagement and freezes the circling, and the
+      **rally** plays on whichever one you hit, not on its packmates
+- [ ] **New: hit one and the whole pack comes for you**, and they never hit or anger each other or
+      the Great Izuchi they escort
+- [ ] **Capture needed: the tail slam.** Turn on `debugCombat`, let one play, and record `tail2`
+      and `tail_claw` through its active window so its damage envelope can be fitted
 - [ ] **New: tail swipe plants before contact, and its green boxes follow the tail through the
       active phase** — headless timing/contact and one-hit-per-swing are GameTest-covered; needs a
-      live `debugCombat`/F3+B pass to replace the temporary volume path with measured positions
+      live `debugCombat`/F3+B pass to accept the measured path visually
 - [x] **New: targets pillagers on sight, same as Great Izuchi/Rathian/Rathalos** — GameTest-covered
       (`izuchiTargetsAPillagerOnSight`)
 - [ ] Naps occasionally when nothing is around (uses the `sleep` clip) — this is a rare, roughly

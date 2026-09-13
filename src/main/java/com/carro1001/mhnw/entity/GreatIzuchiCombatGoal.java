@@ -384,6 +384,9 @@ public class GreatIzuchiCombatGoal extends Goal {
                         age, victim.getName().getString());
                 continue;
             }
+            if (Izuchi.isPackMember(victim)) {
+                continue;
+            }
             this.hitThisAction.add(strikeKey);
             float damage = (float) (this.monster.getAttributeValue(Attributes.ATTACK_DAMAGE)
                     * (profile.damage() / SCRATCH_DAMAGE));

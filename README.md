@@ -28,11 +28,18 @@ Find the Verdant Hunting Grounds, hunt what lives there, and make something out 
 A bone greatsword: four bones, two claws, two hides and a stick. It hits for 9 and swings slowly
 (0.8 a second), and it is repaired with bone rather than iron.
 
-Hold right-click for a second and a half and it makes one committed strike that reaches 4.5 blocks
--- further than a normal swing, straight down your crosshair, one target only. A wall stops it. Let
-go early and nothing happens at all. Whether it hits or misses, the weapon needs a second and a half
-to recover, so it is reach bought with commitment, not a better attack. Ordinary left-click is still
-the faster option up close.
+Hold right-click to charge it. The charge builds through three levels -- at roughly 1.25, 2.25 and
+3.75 seconds -- each announced by a rising sound, a thickening trail of sparks off the blade and the
+weapon leaning further back. **Let go to swing**, and the level you reached is what lands: 9, 12.5
+or 16 damage.
+
+Let go before the first level and nothing happens at all -- no swing, no cooldown, no wear. Hold
+*past* five seconds and it swings by itself, back down at the first level's damage: overcharging
+wastes the charge rather than banking it.
+
+Every charged swing reaches 4.5 blocks straight down your crosshair and hits one target only; a wall
+stops it. Charging slows you to a crawl, and whether you hit or miss the weapon needs a second and a
+half to recover. Ordinary left-click is still the faster option up close.
 
 *A note on presentation:* the blade model and its held/inventory pose are the artist's own.
 

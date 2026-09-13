@@ -144,11 +144,6 @@
       "lengthTicks": 160,
       "loop": true
     },
-    "sleep": {
-      "lengthSeconds": 8,
-      "lengthTicks": 160,
-      "loop": true
-    },
     "walk": {
       "lengthSeconds": 1,
       "lengthTicks": 20,
@@ -159,10 +154,35 @@
       "lengthTicks": 10,
       "loop": true
     },
+    "roar": {
+      "lengthSeconds": 3.5417,
+      "lengthTicks": 71,
+      "loop": true
+    },
+    "rally": {
+      "lengthSeconds": 3,
+      "lengthTicks": 60,
+      "loop": "hold_on_last_frame"
+    },
     "attack_tailswipe": {
       "lengthSeconds": 2.375,
       "lengthTicks": 48,
-      "loop": false
+      "loop": true
+    },
+    "attack_tailslam": {
+      "lengthSeconds": 4.375,
+      "lengthTicks": 88,
+      "loop": true
+    },
+    "death": {
+      "lengthSeconds": 1.875,
+      "lengthTicks": 38,
+      "loop": true
+    },
+    "sleep": {
+      "lengthSeconds": 8,
+      "lengthTicks": 160,
+      "loop": true
     }
   },
   "lagiacrus": {

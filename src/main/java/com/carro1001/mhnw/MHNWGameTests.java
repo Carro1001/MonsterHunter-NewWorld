@@ -181,6 +181,19 @@ public class MHNWGameTests {
                 () -> rathian.getAttackId() != com.carro1001.mhnw.entity.Rathian.ATTACK_NONE);
     }
 
+    /** Fourth {@code Roarable}, and the only small one: the roar freezes the harassment goal rather
+     * than a combat goal, so this also covers that {@code RoarGoal} sits above it. */
+    @GameTest(template = ARENA, timeoutTicks = 300)
+    public static void izuchiRoarRunsForItsRealClipLength(GameTestHelper helper) {
+        Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        Cow victim = helper.spawn(EntityType.COW, 8, 2, 10);
+        victim.setNoAi(true);
+        izuchi.setTarget(victim);
+
+        assertRoarRunsAtOneTickPerRealTick(helper, izuchi, victim,
+                () -> izuchi.getAttackId() != Izuchi.ATTACK_NONE);
+    }
+
     /** Third real {@code Roarable}. Rathalos fights with vanilla melee and has no synced attack id
      * to inspect, so the victim's health is the whole "didn't attack while roaring" probe here --
      * inventing a {@code Rathalos.getAttackId()} for a test would be inventing production API. */
@@ -1438,6 +1451,41 @@ public class MHNWGameTests {
                 "Izuchi never acquired a nearby pillager as a target"));
     }
 
+    /** The long neck/tail model is pickable through three native NeoForge parts from spawn. */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void izuchiRegistersHeadAndTailParts(GameTestHelper helper) {
+        Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        String[] names = {"head", "tail_base", "tail_mid"};
+        helper.assertTrue(izuchi.isMultipartEntity() && izuchi.getParts().length == names.length,
+                "Izuchi must have a head and two tail parts");
+        for (int i = 0; i < names.length; i++) {
+            MonsterPart part = izuchi.monsterParts()[i];
+            helper.assertTrue(part.partName.equals(names[i]) && part.getParent() == izuchi,
+                    "wrong Izuchi part at " + i);
+            helper.assertTrue(helper.getLevel().getPartEntities().contains(part),
+                    "Izuchi part missing from NeoForge lookup: " + part.partName);
+            var centre = izuchi.localToWorld(part.localLeft, part.localUp, part.localForward);
+            helper.assertTrue(part.getBoundingBox().getCenter().distanceTo(centre) < EPSILON,
+                    "Izuchi part was not positioned on spawn: " + part.partName);
+        }
+        helper.succeed();
+    }
+
+    /** One area source may see root and every part, but must damage the parent exactly once. */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void izuchiOneSourceAcrossPartsCountsOnce(GameTestHelper helper) {
+        Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        float before = izuchi.getHealth();
+        DamageSource source = helper.getLevel().damageSources().generic();
+        izuchi.hurt(source, PROBE_DAMAGE);
+        for (MonsterPart part : izuchi.monsterParts()) {
+            part.hurt(source, PROBE_DAMAGE);
+        }
+        helper.assertTrue(Math.abs(before - izuchi.getHealth() - PROBE_DAMAGE) < EPSILON,
+                "one source across Izuchi root and parts caused more than one hit");
+        helper.succeed();
+    }
+
     /** A13: death removes it, same as every other species. */
     @GameTest(template = ARENA, timeoutTicks = 120)
     public static void izuchiDeathRemovesIt(GameTestHelper helper) {
@@ -1445,8 +1493,10 @@ public class MHNWGameTests {
         izuchi.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
         expireCorpse(izuchi);
 
-        helper.succeedWhen(() -> helper.assertTrue(
-                izuchi.isRemoved(), "Izuchi was not removed after dying"));
+        helper.succeedWhen(() -> {
+            helper.assertTrue(izuchi.isRemoved(), "Izuchi was not removed after dying");
+            assertPartsUnregistered(helper, izuchi.monsterParts());
+        });
     }
 
     /**
@@ -2717,6 +2767,13 @@ public class MHNWGameTests {
     }
 
     @GameTest(template = ARENA, timeoutTicks = 300)
+    public static void izuchiRoarAnchorIsStableForTheWholeRoar(GameTestHelper helper) {
+        Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        izuchi.setTarget(inertVictim(helper));
+        assertRoarAnchorIsStableForTheWholeRoar(helper, izuchi);
+    }
+
+    @GameTest(template = ARENA, timeoutTicks = 300)
     public static void rathianRoarAnchorIsStableForTheWholeRoar(GameTestHelper helper) {
         com.carro1001.mhnw.entity.Rathian rathian = helper.spawn(ModEntities.RATHIAN.get(), 8, 2, 8);
         rathian.setTarget(inertVictim(helper));
@@ -2837,6 +2894,19 @@ public class MHNWGameTests {
         aptonoth.setNoAi(true);
         assertDeathAnchorAgesWithRealTicks(helper, aptonoth, aptonoth::getDeathStartTime,
                 Aptonoth.NO_DEATH, 12);
+    }
+
+    /**
+     * Small Izuchi got its own authored death clip with the retargeted animation set, so it now
+     * needs the same anchor the other four have. Before this it had none and fell through to the
+     * idle branch, leaving a corpse standing and breathing for the whole ten-minute carve window.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void izuchiDeathAnchorAgesWithRealTicks(GameTestHelper helper) {
+        Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        izuchi.setNoAi(true);
+        assertDeathAnchorAgesWithRealTicks(helper, izuchi, izuchi::getDeathStartTime,
+                Izuchi.NO_DEATH, 12);
     }
 
     /**
@@ -5032,10 +5102,49 @@ public class MHNWGameTests {
                         + " cooled, so vanilla's own sweep could not fire either way");
     }
 
-    /** Complete one charge through the public item seam, the same one vanilla's completeUsingItem
-     * calls. Used where the geometry is what is under test and the 30-tick wait is not. */
+    /**
+     * Hold the charge for real ticks and then let go, which is how a player swings this weapon.
+     *
+     * <p>Drives vanilla's own countdown and vanilla's own {@code releaseUsingItem}, so the tier that
+     * lands is the one the elapsed ticks earned rather than one a test asserted into place.
+     */
+    private static void chargeAndRelease(net.minecraft.server.level.ServerPlayer player, int ticks) {
+        player.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+        for (int tick = 0; tick < ticks; tick++) {
+            tickOnce(player);
+        }
+        player.releaseUsingItem();
+    }
+
+    /** A full-tier charge released, with the attack cooled first so the swing lands at full
+     * strength. Used where the target geometry is what is under test, not the timing. */
     private static void completeCharge(GameTestHelper helper, net.minecraft.server.level.ServerPlayer player) {
-        player.getMainHandItem().finishUsingItem(helper.getLevel(), player);
+        coolDown(helper, player);
+        chargeAndRelease(player, maxTierTicks());
+    }
+
+    private static int maxTierTicks() {
+        int[] tiers = com.carro1001.mhnw.item.GiantJawbladeItem.TIER_TICKS;
+        return tiers[tiers.length - 1];
+    }
+
+    /** Health lost by a fresh cow to one charge held this long, or 0.0 if nothing was struck. */
+    private static float chargeDamageAt(GameTestHelper helper, net.minecraft.server.level.ServerPlayer hunter,
+                                        int holdTicks, double x, double y, double z) {
+        net.minecraft.world.entity.animal.Cow target = inertCow(helper, x, y, z);
+        // A cow holds 10 health and the upper tiers hit harder than that, so an unmodified one
+        // reports "10.0 lost" for every tier above the first and the measurement says nothing.
+        target.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH)
+                .setBaseValue(200.0D);
+        target.setHealth(200.0F);
+        coolDown(helper, hunter);
+        aimAt(hunter, target.getBoundingBox().getCenter());
+        float before = target.getHealth();
+        chargeAndRelease(hunter, holdTicks);
+        float lost = before - target.getHealth();
+        target.discard();
+        hunter.getCooldowns().removeCooldown(com.carro1001.mhnw.registry.ModItems.GIANT_JAWBLADE.get());
+        return lost;
     }
 
     /**
@@ -5170,12 +5279,12 @@ public class MHNWGameTests {
     }
 
     /**
-     * R3-04: the strike happens after thirty <em>real</em> ticks and not before. Fully ticked --
-     * item in hand, vanilla's own use countdown, vanilla's own completion -- so nothing here can
-     * pass by calling the completion early.
+     * R3-04: nothing swings while the charge is still held, and a release swings exactly once.
+     * Fully ticked -- item in hand, vanilla's own countdown, vanilla's own release -- so nothing
+     * here can pass by calling an item seam directly.
      */
-    @GameTest(template = ARENA, timeoutTicks = 120)
-    public static void r3ChargeStrikesOnlyAfterThirtyRealTicks(GameTestHelper helper) {
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void r3ChargeSwingsOnReleaseNotWhileHeld(GameTestHelper helper) {
         net.minecraft.world.entity.animal.Cow target = inertCow(helper, 8, 2, 11);
         net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 2, 8);
         aimAt(hunter, target.getBoundingBox().getCenter());
@@ -5183,34 +5292,161 @@ public class MHNWGameTests {
 
         hunter.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
         helper.assertTrue(hunter.getUseItemRemainingTicks()
-                        == com.carro1001.mhnw.item.GiantJawbladeItem.CHARGE_TICKS,
-                "starting the charge did not arm the full 30 ticks");
+                        == com.carro1001.mhnw.item.GiantJawbladeItem.OVERCHARGE_TICKS,
+                "starting the charge did not arm the full overcharge window");
 
         helper.startSequence()
-                .thenExecuteFor(com.carro1001.mhnw.item.GiantJawbladeItem.CHARGE_TICKS - 2, () -> tickOnce(hunter))
+                .thenExecuteFor(maxTierTicks(), () -> tickOnce(hunter))
                 .thenExecute(() -> {
                     helper.assertTrue(target.getHealth() == healthBefore,
-                            "the strike landed before the charge completed");
+                            "the weapon swung while the charge was still being held");
                     helper.assertTrue(hunter.isUsingItem(), "the charge was dropped part way");
+                    hunter.releaseUsingItem();
                 })
-                .thenExecuteFor(4, () -> tickOnce(hunter))
                 .thenExecute(() -> {
                     boolean cooling = hunter.getCooldowns().isOnCooldown(
                             com.carro1001.mhnw.registry.ModItems.GIANT_JAWBLADE.get());
                     float after = target.getHealth();
                     retire(hunter);
-                    helper.assertTrue(after < healthBefore, "the completed charge did not strike");
-                    helper.assertTrue(cooling, "a completed charge started no recovery cooldown");
+                    helper.assertTrue(after < healthBefore, "releasing a full charge did not strike");
+                    helper.assertTrue(cooling, "a completed swing started no recovery cooldown");
                 })
                 .thenSucceed();
     }
 
     /**
-     * R3-04: letting go early is not a weaker strike, it is no strike. No damage, no cooldown, no
-     * wear -- and there is no cancellation code behind that, only vanilla never reaching the
-     * completion.
+     * R3-04: each tier lands its own stated damage, measured on a real held-and-released charge.
+     *
+     * <p>Each case cools the attack first, so what is measured is the tier rather than vanilla's
+     * attack-strength ramp, and the tiers are asserted as an increasing set as well as against
+     * their stated numbers -- a bonus wired to the wrong tier passes the second check and fails the
+     * first.
      */
-    @GameTest(template = ARENA, timeoutTicks = 80)
+    @GameTest(template = ARENA, timeoutTicks = 400)
+    public static void r3ChargeTiersLandTheirStatedDamage(GameTestHelper helper) {
+        net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 2, 8);
+        int[] tierTicks = com.carro1001.mhnw.item.GiantJawbladeItem.TIER_TICKS;
+        float[] tierDamage = com.carro1001.mhnw.item.GiantJawbladeItem.TIER_DAMAGE;
+
+        float[] measured = new float[tierTicks.length];
+        for (int tier = 0; tier < tierTicks.length; tier++) {
+            measured[tier] = chargeDamageAt(helper, hunter, tierTicks[tier], 8, 2, 10);
+            helper.assertTrue(Math.abs(measured[tier] - tierDamage[tier]) < 0.51F,
+                    "tier " + (tier + 1) + " dealt " + measured[tier] + ", expected about "
+                            + tierDamage[tier]);
+        }
+        for (int tier = 1; tier < measured.length; tier++) {
+            helper.assertTrue(measured[tier] > measured[tier - 1],
+                    "tier " + (tier + 1) + " (" + measured[tier] + ") did not out-damage tier "
+                            + tier + " (" + measured[tier - 1] + ")");
+        }
+        retire(hunter);
+        helper.succeed();
+    }
+
+    /**
+     * A tier lands its stated damage even when the charge begins on a weapon that has just swung.
+     *
+     * <p>PR #10 review, P1. The other tier test cools the attack first, which quietly guarantees the
+     * one condition that matters: {@code Player.attack} scales damage by vanilla's attack-strength
+     * ramp, so a charge released before the swing timer has refilled lands less than the number this
+     * weapon advertises. At 0.8 attack speed the delay is 25 ticks, and vanilla's curve is quadratic
+     * ({@code 0.2 + f*f*0.8}), so a tier-one release 20 ticks after a left-click would land 6.41
+     * rather than 9.0.
+     *
+     * <p>The fix is that the charge is never shorter than the swing timer, so holding one always
+     * refills it -- {@code attackStrengthTicker} counts up during the hold. This test starts the
+     * charge on the same tick as a normal attack, which is the worst case.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void r3ChargeFromAnUncooledWeaponStillLandsItsTier(GameTestHelper helper) {
+        net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 2, 8);
+        float[] tierDamage = com.carro1001.mhnw.item.GiantJawbladeItem.TIER_DAMAGE;
+
+        // A normal swing first, which resets the strength ticker to zero.
+        net.minecraft.world.entity.animal.Cow warmup = inertCow(helper, 8, 2, 10);
+        coolDown(helper, hunter);
+        hunter.attack(warmup);
+        warmup.discard();
+        helper.assertTrue(hunter.getAttackStrengthScale(0.0F) < 1.0F,
+                "fixture error: the weapon is still fully cooled, so this is not the case under test");
+
+        net.minecraft.world.entity.animal.Cow target = inertCow(helper, 8, 2, 10);
+        target.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH)
+                .setBaseValue(200.0D);
+        target.setHealth(200.0F);
+        aimAt(hunter, target.getBoundingBox().getCenter());
+        float before = target.getHealth();
+
+        chargeAndRelease(hunter, com.carro1001.mhnw.item.GiantJawbladeItem.TIER_TICKS[0]);
+
+        float landed = before - target.getHealth();
+        retire(hunter);
+        helper.assertTrue(Math.abs(landed - tierDamage[0]) < 0.51F,
+                "a tier-one charge begun on an uncooled weapon landed " + landed + ", not the"
+                        + " advertised " + tierDamage[0] + "; vanilla's attack-strength ramp scaled"
+                        + " it down because the charge is shorter than the swing timer");
+        helper.succeed();
+    }
+
+    /**
+     * R3-04: overcharging wastes the charge rather than banking it. Holding past the overcharge
+     * point swings by itself -- vanilla's completion, which is the one path that still runs through
+     * {@code finishUsingItem} -- and lands tier one's damage, not tier three's.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void r3OverchargeSwingsItselfAtTierOne(GameTestHelper helper) {
+        net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 2, 8);
+        float[] tierDamage = com.carro1001.mhnw.item.GiantJawbladeItem.TIER_DAMAGE;
+
+        float overcharged = chargeDamageAt(helper, hunter,
+                com.carro1001.mhnw.item.GiantJawbladeItem.OVERCHARGE_TICKS + 2, 8, 2, 10);
+
+        retire(hunter);
+        helper.assertTrue(overcharged > 0.0F,
+                "holding past the overcharge point never swung at all");
+        helper.assertTrue(Math.abs(overcharged - tierDamage[0]) < 0.51F,
+                "an overcharged swing dealt " + overcharged + ", expected tier one's "
+                        + tierDamage[0]);
+        helper.assertTrue(overcharged < tierDamage[tierDamage.length - 1] - 0.5F,
+                "an overcharged swing still landed full-tier damage, so overcharging costs nothing");
+        helper.succeed();
+    }
+
+    /**
+     * The charge is a commitment of the whole body: while it runs, horizontal movement is cut every
+     * tick. Checked against a real held charge rather than the constant, and compared with the same
+     * push applied while not charging, so vanilla's own friction cannot be mistaken for the effect.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void r3ChargingCutsMovement(GameTestHelper helper) {
+        net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 4, 8);
+        net.minecraft.world.phys.Vec3 push = new net.minecraft.world.phys.Vec3(0.5D, 0.0D, 0.0D);
+
+        hunter.setDeltaMovement(push);
+        tickOnce(hunter);
+        double freeSpeed = hunter.getDeltaMovement().horizontalDistance();
+
+        hunter.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+        hunter.setDeltaMovement(push);
+        tickOnce(hunter);
+        double chargingSpeed = hunter.getDeltaMovement().horizontalDistance();
+        hunter.stopUsingItem();
+        retire(hunter);
+
+        helper.assertTrue(freeSpeed > 0.0D, "fixture error: the un-charged push produced no motion");
+        helper.assertTrue(chargingSpeed < freeSpeed * 0.6D,
+                "charging kept " + chargingSpeed + " of " + freeSpeed
+                        + " horizontal speed; it is meant to be a heavy crawl");
+        helper.succeed();
+    }
+
+    /**
+     * R3-04: letting go before tier one is not a weaker strike, it is no strike. No damage, no
+     * cooldown, no wear -- and there is no cancellation code behind that, only a release that finds
+     * no tier to swing.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
     public static void r3CancelledChargeChangesNothing(GameTestHelper helper) {
         net.minecraft.world.entity.animal.Cow target = inertCow(helper, 8, 2, 11);
         net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 2, 8);
@@ -5220,9 +5456,12 @@ public class MHNWGameTests {
         hunter.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
 
         helper.startSequence()
-                .thenExecuteFor(10, () -> tickOnce(hunter))
-                .thenExecute(hunter::stopUsingItem)
-                .thenExecuteFor(com.carro1001.mhnw.item.GiantJawbladeItem.CHARGE_TICKS + 5, () -> tickOnce(hunter))
+                // Short of tier one, which is the only release that costs nothing at all.
+                .thenExecuteFor(com.carro1001.mhnw.item.GiantJawbladeItem.TIER_TICKS[0] - 3,
+                        () -> tickOnce(hunter))
+                .thenExecute(hunter::releaseUsingItem)
+                .thenExecuteFor(com.carro1001.mhnw.item.GiantJawbladeItem.OVERCHARGE_TICKS + 5,
+                        () -> tickOnce(hunter))
                 .thenExecute(() -> {
                     boolean cooling = hunter.getCooldowns().isOnCooldown(
                             com.carro1001.mhnw.registry.ModItems.GIANT_JAWBLADE.get());
@@ -5357,12 +5596,18 @@ public class MHNWGameTests {
         completeCharge(helper, hunter);
 
         float chargeCost = beforeCharge - quarry.getHealth();
+        // The reference is one ordinary hit, which vanilla guarantees is exactly one hit. A full
+        // charge is legitimately harder than that by the tier ratio, so the ceiling scales with it;
+        // a part and its parent both taking the same swing would land near twice this.
+        float[] tierDamage = com.carro1001.mhnw.item.GiantJawbladeItem.TIER_DAMAGE;
+        float oneChargedHit = singleHit * (tierDamage[tierDamage.length - 1] / tierDamage[0]);
         retire(hunter);
         helper.assertTrue(singleHit > 0.0F, "fixture error: the reference hit did no damage");
         helper.assertTrue(chargeCost > 0.0F, "the charge did not reach the monster at all");
-        helper.assertTrue(chargeCost <= singleHit + 1.0E-3F,
-                "the charge cost the monster " + chargeCost + " health against a single hit's "
-                        + singleHit + "; a part and its parent were both hit, or the volume swept");
+        helper.assertTrue(chargeCost <= oneChargedHit * 1.2F,
+                "the charge cost the monster " + chargeCost + " health against one charged hit's"
+                        + " expected " + oneChargedHit + "; a part and its parent were both hit,"
+                        + " or the volume swept");
         helper.succeed();
     }
 
@@ -5432,6 +5677,274 @@ public class MHNWGameTests {
         helper.assertTrue(tab != null && tab.getIconItem().is(ModEntities.GREAT_IZUCHI_SPAWN_EGG.get()),
                 "the mod's creative tab icon is " + (tab == null ? "null" : tab.getIconItem())
                         + ", expected the Great Izuchi spawn egg");
+        helper.succeed();
+    }
+
+    /**
+     * The Giant Jawblade's model must never inherit from vanilla's flat-item chain.
+     *
+     * <p>This is a real bug that shipped twice and cost two rounds, and it is invisible to every
+     * other check: the model loads, the item works, a dropped one still casts a shadow, and nothing
+     * is logged. {@code item/handheld} parents {@code item/generated} parents
+     * {@code builtin/generated}, and {@link net.minecraft.client.resources.model.ModelBakery} bakes
+     * any model whose <em>root</em> parent is that marker through {@code ItemModelGenerator}, which
+     * throws the model's own {@code elements} away and builds quads purely from {@code layer0} ..
+     * {@code layer4}. A cuboid model names its texture {@code "0"}, not {@code "layer0"}, so the
+     * generator finds no layers, emits no quads, and the weapon renders as nothing at all.
+     *
+     * <p>A 3D item model therefore declares no parent and carries its own {@code display} block --
+     * which is exactly what the artist's export does, and what a well-meaning "fix" to inherit
+     * vanilla's hand transforms undoes. Checked as text on purpose: model baking is client-only, so
+     * a dedicated server cannot bake this model to count its quads, but it can read the file.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void r3JawbladeModelDoesNotInheritTheFlatItemChain(GameTestHelper helper) {
+        String model = readPackaged(helper, "/assets/mhnw/models/item/giant_jawblade.json");
+        helper.assertTrue(!model.contains("\"parent\""),
+                "the weapon model declares a parent; a 3D item model must not, because vanilla's"
+                        + " item parents resolve to builtin/generated and discard its elements");
+        helper.assertTrue(model.contains("\"elements\"") && model.contains("\"display\""),
+                "the weapon model lost its own elements or display block");
+        helper.assertTrue(model.contains("\"0\":") && !model.contains("layer0"),
+                "the weapon model uses a layer texture key, which only means anything to the flat"
+                        + " item generator this model must not go through");
+
+        // The charge-tier models are the one place a parent is correct: they inherit this model's
+        // geometry so only their held poses differ. That parent must still be ours -- pointing any
+        // of them at a vanilla item model would hand the whole chain back to the flat generator.
+        for (int tier = 1; tier <= com.carro1001.mhnw.item.GiantJawbladeItem.CHARGE_POSE_STEPS; tier++) {
+            String path = "/assets/mhnw/models/item/giant_jawblade_charge_" + tier + ".json";
+            String pose = readPackaged(helper, path);
+            helper.assertTrue(pose.contains("\"mhnw:item/giant_jawblade\""),
+                    path + " does not inherit the weapon's own model");
+            helper.assertTrue(!pose.contains("item/generated") && !pose.contains("item/handheld"),
+                    path + " parents a vanilla item model, which discards the geometry it inherits");
+            helper.assertTrue(model.contains("giant_jawblade_charge_" + tier + "\""),
+                    "the weapon model has no override pointing at charge pose " + tier
+                            + ", so that pose can never be shown. If CHARGE_POSE_STEPS changed,"
+                            + " rerun node tools/gen_jawblade_charge_models.js");
+        }
+        helper.succeed();
+    }
+
+    /** Read a packaged client resource as text, or fail the test saying which one was missing. */
+    private static String readPackaged(GameTestHelper helper, String path) {
+        try (java.io.InputStream packaged = MHNW.class.getResourceAsStream(path)) {
+            if (packaged == null) {
+                helper.fail(path + " is not packaged");
+                return "";
+            }
+            return new String(packaged.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (java.io.IOException failure) {
+            helper.fail("could not read " + path + ": " + failure);
+            return "";
+        }
+    }
+
+    // ---------------------------------------------------------------- Izuchi pack anger
+
+    /**
+     * Hit one of the pack and the rest hold a grudge against that player specifically.
+     *
+     * <p>What is checked is the anger itself rather than the live target, because this species is
+     * hostile on sight: every neighbour is already targeting the nearest player, so "did it target
+     * them" would pass without any pack behaviour at all. The grudge is the part that is new, and
+     * it is what the priority-2 targeting goal reads.
+     *
+     * <p>This is also why the implementation does not rely on {@code HurtByTargetGoal.setAlertOthers}
+     * alone: vanilla's alert only touches neighbours whose target is null, which here is none of
+     * them.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void izuchiPackSharesAngerWithWhoeverHitOne(GameTestHelper helper) {
+        Izuchi struck = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        Izuchi packmate = helper.spawn(ModEntities.IZUCHI.get(), 10, 2, 8);
+        Izuchi bystander = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 10);
+        for (Izuchi izuchi : new Izuchi[]{struck, packmate, bystander}) {
+            izuchi.setNoAi(true);
+        }
+        net.minecraft.server.level.ServerPlayer hunter = realPreparer(helper, 8, 2, 6);
+
+        helper.assertTrue(!packmate.isAngryAt(hunter),
+                "fixture error: a packmate was already angry before anything hit anyone");
+
+        struck.hurt(helper.getLevel().damageSources().playerAttack(hunter), 1.0F);
+
+        boolean struckAngry = struck.isAngryAt(hunter);
+        boolean packmateAngry = packmate.isAngryAt(hunter);
+        boolean bystanderAngry = bystander.isAngryAt(hunter);
+        java.util.UUID remembered = packmate.getPersistentAngerTarget();
+        int timer = packmate.getRemainingPersistentAngerTime();
+        retire(hunter);
+
+        helper.assertTrue(packmateAngry && bystanderAngry,
+                "the pack did not share the grudge: packmate=" + packmateAngry
+                        + " bystander=" + bystanderAngry);
+        helper.assertTrue(hunter.getUUID().equals(remembered),
+                "a packmate remembered " + remembered + " rather than the player who hit one of them");
+        helper.assertTrue(timer > 0, "the grudge was shared with no time on it");
+        helper.assertTrue(struckAngry, "the one actually hit is not angry at its attacker");
+        helper.succeed();
+    }
+
+    /**
+     * The grudge is a memory: it survives a save/load round trip, and it runs out on its own rather
+     * than lasting forever.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void izuchiAngerSurvivesReloadAndExpires(GameTestHelper helper) {
+        Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        izuchi.setNoAi(true);
+        net.minecraft.server.level.ServerPlayer hunter = realPreparer(helper, 8, 2, 6);
+        izuchi.hurt(helper.getLevel().damageSources().playerAttack(hunter), 1.0F);
+
+        int before = izuchi.getRemainingPersistentAngerTime();
+        helper.assertTrue(before > 0 && izuchi.isAngryAt(hunter),
+                "fixture error: the Izuchi never became angry in the first place");
+
+        net.minecraft.nbt.CompoundTag saved = new net.minecraft.nbt.CompoundTag();
+        izuchi.saveWithoutId(saved);
+        Izuchi reloaded = ModEntities.IZUCHI.get().create(helper.getLevel());
+        reloaded.load(saved);
+
+        java.util.UUID rememberedAfterLoad = reloaded.getPersistentAngerTarget();
+        int timerAfterLoad = reloaded.getRemainingPersistentAngerTime();
+
+        // And it is finite: run the timer out and the grudge clears itself.
+        izuchi.setRemainingPersistentAngerTime(1);
+        izuchi.setTarget(null);
+        izuchi.customServerAiStepForTest();
+        boolean stillAngry = izuchi.getRemainingPersistentAngerTime() > 0;
+        retire(hunter);
+
+        helper.assertTrue(hunter.getUUID().equals(rememberedAfterLoad),
+                "a reloaded Izuchi forgot who it was angry at: " + rememberedAfterLoad);
+        helper.assertTrue(timerAfterLoad > 0,
+                "a reloaded Izuchi kept the target but lost the timer");
+        helper.assertTrue(!stillAngry, "the grudge never expires");
+        helper.succeed();
+    }
+
+    /**
+     * The pack does not wound its own, in either direction, and never turns on itself for trying.
+     *
+     * <p>Both directions matter and neither is hypothetical: a Great Izuchi's attack volume and a
+     * small Izuchi's tail-swipe volume each damaged every {@code LivingEntity} they touched, so an
+     * escort standing in the leader's swing took the hit and then retaliated through
+     * {@code HurtByTargetGoal}.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 100)
+    public static void izuchiPackDoesNotFightItself(GameTestHelper helper) {
+        GreatIzuchi leader = spawnInert(helper);
+        Izuchi escort = helper.spawn(ModEntities.IZUCHI.get(), 10, 2, 10);
+        Izuchi other = helper.spawn(ModEntities.IZUCHI.get(), 11, 2, 10);
+        escort.setNoAi(true);
+        other.setNoAi(true);
+
+        float escortBefore = escort.getHealth();
+        float leaderBefore = leader.getHealth();
+
+        // Leader swings through its own escort, escort bites back, escort bites escort.
+        boolean leaderHurtEscort = escort.hurt(
+                helper.getLevel().damageSources().mobAttack(leader), 5.0F);
+        boolean escortHurtLeader = leader.hurt(
+                helper.getLevel().damageSources().mobAttack(escort), 5.0F);
+        boolean escortHurtEscort = other.hurt(
+                helper.getLevel().damageSources().mobAttack(escort), 5.0F);
+
+        helper.assertTrue(!leaderHurtEscort && !escortHurtLeader && !escortHurtEscort,
+                "a pack member accepted damage from its own pack: leader->escort="
+                        + leaderHurtEscort + " escort->leader=" + escortHurtLeader
+                        + " escort->escort=" + escortHurtEscort);
+        helper.assertTrue(escort.getHealth() == escortBefore && other.getHealth() == other.getMaxHealth()
+                        && leader.getHealth() == leaderBefore,
+                "pack infighting cost somebody health");
+        helper.assertTrue(escort.getLastHurtByMob() == null && leader.getLastHurtByMob() == null
+                        && other.getLastHurtByMob() == null,
+                "a pack member recorded its own pack as an attacker, so it will retaliate");
+        helper.assertTrue(escort.isAlliedTo(leader) && leader.isAlliedTo(escort)
+                        && escort.isAlliedTo(other),
+                "pack members do not read as allied, so vanilla's own helpers can still pit them"
+                        + " against each other");
+
+        // And a player still gets through, so the guard is not simply refusing everything.
+        net.minecraft.server.level.ServerPlayer hunter = realPreparer(helper, 10, 2, 8);
+        boolean playerLanded = escort.hurt(
+                helper.getLevel().damageSources().playerAttack(hunter), 2.0F);
+        retire(hunter);
+        helper.assertTrue(playerLanded && escort.getHealth() < escortBefore,
+                "the guard also blocked a player's hit");
+        helper.succeed();
+    }
+
+    /**
+     * The rally is the call that hands the grudge to the pack, so it plays when there is a pack to
+     * hand it to and not otherwise.
+     *
+     * <p>The lone case is the one worth guarding: an Izuchi shouting at nobody reads as a bug, and
+     * it is the case a naive "play it whenever hurt" implementation gets wrong.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void izuchiRalliesOnlyWhenThereIsAPackToTell(GameTestHelper helper) {
+        Izuchi lone = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        lone.setNoAi(true);
+        net.minecraft.server.level.ServerPlayer hunter = realPreparer(helper, 8, 2, 6);
+
+        lone.hurt(helper.getLevel().damageSources().playerAttack(hunter), 1.0F);
+        boolean loneRallied = lone.isRallying();
+
+        Izuchi caller = helper.spawn(ModEntities.IZUCHI.get(), 12, 2, 12);
+        Izuchi packmate = helper.spawn(ModEntities.IZUCHI.get(), 13, 2, 12);
+        caller.setNoAi(true);
+        packmate.setNoAi(true);
+        caller.hurt(helper.getLevel().damageSources().playerAttack(hunter), 1.0F);
+
+        boolean callerRallied = caller.isRallying();
+        boolean packmateRallied = packmate.isRallying();
+        long anchor = caller.getRallyStartTime();
+        retire(hunter);
+
+        helper.assertTrue(!loneRallied,
+                "an Izuchi with no packmates rallied at nobody");
+        helper.assertTrue(callerRallied,
+                "the Izuchi that was hit did not rally its packmate");
+        helper.assertTrue(!packmateRallied,
+                "the packmate rallied too; the call belongs to whoever took the hit");
+        helper.assertTrue(anchor == helper.getLevel().getGameTime(),
+                "the rally anchor is " + anchor + ", expected the game time the call started");
+        helper.succeed();
+    }
+
+    /**
+     * The tail slam is present, runs on its own longer clock, and lands nothing.
+     *
+     * <p>"Lands nothing" is the point, not an oversight: its damage envelope has not been measured
+     * from a live capture yet, so it is deliberately unarmed and kept out of ordinary combat. This
+     * test is what will fail, loudly and in the right place, the moment somebody fits an envelope
+     * for it without also removing the gate -- or ships a guessed one.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void izuchiTailSlamIsPresentButUnarmed(GameTestHelper helper) {
+        Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        izuchi.setNoAi(true);
+        Cow victim = inertCow(helper, 8, 2, 9);
+        float before = victim.getHealth();
+
+        izuchi.beginTailSlam();
+        helper.assertTrue(izuchi.getAttackId() == Izuchi.ATTACK_TAIL_SLAM,
+                "beginTailSlam did not commit the slam");
+
+        // Every tick of its own action length, including the whole span the swipe would be live in.
+        for (int age = 0; age <= IzuchiHarassGoal.SLAM_ACTION_END; age++) {
+            helper.assertTrue(IzuchiHarassGoal.attackVolumes(izuchi, age).length == 0,
+                    "the slam produced a damage volume at age " + age + "; if it has been measured,"
+                            + " remove the debugCombat gate in IzuchiHarassGoal.chooseAttack and"
+                            + " update this test");
+        }
+
+        helper.assertTrue(IzuchiHarassGoal.SLAM_ACTION_END > IzuchiHarassGoal.ACTION_END,
+                "the slam is meant to run on its own longer clock than the swipe");
+        helper.assertTrue(victim.getHealth() == before, "the unarmed slam hurt something");
         helper.succeed();
     }
 

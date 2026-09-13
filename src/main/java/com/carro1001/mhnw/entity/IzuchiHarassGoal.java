@@ -75,12 +75,27 @@ public class IzuchiHarassGoal extends Goal {
     public static final int ACTIVE_END = 47;
     public static final int ACTION_END = 47;
 
+    /** The slam clip's own length; see {@code docs/ANIMATION_MANIFEST.json}. It has no active
+     * window here because its damage envelope has not been measured yet -- see
+     * {@link Izuchi#ATTACK_TAIL_SLAM}. */
+    public static final int SLAM_ACTION_END = 87;
+
+    /** How long the action this mob is currently committed to runs for. */
+    private static int actionEnd(Izuchi mob) {
+        return mob.getAttackId() == Izuchi.ATTACK_TAIL_SLAM ? SLAM_ACTION_END : ACTION_END;
+    }
+
     private static final double VOLUME_SIZE = 0.9D;
 
-    // Temporary capture path; replace with live BoneProbe measurements when they are available.
+    // Live BoneProbe capture 2026-09-13. The active motion folds sharply through ticks 40-42,
+    // so it needs measured middle keys rather than a misleading straight endpoint interpolation.
     private static final double[][][] TAIL_PATHS = {
-            {{36, -1.2D, 0.9D, -0.8D}, {47, 0.8D, 0.8D, 1.2D}},
-            {{36, -2.0D, 0.7D, -1.2D}, {47, 1.4D, 0.7D, 1.8D}},
+            {{36, 1.44D, 0.71D, 0.05D}, {40, 0.82D, 0.61D, 1.03D},
+                    {42, 0.52D, 0.58D, 1.07D}, {46, 0.53D, 0.62D, 1.04D},
+                    {47, 0.92D, 0.58D, 0.84D}},
+            {{36, 2.47D, 0.30D, 0.17D}, {40, 0.56D, 0.41D, 1.88D},
+                    {42, -0.09D, 0.40D, 1.58D}, {46, -0.11D, 0.40D, 1.24D},
+                    {47, 0.42D, 0.38D, 1.34D}},
     };
 
     private final Izuchi mob;
@@ -242,13 +257,31 @@ public class IzuchiHarassGoal extends Goal {
         this.mob.getNavigation().stop();
         this.phaseTicks = 0;
         this.hitThisAttack.clear();
+        chooseAttack();
+        debug("attack start: entity={} seq={} id={}", this.mob.getId(),
+                this.mob.getActionSequence(), this.mob.getAttackId());
+    }
+
+    /**
+     * Which of the two attacks to commit to.
+     *
+     * <p>The slam is behind {@code debugCombat} deliberately and temporarily: its damage envelope
+     * has not been measured, so it lands nothing, and letting it into ordinary combat would mean
+     * half of a pack's attacks silently whiffing. Behind the diagnostics switch it still plays in
+     * full, which is exactly what a {@code BoneProbe} capture of its active window needs. Delete
+     * this gate together with fitting the envelope -- neither is finished without the other.
+     */
+    private void chooseAttack() {
+        if (MHNWConfig.DEBUG_COMBAT.get() && this.mob.getRandom().nextBoolean()) {
+            this.mob.beginTailSlam();
+            return;
+        }
         this.mob.beginTailSwipe();
-        debug("attack start: entity={} seq={}", this.mob.getId(), this.mob.getActionSequence());
     }
 
     private void tickAttack(LivingEntity target) {
         int age = this.mob.getAttackAge();
-        if (age < 0 || age > ACTION_END) {
+        if (age < 0 || age > actionEnd(this.mob)) {
             debug("attack end: entity={} seq={} age={} victims={}", this.mob.getId(),
                     this.mob.getActionSequence(), age, this.hitThisAttack.size());
             this.mob.endAttack();
@@ -313,6 +346,9 @@ public class IzuchiHarassGoal extends Goal {
                         || !victim.isAlive() || this.hitThisAttack.contains(victim.getId())
                         || !victim.getBoundingBox().intersects(volume)
                         || !this.mob.hasLineOfSight(victim)) {
+                    continue;
+                }
+                if (Izuchi.isPackMember(victim)) {
                     continue;
                 }
                 this.hitThisAttack.add(victim.getId());

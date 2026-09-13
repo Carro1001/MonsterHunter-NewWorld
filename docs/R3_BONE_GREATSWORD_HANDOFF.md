@@ -33,7 +33,9 @@ This packet owns:
 This is one weapon, not a weapon system. There is no common moveset API to design before a second
 weapon exists.
 
-**Not included:** a second greatsword move or charge tier, combos, sweeping/AOE charge damage,
+**Not included** (but see the SUPERSEDED note under "Fixed charged strike": charge tiers were later
+added by maintainer direction, and only that exclusion was lifted):
+a second greatsword move or charge tier, combos, sweeping/AOE charge damage,
 sheathing, stamina, dodge/roll, player animation libraries, keybinds, packets, screen shake, a
 skill/decoration tree, sharpness gauges, weapon upgrades, ores, a forge/workstation, other weapons,
 part breaking, monster changes, R4 poison/Rathian work, R8 combat changes or public release.
@@ -196,6 +198,28 @@ materials, giving the player a real equipment choice without another economy tie
 Do not add ore generation, intermediate blade parts, smithing templates or a custom workstation.
 
 ### Fixed charged strike
+
+> **SUPERSEDED on 2026-09-13 by maintainer direction, after play.** Everything in this subsection
+> describes the charge as originally specified. It was implemented exactly as written, played, and
+> then deliberately replaced. **Do not "restore" any of it from this document.** The current
+> contract, and the reasoning, are in `CLAUDE.md`'s R3 section and `docs/TEST_PLAN.md`'s
+> "R3 charge rework" entry; the tests enforce it. What changed:
+>
+> | This section says | Actual behaviour since 2026-09-13 |
+> |---|---|
+> | one fixed 30-tick hold that fires by itself | **three tiers at 25/45/75 ticks; releasing is what swings** |
+> | "no charge tiers", "no damage multiplier" | **9.0 / 12.5 / 16.0 by tier**, via a transient `ATTACK_DAMAGE` modifier around the one `Player.attack` call |
+> | holding to completion is the only way to strike | releasing below tier one does nothing; **holding past 100 ticks auto-swings at tier one's damage**, so overcharging wastes the charge |
+> | `UseAnim.SPEAR` presentation | `UseAnim.NONE` -- SPEAR is vanilla's trident raise and read wrong for a greatsword |
+> | "vanilla held-item use supplies its ordinary movement slowdown" | that 20% input scaling **times 0.35 per tick**, a deliberate crawl |
+>
+> Unchanged from this section, and still binding: one `Player.attack` per swing, one target, the
+> 4.5-block block-clipped trace, no cone/sweep/cleave, and a 30-tick recovery on hit or miss.
+>
+> Tier one is 25 ticks rather than 20 for a non-obvious reason worth keeping: at 0.8 attack speed
+> vanilla's swing timer is 25 ticks, and `Player.attack` scales damage by its attack-strength ramp,
+> so a shorter charge begun right after a left-click landed 6.64 instead of 9.0. Making the shortest
+> charge equal the swing timer means holding one always refills it.
 
 The secondary attack is one fixed held-use completion, following R2's proven server-authoritative
 shape rather than adding a state machine:
