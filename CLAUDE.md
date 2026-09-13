@@ -69,8 +69,9 @@ Species notes that are easy to get wrong from an older doc:
   and documented in `docs/DEFERRED.md`, not a bug to fix in passing.
 - **Rathian** has a real measured/mirrored bite timeline and the opening roar; it is not
   vanilla-melee-only.
-- **Small Izuchi's** missing dedicated attack/death clips are an **accepted first-release
-  presentation limitation** (roadmap v4), not a prerequisite for R1. See "Attack timeline" below.
+- **Small Izuchi** has its recovered `origin/brain` tail swipe: a 48-tick server-timed action with
+  a temporary, live-fitting-pending damage envelope. It still has no dedicated death clip. See
+  "Attack timeline" below.
 - **Toad and Flashbug** endemic behaviour ships as-is and is retained; R2 extended it rather than
   redesigning it — both are now capturable, and the Flashbug's flash moved into a shared helper,
   but neither species' trigger, telegraph, radius or one-release discard changed.
@@ -100,7 +101,8 @@ round on this machine takes roughly 30 seconds.
 Combat/behaviour diagnostics: `/mhnw debugcombat` toggles logging in-game (op-only) — see
 `MHNWCommands`/`MHNWConfig`. With it on, `BoneProbe` (client-only) logs every named GeckoLib bone's
 measured world position, converted into the same left/up/forward local frame every species'
-`localToWorld` uses, and `AttackVolumeOverlay` draws Great Izuchi's live attack volume with F3+B.
+`localToWorld` uses, and `AttackVolumeOverlay` draws Great Izuchi's and small Izuchi's live attack
+volumes with F3+B.
 This is the only sane way to get real hurtbox/attack numbers — see "Hurtboxes are static offsets"
 below for why guessing offline doesn't work.
 
@@ -211,7 +213,7 @@ without persisting anything of ours and without calling `die()` twice. No body's
 extended; see `docs/DEFERRED.md` on Rathian's and Rathalos's death clips still being cut short by
 vanilla's 20-tick removal.
 
-### Attack timeline: Great Izuchi and Rathian, so far
+### Attack timeline: Great Izuchi, Rathian and small Izuchi
 
 `GreatIzuchiCombatGoal`/`RathianCombatGoal` (vanilla `Goal`s, not a Brain-system behaviour — there is
 no SmartBrainLib dependency on this branch) each own their species' whole combat loop: target
@@ -232,22 +234,18 @@ measured `attack_charge_bite_right` path rather than its own capture, on the rea
 right bite's real data already showed no consistent left/right bias — replace it with its own
 measurement if a capture of the left clip ever shows that assumption was wrong.
 
-Rathalos and Izuchi still fight with ordinary vanilla `MeleeAttackGoal`/`Mob.doHurtTarget` and have
-**no custom attack presentation** — a deliberate, documented P4 gap (`docs/DEFERRED.md`), not an
-oversight:
+Rathalos still fights with ordinary vanilla `MeleeAttackGoal`/`Mob.doHurtTarget` and has **no custom
+attack presentation** — a deliberate, documented P4 gap (`docs/DEFERRED.md`), not an oversight:
 - Rathalos's real attack clips exist in its `.geo.json`/animation files but aren't wired to any
   attack volume; its four melee clips reference 14-17 bone names each that don't exist anywhere in
   its own geometry (confirmed, not assumed — a model-editor retarget or a new clip is needed before
   those can play correctly at all).
-- Izuchi (small) has no attack or death clip in its own preserved asset at all (idle/sleep/walk/run
-  only). A candidate attack/death set exists on the archived `origin/brain` branch
-  (`legacy/candidate-art-brain-branch/izuchi.*`), but every attack/death/roar/rally clip in it
-  references bones (`left_shoulder`, `right_shoulder`, `left_ankle`, `right_ankle`, `mane`,
-  `tailblade`, `left_hand`, `right_hand`) that belong to Great Izuchi's richer skeleton, not
-  Izuchi's own — confirmed directly by diffing each clip's referenced bones against Izuchi's own
-  `.geo.json`. This needs either a real retarget, a newly authored clip, or explicit approval to
-  reuse an existing clip as a labelled placeholder — a decision left to the maintainer, not made
-  unilaterally.
+- Small Izuchi's approved `origin/brain` `attack_tailswipe` is restored after removing its nine
+  invalid Great-Izuchi-only tracks. `IzuchiHarassGoal` commits a synchronized 48-tick action after
+  its dart, damages only in ticks 36–47, and allows one hit per victim. Its two temporary sweep
+  paths are drawn green by `AttackVolumeOverlay` and must be replaced by a live `BoneProbe` capture;
+  do not treat an offline rig solve as a measurement. The other archived clips and a death clip
+  remain deferred.
 
 ### The opening roar (`RoarGoal`/`Roarable`)
 
@@ -322,10 +320,11 @@ default `armor*` names but has **no boot bones at all**, so a stock `GeoArmorRen
 renders bare feet.
 
 `entity/IzuchiHarassGoal.java` replaced small Izuchi's vanilla `MeleeAttackGoal`: bounded
-circle → dart → retreat, ordinary `doHurtTarget` damage, no new clip and no attack timeline. At most
-one Izuchi within 12 blocks darts at a time, enforced by reading `Izuchi.isDarting()` off the living
-neighbours. Every field it owns is transient; a reload starts from nothing. It overrides
-`requiresUpdateEveryTick()` for the same reason `RoarGoal` has to.
+circle → dart → tail swipe → retreat. The recovered tail swipe has a synchronized 48-tick action
+clock, damage only in ticks 36–47, and server volumes shared with the green client overlay. At most
+one Izuchi within 12 blocks owns the dart-and-swipe turn at a time, enforced by reading
+`Izuchi.isTakingAttackTurn()` off living neighbours. Every field it owns is transient; a reload
+starts from nothing. It overrides `requiresUpdateEveryTick()` for the same reason `RoarGoal` has to.
 
 Two cancellation paths that are not obvious and were both missed in the first cut:
 
