@@ -439,7 +439,7 @@ back out -- and bone as its repair material.
 
 Its one addition is a charged strike -- **three tiers, held and released**, which deliberately
 overrides the R3 packet's own "no charge tiers, no damage multiplier" contract at the maintainer's
-direction after play. Tiers land at 20/45/75 ticks for 9.0/12.5/16.0 damage; releasing is what
+direction after play. Tiers land at 25/45/75 ticks for 9.0/12.5/16.0 damage; releasing is what
 swings; releasing below tier one does nothing at all; holding past 100 ticks swings by itself at
 tier one's damage, so overcharging wastes the charge rather than banking it. Every part of it is
 borrowed:

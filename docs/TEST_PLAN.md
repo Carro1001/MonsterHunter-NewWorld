@@ -523,7 +523,7 @@ with "no damage multiplier" and an explicit exclusion of "charge tiers". All thr
 | | Packet contract | Now |
 |---|---|---|
 | Firing | auto-fires when the 30-tick hold completes | **release to swing** |
-| Tiers | none, explicitly excluded | **three**, at 20 / 45 / 75 ticks |
+| Tiers | none, explicitly excluded | **three**, at 25 / 45 / 75 ticks |
 | Damage | fixed 9.0, "reach not damage" | **9.0 / 12.5 / 16.0** by tier |
 | Overhold | n/a | **100 ticks auto-swings at tier one's damage** — the charge is wasted |
 | Pose | `UseAnim.SPEAR` | `UseAnim.NONE` — SPEAR is the trident raise and read wrong |
@@ -546,7 +546,7 @@ ticks of the wind-up) did not.
 
 - [ ] **Confirm it renders and reads right**, now that there is an authored pose rather than a
       borrowed placeholder or a missing one: first/third person both hands, GUI, ground, item frame.
-- [ ] **Feel of the charge.** Do 20/45/75-tick tiers read as a deliberate wind-up? Is the lean
+- [ ] **Feel of the charge.** Do 25/45/75-tick tiers read as a deliberate wind-up? Is the lean
       smooth at 48 steps, and does the crawl feel like commitment rather than like a bug?
 - [ ] **Tier cues.** Rising riptide sound per tier, particles off the weapon side that are visible
       in first person, and `ENCHANTED_HIT` instead of `CRIT` once waiting stops paying.
