@@ -1442,7 +1442,7 @@ public class MHNWGameTests {
     @GameTest(template = ARENA, timeoutTicks = 40)
     public static void izuchiRegistersHeadAndTailParts(GameTestHelper helper) {
         Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
-        String[] names = {"head", "tail_base", "tail_tip"};
+        String[] names = {"head", "tail_base", "tail_mid"};
         helper.assertTrue(izuchi.isMultipartEntity() && izuchi.getParts().length == names.length,
                 "Izuchi must have a head and two tail parts");
         for (int i = 0; i < names.length; i++) {
@@ -5069,10 +5069,49 @@ public class MHNWGameTests {
                         + " cooled, so vanilla's own sweep could not fire either way");
     }
 
-    /** Complete one charge through the public item seam, the same one vanilla's completeUsingItem
-     * calls. Used where the geometry is what is under test and the 30-tick wait is not. */
+    /**
+     * Hold the charge for real ticks and then let go, which is how a player swings this weapon.
+     *
+     * <p>Drives vanilla's own countdown and vanilla's own {@code releaseUsingItem}, so the tier that
+     * lands is the one the elapsed ticks earned rather than one a test asserted into place.
+     */
+    private static void chargeAndRelease(net.minecraft.server.level.ServerPlayer player, int ticks) {
+        player.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+        for (int tick = 0; tick < ticks; tick++) {
+            tickOnce(player);
+        }
+        player.releaseUsingItem();
+    }
+
+    /** A full-tier charge released, with the attack cooled first so the swing lands at full
+     * strength. Used where the target geometry is what is under test, not the timing. */
     private static void completeCharge(GameTestHelper helper, net.minecraft.server.level.ServerPlayer player) {
-        player.getMainHandItem().finishUsingItem(helper.getLevel(), player);
+        coolDown(helper, player);
+        chargeAndRelease(player, maxTierTicks());
+    }
+
+    private static int maxTierTicks() {
+        int[] tiers = com.carro1001.mhnw.item.GiantJawbladeItem.TIER_TICKS;
+        return tiers[tiers.length - 1];
+    }
+
+    /** Health lost by a fresh cow to one charge held this long, or 0.0 if nothing was struck. */
+    private static float chargeDamageAt(GameTestHelper helper, net.minecraft.server.level.ServerPlayer hunter,
+                                        int holdTicks, double x, double y, double z) {
+        net.minecraft.world.entity.animal.Cow target = inertCow(helper, x, y, z);
+        // A cow holds 10 health and the upper tiers hit harder than that, so an unmodified one
+        // reports "10.0 lost" for every tier above the first and the measurement says nothing.
+        target.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH)
+                .setBaseValue(200.0D);
+        target.setHealth(200.0F);
+        coolDown(helper, hunter);
+        aimAt(hunter, target.getBoundingBox().getCenter());
+        float before = target.getHealth();
+        chargeAndRelease(hunter, holdTicks);
+        float lost = before - target.getHealth();
+        target.discard();
+        hunter.getCooldowns().removeCooldown(com.carro1001.mhnw.registry.ModItems.GIANT_JAWBLADE.get());
+        return lost;
     }
 
     /**
@@ -5207,12 +5246,12 @@ public class MHNWGameTests {
     }
 
     /**
-     * R3-04: the strike happens after thirty <em>real</em> ticks and not before. Fully ticked --
-     * item in hand, vanilla's own use countdown, vanilla's own completion -- so nothing here can
-     * pass by calling the completion early.
+     * R3-04: nothing swings while the charge is still held, and a release swings exactly once.
+     * Fully ticked -- item in hand, vanilla's own countdown, vanilla's own release -- so nothing
+     * here can pass by calling an item seam directly.
      */
-    @GameTest(template = ARENA, timeoutTicks = 120)
-    public static void r3ChargeStrikesOnlyAfterThirtyRealTicks(GameTestHelper helper) {
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void r3ChargeSwingsOnReleaseNotWhileHeld(GameTestHelper helper) {
         net.minecraft.world.entity.animal.Cow target = inertCow(helper, 8, 2, 11);
         net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 2, 8);
         aimAt(hunter, target.getBoundingBox().getCenter());
@@ -5220,34 +5259,116 @@ public class MHNWGameTests {
 
         hunter.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
         helper.assertTrue(hunter.getUseItemRemainingTicks()
-                        == com.carro1001.mhnw.item.GiantJawbladeItem.CHARGE_TICKS,
-                "starting the charge did not arm the full 30 ticks");
+                        == com.carro1001.mhnw.item.GiantJawbladeItem.OVERCHARGE_TICKS,
+                "starting the charge did not arm the full overcharge window");
 
         helper.startSequence()
-                .thenExecuteFor(com.carro1001.mhnw.item.GiantJawbladeItem.CHARGE_TICKS - 2, () -> tickOnce(hunter))
+                .thenExecuteFor(maxTierTicks(), () -> tickOnce(hunter))
                 .thenExecute(() -> {
                     helper.assertTrue(target.getHealth() == healthBefore,
-                            "the strike landed before the charge completed");
+                            "the weapon swung while the charge was still being held");
                     helper.assertTrue(hunter.isUsingItem(), "the charge was dropped part way");
+                    hunter.releaseUsingItem();
                 })
-                .thenExecuteFor(4, () -> tickOnce(hunter))
                 .thenExecute(() -> {
                     boolean cooling = hunter.getCooldowns().isOnCooldown(
                             com.carro1001.mhnw.registry.ModItems.GIANT_JAWBLADE.get());
                     float after = target.getHealth();
                     retire(hunter);
-                    helper.assertTrue(after < healthBefore, "the completed charge did not strike");
-                    helper.assertTrue(cooling, "a completed charge started no recovery cooldown");
+                    helper.assertTrue(after < healthBefore, "releasing a full charge did not strike");
+                    helper.assertTrue(cooling, "a completed swing started no recovery cooldown");
                 })
                 .thenSucceed();
     }
 
     /**
-     * R3-04: letting go early is not a weaker strike, it is no strike. No damage, no cooldown, no
-     * wear -- and there is no cancellation code behind that, only vanilla never reaching the
-     * completion.
+     * R3-04: each tier lands its own stated damage, measured on a real held-and-released charge.
+     *
+     * <p>Each case cools the attack first, so what is measured is the tier rather than vanilla's
+     * attack-strength ramp, and the tiers are asserted as an increasing set as well as against
+     * their stated numbers -- a bonus wired to the wrong tier passes the second check and fails the
+     * first.
      */
-    @GameTest(template = ARENA, timeoutTicks = 80)
+    @GameTest(template = ARENA, timeoutTicks = 400)
+    public static void r3ChargeTiersLandTheirStatedDamage(GameTestHelper helper) {
+        net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 2, 8);
+        int[] tierTicks = com.carro1001.mhnw.item.GiantJawbladeItem.TIER_TICKS;
+        float[] tierDamage = com.carro1001.mhnw.item.GiantJawbladeItem.TIER_DAMAGE;
+
+        float[] measured = new float[tierTicks.length];
+        for (int tier = 0; tier < tierTicks.length; tier++) {
+            measured[tier] = chargeDamageAt(helper, hunter, tierTicks[tier], 8, 2, 10);
+            helper.assertTrue(Math.abs(measured[tier] - tierDamage[tier]) < 0.51F,
+                    "tier " + (tier + 1) + " dealt " + measured[tier] + ", expected about "
+                            + tierDamage[tier]);
+        }
+        for (int tier = 1; tier < measured.length; tier++) {
+            helper.assertTrue(measured[tier] > measured[tier - 1],
+                    "tier " + (tier + 1) + " (" + measured[tier] + ") did not out-damage tier "
+                            + tier + " (" + measured[tier - 1] + ")");
+        }
+        retire(hunter);
+        helper.succeed();
+    }
+
+    /**
+     * R3-04: overcharging wastes the charge rather than banking it. Holding past the overcharge
+     * point swings by itself -- vanilla's completion, which is the one path that still runs through
+     * {@code finishUsingItem} -- and lands tier one's damage, not tier three's.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void r3OverchargeSwingsItselfAtTierOne(GameTestHelper helper) {
+        net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 2, 8);
+        float[] tierDamage = com.carro1001.mhnw.item.GiantJawbladeItem.TIER_DAMAGE;
+
+        float overcharged = chargeDamageAt(helper, hunter,
+                com.carro1001.mhnw.item.GiantJawbladeItem.OVERCHARGE_TICKS + 2, 8, 2, 10);
+
+        retire(hunter);
+        helper.assertTrue(overcharged > 0.0F,
+                "holding past the overcharge point never swung at all");
+        helper.assertTrue(Math.abs(overcharged - tierDamage[0]) < 0.51F,
+                "an overcharged swing dealt " + overcharged + ", expected tier one's "
+                        + tierDamage[0]);
+        helper.assertTrue(overcharged < tierDamage[tierDamage.length - 1] - 0.5F,
+                "an overcharged swing still landed full-tier damage, so overcharging costs nothing");
+        helper.succeed();
+    }
+
+    /**
+     * The charge is a commitment of the whole body: while it runs, horizontal movement is cut every
+     * tick. Checked against a real held charge rather than the constant, and compared with the same
+     * push applied while not charging, so vanilla's own friction cannot be mistaken for the effect.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 120)
+    public static void r3ChargingCutsMovement(GameTestHelper helper) {
+        net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 4, 8);
+        net.minecraft.world.phys.Vec3 push = new net.minecraft.world.phys.Vec3(0.5D, 0.0D, 0.0D);
+
+        hunter.setDeltaMovement(push);
+        tickOnce(hunter);
+        double freeSpeed = hunter.getDeltaMovement().horizontalDistance();
+
+        hunter.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+        hunter.setDeltaMovement(push);
+        tickOnce(hunter);
+        double chargingSpeed = hunter.getDeltaMovement().horizontalDistance();
+        hunter.stopUsingItem();
+        retire(hunter);
+
+        helper.assertTrue(freeSpeed > 0.0D, "fixture error: the un-charged push produced no motion");
+        helper.assertTrue(chargingSpeed < freeSpeed * 0.6D,
+                "charging kept " + chargingSpeed + " of " + freeSpeed
+                        + " horizontal speed; it is meant to be a heavy crawl");
+        helper.succeed();
+    }
+
+    /**
+     * R3-04: letting go before tier one is not a weaker strike, it is no strike. No damage, no
+     * cooldown, no wear -- and there is no cancellation code behind that, only a release that finds
+     * no tier to swing.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
     public static void r3CancelledChargeChangesNothing(GameTestHelper helper) {
         net.minecraft.world.entity.animal.Cow target = inertCow(helper, 8, 2, 11);
         net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 2, 8);
@@ -5257,9 +5378,12 @@ public class MHNWGameTests {
         hunter.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
 
         helper.startSequence()
-                .thenExecuteFor(10, () -> tickOnce(hunter))
-                .thenExecute(hunter::stopUsingItem)
-                .thenExecuteFor(com.carro1001.mhnw.item.GiantJawbladeItem.CHARGE_TICKS + 5, () -> tickOnce(hunter))
+                // Short of tier one, which is the only release that costs nothing at all.
+                .thenExecuteFor(com.carro1001.mhnw.item.GiantJawbladeItem.TIER_TICKS[0] - 3,
+                        () -> tickOnce(hunter))
+                .thenExecute(hunter::releaseUsingItem)
+                .thenExecuteFor(com.carro1001.mhnw.item.GiantJawbladeItem.OVERCHARGE_TICKS + 5,
+                        () -> tickOnce(hunter))
                 .thenExecute(() -> {
                     boolean cooling = hunter.getCooldowns().isOnCooldown(
                             com.carro1001.mhnw.registry.ModItems.GIANT_JAWBLADE.get());
@@ -5394,12 +5518,18 @@ public class MHNWGameTests {
         completeCharge(helper, hunter);
 
         float chargeCost = beforeCharge - quarry.getHealth();
+        // The reference is one ordinary hit, which vanilla guarantees is exactly one hit. A full
+        // charge is legitimately harder than that by the tier ratio, so the ceiling scales with it;
+        // a part and its parent both taking the same swing would land near twice this.
+        float[] tierDamage = com.carro1001.mhnw.item.GiantJawbladeItem.TIER_DAMAGE;
+        float oneChargedHit = singleHit * (tierDamage[tierDamage.length - 1] / tierDamage[0]);
         retire(hunter);
         helper.assertTrue(singleHit > 0.0F, "fixture error: the reference hit did no damage");
         helper.assertTrue(chargeCost > 0.0F, "the charge did not reach the monster at all");
-        helper.assertTrue(chargeCost <= singleHit + 1.0E-3F,
-                "the charge cost the monster " + chargeCost + " health against a single hit's "
-                        + singleHit + "; a part and its parent were both hit, or the volume swept");
+        helper.assertTrue(chargeCost <= oneChargedHit * 1.2F,
+                "the charge cost the monster " + chargeCost + " health against one charged hit's"
+                        + " expected " + oneChargedHit + "; a part and its parent were both hit,"
+                        + " or the volume swept");
         helper.succeed();
     }
 
@@ -5470,6 +5600,67 @@ public class MHNWGameTests {
                 "the mod's creative tab icon is " + (tab == null ? "null" : tab.getIconItem())
                         + ", expected the Great Izuchi spawn egg");
         helper.succeed();
+    }
+
+    /**
+     * The Giant Jawblade's model must never inherit from vanilla's flat-item chain.
+     *
+     * <p>This is a real bug that shipped twice and cost two rounds, and it is invisible to every
+     * other check: the model loads, the item works, a dropped one still casts a shadow, and nothing
+     * is logged. {@code item/handheld} parents {@code item/generated} parents
+     * {@code builtin/generated}, and {@link net.minecraft.client.resources.model.ModelBakery} bakes
+     * any model whose <em>root</em> parent is that marker through {@code ItemModelGenerator}, which
+     * throws the model's own {@code elements} away and builds quads purely from {@code layer0} ..
+     * {@code layer4}. A cuboid model names its texture {@code "0"}, not {@code "layer0"}, so the
+     * generator finds no layers, emits no quads, and the weapon renders as nothing at all.
+     *
+     * <p>A 3D item model therefore declares no parent and carries its own {@code display} block --
+     * which is exactly what the artist's export does, and what a well-meaning "fix" to inherit
+     * vanilla's hand transforms undoes. Checked as text on purpose: model baking is client-only, so
+     * a dedicated server cannot bake this model to count its quads, but it can read the file.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void r3JawbladeModelDoesNotInheritTheFlatItemChain(GameTestHelper helper) {
+        String model = readPackaged(helper, "/assets/mhnw/models/item/giant_jawblade.json");
+        helper.assertTrue(!model.contains("\"parent\""),
+                "the weapon model declares a parent; a 3D item model must not, because vanilla's"
+                        + " item parents resolve to builtin/generated and discard its elements");
+        helper.assertTrue(model.contains("\"elements\"") && model.contains("\"display\""),
+                "the weapon model lost its own elements or display block");
+        helper.assertTrue(model.contains("\"0\":") && !model.contains("layer0"),
+                "the weapon model uses a layer texture key, which only means anything to the flat"
+                        + " item generator this model must not go through");
+
+        // The charge-tier models are the one place a parent is correct: they inherit this model's
+        // geometry so only their held poses differ. That parent must still be ours -- pointing any
+        // of them at a vanilla item model would hand the whole chain back to the flat generator.
+        for (int tier = 1; tier <= com.carro1001.mhnw.item.GiantJawbladeItem.CHARGE_POSE_STEPS; tier++) {
+            String path = "/assets/mhnw/models/item/giant_jawblade_charge_" + tier + ".json";
+            String pose = readPackaged(helper, path);
+            helper.assertTrue(pose.contains("\"mhnw:item/giant_jawblade\""),
+                    path + " does not inherit the weapon's own model");
+            helper.assertTrue(!pose.contains("item/generated") && !pose.contains("item/handheld"),
+                    path + " parents a vanilla item model, which discards the geometry it inherits");
+            helper.assertTrue(model.contains("giant_jawblade_charge_" + tier + "\""),
+                    "the weapon model has no override pointing at charge pose " + tier
+                            + ", so that pose can never be shown. If CHARGE_POSE_STEPS changed,"
+                            + " rerun node tools/gen_jawblade_charge_models.js");
+        }
+        helper.succeed();
+    }
+
+    /** Read a packaged client resource as text, or fail the test saying which one was missing. */
+    private static String readPackaged(GameTestHelper helper, String path) {
+        try (java.io.InputStream packaged = MHNW.class.getResourceAsStream(path)) {
+            if (packaged == null) {
+                helper.fail(path + " is not packaged");
+                return "";
+            }
+            return new String(packaged.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (java.io.IOException failure) {
+            helper.fail("could not read " + path + ": " + failure);
+            return "";
+        }
     }
 
     private static void fillFloor(GameTestHelper helper, int y, net.minecraft.world.level.block.Block block) {

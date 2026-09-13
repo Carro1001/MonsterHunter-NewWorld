@@ -265,16 +265,16 @@ tracks all resolve on the current small-Izuchi rig. It runs on a synchronized 48
 with damage only during ticks 36–47 and green developer boxes drawn from the exact server volume
 calculation.
 
-The collision envelope is intentionally conservative pending a live `BoneProbe` capture while the
-swipe is active. It is an explicit tuning/acceptance gap, not a claim that an offline rig solve is
-authoritative. Confirm the green boxes follow the tail and can strike a nearby target once, then
-replace the two temporary paths with those measured positions. There is still no approved death
-clip; vanilla's corpse flop remains.
+The collision envelope was fitted from the maintainer's 2026-09-13 live `BoneProbe` capture during
+the swipe's active window: tail 2 travels `(1.44, 0.71, 0.05)` → `(0.76, 0.59, 0.94)`, while the
+tail claw travels `(2.47, 0.30, 0.17)` → `(0.18, 0.38, 1.32)` in left/up/forward blocks. The
+former guessed, mirrored path was removed. Confirm the revised green boxes follow the tail through
+the whole active phase; there is still no approved death clip, so vanilla's corpse flop remains.
 
-The root hurtbox is now extended by native NeoForge `head`, `tail_base`, and `tail_tip` parts so
-the visible long neck/tail can be picked and carved. Their static offsets are provisional envelopes
-from the maintainer's F3+B capture; run the same live probe pass before treating their placement as
-finished.
+The root hurtbox is now extended by native NeoForge `head`, `tail_base`, and `tail_mid` parts so
+the visible long neck/tail can be picked and carved. The 2026-09-13 visual pass removed the surplus
+far-tip box and reduced both remaining tail boxes. Confirm the revised boxes through locomotion and
+the swipe before treating their placement as finished.
 
 The other archived `brain` clips remain deferred: they need a genuine retargeting pass or new art
 before being wired. If an authored death clip is added later, check whether it needs
@@ -449,11 +449,13 @@ agree, and R0b does not claim it is.
 `thirdperson_righthand`/`_lefthand`, `firstperson_righthand`/`_lefthand`, `ground`, `gui`, `head`,
 `fixed`, `on_shelf` -- covering every context the first delivery left to `item/handheld`'s own
 short-tool defaults. The geometry and texture are byte-identical to the first delivery (diffed
-before replacing anything); only the pose changed. That first delivery's missing `gui` scale is the
-likely reason the weapon "didn't render at all" as reported: the model spans ~41 units against a
-vanilla tool's ~16, and `item/handheld`'s default 0.625 GUI scale would push most of it outside the
-icon's bounds -- invisible, not broken. There is still no separate 2D inventory icon, so GUI too
-renders the real 3D model at the artist's own tuned pose; ordinary practice for a weapon mod.
+before replacing anything); only the pose changed. There is still no separate 2D inventory icon, so
+GUI too renders the real 3D model at the artist's own tuned pose; ordinary practice for a weapon mod.
+
+Both deliveries initially rendered as nothing at all, and neither was the artist's fault: the model
+had been given `parent: minecraft:item/handheld` to inherit hand transforms, which roots it at
+`builtin/generated` and makes `ModelBakery` throw the geometry away in favour of `layer0` quads that
+a cuboid model does not have. See `TEST_PLAN.md`'s R3 section; a GameTest now guards it.
 
 **Trigger:** a human at a screen, now that there is a genuine authored pose to judge rather than a
 borrowed placeholder. Nothing here is guessed -- geometry, UVs and pose all came from the delivery.

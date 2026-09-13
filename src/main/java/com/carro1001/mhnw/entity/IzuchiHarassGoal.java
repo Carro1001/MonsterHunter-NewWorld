@@ -77,10 +77,15 @@ public class IzuchiHarassGoal extends Goal {
 
     private static final double VOLUME_SIZE = 0.9D;
 
-    // Temporary capture path; replace with live BoneProbe measurements when they are available.
+    // Live BoneProbe capture 2026-09-13. The active motion folds sharply through ticks 40-42,
+    // so it needs measured middle keys rather than a misleading straight endpoint interpolation.
     private static final double[][][] TAIL_PATHS = {
-            {{36, -1.2D, 0.9D, -0.8D}, {47, 0.8D, 0.8D, 1.2D}},
-            {{36, -2.0D, 0.7D, -1.2D}, {47, 1.4D, 0.7D, 1.8D}},
+            {{36, 1.44D, 0.71D, 0.05D}, {40, 0.82D, 0.61D, 1.03D},
+                    {42, 0.52D, 0.58D, 1.07D}, {46, 0.53D, 0.62D, 1.04D},
+                    {47, 0.92D, 0.58D, 0.84D}},
+            {{36, 2.47D, 0.30D, 0.17D}, {40, 0.56D, 0.41D, 1.88D},
+                    {42, -0.09D, 0.40D, 1.58D}, {46, -0.11D, 0.40D, 1.24D},
+                    {47, 0.42D, 0.38D, 1.34D}},
     };
 
     private final Izuchi mob;

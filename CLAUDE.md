@@ -71,9 +71,9 @@ Species notes that are easy to get wrong from an older doc:
 - **Rathian** has a real measured/mirrored bite timeline and the opening roar; it is not
   vanilla-melee-only.
 - **Small Izuchi** has its recovered `origin/brain` tail swipe: a 48-tick server-timed action with
-  a temporary, live-fitting-pending damage envelope. Its root box is extended by native head and
-  tail parts, also pending a live fitting pass. It still has no dedicated death clip. See "Attack
-  timeline" below.
+  a live-fitted damage envelope. Its root box is extended by native head and two tail parts,
+  which still need pose acceptance. It still has no dedicated death clip. See "Attack timeline"
+  below.
 - **Toad and Flashbug** endemic behaviour ships as-is and is retained; R2 extended it rather than
   redesigning it — both are now capturable, and the Flashbug's flash moved into a shared helper,
   but neither species' trigger, telegraph, radius or one-release discard changed.
@@ -399,7 +399,12 @@ And `Bucketable.bucketMobPickup` casts to `ServerPlayer` to award `FILLED_BUCKET
 0.8 attack speed, both expressed as vanilla's own attribute modifiers rather than constants read
 back out -- and bone as its repair material.
 
-Its one addition is a charged strike, and every part of it is borrowed:
+Its one addition is a charged strike -- **three tiers, held and released**, which deliberately
+overrides the R3 packet's own "no charge tiers, no damage multiplier" contract at the maintainer's
+direction after play. Tiers land at 20/45/75 ticks for 9.0/12.5/16.0 damage; releasing is what
+swings; releasing below tier one does nothing at all; holding past 100 ticks swings by itself at
+tier one's damage, so overcharging wastes the charge rather than banking it. Every part of it is
+borrowed:
 
 - **The charge is vanilla's held use.** 30 ticks from `getUseDuration`, `UseAnim.SPEAR`, and
   `finishUsingItem` called once on the server only on a completed hold -- the same shape as R2's BBQ
@@ -410,6 +415,20 @@ Its one addition is a charged strike, and every part of it is borrowed:
   vanilla's projectiles use, out to 4.5 blocks. A wall stops the strike because the trace stops, not
   because of a check of ours, and `Level.getEntities` already includes NeoForge `PartEntity`
   instances, so a `MonsterPart` is selectable with no multipart-specific code.
+- **The tier bonus is a transient `ATTACK_DAMAGE` modifier** applied around the attack call and
+  removed in a `finally`, rather than a damage number of ours -- so enchantment scaling, the attack
+  event, durability and the hit's own sound all see one coherent larger hit instead of a base hit
+  plus a correction, and the modifier cannot outlive the call even if the attack throws.
+- **The lean is 48 generated pose models** picked by a `mhnw:charge` item property
+  (`tools/gen_jawblade_charge_models.js` -- generated, don't hand-edit). An item property function
+  is the **only** render hook that receives the holder: a BEWLR and a baked-model wrapper both get
+  the stack alone, and on a server would pose every player's weapon from the local player's charge.
+  Property functions select whole models, so a smooth lean is spelled as many small steps, exactly
+  as vanilla spells `bow_pulling_0..2`, just finer.
+- **The charging crawl is a per-tick multiply on existing motion**, not a movement-speed modifier.
+  A modifier would have to be removed again on every path that can end a charge -- release,
+  completion, swap, death, dropping the weapon mid-hold -- and one missed path leaves a player
+  permanently slowed with no way to clear it.
 - **The damage is `Player.attack`,** called at most once. That keeps attack events, enchantments,
   knockback, durability, sounds, stats and the player-caused damage source -- and therefore
   `CarveState` attribution -- on exactly the path a left-click uses. NeoForge's own patch to that
@@ -429,14 +448,17 @@ alternative is the transient state the packet forbids. A GameTest keeps a bystan
 *beside* the target, because the in-line pair never enters sweep range and would never have caught
 it.
 
-**The presentation is real geometry with a real authored pose.** `models/item/giant_jawblade.json`
-is the artist's exported geometry, `parent` `minecraft:item/handheld`, with every display context
+**The presentation is real geometry with a real authored pose, and it must declare no `parent`.**
+`models/item/giant_jawblade.json` is the artist's exported geometry with every display context
 (`thirdperson`/`firstperson` both hands, `ground`, `gui`, `head`, `fixed`, `on_shelf`) explicitly
-authored rather than inherited. An earlier delivery had the geometry but no display block at all --
-`item/handheld`'s ~16-unit-tool defaults on a ~41-unit model pushed the GUI icon outside its own
-bounds, which is why it reported as invisible rather than merely misposed; the fix was the artist's
-second delivery, not a code change. There is still no separate 2D icon, so GUI renders the real 3D
-model too, at the artist's own tuned pose. See `docs/DEFERRED.md`.
+authored rather than inherited. **Giving it `parent: minecraft:item/handheld` to inherit hand transforms made it render nothing at
+all** -- a working item with an entity shadow and no geometry, logging nothing. That parent roots at
+`builtin/generated`, and `ModelBakery.bakeUncached` routes such a model through `ItemModelGenerator`,
+which discards `elements` and builds quads from `layer0`..`layer4`; a cuboid model names its texture
+`"0"`, so it baked zero quads. `r3JawbladeModelDoesNotInheritTheFlatItemChain` guards this as text,
+since model baking is client-only. The charge-tier models are the one place a parent belongs, and it
+must be ours. There is still no separate 2D icon, so GUI renders the real 3D model too, at the
+artist's own pose. See `docs/DEFERRED.md`.
 
 ### One creative tab, not five borrowed ones
 

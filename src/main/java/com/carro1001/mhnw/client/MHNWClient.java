@@ -12,6 +12,7 @@ import com.carro1001.mhnw.entity.Rathian;
 import com.carro1001.mhnw.entity.Rathalos;
 import com.carro1001.mhnw.entity.Toad;
 import com.carro1001.mhnw.registry.ModEntities;
+import com.carro1001.mhnw.registry.ModItems;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.resources.ResourceLocation;
@@ -49,6 +50,25 @@ public final class MHNWClient {
         // the projectile carries, so it needs no model, no class of ours, and no texture.
         event.registerEntityRenderer(ModEntities.FLASH_BOMB.get(),
                 net.minecraft.client.renderer.entity.ThrownItemRenderer::new);
+    }
+
+    /**
+     * Leans the Giant Jawblade back as its charge builds, the same way vanilla's bow swaps to its
+     * pulling models.
+     *
+     * <p>Registers one {@code mhnw:charge} property whose value the weapon itself computes from
+     * vanilla's use countdown ({@link com.carro1001.mhnw.item.GiantJawbladeItem#chargeProgress}),
+     * and the item model's own {@code overrides} pick a per-tier model from it. No renderer class,
+     * no animation controller and no packet: the client already knows how long the holder has been
+     * using the item, so the pose needs nothing sent to it.
+     */
+    @SubscribeEvent
+    private static void onClientSetup(net.neoforged.fml.event.lifecycle.FMLClientSetupEvent event) {
+        event.enqueueWork(() -> net.minecraft.client.renderer.item.ItemProperties.register(
+                ModItems.GIANT_JAWBLADE.get(),
+                ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, "charge"),
+                (stack, level, holder, seed) ->
+                        com.carro1001.mhnw.item.GiantJawbladeItem.chargeProgress(stack, holder)));
     }
 
     /**

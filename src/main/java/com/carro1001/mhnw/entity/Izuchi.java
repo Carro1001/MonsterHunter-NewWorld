@@ -114,12 +114,12 @@ public class Izuchi extends Monster implements GeoEntity {
 
     public Izuchi(EntityType<? extends Monster> type, Level level) {
         super(type, level);
-        // Provisional envelopes from the maintainer's F3+B capture. They overlap the root/body
-        // silhouette so ordinary melee cannot slip through a seam; tune from a live BoneProbe pass.
+        // F3+B acceptance 2026-09-13: the far tip box read as surplus; two smaller tail segments
+        // give the visible tail a more faithful, less intrusive static picking envelope.
         this.parts = new MonsterPart[] {
                 new MonsterPart(this, "head",      0.70F, 0.70F, 0.00D, 1.35D,  0.80D),
-                new MonsterPart(this, "tail_base", 0.80F, 0.70F, 0.00D, 0.85D, -0.80D),
-                new MonsterPart(this, "tail_tip",  0.65F, 0.65F, 0.00D, 0.80D, -1.55D),
+                new MonsterPart(this, "tail_base", 0.95F, 0.60F, 0.00D, 1.25D, -1.00D),
+                new MonsterPart(this, "tail_mid",  0.85F, 0.60F, 0.00D, 1.25D, -1.95D),
         };
     }
 

@@ -1,6 +1,5 @@
 {
   "credit": "Made with Blockbench",
-  "parent": "minecraft:item/handheld",
   "texture_size": [
     64,
     64
@@ -674,5 +673,295 @@
         0.75
       ]
     }
-  }
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "mhnw:charge": 0.0208
+      },
+      "model": "mhnw:item/giant_jawblade_charge_1"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.0417
+      },
+      "model": "mhnw:item/giant_jawblade_charge_2"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.0625
+      },
+      "model": "mhnw:item/giant_jawblade_charge_3"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.0833
+      },
+      "model": "mhnw:item/giant_jawblade_charge_4"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.1042
+      },
+      "model": "mhnw:item/giant_jawblade_charge_5"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.125
+      },
+      "model": "mhnw:item/giant_jawblade_charge_6"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.1458
+      },
+      "model": "mhnw:item/giant_jawblade_charge_7"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.1667
+      },
+      "model": "mhnw:item/giant_jawblade_charge_8"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.1875
+      },
+      "model": "mhnw:item/giant_jawblade_charge_9"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.2083
+      },
+      "model": "mhnw:item/giant_jawblade_charge_10"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.2292
+      },
+      "model": "mhnw:item/giant_jawblade_charge_11"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.25
+      },
+      "model": "mhnw:item/giant_jawblade_charge_12"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.2708
+      },
+      "model": "mhnw:item/giant_jawblade_charge_13"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.2917
+      },
+      "model": "mhnw:item/giant_jawblade_charge_14"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.3125
+      },
+      "model": "mhnw:item/giant_jawblade_charge_15"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.3333
+      },
+      "model": "mhnw:item/giant_jawblade_charge_16"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.3542
+      },
+      "model": "mhnw:item/giant_jawblade_charge_17"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.375
+      },
+      "model": "mhnw:item/giant_jawblade_charge_18"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.3958
+      },
+      "model": "mhnw:item/giant_jawblade_charge_19"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.4167
+      },
+      "model": "mhnw:item/giant_jawblade_charge_20"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.4375
+      },
+      "model": "mhnw:item/giant_jawblade_charge_21"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.4583
+      },
+      "model": "mhnw:item/giant_jawblade_charge_22"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.4792
+      },
+      "model": "mhnw:item/giant_jawblade_charge_23"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.5
+      },
+      "model": "mhnw:item/giant_jawblade_charge_24"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.5208
+      },
+      "model": "mhnw:item/giant_jawblade_charge_25"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.5417
+      },
+      "model": "mhnw:item/giant_jawblade_charge_26"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.5625
+      },
+      "model": "mhnw:item/giant_jawblade_charge_27"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.5833
+      },
+      "model": "mhnw:item/giant_jawblade_charge_28"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.6042
+      },
+      "model": "mhnw:item/giant_jawblade_charge_29"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.625
+      },
+      "model": "mhnw:item/giant_jawblade_charge_30"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.6458
+      },
+      "model": "mhnw:item/giant_jawblade_charge_31"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.6667
+      },
+      "model": "mhnw:item/giant_jawblade_charge_32"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.6875
+      },
+      "model": "mhnw:item/giant_jawblade_charge_33"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.7083
+      },
+      "model": "mhnw:item/giant_jawblade_charge_34"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.7292
+      },
+      "model": "mhnw:item/giant_jawblade_charge_35"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.75
+      },
+      "model": "mhnw:item/giant_jawblade_charge_36"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.7708
+      },
+      "model": "mhnw:item/giant_jawblade_charge_37"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.7917
+      },
+      "model": "mhnw:item/giant_jawblade_charge_38"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.8125
+      },
+      "model": "mhnw:item/giant_jawblade_charge_39"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.8333
+      },
+      "model": "mhnw:item/giant_jawblade_charge_40"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.8542
+      },
+      "model": "mhnw:item/giant_jawblade_charge_41"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.875
+      },
+      "model": "mhnw:item/giant_jawblade_charge_42"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.8958
+      },
+      "model": "mhnw:item/giant_jawblade_charge_43"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.9167
+      },
+      "model": "mhnw:item/giant_jawblade_charge_44"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.9375
+      },
+      "model": "mhnw:item/giant_jawblade_charge_45"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.9583
+      },
+      "model": "mhnw:item/giant_jawblade_charge_46"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 0.9792
+      },
+      "model": "mhnw:item/giant_jawblade_charge_47"
+    },
+    {
+      "predicate": {
+        "mhnw:charge": 1
+      },
+      "model": "mhnw:item/giant_jawblade_charge_48"
+    }
+  ]
 }

@@ -400,26 +400,66 @@ pixel-identical to the atlas already in the repo, so this was the model that atl
 unwrapped from. Wired with `parent: minecraft:item/handheld` and hand/head/fixed transforms borrowed
 from the old, never-shipped `BoneBlade.bbmodel` as a starting pose, since nothing authored existed.
 
-Reported result: **the weapon didn't render at all.** The likely mechanism, not fully confirmed: the
-model spans ~41 units against a vanilla tool's ~16, and the one context still using `item/handheld`'s
-own default rather than a borrowed override — `gui` — has a 0.625 scale tuned for that shorter item,
-which would push most of a model this size outside the icon's render bounds.
+Reported result: **the weapon didn't render at all** — in hand, in the inventory and on the ground,
+where it still cast a shadow. An earlier revision of this document blamed the `gui` display scale.
+**That was wrong**, and it is recorded here because it is the more useful half of the round.
+
+The real cause was `parent: minecraft:item/handheld`, added by the implementing agent to inherit hand
+transforms. `item/handheld` parents `item/generated` parents `builtin/generated`, and
+`ModelBakery.bakeUncached` routes any model whose **root** parent is that marker through
+`ItemModelGenerator` — which discards the model's own `elements` entirely and builds quads from
+`layer0`..`layer4` (`ItemModelGenerator.LAYERS`). A cuboid model names its texture `"0"`, so the
+generator found no layers, emitted **zero quads**, and produced a working item that renders nothing
+while still casting an entity shadow. Nothing is logged on this path, which is why two rounds of
+inspection found no error.
+
+A 3D item model therefore declares **no parent** and carries its own `display` block.
+`r3JawbladeModelDoesNotInheritTheFlatItemChain` now enforces exactly that, as text, because model
+baking is client-only and a dedicated server cannot bake the model to count its quads.
 
 The same day, a second delivery added a **fully authored `display` block** — `thirdperson_righthand`/
 `_lefthand`, `firstperson_righthand`/`_lefthand`, `ground`, `gui`, `head`, `fixed`, `on_shelf` — from
 the artist. Geometry and texture were diffed byte-for-byte against the first delivery and are
 unchanged; only the pose is new. `giant_jawblade.json` now carries that geometry and that display
-block verbatim, still `parent: minecraft:item/handheld` as a fallback for any context not covered.
-No separate 2D icon exists, so GUI also renders the real 3D model, at the artist's own pose. 159/159
-unchanged both times (`modCreativeTabResolvesWithItsIcon` and `r3JawbladeRegistryAndResources` only
-check the model/atlas are packaged, not their content).
+block verbatim, and **no parent at all**. No separate 2D icon exists, so GUI also renders the real
+3D model, at the artist's own pose.
+
+### R3 charge rework (2026-09-13): three tiers, held and released
+
+**This overrides the R3 packet's own locked contract**, at the maintainer's direction after playing
+it. `R3_BONE_GREATSWORD_HANDOFF.md` section 4 specifies one fixed 30-tick hold that fires by itself,
+with "no damage multiplier" and an explicit exclusion of "charge tiers". All three are now gone:
+
+| | Packet contract | Now |
+|---|---|---|
+| Firing | auto-fires when the 30-tick hold completes | **release to swing** |
+| Tiers | none, explicitly excluded | **three**, at 20 / 45 / 75 ticks |
+| Damage | fixed 9.0, "reach not damage" | **9.0 / 12.5 / 16.0** by tier |
+| Overhold | n/a | **100 ticks auto-swings at tier one's damage** — the charge is wasted |
+| Pose | `UseAnim.SPEAR` | `UseAnim.NONE` — SPEAR is the trident raise and read wrong |
+| Movement | vanilla's 20% input scaling only | that **× 0.35 per tick**, a heavy crawl |
+
+What did **not** change: one `Player.attack` per swing, one target, 4.5 blocks, block-clipped trace,
+no sweep, 30-tick recovery on hit or miss. The tier bonus is a transient `ATTACK_DAMAGE` modifier
+applied around that one call and removed in a `finally`, so enchantments, durability, attack events
+and carve attribution still scale on vanilla's own pipeline rather than on arithmetic of ours.
+
+The charge lean is 48 generated pose models selected by a `mhnw:charge` item property —
+`tools/gen_jawblade_charge_models.js`, don't hand-edit the output. **An item property function is
+the only render hook that receives the holder**; a BEWLR and a baked-model wrapper both get the
+stack alone and would pose every player's weapon from the local player's charge. Property functions
+select whole models, so a smooth lean is spelled as many small steps, the same way vanilla spells
+`bow_pulling_0..2` — just finer. 16 steps read as visibly jagged in play; 48 (a change every ~1.56
+ticks of the wind-up) did not.
 
 ### What still needs a human — R3
 
 - [ ] **Confirm it renders and reads right**, now that there is an authored pose rather than a
       borrowed placeholder or a missing one: first/third person both hands, GUI, ground, item frame.
-- [ ] **Feel of the charge.** Does 30 ticks read as a deliberate windup rather than a stuck input?
-      Is the miss recovery understandable when it happens?
+- [ ] **Feel of the charge.** Do 20/45/75-tick tiers read as a deliberate wind-up? Is the lean
+      smooth at 48 steps, and does the crawl feel like commitment rather than like a bug?
+- [ ] **Tier cues.** Rising riptide sound per tier, particles off the weapon side that are visible
+      in first person, and `ENCHANTED_HIT` instead of `CRIT` once waiting stops paying.
 - [ ] **One cue per strike** (PR #8 P2, not headlessly testable). A landed charge should sound once,
       not twice; a miss should sound once. Also worth an ear: that left-click still sounds normal
       now that this weapon no longer sweeps.
@@ -1287,16 +1327,17 @@ during testing). Health (1-hit-kill) unchanged from last round.
 Genuinely hostile, unlike everything in P3 — this is the first thing since Great Izuchi that
 actually attacks the player on sight. It now plants for the recovered `brain`-branch tail swipe:
 the server owns its 48-tick action clock and only permits damage in ticks 36–47. The client draws
-the exact same temporary attack volumes as green developer boxes when debug combat is enabled.
-The maintainer supplied a video confirming the clip plays; a live capture is still needed to tune
-the green boxes to the moving tail. There is no death animation, so death remains vanilla's plain
-corpse flop.
+the exact same live-fitted attack volumes as green developer boxes when debug combat is enabled.
+The maintainer supplied a video confirming the clip plays, and the 2026-09-13 `BoneProbe` capture
+fitted the tail path. The static F3+B envelope is head plus two reduced tail parts after its
+surplus tip part was removed; both envelopes still need a visual acceptance pass. There is no death
+animation, so death remains vanilla's plain corpse flop.
 
 - [ ] Renders, spawns via egg, idles/walks/runs with correct animation
 - [ ] Notices and attacks a nearby player, dealing real damage
 - [ ] **New: tail swipe plants before contact, and its green boxes follow the tail through the
       active phase** — headless timing/contact and one-hit-per-swing are GameTest-covered; needs a
-      live `debugCombat`/F3+B pass to replace the temporary volume path with measured positions
+      live `debugCombat`/F3+B pass to accept the measured path visually
 - [x] **New: targets pillagers on sight, same as Great Izuchi/Rathian/Rathalos** — GameTest-covered
       (`izuchiTargetsAPillagerOnSight`)
 - [ ] Naps occasionally when nothing is around (uses the `sleep` clip) — this is a rare, roughly
