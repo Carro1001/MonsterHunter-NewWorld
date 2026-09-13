@@ -95,6 +95,23 @@ first left the blade stuck vertical.
 Both are worth re-walking J1-J5 for. J3's caveat still stands: the rotation *signs* were never
 judged, only the pivot they rotate about.
 
+### Second playtest of the GeckoLib jawblade — three fixes, all in assets
+
+- **Crash on right-click in third person.** `enumExtensions` was at the root of
+  `neoforge.mods.toml`; FML reads it per-mod (`IModInfo.getConfig()`), so it was silently ignored
+  and `EnumProxy.getValue()` threw inside the render path. Moved under `[[mods]]`, and the accessor
+  now degrades to the ordinary pose and logs once rather than crashing.
+- **The swing was far too wide** — the blade came out flat across the screen and left the
+  first-person view at full charge. Both the clip's rotations and `MHNWArmPoses`' four constants
+  were cut to **three fifths**: the blade now tops out at 54 degrees rather than 90, the lead arm at
+  about 64 rather than 106. **Scale those two together or the grip and the blade disagree.**
+- **The hunter gripped the weapon by its pommel.** The display translation of `[0, 7, 1.75]` put
+  the hand at geo y `-7`, two units off the end of a handle running `-9..2`. Mid-handle is `-3.5`,
+  so the translation is now `3.5` and the pivot re-derives to match. **The 48-model weapon still
+  grips the old spot** — its poses are generated with the old translation baked in, so fixing it
+  means editing `tools/gen_jawblade_charge_models.js` and re-running it. Worth doing only if that
+  weapon wins the comparison.
+
 ### Two facts this round established the hard way
 
 - **`runGameTestServer` exits zero when the mod fails to load.** The first cut of the GeckoLib item

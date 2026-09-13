@@ -31,8 +31,11 @@ import java.util.function.Consumer;
  * charge dying. The controller starts it the tick the hold starts, so clip time and charge time are
  * the same clock and no seek is needed.
  *
- * <p>The segments cover less angle as they go -- 40 degrees over the first 1.5s, then 28 over 2.0s,
- * then 22 over 2.75s -- so the blade visibly decelerates as it loads up. That deceleration lives in
+ * <p>The segments cover less angle as they go -- 24 degrees over the first 1.5s, then 17 over 2.0s,
+ * then 13 over 2.75s, ending at 54 rather than the 90 the first pass used -- so the blade visibly
+ * decelerates as it loads up without swinging flat across the screen or leaving the first-person
+ * view. {@code MHNWArmPoses} was cut by the same three fifths in the same pass; the arm and the
+ * weapon have to be scaled together or the grip and the blade disagree. That deceleration lives in
  * the clip's own keyframe spacing, not in {@link GiantJawbladeItem#chargeProgress}, which stays
  * linear because the damage tiers and the legacy 48-model lean both read it. GeckoLib
  * 4.9.2 has no public seek and no {@code anim_time_update} MoLang support (both checked in the

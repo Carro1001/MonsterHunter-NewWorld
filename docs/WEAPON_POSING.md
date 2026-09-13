@@ -51,6 +51,13 @@ visibly threw the weapon out of the grip mid-charge.
 hardcoding it, so a new `display` block and a stale pivot cannot disagree silently. **Copy that
 assertion for the next weapon.**
 
+**The translation is also how you choose where along the grip the hunter holds.** The hand lands on
+whatever model point the formula names, so the display block decides that too -- it is not only a
+placement. The Giant Jawblade shipped at `[0, 7, 1.75]`, putting the hand at geo y `-7` on a handle
+running `-9..2`: two units off the pommel, which read on screen as holding the sword by its very
+end. Mid-handle is `-3.5`, so the translation became `3.5`. When a weapon looks mis-gripped, this is
+the number, and the pivot has to be re-derived with it.
+
 Two consequences:
 
 - **The pivot is per display context, but a geo file has only one.** First person uses a different
@@ -199,7 +206,9 @@ file as the source of truth):
 ## 7. Checklist for the next weapon
 
 1. Author the model and its `display` block. That block, not the geometry, decides where the hand is.
-2. Compute the bone pivot as `-thirdperson_righthand.translation` and assert it in a GameTest.
+2. Check where that puts the hand along the grip before anything else -- `-translation` against the
+   handle cube's own extent. Then compute the bone pivot as `-thirdperson_righthand.translation` and
+   assert it in a GameTest.
 3. Decide what must move — weapon only, or arms too — using the table in section 1.
 4. If a clip is driven by a gameplay timer, match durations and assert the timings against the
    constants, or re-anchor per render. Do not invent a third way.

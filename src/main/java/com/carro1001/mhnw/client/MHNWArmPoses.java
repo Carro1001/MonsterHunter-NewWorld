@@ -33,23 +33,28 @@ import net.neoforged.neoforge.client.IArmPoseTransformer;
 public final class MHNWArmPoses {
 
     /**
-     * How far back the leading arm swings at a full charge, in radians, on top of the resting
-     * item pose. Roughly 105 degrees: enough to read as "wound up" from across a clearing without
-     * putting the blade through the hunter's own head.
+     * How far back the leading arm swings at a full charge, in radians, on top of the resting item
+     * pose. About 64 degrees: a high guard rather than a full overhead wind-up.
      *
-     * <p>These numbers are a first pass and are meant to be tuned by eye -- they are gathered here
-     * rather than scattered through {@link #pose} so that tuning them is a one-place edit. If the
-     * arms bend the wrong way, negate; the axis conventions are easy to get backwards and this has
-     * never been judged on a screen.
+     * <p><b>Cut to three fifths of the first pass after playtesting.</b> At 1.85 radians the arm
+     * came out past horizontal, the blade swung flat across the screen, and at full charge it left
+     * the first-person view entirely -- too wide to read, and wider than a person could hold a
+     * greatsword. The clip's own rotations in
+     * {@code animations/item/giant_jawblade.animation.json} were scaled by the same three fifths in
+     * the same pass, so the arm and the weapon stay in proportion; scale both together or they
+     * will disagree.
+     *
+     * <p>These are meant to be tuned by eye and are gathered here rather than scattered through
+     * {@link #pose} so that tuning them is a one-place edit.
      */
-    private static final float LEAD_ARM_LIFT = -1.85F;
+    private static final float LEAD_ARM_LIFT = -1.11F;
 
     /** The off hand comes across onto the grip rather than staying at the hunter's side. */
-    private static final float OFF_ARM_LIFT = -1.70F;
+    private static final float OFF_ARM_LIFT = -1.02F;
 
     /** A small outward splay, so the two arms do not occupy the same space at full charge. */
-    private static final float LEAD_ARM_SPLAY = -0.22F;
-    private static final float OFF_ARM_SPLAY = 0.30F;
+    private static final float LEAD_ARM_SPLAY = -0.13F;
+    private static final float OFF_ARM_SPLAY = 0.18F;
 
     /**
      * The extended {@code ArmPose} constant. Two-handed: that is what tells vanilla to pose the off
