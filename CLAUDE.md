@@ -71,8 +71,9 @@ Species notes that are easy to get wrong from an older doc:
 - **Rathian** has a real measured/mirrored bite timeline and the opening roar; it is not
   vanilla-melee-only.
 - **Small Izuchi** has its recovered `origin/brain` tail swipe: a 48-tick server-timed action with
-  a temporary, live-fitting-pending damage envelope. It still has no dedicated death clip. See
-  "Attack timeline" below.
+  a temporary, live-fitting-pending damage envelope. Its root box is extended by native head and
+  tail parts, also pending a live fitting pass. It still has no dedicated death clip. See "Attack
+  timeline" below.
 - **Toad and Flashbug** endemic behaviour ships as-is and is retained; R2 extended it rather than
   redesigning it — both are now capturable, and the Flashbug's flash moved into a shared helper,
   but neither species' trigger, telegraph, radius or one-release discard changed.

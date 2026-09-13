@@ -271,6 +271,11 @@ authoritative. Confirm the green boxes follow the tail and can strike a nearby t
 replace the two temporary paths with those measured positions. There is still no approved death
 clip; vanilla's corpse flop remains.
 
+The root hurtbox is now extended by native NeoForge `head`, `tail_base`, and `tail_tip` parts so
+the visible long neck/tail can be picked and carved. Their static offsets are provisional envelopes
+from the maintainer's F3+B capture; run the same live probe pass before treating their placement as
+finished.
+
 The other archived `brain` clips remain deferred: they need a genuine retargeting pass or new art
 before being wired. If an authored death clip is added later, check whether it needs
 `getDeathMaxRotation` zeroed the way Great Izuchi's does (only add that override if it actually

@@ -1438,6 +1438,41 @@ public class MHNWGameTests {
                 "Izuchi never acquired a nearby pillager as a target"));
     }
 
+    /** The long neck/tail model is pickable through three native NeoForge parts from spawn. */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void izuchiRegistersHeadAndTailParts(GameTestHelper helper) {
+        Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        String[] names = {"head", "tail_base", "tail_tip"};
+        helper.assertTrue(izuchi.isMultipartEntity() && izuchi.getParts().length == names.length,
+                "Izuchi must have a head and two tail parts");
+        for (int i = 0; i < names.length; i++) {
+            MonsterPart part = izuchi.monsterParts()[i];
+            helper.assertTrue(part.partName.equals(names[i]) && part.getParent() == izuchi,
+                    "wrong Izuchi part at " + i);
+            helper.assertTrue(helper.getLevel().getPartEntities().contains(part),
+                    "Izuchi part missing from NeoForge lookup: " + part.partName);
+            var centre = izuchi.localToWorld(part.localLeft, part.localUp, part.localForward);
+            helper.assertTrue(part.getBoundingBox().getCenter().distanceTo(centre) < EPSILON,
+                    "Izuchi part was not positioned on spawn: " + part.partName);
+        }
+        helper.succeed();
+    }
+
+    /** One area source may see root and every part, but must damage the parent exactly once. */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void izuchiOneSourceAcrossPartsCountsOnce(GameTestHelper helper) {
+        Izuchi izuchi = helper.spawn(ModEntities.IZUCHI.get(), 8, 2, 8);
+        float before = izuchi.getHealth();
+        DamageSource source = helper.getLevel().damageSources().generic();
+        izuchi.hurt(source, PROBE_DAMAGE);
+        for (MonsterPart part : izuchi.monsterParts()) {
+            part.hurt(source, PROBE_DAMAGE);
+        }
+        helper.assertTrue(Math.abs(before - izuchi.getHealth() - PROBE_DAMAGE) < EPSILON,
+                "one source across Izuchi root and parts caused more than one hit");
+        helper.succeed();
+    }
+
     /** A13: death removes it, same as every other species. */
     @GameTest(template = ARENA, timeoutTicks = 120)
     public static void izuchiDeathRemovesIt(GameTestHelper helper) {
@@ -1445,8 +1480,10 @@ public class MHNWGameTests {
         izuchi.hurt(helper.getLevel().damageSources().genericKill(), Float.MAX_VALUE);
         expireCorpse(izuchi);
 
-        helper.succeedWhen(() -> helper.assertTrue(
-                izuchi.isRemoved(), "Izuchi was not removed after dying"));
+        helper.succeedWhen(() -> {
+            helper.assertTrue(izuchi.isRemoved(), "Izuchi was not removed after dying");
+            assertPartsUnregistered(helper, izuchi.monsterParts());
+        });
     }
 
     /**

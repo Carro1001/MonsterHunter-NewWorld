@@ -2,7 +2,7 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 159 tests, all passing**
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 165 tests, all passing**
 (`.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-12, presentation/feel round and the
 corpse-presentation fix, both rebased onto the R3/Izuchi-tail-swipe master; 157 after the corpse fix
 alone, 156 before either, 148 after the R2 field-preparation packet, 123 before that packet, 121
@@ -31,10 +31,10 @@ reality. Standing rule going forward: no further push or publish without explici
 
 Combat/behaviour diagnostics: run `/mhnw debugcombat` in-game to toggle (op-only), or set
 `debugCombat = true` in `run/config/mhnw-common.toml` before launching if you'd rather it start on.
-Either way it logs attack transitions and contact accepted/rejected, and — for Great Izuchi
-specifically — draws the live attack volume with F3+B.
+Either way it logs attack transitions and contact accepted/rejected, and draws Great Izuchi's and
+small Izuchi's live attack volumes with F3+B.
 
-**Bone probe**: with `debugCombat` on, Great Izuchi, Rathian, Rathalos, Aptonoth and Lagiacrus log their
+**Bone probe**: with `debugCombat` on, Great Izuchi, small Izuchi, Rathian, Rathalos, Aptonoth and Lagiacrus log their
 actual runtime bone positions to the game log every ~2 seconds (or every tick for Great Izuchi
 while it's mid-attack), in the same left/up/forward frame the hurtbox offsets use. This is what
 actually fixed Rathian's and Aptonoth's hurtboxes this round (see their sections below) — real

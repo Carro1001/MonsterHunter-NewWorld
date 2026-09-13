@@ -20,6 +20,7 @@ import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.entity.PartEntity;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
@@ -32,10 +33,10 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * The small Izuchi: P4's "simple independent movement/targeting" species (handoff section 5, P4),
  * a genuinely hostile ground monster, unlike any of the P3 endemic life.
  *
- * <p>A single fitted hurtbox, not multipart: section 4.2 reserves that machinery for large
- * monsters, and this is explicitly the small one. Its recovered tail swipe uses the same
- * server-owned action clock and server-side damage-volume rule as Great Izuchi, but remains part of
- * {@link IzuchiHarassGoal}'s bounded pack turn rather than acquiring a second combat goal.
+ * <p>The root box covers the torso, with a head and two tail parts extending the long model. Its
+ * recovered tail swipe uses the same server-owned action clock and server-side damage-volume rule
+ * as Great Izuchi, but remains part of {@link IzuchiHarassGoal}'s bounded pack turn rather than
+ * acquiring a second combat goal.
  *
  * <p>R1 replaced the vanilla {@code MeleeAttackGoal} this used to run with
  * {@link IzuchiHarassGoal}: same ordinary damage, but the escorts now circle at a distance and take
@@ -94,6 +95,7 @@ public class Izuchi extends Monster implements GeoEntity {
     public static final int TRANSITION_TICKS = 5;
 
     private final AnimatableInstanceCache animCache = GeckoLibUtil.createInstanceCache(this);
+    private final MonsterPart[] parts;
 
     /** R1 carving: participants, personal counters and the deterministic reward table. */
     private final CarveState carveState = new CarveState(CarveState.Table.IZUCHI);
@@ -107,9 +109,18 @@ public class Izuchi extends Monster implements GeoEntity {
     private IzuchiHarassGoal.Phase harassPhase;
     private int actionSequenceCounter;
     private Float committedBodyYaw;
+    private DamageSource lastDamageSource;
+    private int lastDamageTick = -1;
 
     public Izuchi(EntityType<? extends Monster> type, Level level) {
         super(type, level);
+        // Provisional envelopes from the maintainer's F3+B capture. They overlap the root/body
+        // silhouette so ordinary melee cannot slip through a seam; tune from a live BoneProbe pass.
+        this.parts = new MonsterPart[] {
+                new MonsterPart(this, "head",      0.70F, 0.70F, 0.00D, 1.35D,  0.80D),
+                new MonsterPart(this, "tail_base", 0.80F, 0.70F, 0.00D, 0.85D, -0.80D),
+                new MonsterPart(this, "tail_tip",  0.65F, 0.65F, 0.00D, 0.80D, -1.55D),
+        };
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -206,18 +217,72 @@ public class Izuchi extends Monster implements GeoEntity {
                 getZ() + left * sin + forward * cos);
     }
 
+    @Override
+    public boolean isMultipartEntity() {
+        return true;
+    }
+
+    @Override
+    public PartEntity<?>[] getParts() {
+        return this.parts;
+    }
+
+    @Override
+    public void setId(int id) {
+        super.setId(id);
+        for (int i = 0; i < this.parts.length; i++) {
+            this.parts[i].setId(id + i + 1);
+        }
+    }
+
+    public MonsterPart[] monsterParts() {
+        return this.parts;
+    }
+
+    public MonsterPart part(String name) {
+        for (MonsterPart part : this.parts) {
+            if (part.partName.equals(name)) {
+                return part;
+            }
+        }
+        throw new IllegalArgumentException("no such part: " + name);
+    }
+
+    private void positionParts() {
+        for (MonsterPart part : this.parts) {
+            part.setOldPosAndRot();
+            Vec3 centre = localToWorld(part.localLeft, part.localUp, part.localForward);
+            part.setPos(centre.x, part.restingY(centre.y), centre.z);
+        }
+    }
+
+    @Override
+    public void onAddedToLevel() {
+        super.onAddedToLevel();
+        positionParts();
+    }
+
     /** R1 carving state. */
     public CarveState carveState() {
         return this.carveState;
     }
 
     /**
-     * R1: credit the attacking player only when the hit is accepted and health genuinely falls.
-     * This species is not multipart, so there is no duplicate-part case to guard, but the
-     * accepted-and-harmful rule is the same one {@link GreatIzuchi#hurt} applies.
+     * Parts forward here, so one source touching the root and several parts in a tick still costs
+     * one hit while two distinct attackers remain independent.
      */
     @Override
     public boolean hurt(DamageSource source, float amount) {
+        if (!level().isClientSide) {
+            if (source == this.lastDamageSource && this.tickCount == this.lastDamageTick) {
+                return false;
+            }
+            if (source != this.lastDamageSource) {
+                this.invulnerableTime = 0;
+            }
+            this.lastDamageSource = source;
+            this.lastDamageTick = this.tickCount;
+        }
         float before = getHealth();
         boolean accepted = super.hurt(source, amount);
         if (accepted && !level().isClientSide && getHealth() < before) {
@@ -305,6 +370,7 @@ public class Izuchi extends Monster implements GeoEntity {
             this.yBodyRot = this.committedBodyYaw;
             setYRot(this.committedBodyYaw);
         }
+        positionParts();
     }
 
     @Override
