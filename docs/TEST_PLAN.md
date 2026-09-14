@@ -1522,6 +1522,10 @@ range and deals damage the instant it touches, which read as a body-slam that on
 a bite clip, rather than a bite that actually connects. `RathianCombatGoal` is the same
 windup/active/recovery shape as `GreatIzuchiCombatGoal`.
 
+**R4 hardening (2026-09-13):** Rathian deliberately survives peaceful difficulty, so its custom
+combat goal now rejects peaceful both before pursuit starts and while a bite is already committed.
+One focused GameTest covers both states without changing the shared test world's global difficulty.
+
 **This round: the strike volume and phase timing were replaced with a real measured path**, baked
 from a live capture, plus two behaviour fixes reported from that same session. The round-one
 estimate (a static point close to the body, active ticks 11-20) turned out wrong on both counts:

@@ -1593,6 +1593,25 @@ public class MHNWGameTests {
                 "Rathian never damaged a target standing right next to it"));
     }
 
+    /** Peaceful keeps Rathian loaded, so its own goal must reject both pursuit and a committed bite. */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void rathianCombatRejectsPeacefulDifficulty(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Rathian rathian = helper.spawn(ModEntities.RATHIAN.get(), 8, 2, 8);
+        Cow target = helper.spawn(EntityType.COW, 8, 2, 9);
+        target.setNoAi(true);
+
+        helper.assertTrue(!com.carro1001.mhnw.entity.RathianCombatGoal.canFight(
+                        rathian, target, net.minecraft.world.Difficulty.PEACEFUL, false),
+                "Rathian would start pursuing a live target on peaceful difficulty");
+        helper.assertTrue(!com.carro1001.mhnw.entity.RathianCombatGoal.canFight(
+                        rathian, target, net.minecraft.world.Difficulty.PEACEFUL, true),
+                "Rathian would finish a committed bite on peaceful difficulty");
+        helper.assertTrue(com.carro1001.mhnw.entity.RathianCombatGoal.canFight(
+                        rathian, target, net.minecraft.world.Difficulty.EASY, false),
+                "the peaceful guard also rejected an ordinary difficulty");
+        helper.succeed();
+    }
+
     /** The specific fix for "body-slams and only then plays the bite": damage must land inside the
      * bite's own active window (see {@code RathianCombatGoal.BITE_RIGHT}), not the instant contact is
      * made the way plain vanilla {@code MeleeAttackGoal} worked before this. */

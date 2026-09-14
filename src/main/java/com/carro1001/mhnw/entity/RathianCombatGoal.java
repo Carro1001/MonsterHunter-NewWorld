@@ -3,6 +3,7 @@ package com.carro1001.mhnw.entity;
 import com.carro1001.mhnw.MHNW;
 import com.carro1001.mhnw.MHNWConfig;
 import net.minecraft.util.Mth;
+import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -117,19 +118,22 @@ public class RathianCombatGoal extends Goal {
         setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
     }
 
-    private boolean targetIsValid() {
-        LivingEntity target = this.monster.getTarget();
-        return target != null && target.isAlive() && this.monster.isAlive();
+    public static boolean canFight(
+            Rathian monster, LivingEntity target, Difficulty difficulty, boolean attacking) {
+        return difficulty != Difficulty.PEACEFUL && monster.isAlive()
+                && (attacking || target != null && target.isAlive());
     }
 
     @Override
     public boolean canUse() {
-        return targetIsValid();
+        return canFight(this.monster, this.monster.getTarget(),
+                this.monster.level().getDifficulty(), false);
     }
 
     @Override
     public boolean canContinueToUse() {
-        return this.attacking || targetIsValid();
+        return canFight(this.monster, this.monster.getTarget(),
+                this.monster.level().getDifficulty(), this.attacking);
     }
 
     @Override
