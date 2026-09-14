@@ -61,6 +61,19 @@ measured for real, stand near one with `debugCombat` on for a few seconds and se
 - **The hunter's arms are posed too**, in third person, for every player -- a custom
   `HumanoidModel.ArmPose`, no animation library. See `docs/WEAPON_POSING.md`.
 
+### Third-person swing snapped upright before swinging — fixed (2026-09-13)
+
+Reported after the per-tier arcs landed: in third person the blade teleported to a vertical pose and
+swung from there. That vertical pose is the model's **rest pose** — the controller was stopping.
+
+The charge ends the instant the button comes up, but `swinging` only becomes true on the client when
+the server's animate packet arrives a tick or two later. For those ticks neither clip applied, the
+controller stopped, and the bone reverted to rest. **A longer transition cannot help**: a `STOP` is
+instant and GeckoLib's lerp only works between clips. The swing now starts on both sides — client
+for its own view (vanilla's own prediction pattern), server for everyone else — and the tier is
+computed identically on both from vanilla's countdown, so the client never picks its arc from a
+component the server has not synced back yet.
+
 ### Recovery raised to 50 ticks (2026-09-13)
 
 Up from 30, at the maintainer's direction. Worth knowing what it gates: it is an `ItemCooldowns`

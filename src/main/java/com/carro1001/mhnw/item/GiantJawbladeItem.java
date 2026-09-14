@@ -201,11 +201,13 @@ public class GiantJawbladeItem extends SwordItem implements software.bernie.geck
             software.bernie.geckolib.animation.RawAnimation.begin().thenPlay("swing_3")};
 
     /**
-     * Blend ticks between clips. One is enough now that each arc begins at its own tier's wound
-     * angle rather than at a single shared first frame; it only has to cover the uncharged case,
-     * where the blade starts from rest.
+     * Blend ticks between clips -- GeckoLib's lerp, and the only one available.
+     *
+     * <p>It smooths charge-into-swing and swing-into-rest. It cannot smooth a controller
+     * {@code STOP}, which is instant; a gap where neither clip is playing snaps the bone to the
+     * model's rest pose no matter how long this is. See {@link #beginSwing}.
      */
-    private static final int TRANSITION_TICKS = 1;
+    private static final int TRANSITION_TICKS = 2;
 
     private final software.bernie.geckolib.animatable.instance.AnimatableInstanceCache cache =
             software.bernie.geckolib.util.GeckoLibUtil.createInstanceCache(this);
@@ -544,11 +546,12 @@ public class GiantJawbladeItem extends SwordItem implements software.bernie.geck
      */
     @Override
     public void releaseUsing(ItemStack stack, Level level, LivingEntity entity, int timeCharged) {
-        if (!(entity instanceof Player player) || level.isClientSide) {
+        if (!(entity instanceof Player player)) {
             return;
         }
         int charged = USE_DURATION_TICKS - timeCharged;
         int tier = tierFor(charged);
+
         if (tier < 0) {
             // A charge that never reached tier one still swings, at the weakest arc -- letting go
             // early should look like a wasted swing rather than like nothing happened. It still
@@ -556,13 +559,44 @@ public class GiantJawbladeItem extends SwordItem implements software.bernie.geck
             // excluded, because it announced its own death with a cue and a dropped blade; swinging
             // again afterwards would undo that.
             if (charged < FIZZLE_TICKS) {
-                stack.set(com.carro1001.mhnw.registry.ModDataComponents.SWING_TIER.get(), 0);
-                player.swing(InteractionHand.MAIN_HAND, true);
+                beginSwing(stack, player, 0);
             }
             return;
         }
-        stack.set(com.carro1001.mhnw.registry.ModDataComponents.SWING_TIER.get(), tier);
+
+        beginSwing(stack, player, tier);
+        if (level.isClientSide) {
+            return;
+        }
         strike(level, player, TIER_DAMAGE[tier] - TIER_DAMAGE[0]);
+    }
+
+    /**
+     * Start the swing on <b>both</b> sides, and record which arc it is.
+     *
+     * <p>The client half is prediction, in vanilla's own style -- {@code Minecraft.startAttack}
+     * swings locally rather than waiting for the server to say so -- and it is load-bearing rather
+     * than an optimisation. Without it there is a gap: the charge ends the instant the button comes
+     * up, but {@code swinging} only becomes true on the client when the server's animate packet
+     * lands a tick or two later. For those ticks the blade is neither charging nor swinging, the
+     * controller stops, and the bone snaps to the model's rest pose -- which for this weapon is
+     * vertical. That read in play as the blade teleporting upright and swinging from there.
+     *
+     * <p><b>No amount of blending fixes that</b>, which is worth knowing before someone reaches for
+     * a longer transition: a controller {@code STOP} is instant, and GeckoLib's transition only
+     * lerps <em>between clips</em>. The fix is to never stop in the first place.
+     *
+     * <p>The tier is computed the same way on both sides from vanilla's own countdown, so the
+     * client picks the right arc immediately instead of reading a component the server has not
+     * synced back yet. The two-argument {@code swing} is deliberate: {@code LocalPlayer} overrides
+     * only the one-argument form, and that override sends a swing packet the server has no use for
+     * here -- it is already swinging this player itself.
+     */
+    private static void beginSwing(ItemStack stack, Player player, int tier) {
+        stack.set(com.carro1001.mhnw.registry.ModDataComponents.SWING_TIER.get(), tier);
+        // Both sides: the client for its own view, the server so everyone else sees it too. The
+        // flag is vanilla's "tell the swinging player as well", which only the server needs to do.
+        player.swing(InteractionHand.MAIN_HAND, !player.level().isClientSide);
     }
 
     /**
@@ -667,7 +701,8 @@ public class GiantJawbladeItem extends SwordItem implements software.bernie.geck
                 damage.removeModifier(CHARGE_BONUS_ID);
             }
         }
-        player.swing(InteractionHand.MAIN_HAND, true);
+        // The swing itself is started by beginSwing, on both sides and before this runs, so that
+        // the client never has a tick with neither clip playing.
         player.getCooldowns().addCooldown(this, RECOVERY_TICKS);
     }
 }

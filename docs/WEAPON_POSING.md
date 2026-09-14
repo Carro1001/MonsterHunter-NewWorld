@@ -207,6 +207,24 @@ correctly with no field, no packet and no cooldown read. `Player.swing(hand)` is
 any weapon that swings through its own code path has to call it anyway. This is the cheapest real
 animation hook in the whole document; reach for it before anything else.
 
+**Predict the swing on the client, or the bone snaps to rest.** `swinging` becomes true on the
+client only when the server's animate packet arrives, a tick or two after the button came up. If the
+clip that was playing has already ended by then — a charge ends the instant you release — the
+controller has nothing to play for those ticks, stops, and the bone reverts to the model's rest
+pose. For a greatsword that is bolt upright, and it reads as the weapon teleporting vertical and
+swinging from there.
+
+**No amount of blending fixes it.** A controller `STOP` is instant, and GeckoLib's transition only
+lerps *between clips* — there is nothing to lerp from when nothing is playing. Start the swing on
+both sides instead: the client for its own view, the server so everyone else sees it. Vanilla does
+the same thing (`Minecraft.startAttack` swings locally without waiting). Use the two-argument
+`swing(hand, updateSelf)`: `LocalPlayer` overrides only the one-argument form, and that override
+sends a swing packet the server has no use for when it is already swinging that player itself.
+
+Compute anything the clip selection depends on **on both sides** too, from state both already have.
+A component written server-side has not synced back yet on the tick the swing starts, so the client
+would pick its arc from a stale value for exactly the frames anyone is looking at.
+
 **But it moves the weapon only.** The arm's swing is `HumanoidModel.setupAttackAnimation`, which
 runs *after* `poseRightArm` — so it overwrites whatever a custom `ArmPose` did, and there is no hook
 between them. Replacing the arm's swing needs a mixin or a player-animation library.
