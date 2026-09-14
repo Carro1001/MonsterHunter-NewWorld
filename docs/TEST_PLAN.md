@@ -2,7 +2,7 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 174 tests, all passing**
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 175 tests, all passing**
 (`.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-12, presentation/feel round and the
 corpse-presentation fix, both rebased onto the R3/Izuchi-tail-swipe master; 157 after the corpse fix
 alone, 156 before either, 148 after the R2 field-preparation packet, 123 before that packet, 121
@@ -69,7 +69,7 @@ measured for real, stand near one with `debugCombat` on for a few seconds and se
 | **J2** | First person — **accepted**. The clip poses the weapon; the arms are not posed there (`applyForgeHandTransform` would, and is priced in `DEFERRED.md`). |
 | **J3** | Rotation signs — **correct as authored**, no negation needed. |
 | **J5** | Release — **accepted**; the snap back to rest reads as the swing. |
-| **J4** | Hotbar icon, dropped item, item frame — **still unchecked**. `isPerspectiveAware()` should keep the GUI copy from animating with the held one; if it does animate, that flag is not working. |
+| **J4** | Hotbar icon, dropped item, item frame — **was broken, now fixed**. The icon wound itself up in real time along with the held weapon. `isPerspectiveAware()` does not prevent this: it gives each context its own animation state, but they all run the same predicate, and the predicate matches by stack identity — which the hotbar and the hand share, being the same object. The clip is now gated to the four hand contexts by `GiantJawbladeItem.animatesIn`, guarded by `r3JawbladeAnimatesOnlyInAHand`. The `display` block was never the problem; all nine contexts survived the move unchanged. |
 | **J6** | A **second player** charging nearby — **still unchecked**. Their wind-up is found by stack identity and plays from its own start, so a charge already in progress when you look at it replays from the beginning. |
 
 ### Second playtest of the GeckoLib jawblade — three fixes, all in assets

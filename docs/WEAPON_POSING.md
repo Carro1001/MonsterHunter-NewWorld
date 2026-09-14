@@ -116,6 +116,16 @@ charge, the fully-wound pose, forever. Call `forceAnimationReset()` on the not-p
 Also set `isPerspectiveAware()` to `true` on any item whose hotbar icon renders alongside the held
 copy; without it both share one animation manager and fight over it.
 
+**`isPerspectiveAware()` is not enough on its own, and this is the trap.** It separates their
+animation *state*, not their *answer*: every context still runs the same predicate. A predicate that
+finds "is this being used" by stack identity is true in the hotbar too, because the icon and the
+held copy are the same `ItemStack` object — so the inventory icon winds itself up in real time
+alongside the weapon. Gate the predicate on `DataTickets.ITEM_RENDER_PERSPECTIVE`, as a **whitelist
+of the four hand contexts** (`GiantJawbladeItem.animatesIn`). A blacklist of GUI leaves item frames,
+dropped stacks, armour-stand hands and head slots animating until someone notices. Keep that check
+in common code over the common `ItemDisplayContext` enum and it stays GameTest-able, which the
+render itself never is.
+
 ## 4. Keeping a clip in step with a gameplay clock
 
 **GeckoLib 4.9.2 has no public seek and no `anim_time_update` MoLang support.** Both verified in the

@@ -178,6 +178,30 @@ public class GiantJawbladeItem extends SwordItem implements software.bernie.geck
         return true;
     }
 
+    /**
+     * Whether the charge clip should play in a given render context: only in a hand.
+     *
+     * <p><b>{@link #isPerspectiveAware()} alone does not do this.</b> It gives each display context
+     * its own {@code AnimatableManager}, but every one of them still runs the same predicate -- and
+     * the predicate finds the charge by stack identity, which the hotbar icon and the held copy
+     * share, because they are the same {@code ItemStack} object. So the inventory icon wound itself
+     * up in real time along with the weapon. The icon is meant to be a picture of the item, posed
+     * once by the model's own {@code gui} display transform.
+     *
+     * <p>Deliberately a whitelist of the four hand contexts rather than a blacklist of GUI: an item
+     * frame, a dropped stack, an armour stand's hand and a head slot should all be still too, and a
+     * blacklist would have let each new context animate until someone noticed.
+     *
+     * <p>Common code and a common enum on purpose, so the rule is reachable from a GameTest -- what
+     * renders cannot be checked headlessly, but which contexts are allowed to move can.
+     */
+    public static boolean animatesIn(net.minecraft.world.item.ItemDisplayContext context) {
+        return context == net.minecraft.world.item.ItemDisplayContext.FIRST_PERSON_RIGHT_HAND
+                || context == net.minecraft.world.item.ItemDisplayContext.FIRST_PERSON_LEFT_HAND
+                || context == net.minecraft.world.item.ItemDisplayContext.THIRD_PERSON_RIGHT_HAND
+                || context == net.minecraft.world.item.ItemDisplayContext.THIRD_PERSON_LEFT_HAND;
+    }
+
     @Override
     public software.bernie.geckolib.animatable.instance.AnimatableInstanceCache getAnimatableInstanceCache() {
         return this.cache;
@@ -208,9 +232,12 @@ public class GiantJawbladeItem extends SwordItem implements software.bernie.geck
                     @Override
                     public software.bernie.geckolib.animation.PlayState handle(
                             software.bernie.geckolib.animation.AnimationState<GiantJawbladeItem> state) {
+                        net.minecraft.world.item.ItemDisplayContext context = state.getData(
+                                software.bernie.geckolib.constant.DataTickets.ITEM_RENDER_PERSPECTIVE);
                         ItemStack stack = state.getData(
                                 software.bernie.geckolib.constant.DataTickets.ITEMSTACK);
-                        if (stack == null || !isCharging(stack)) {
+                        if (context == null || !animatesIn(context)
+                                || stack == null || !isCharging(stack)) {
                             // Stopping is not rewinding. The controller keeps currentRawAnimation
                             // across a STOP, and setAnimation only reloads a clip when the reload
                             // flag is set or a *different* animation is requested -- so without

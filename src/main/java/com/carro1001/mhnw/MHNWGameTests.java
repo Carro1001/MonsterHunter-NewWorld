@@ -5825,6 +5825,35 @@ public class MHNWGameTests {
         helper.succeed();
     }
 
+    /**
+     * The charge clip animates in a hand and nowhere else.
+     *
+     * <p>The inventory icon used to wind itself up in real time along with the held weapon: the
+     * hotbar and the hand render the same {@code ItemStack} object, so the predicate's identity
+     * check was true in both, and {@code isPerspectiveAware()} only separates their animation
+     * state, not their answer. An icon is meant to be a picture, posed once by the model's own
+     * {@code gui} transform.
+     *
+     * <p>Every context is enumerated rather than spot-checking a couple, so a context added by a
+     * future Minecraft version fails here rather than quietly animating.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void r3JawbladeAnimatesOnlyInAHand(GameTestHelper helper) {
+        for (net.minecraft.world.item.ItemDisplayContext context
+                : net.minecraft.world.item.ItemDisplayContext.values()) {
+            boolean inHand = switch (context) {
+                case FIRST_PERSON_RIGHT_HAND, FIRST_PERSON_LEFT_HAND,
+                        THIRD_PERSON_RIGHT_HAND, THIRD_PERSON_LEFT_HAND -> true;
+                default -> false;
+            };
+            helper.assertTrue(
+                    com.carro1001.mhnw.item.GiantJawbladeItem.animatesIn(context) == inHand,
+                    "the charge clip " + (inHand ? "must" : "must not") + " play in " + context
+                            + "; a still context that animates is an inventory icon winding itself up");
+        }
+        helper.succeed();
+    }
+
     private static String chargeClip(GameTestHelper helper) {
         return readPackaged(helper, "/assets/mhnw/animations/item/giant_jawblade.animation.json");
     }
