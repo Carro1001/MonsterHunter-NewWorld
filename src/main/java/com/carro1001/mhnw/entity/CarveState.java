@@ -98,6 +98,10 @@ public final class CarveState {
                 };
                 case APTONOTH -> switch (carveIndex) {
                     case 1 -> new ItemStack(ModItems.MONSTER_HIDE.get(), 2);
+                    // The habitat's own bone source. Bone armor's other two materials are Izuchi
+                    // carves, so the first hunt is the gate; bone itself should not also be a trip
+                    // back to a skeleton somewhere else.
+                    case 2 -> new ItemStack(Items.BONE, 2);
                     default -> new ItemStack(ModItems.RAW_MEAT.get(), 2);
                 };
             };

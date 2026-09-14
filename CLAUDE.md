@@ -439,24 +439,30 @@ back out -- and bone as its repair material.
 
 Its one addition is a charged strike -- **three tiers, held and released**, which deliberately
 overrides the R3 packet's own "no charge tiers, no damage multiplier" contract at the maintainer's
-direction after play. Tiers land at 25/45/75 ticks for 9.0/12.5/16.0 damage; releasing is what
-swings; releasing below tier one does nothing at all; holding past 100 ticks swings by itself at
-tier one's damage, so overcharging wastes the charge rather than banking it. Every part of it is
+direction after play. Tiers land at 30/70/125 ticks for 9.0/12.5/16.0 damage -- each segment
+deliberately longer than the last, because a heavier charge should wind slower. Releasing is what
+swings; releasing below tier one has only the weak visual arc and no strike; and holding past
+`FIZZLE_TICKS` (60 ticks after tier three) kills the charge outright -- a dull cue, the blade drops,
+and releasing afterwards does nothing. **The weapon never swings unprompted.** Every part of it is
 borrowed:
 
-- **The charge is vanilla's held use.** `getUseDuration` is the 100-tick overcharge window, the
-  pose is `UseAnim.NONE`, and `releaseUsing` is what swings -- `finishUsingItem` fires only on a
-  hold that ran the whole way, which is exactly the overcharge case. Same shape as R2's BBQ spit,
-  for the same reason: "releasing early does nothing" needs no cancellation code, because a release
-  below tier one simply finds no tier to swing. **Nothing is stored anywhere**: no field, no
-  component, no attachment, no packet, so a reload cannot resume or cash in a charge, and the tier
-  is derived from vanilla's own countdown rather than tracked.
-- **Tier one is 25 ticks, not 20, and that is a correctness number rather than a feel one.**
+- **The charge is vanilla's held use.** `getUseDuration` is the bow's hour-long value, so vanilla
+  never ends the hold and `finishUsingItem` is unreachable -- that is the "no auto release" contract
+  structurally rather than as a check. `releaseUsing` is what swings. Same shape as R2's BBQ spit,
+  for the same reason: the sub-tier release finds no tier to strike, so its weak visual arc needs no
+  cancellation code. **Nothing is stored anywhere**: no field, no
+  component, no attachment, no packet, so a reload cannot resume or cash in a charge, and both the
+  tier and the fizzle are derived from vanilla's own countdown rather than tracked -- `tierFor`
+  simply refuses to name a tier past the fizzle point.
+  **Superseded:** it used to run a 100-tick `OVERCHARGE_TICKS` window and swing itself at tier one's
+  damage when that ran out.
+- **Tier one must not drop below 25 ticks, and that is a correctness floor rather than a feel one.**
   `Player.attack` scales damage by vanilla's attack-strength ramp; at 0.8 attack speed the swing
   timer is 25 ticks, so a 20-tick tier one begun right after a left-click landed 6.64 instead of the
   advertised 9.0 (PR #10 review). `attackStrengthTicker` counts up during the hold, so making the
   shortest charge equal the swing timer means holding one always refills it. Keep
-  `TIER_TICKS[0] >= 25` if the attack speed ever changes.
+  `TIER_TICKS[0] >= 25` if the attack speed ever changes. It is 30 now, for feel; the floor is what
+  matters.
 - **The target query is `ProjectileUtil.getHitResultOnViewVector`**, the same block-clipped trace
   vanilla's projectiles use, out to 4.5 blocks. A wall stops the strike because the trace stops, not
   because of a check of ours, and `Level.getEntities` already includes NeoForge `PartEntity`
@@ -465,12 +471,16 @@ borrowed:
   removed in a `finally`, rather than a damage number of ours -- so enchantment scaling, the attack
   event, durability and the hit's own sound all see one coherent larger hit instead of a base hit
   plus a correction, and the modifier cannot outlive the call even if the attack throws.
-- **The lean is 48 generated pose models** picked by a `mhnw:charge` item property
-  (`tools/gen_jawblade_charge_models.js` -- generated, don't hand-edit). An item property function
-  is the **only** render hook that receives the holder: a BEWLR and a baked-model wrapper both get
-  the stack alone, and on a server would pose every player's weapon from the local player's charge.
-  Property functions select whole models, so a smooth lean is spelled as many small steps, exactly
-  as vanilla spells `bow_pulling_0..2`, just finer.
+- **The lean is one GeckoLib clip**, and the stance is a custom `HumanoidModel.ArmPose`. The weapon
+  is a `GeoItem` drawn by `MHNWClient.JawbladeRenderer` from `geo/item/giant_jawblade.geo.json` and
+  `animations/item/giant_jawblade.animation.json`; the hunter's arms are raised by
+  `client/MHNWArmPoses`, reached through `IClientItemExtensions.getArmPose` and an extended enum
+  constant declared in `META-INF/enumextensions.json`. No animation library: see
+  `docs/WEAPON_POSING.md`, which is the reference for all of this and for the next weapon.
+  **Superseded:** this was 48 generated pose models picked by a `mhnw:charge` item property, with a
+  generator under `tools/`. Both approaches shipped side by side for one round so they could be
+  compared in play; the clip won on 2026-09-13 and the models, the generator, the property and
+  `CHARGE_POSE_STEPS` were deleted. Don't reintroduce them.
 - **The charging crawl is a per-tick multiply on existing motion**, not a movement-speed modifier.
   A modifier would have to be removed again on every path that can end a charge -- release,
   completion, swap, death, dropping the weapon mid-hold -- and one missed path leaves a player
@@ -481,7 +491,10 @@ borrowed:
   method resolves a `PartEntity` to its parent for durability and post-attack effects.
 
 There is no cone, sweep, cleave or combo, and no weapon/moveset abstraction: one weapon does not
-tell you what two weapons would share. The 30-tick recovery cooldown applies on a hit and on a miss.
+tell you what two weapons would share. The 50-tick recovery cooldown applies on a hit and on a miss
+(30 before the alpha). It is an `ItemCooldowns` entry, so what it actually blocks is starting
+another **charge** -- vanilla item cooldowns do not gate left-click attacks at all; that would be
+the attack-speed attribute, and lowering it drags `TIER_TICKS[0]` up with it.
 (Charge tiers and their damage multiplier *were* on that exclusion list until 2026-09-13, when the
 maintainer replaced the packet's single fixed strike after playing it -- the superseded contract is
 marked as such in `docs/R3_BONE_GREATSWORD_HANDOFF.md` rather than left to contradict the code.)
@@ -552,6 +565,12 @@ Static datapack-style data (loot tables, spawn placement biome modifiers) lives 
 `src/main/resources/data/mhnw/`. Generated data goes to `src/generated/resources/` via `runData` —
 don't hand-edit files there. GeckoLib assets (`.geo.json`, `.animation.json`, textures) live under
 `src/main/resources/assets/mhnw/{geo,animations,textures}/`.
+
+`docs/WEAPON_POSING.md` is the reference for making a held weapon move: where the hand actually is
+(a derived number, not the artist's modelling origin), what can move the player's arms and what
+cannot, the GeckoLib-on-an-item wiring and its three traps, and how a clip is kept in step with a
+gameplay clock given GeckoLib has no seek. Read it before posing a second weapon — it exists so the
+Giant Jawblade's two playtest rounds don't repeat.
 
 `docs/ANIMATION_MANIFEST.json` is a generated inventory of every species' animation clips (name,
 length in seconds/ticks, loop mode), covering every `.animation.json` under `assets/mhnw/animations/

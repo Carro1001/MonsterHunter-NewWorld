@@ -2,7 +2,7 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 174 tests, all passing**
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 177 tests, all passing**
 (`.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-12, presentation/feel round and the
 corpse-presentation fix, both rebased onto the R3/Izuchi-tail-swipe master; 157 after the corpse fix
 alone, 156 before either, 148 after the R2 field-preparation packet, 123 before that packet, 121
@@ -43,6 +43,145 @@ measured numbers as a proxy for now (same skeleton, similar proportions); if you
 measured for real, stand near one with `debugCombat` on for a few seconds and send me
 `logs/latest.log`.
 
+
+---
+
+## Alpha pass 2 — Great Izuchi's real health, and two jawblades to choose between (2026-09-13)
+
+175 tests, all passing.
+
+- **`GreatIzuchi.MAX_HEALTH` is 120**, the number `DEFERRED.md` always named as the intent. 40 was a
+  development convenience; a charged Giant Jawblade ended it in three hits, which leaves no room for
+  the armour-then-rematch arc. Still a playtest number — the alpha decides whether it stays.
+- **The Giant Jawblade is GeckoLib-animated, and the 48-model approach is gone.** Both shipped side
+  by side for one round so they could be held one after the other; the clip won on 2026-09-13. The
+  48 `giant_jawblade_charge_*.json` models, `tools/gen_jawblade_charge_models.js`, the `mhnw:charge`
+  item property and `CHARGE_POSE_STEPS` were deleted, and `GiantJawbladeGeoItem` folded into
+  `GiantJawbladeItem`. The item id, recipe and stats are unchanged, so nothing on disk moved.
+- **The hunter's arms are posed too**, in third person, for every player -- a custom
+  `HumanoidModel.ArmPose`, no animation library. See `docs/WEAPON_POSING.md`.
+
+### Third-person swing snapped upright before swinging — fixed (2026-09-13)
+
+Reported after the per-tier arcs landed: in third person the blade teleported to a vertical pose and
+swung from there. That vertical pose is the model's **rest pose** — the controller was stopping.
+
+The charge ends the instant the button comes up, but `swinging` only becomes true on the client when
+the server's animate packet arrives a tick or two later. For those ticks neither clip applied, the
+controller stopped, and the bone reverted to rest. **A longer transition cannot help**: a `STOP` is
+instant and GeckoLib's lerp only works between clips. The swing now starts on both sides — client
+for its own view (vanilla's own prediction pattern), server for everyone else — and the tier is
+computed identically on both from vanilla's countdown, so the client never picks its arc from a
+component the server has not synced back yet.
+
+### Recovery raised to 50 ticks (2026-09-13)
+
+Up from 30, at the maintainer's direction. Worth knowing what it gates: it is an `ItemCooldowns`
+entry, and vanilla item cooldowns block **use**, not attacks — so it stops you starting another
+charge for two and a half seconds and does nothing to left-click rate. Throttling left-click means
+lowering the attack-speed attribute instead, which drags `TIER_TICKS[0]` up with it, since tier one
+must not be shorter than the swing timer (the PR #10 damage defect).
+
+### Release swing, per tier (added 2026-09-13, unjudged)
+
+The weapon now has its own arc on release, and on an ordinary left-click too -- one weapon, one way
+of moving. Its clock is vanilla's `swinging` flag, already set by `strike()` and already synced to
+everyone, so a second player's swing animates correctly with no state of ours.
+
+There is one arc per tier, each beginning at that tier's own wound angle so the swing flows
+straight out of the charge, and sweeping further the harder the charge was -- tier three covers
+roughly twice the ground of tier one. A release **below** tier one swings too, at the weakest arc,
+so letting go early looks like a wasted swing rather than a dropped input; it still costs no damage,
+no cooldown and no durability. A release after the charge has already **fizzled** does not swing,
+because the fizzle announced itself.
+
+**It moves the blade, not the arm.** `HumanoidModel.setupAttackAnimation` runs after the arm pose
+and overwrites it, so vanilla's arm swing stays; the clip is deliberately the same length as
+vanilla's swing (6 ticks) so the blade does not outrun the arm. A **human still has to judge** it:
+whether the three arcs are distinguishable from each other in play, and whether the weakest one
+reads as a failed swing. All of it lives in `animations/item/giant_jawblade.animation.json`.
+
+### Playtest results — three rounds, all resolved
+
+| | |
+|---|---|
+| **J1** | Third-person charge — **accepted** after three corrections: pivot moved to the hand, swing cut to 3/5 (54 degrees, not 90), grip moved into the top third of the handle. |
+| **J2** | First person — **accepted**. The clip poses the weapon; the arms are not posed there (`applyForgeHandTransform` would, and is priced in `DEFERRED.md`). |
+| **J3** | Rotation signs — **correct as authored**, no negation needed. |
+| **J5** | Release — **accepted**; the snap back to rest reads as the swing. |
+| **J4** | Hotbar icon, dropped item, item frame — **was broken, now fixed**. The icon wound itself up in real time along with the held weapon. `isPerspectiveAware()` does not prevent this: it gives each context its own animation state, but they all run the same predicate, and the predicate matches by stack identity — which the hotbar and the hand share, being the same object. The clip is now gated to the four hand contexts by `GiantJawbladeItem.animatesIn`, guarded by `r3JawbladeAnimatesOnlyInAHand`. The `display` block was never the problem; all nine contexts survived the move unchanged. |
+| **J6** | A **second player** charging nearby — **still unchecked**. Their wind-up is found by stack identity and plays from its own start, so a charge already in progress when you look at it replays from the beginning. |
+
+### Second playtest of the GeckoLib jawblade — three fixes, all in assets
+
+- **Crash on right-click in third person.** `enumExtensions` was at the root of
+  `neoforge.mods.toml`; FML reads it per-mod (`IModInfo.getConfig()`), so it was silently ignored
+  and `EnumProxy.getValue()` threw inside the render path. Moved under `[[mods]]`, and the accessor
+  now degrades to the ordinary pose and logs once rather than crashing.
+- **The swing was far too wide** — the blade came out flat across the screen and left the
+  first-person view at full charge. Both the clip's rotations and `MHNWArmPoses`' four constants
+  were cut to **three fifths**: the blade now tops out at 54 degrees rather than 90, the lead arm at
+  about 64 rather than 106. **Scale those two together or the grip and the blade disagree.**
+- **The hunter gripped the weapon by its pommel.** The display translation of `[0, 7, 1.75]` put
+  the hand at geo y `-7`, two units off the end of a handle running `-9..2`. Mid-handle is `-3.5`,
+  so the translation became `3.5` — and then `-0.5` in the third round, putting the hand at geo
+  `0.5`, in the top third of the handle just under the guard, where a lead hand actually goes.
+  Mid-handle still read as low.
+
+### Two facts this round established the hard way
+
+- **`runGameTestServer` exits zero when the mod fails to load.** The first cut of the GeckoLib item
+  named `Minecraft` in its own method body, which NeoForge's `RuntimeDistCleaner` refuses on a
+  dedicated server; mod loading threw, no test ran at all, and Gradle still printed BUILD
+  SUCCESSFUL. **A green build is not proof the suite ran** — check for the
+  `GAME TESTS COMPLETE` line, and for `invalid dist` in the log. The fix is in
+  `GiantJawbladeItem.registerControllers`: the predicate is an anonymous class, which is a
+  separate class file and so loads only when the render path runs it. A lambda is not.
+- **GeckoLib 4.9.2 supports no `anim_time_update` MoLang field** (checked in the sources jar, as
+  with the no-public-seek finding). So the charge clip is kept in step with the charge by matching
+  its length to `FIZZLE_TICKS` and its keyframes to `TIER_TICKS`, and
+  `r3GeckoJawbladeMatchesTheWeaponAndItsChargeClock` recomputes both from the constants rather than
+  hardcoding seconds.
+
+---
+
+## Alpha pass 1 — habitat exclusivity and the herbivore's bone (2026-09-13)
+
+For the friends-and-family alpha. Two gameplay changes and one real test fix; still 174 tests, all
+passing (`.\gradlew.bat --no-daemon build runGameTestServer`, three consecutive clean runs).
+
+- **The Verdant Hunting Grounds no longer spawns vanilla mobs.** Its biome JSON carried a
+  plains/forest roster of its own — sheep/pig/chicken/cow/wolf, eight monsters at weight 95-100
+  each, bats at 10 — while Great Izuchi's modifier adds one entry at **weight 2**. The mod's own
+  creatures were being outbid in their own habitat, so the hunt the biome exists for barely
+  happened. `creature`, `monster` and `ambient` are now empty in the JSON; the biome modifiers are
+  the only thing that fills them, which also makes those modifiers the single owner of the roster
+  the way `CLAUDE.md` already says they should be. `underground_water_creature` (glow squid) is
+  left alone: it competes with nothing of ours. Vanilla dungeon spawners from
+  `minecraft:monster_room` are untouched — that is a structure, not the surface population.
+  `huntingGroundsHasOneEntryPerSpecies` now asserts this per category rather than per species, so a
+  re-added cow fails it too.
+- **Aptonoth's third carve yields 2 bone** (was a second helping of raw meat). The habitat's own
+  bone source, so the armor's vanilla half doesn't send a player back to a skeleton somewhere else.
+  Hide and claw are unchanged and still Izuchi-only: the first Izuchi kill in iron/leather stays
+  the gate on bone armor, which is what then makes Great Izuchi tractable.
+- **`izuchiAttacksAndDamagesTarget` was intermittently failing on a clean tree**, not from this
+  round's changes. The cause was environmental and took far too long to find: `run/config/mhnw-common.toml`
+  had `debugCombat = true` left over from a play session, and that flag used to gate small Izuchi's
+  unfinished, damage-less tail slam. With logging on the mob picked the slam half the time and spent
+  88 ticks landing nothing. Three timeout raises (400→800→1600) and four fixture theories -- aim
+  pinning, position pinning, tick phase, target re-assertion -- all measured the same ~20% and all
+  missed it. What found it was making the failure message report *swipes started* versus *ticks
+  inside the active window*: `swipes started: 0, phase: ATTACK` pointed straight at attack
+  selection. The gate is now `MHNWConfig.TAIL_SLAM_PREVIEW`, the budget is back to the original 400,
+  and twelve consecutive runs pass **with the stale `debugCombat = true` still in place**.
+  Lesson worth keeping: make the failure message discriminate between distinct defects before
+  touching the timeout.
+
+### Still open for the alpha
+
+- Natural-spawn density has not been re-observed in a real world since the vanilla roster came out.
+  H08 below was already open; this makes its numbers stale in the player's favour, not accurate.
 
 ---
 
@@ -523,30 +662,30 @@ with "no damage multiplier" and an explicit exclusion of "charge tiers". All thr
 | | Packet contract | Now |
 |---|---|---|
 | Firing | auto-fires when the 30-tick hold completes | **release to swing** |
-| Tiers | none, explicitly excluded | **three**, at 25 / 45 / 75 ticks |
+| Tiers | none, explicitly excluded | **three**, at 30 / 70 / 125 ticks |
 | Damage | fixed 9.0, "reach not damage" | **9.0 / 12.5 / 16.0** by tier |
-| Overhold | n/a | **100 ticks auto-swings at tier one's damage** — the charge is wasted |
+| Overhold | n/a | **185 ticks fizzle** — the held input remains until release, but no swing occurs |
 | Pose | `UseAnim.SPEAR` | `UseAnim.NONE` — SPEAR is the trident raise and read wrong |
 | Movement | vanilla's 20% input scaling only | that **× 0.35 per tick**, a heavy crawl |
 
 What did **not** change: one `Player.attack` per swing, one target, 4.5 blocks, block-clipped trace,
-no sweep, 30-tick recovery on hit or miss. The tier bonus is a transient `ATTACK_DAMAGE` modifier
+no sweep, 50-tick recovery on hit or miss. The tier bonus is a transient `ATTACK_DAMAGE` modifier
 applied around that one call and removed in a `finally`, so enchantments, durability, attack events
 and carve attribution still scale on vanilla's own pipeline rather than on arithmetic of ours.
 
-The charge lean is 48 generated pose models selected by a `mhnw:charge` item property —
-`tools/gen_jawblade_charge_models.js`, don't hand-edit the output. **An item property function is
-the only render hook that receives the holder**; a BEWLR and a baked-model wrapper both get the
-stack alone and would pose every player's weapon from the local player's charge. Property functions
-select whole models, so a smooth lean is spelled as many small steps, the same way vanilla spells
-`bow_pulling_0..2` — just finer. 16 steps read as visibly jagged in play; 48 (a change every ~1.56
-ticks of the wind-up) did not.
+**Superseded 2026-09-13 — the charge lean is now one GeckoLib clip.** The weapon is a `GeoItem`
+drawn by `MHNWClient.JawbladeRenderer`; the 48 generated pose models, their generator and the
+`mhnw:charge` item property were deleted after the two approaches were compared in play. What
+remains true and worth keeping from that round: **an item property function is the only render hook
+that receives the holder**, which is why the model-swap approach existed at all; a BEWLR and a
+baked-model wrapper both get the stack alone. GeckoLib's item animation state has no holder either,
+so the surviving clip recovers one by stack identity. See `docs/WEAPON_POSING.md`.
 
 ### What still needs a human — R3
 
 - [ ] **Confirm it renders and reads right**, now that there is an authored pose rather than a
       borrowed placeholder or a missing one: first/third person both hands, GUI, ground, item frame.
-- [ ] **Feel of the charge.** Do 25/45/75-tick tiers read as a deliberate wind-up? Is the lean
+- [ ] **Feel of the charge.** Do 30/70/125-tick tiers read as a deliberate wind-up? Is the lean
       smooth at 48 steps, and does the crawl feel like commitment rather than like a bug?
 - [ ] **Tier cues.** Rising riptide sound per tier, particles off the weapon side that are visible
       in first person, and `ENCHANTED_HIT` instead of `CRIT` once waiting stops paying.

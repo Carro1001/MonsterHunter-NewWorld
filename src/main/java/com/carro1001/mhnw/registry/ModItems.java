@@ -110,6 +110,7 @@ public final class ModItems {
     public static final DeferredHolder<Item, Item> GIANT_JAWBLADE =
             ITEMS.register("giant_jawblade", () -> new GiantJawbladeItem(new Item.Properties()));
 
+
     /** Vanilla's own filled-bucket properties: one per stack, and an empty bucket on use. */
     private static Item.Properties bucketProperties() {
         return new Item.Properties().stacksTo(1).craftRemainder(Items.BUCKET);

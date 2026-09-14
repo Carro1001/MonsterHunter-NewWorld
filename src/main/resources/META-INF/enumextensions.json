@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "enum": "net/minecraft/client/model/HumanoidModel$ArmPose",
+      "name": "MHNW_GREATSWORD_CHARGE",
+      "constructor": "(ZLnet/neoforged/neoforge/client/IArmPoseTransformer;)V",
+      "parameters": {
+        "class": "com/carro1001/mhnw/client/MHNWArmPoses",
+        "field": "mhnw_greatsword_charge"
+      }
+    }
+  ]
+}

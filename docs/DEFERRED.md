@@ -483,10 +483,62 @@ borrowed placeholder. Nothing here is guessed -- geometry, UVs and pose all came
 **What it takes then:** open the weapon in every context and confirm it reads right. If something is
 still off, the fix is the same one-file `display` edit either way; no code, no id change.
 
+### Small Izuchi's tail slam is still unarmed, and is now behind its own switch
+**Status:** unchanged in substance, re-gated 2026-09-13. The slam plays in full but its damage
+envelope has never been measured, so it lands nothing; committing to it costs the pack an 88-tick
+action. Fitting the envelope needs a live `BoneProbe` capture, and this project has twice thrown
+away an offline solve.
+
+**What changed:** the gate moved from `debugCombat` to `MHNWConfig.TAIL_SLAM_PREVIEW`. A logging
+switch was deciding which attack a monster used, so turning on diagnostics -- which `CLAUDE.md`
+tells you to do for any hurtbox work -- quietly halved a pack's effective attacks. It also made the
+GameTest suite depend on whatever was left in `run/config/`: a stale `debugCombat = true` there is
+what made `izuchiAttacksAndDamagesTarget` fail intermittently, and three timeout raises and four
+fixture theories went past it before the failure message was made to distinguish "never swung" from
+"swung and missed". A switch that changes behaviour and a switch that changes output are two
+switches.
+
+**Trigger:** a live capture of the slam's active window. Delete the gate and the config key together
+with fitting the envelope; neither is finished without the other.
+
+### A missed left-click keeps the previous swing arc
+**Status:** accepted, 2026-09-13. `ModDataComponents.SWING_TIER` records how hard the last swing
+was so the blade's arc can match it, and an ordinary left-click resets it to the weakest arc through
+`onLeftClickEntity`. That hook only fires on a left-click that **connects**. A left-click swung at
+thin air right after a charged strike therefore replays the wider arc once.
+
+**Why it is not fixed:** vanilla tells the server nothing about a missed swing --
+`PlayerInteractEvent.LeftClickEmpty` is client-only. Closing it means a packet of our own, sent on
+every whiffed swing, for a difference that lasts six ticks and that nobody is looking at while
+missing. If a future weapon needs the server to know about missed swings for a real reason, send one
+packet for both.
+
+### Player animation: the arms are posed, the body is not
+**Status:** arms done 2026-09-13, body still deferred. The Giant Jawblade's charge now poses the
+hunter's arms in third person through a custom `HumanoidModel.ArmPose`
+(`client/MHNWArmPoses`, reached via `IClientItemExtensions.getArmPose`), with **no animation
+library** -- see `docs/WEAPON_POSING.md` section 5 for the mechanism and its traps.
+
+**What is still out of reach:** posing the player's body, legs or stance. That needs KosmX's
+playerAnimator (`dev.kosmx.player-anim`, current NeoForge 1.21.1 build), which is a third external
+dependency on a non-central Maven plus an authored asset per stance, and a soft-dependency fallback
+so the charge stays playable without it. One weapon's wind-up does not carry that.
+
+**Also still untried:** `IClientItemExtensions.applyForgeHandTransform`, which moves the arm and
+item together in first person. First person currently shows the weapon posed by the clip and the
+arm unposed, which reads acceptably; the hook is priced in `WEAPON_POSING.md` if it stops doing so.
+
+**Do not re-propose `UseAnim.SPEAR`.** Tried, rejected on sight -- it raises the weapon vertically
+overhead like a trident throw. Recorded in `GiantJawbladeItem`'s class doc.
+
+**Trigger:** a second or third weapon whose stances differ enough that hand-posing each becomes the
+expensive option.
+
 ## Balance values that are testing placeholders, not decisions
 
-- `GreatIzuchi.MAX_HEALTH` is 40, deliberately low so a slice dies quickly during development.
-  Intended closer to 120.
+- `GreatIzuchi.MAX_HEALTH` is **120 as of 2026-09-13**, the number this entry always named as the
+  intent; it was 40 as a development convenience. Still a playtest value, not a signed-off one --
+  the alpha is what decides whether it stays.
 - `GreatIzuchiCombatGoal.SCRATCH_DAMAGE` is 2.5 per strike, up to 3 strikes.
 - Illagers are targeted alongside players, added to make attacks observable from outside a fight.
   Keep or drop deliberately.

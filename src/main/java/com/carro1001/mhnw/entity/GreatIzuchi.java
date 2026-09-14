@@ -74,9 +74,10 @@ import software.bernie.geckolib.util.GeckoLibUtil;
 public class GreatIzuchi extends Monster implements GeoEntity, Roarable {
 
     // Provisional balance constants. Tuning is a later packet; the behaviour itself is finished.
-    // ponytail: 40 HP is a deliberately low testing value so a slice can be killed quickly during
-    // development. Raise toward 120 once the combat slice is signed off.
-    public static final double MAX_HEALTH = 40.0D;
+    // 120 as of the alpha: the development value was 40, which a charged Giant Jawblade ended in
+    // three hits and which left no room for the armour-then-rematch arc the hunting loop is built
+    // around. This is the long-intended number, not a fresh guess.
+    public static final double MAX_HEALTH = 120.0D;
     public static final double MOVE_SPEED = 0.28D;
     public static final double FOLLOW_RANGE = 32.0D;
     public static final double KNOCKBACK_RESISTANCE = 0.6D;

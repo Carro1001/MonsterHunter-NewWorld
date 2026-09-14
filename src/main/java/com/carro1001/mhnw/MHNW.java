@@ -41,6 +41,7 @@ public class MHNW {
     public MHNW(IEventBus modBus, ModContainer container) {
         ModEntities.register(modBus);
         ModItems.register(modBus);
+        com.carro1001.mhnw.registry.ModDataComponents.register(modBus);
         ModCreativeTabs.register(modBus);
         modBus.addListener(MHNW::onAttributeCreation);
         modBus.addListener(MHNW::onRegisterSpawnPlacements);
