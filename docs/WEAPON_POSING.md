@@ -70,7 +70,7 @@ Two consequences:
 
 ## 3. GeckoLib on an item: the wiring, and three traps
 
-**Verified**, this is what `GiantJawbladeGeoItem` does.
+**Verified**, this is what `GiantJawbladeItem` does.
 
 Files, resolved by `DefaultedItemGeoModel(ResourceLocation(MOD_ID, "<name>"))`:
 
@@ -202,7 +202,7 @@ perspectives, or the item gets rotated twice. `isPerspectiveAware()` and
   and a baked-model wrapper both get the stack alone. GeckoLib's item animation state carries only
   `ITEMSTACK`, `TICK` and `ITEM_RENDER_PERSPECTIVE` — **no holder** — so an item clip that depends on
   who is holding it must recover the holder by stack identity against `level.players()`, the way
-  `GiantJawbladeGeoItem` does.
+  `GiantJawbladeItem` does.
 
 ## 6. Converting a Blockbench `.bbmodel` to `geo.json` by hand
 

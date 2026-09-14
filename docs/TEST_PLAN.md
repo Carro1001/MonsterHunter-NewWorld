@@ -84,10 +84,9 @@ measured for real, stand near one with `debugCombat` on for a few seconds and se
   about 64 rather than 106. **Scale those two together or the grip and the blade disagree.**
 - **The hunter gripped the weapon by its pommel.** The display translation of `[0, 7, 1.75]` put
   the hand at geo y `-7`, two units off the end of a handle running `-9..2`. Mid-handle is `-3.5`,
-  so the translation is now `3.5` and the pivot re-derives to match. **The 48-model weapon still
-  grips the old spot** — its poses are generated with the old translation baked in, so fixing it
-  means editing `tools/gen_jawblade_charge_models.js` and re-running it. Worth doing only if that
-  weapon wins the comparison.
+  so the translation became `3.5` — and then `-0.5` in the third round, putting the hand at geo
+  `0.5`, in the top third of the handle just under the guard, where a lead hand actually goes.
+  Mid-handle still read as low.
 
 ### Two facts this round established the hard way
 
@@ -96,7 +95,7 @@ measured for real, stand near one with `debugCombat` on for a few seconds and se
   dedicated server; mod loading threw, no test ran at all, and Gradle still printed BUILD
   SUCCESSFUL. **A green build is not proof the suite ran** — check for the
   `GAME TESTS COMPLETE` line, and for `invalid dist` in the log. The fix is in
-  `GiantJawbladeGeoItem.registerControllers`: the predicate is an anonymous class, which is a
+  `GiantJawbladeItem.registerControllers`: the predicate is an anonymous class, which is a
   separate class file and so loads only when the render path runs it. A lambda is not.
 - **GeckoLib 4.9.2 supports no `anim_time_update` MoLang field** (checked in the sources jar, as
   with the no-public-seek finding). So the charge clip is kept in step with the charge by matching
@@ -634,13 +633,13 @@ no sweep, 30-tick recovery on hit or miss. The tier bonus is a transient `ATTACK
 applied around that one call and removed in a `finally`, so enchantments, durability, attack events
 and carve attribution still scale on vanilla's own pipeline rather than on arithmetic of ours.
 
-The charge lean is 48 generated pose models selected by a `mhnw:charge` item property —
-`tools/gen_jawblade_charge_models.js`, don't hand-edit the output. **An item property function is
-the only render hook that receives the holder**; a BEWLR and a baked-model wrapper both get the
-stack alone and would pose every player's weapon from the local player's charge. Property functions
-select whole models, so a smooth lean is spelled as many small steps, the same way vanilla spells
-`bow_pulling_0..2` — just finer. 16 steps read as visibly jagged in play; 48 (a change every ~1.56
-ticks of the wind-up) did not.
+**Superseded 2026-09-13 — the charge lean is now one GeckoLib clip.** The weapon is a `GeoItem`
+drawn by `MHNWClient.JawbladeRenderer`; the 48 generated pose models, their generator and the
+`mhnw:charge` item property were deleted after the two approaches were compared in play. What
+remains true and worth keeping from that round: **an item property function is the only render hook
+that receives the holder**, which is why the model-swap approach existed at all; a BEWLR and a
+baked-model wrapper both get the stack alone. GeckoLib's item animation state has no holder either,
+so the surviving clip recovers one by stack identity. See `docs/WEAPON_POSING.md`.
 
 ### What still needs a human — R3
 
