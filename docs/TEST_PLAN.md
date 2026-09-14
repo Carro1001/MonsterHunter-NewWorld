@@ -2,8 +2,9 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 174 tests, all passing**
-(`.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-12, presentation/feel round and the
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 176 tests, all passing**
+(`.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-13, Rathian/Rathalos Peaceful hardening,
+presentation/feel round and the
 corpse-presentation fix, both rebased onto the R3/Izuchi-tail-swipe master; 157 after the corpse fix
 alone, 156 before either, 148 after the R2 field-preparation packet, 123 before that packet, 121
 before the R1 PR #6 review round, 97 before
