@@ -134,10 +134,11 @@ time rather than moving it. `GeoModel.applyMolangQueries` exists but there is no
 
 So there are two honest ways to sync a clip to a gameplay timer:
 
-1. **Match the durations** and start them together. The jawblade's clip is 5.0s because
-   `OVERCHARGE_TICKS` is 100, and its keyframes sit at 1.25/2.25/3.75s because `TIER_TICKS` is
-   {25,45,75}. The GameTest recomputes both from the constants, so changing a tier without
-   re-authoring the clip fails a test instead of silently desyncing the pose from the damage.
+1. **Match the durations** and start them together. The jawblade's clip is 9.25s because
+   `FIZZLE_TICKS` is 185 (`TIER_TICKS[2] + 60`), and its keyframes sit at 1.5/3.5/6.25s because
+   `TIER_TICKS` is {30,70,125}. The GameTest derives the clip length and each keyframe time from
+   those constants, so changing a tier or fizzle window without re-authoring the clip fails a test
+   instead of silently desyncing the pose from the damage.
    **Cost:** a viewer who starts rendering someone *else* mid-action sees the clip from its
    beginning.
 2. **Re-anchor on every render**, which is what `animation/ServerTimedAnimationController` does for
