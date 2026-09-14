@@ -5757,123 +5757,59 @@ public class MHNWGameTests {
     }
 
     /**
-     * The Giant Jawblade's model must never inherit from vanilla's flat-item chain.
+     * The weapon's presentation contract, in one test, because a GameTest server loads no assets and
+     * can never see the result: the model must route to GeckoLib's renderer, the geometry must carry
+     * the bone the clip animates, that bone must pivot on the player's hand, and the clip's timing
+     * must still match the constants the damage tiers come from.
      *
-     * <p>This is a real bug that shipped twice and cost two rounds, and it is invisible to every
-     * other check: the model loads, the item works, a dropped one still casts a shadow, and nothing
-     * is logged. {@code item/handheld} parents {@code item/generated} parents
-     * {@code builtin/generated}, and {@link net.minecraft.client.resources.model.ModelBakery} bakes
-     * any model whose <em>root</em> parent is that marker through {@code ItemModelGenerator}, which
-     * throws the model's own {@code elements} away and builds quads purely from {@code layer0} ..
-     * {@code layer4}. A cuboid model names its texture {@code "0"}, not {@code "layer0"}, so the
-     * generator finds no layers, emits no quads, and the weapon renders as nothing at all.
-     *
-     * <p>A 3D item model therefore declares no parent and carries its own {@code display} block --
-     * which is exactly what the artist's export does, and what a well-meaning "fix" to inherit
-     * vanilla's hand transforms undoes. Checked as text on purpose: model baking is client-only, so
-     * a dedicated server cannot bake this model to count its quads, but it can read the file.
+     * <p>The 48 generated pose models this used to also guard are gone -- the GeckoLib clip won the
+     * comparison on 2026-09-13 and the model-swap approach was deleted with it.
      */
     @GameTest(template = ARENA, timeoutTicks = 40)
-    public static void r3JawbladeModelDoesNotInheritTheFlatItemChain(GameTestHelper helper) {
+    public static void r3JawbladeModelIsGeckoRenderedAndGrippedAtTheHand(GameTestHelper helper) {
         String model = readPackaged(helper, "/assets/mhnw/models/item/giant_jawblade.json");
-        helper.assertTrue(!model.contains("\"parent\""),
-                "the weapon model declares a parent; a 3D item model must not, because vanilla's"
-                        + " item parents resolve to builtin/generated and discard its elements");
-        helper.assertTrue(model.contains("\"elements\"") && model.contains("\"display\""),
-                "the weapon model lost its own elements or display block");
-        helper.assertTrue(model.contains("\"0\":") && !model.contains("layer0"),
-                "the weapon model uses a layer texture key, which only means anything to the flat"
-                        + " item generator this model must not go through");
 
-        // The charge-tier models are the one place a parent is correct: they inherit this model's
-        // geometry so only their held poses differ. That parent must still be ours -- pointing any
-        // of them at a vanilla item model would hand the whole chain back to the flat generator.
-        for (int tier = 1; tier <= com.carro1001.mhnw.item.GiantJawbladeItem.CHARGE_POSE_STEPS; tier++) {
-            String path = "/assets/mhnw/models/item/giant_jawblade_charge_" + tier + ".json";
-            String pose = readPackaged(helper, path);
-            helper.assertTrue(pose.contains("\"mhnw:item/giant_jawblade\""),
-                    path + " does not inherit the weapon's own model");
-            helper.assertTrue(!pose.contains("item/generated") && !pose.contains("item/handheld"),
-                    path + " parents a vanilla item model, which discards the geometry it inherits");
-            helper.assertTrue(model.contains("giant_jawblade_charge_" + tier + "\""),
-                    "the weapon model has no override pointing at charge pose " + tier
-                            + ", so that pose can never be shown. If CHARGE_POSE_STEPS changed,"
-                            + " rerun node tools/gen_jawblade_charge_models.js");
-        }
-        helper.succeed();
-    }
-
-    /**
-     * The GeckoLib comparison jawblade is the same weapon and a differently-posed one, and both
-     * halves of that are asserted here because a GameTest server loads no assets and can never see
-     * the pose itself.
-     *
-     * <p>The clip's timing is the part that can rot silently. It carries no seek -- GeckoLib 4.9.2
-     * has none -- so it stays in step with the charge only because its length equals
-     * {@code FIZZLE_TICKS} and its keyframes sit on {@code TIER_TICKS}. Changing either
-     * constant without re-authoring the clip desyncs the wind-up from the damage with nothing
-     * visible failing, so the numbers are recomputed here and looked for in the file.
-     */
-    @GameTest(template = ARENA, timeoutTicks = 40)
-    public static void r3GeckoJawbladeMatchesTheWeaponAndItsChargeClock(GameTestHelper helper) {
-        net.minecraft.world.item.Item plain = com.carro1001.mhnw.registry.ModItems.GIANT_JAWBLADE.get();
-        net.minecraft.world.item.Item gecko =
-                com.carro1001.mhnw.registry.ModItems.GIANT_JAWBLADE_GECKO.get();
-
-        // Same fight, different presentation: anything that differs here makes the comparison a
-        // comparison of two weapons rather than of two ways of drawing one.
-        helper.assertTrue(gecko instanceof com.carro1001.mhnw.item.GiantJawbladeItem,
-                "the GeckoLib jawblade is not the same weapon class");
-        helper.assertTrue(new net.minecraft.world.item.ItemStack(gecko)
-                        .getAttributeModifiers().modifiers().equals(
-                                new net.minecraft.world.item.ItemStack(plain)
-                                        .getAttributeModifiers().modifiers()),
-                "the two jawblades no longer share their attribute modifiers");
-
-        // builtin/entity is the correct parent here and builtin/generated is still fatal: this
-        // model carries no elements of its own, because GeckoLib's BEWLR draws the geometry.
-        String model = readPackaged(helper, "/assets/mhnw/models/item/giant_jawblade_gecko.json");
+        // builtin/entity is what makes vanilla hand the stack to a custom renderer at all. Every
+        // other item parent roots at builtin/generated, where ModelBakery discards `elements` and
+        // builds quads from `layer0` -- which a cuboid model does not have, so the weapon rendered
+        // as nothing at all, with a shadow and no geometry and nothing in the log. That is a real
+        // afternoon, guarded here as text because model baking is client-only.
         helper.assertTrue(model.contains("\"builtin/entity\""),
-                "the GeckoLib jawblade model must parent builtin/entity for vanilla to hand it to"
-                        + " a custom renderer at all");
+                "the weapon model must parent builtin/entity for vanilla to route it to GeckoLib");
         helper.assertTrue(!model.contains("item/generated") && !model.contains("item/handheld"),
-                "the GeckoLib jawblade model parents a flat item model, which discards everything");
+                "the weapon model parents a flat item model, which discards everything it inherits");
         helper.assertTrue(model.contains("\"display\""),
-                "the GeckoLib jawblade model lost the authored display block");
+                "the weapon model lost the authored display block, which is also what places the grip");
 
         String geo = readPackaged(helper, "/assets/mhnw/geo/item/giant_jawblade.geo.json");
         helper.assertTrue(geo.contains("\"group\""),
                 "the geometry has no bone named group, which is the one the clip animates");
 
-        // The bone has to pivot on the player's hand, and where that is can be derived rather than
-        // eyeballed. Vanilla applies the model's own display transform, then translate(-0.5) thrice,
-        // then draws the model at 1/16 scale -- so a Java-model point sits on the hand when it
-        // equals 8 minus the display translation, and geo coordinates are Java minus 8. The hand is
-        // therefore at exactly the negated third-person translation.
-        //
-        // The artist's modelling origin, [0,-3,0], is NOT that point; it sits four units up the
-        // handle. Pivoting there swung the grip out of the hand as the charge wound up, which is
-        // what the second playtest showed, so the two are asserted to be derived rather than
-        // assumed equal.
-        com.google.gson.JsonObject geckoModel = com.google.gson.JsonParser.parseString(
-                readPackaged(helper, "/assets/mhnw/models/item/giant_jawblade_gecko.json"))
-                .getAsJsonObject();
-        com.google.gson.JsonArray translation = geckoModel.getAsJsonObject("display")
+        // The bone pivots on the player's hand, and where that is is derived, not eyeballed: vanilla
+        // applies the display transform, then translate(-0.5) thrice, then draws at 1/16 scale, so a
+        // Java-model point sits on the hand when it equals 8 minus the display translation -- and geo
+        // coordinates are Java minus 8. The hand is exactly the negated third-person translation.
+        // Pivoting anywhere else swings the grip out of the hand mid-charge, which two playtests saw.
+        com.google.gson.JsonArray translation = com.google.gson.JsonParser.parseString(model)
+                .getAsJsonObject().getAsJsonObject("display")
                 .getAsJsonObject("thirdperson_righthand").getAsJsonArray("translation");
         com.google.gson.JsonArray pivot = com.google.gson.JsonParser.parseString(geo)
                 .getAsJsonObject().getAsJsonArray("minecraft:geometry").get(0).getAsJsonObject()
                 .getAsJsonArray("bones").get(0).getAsJsonObject().getAsJsonArray("pivot");
         for (int axis = 0; axis < 3; axis++) {
-            double expected = -translation.get(axis).getAsDouble();
-            helper.assertTrue(Math.abs(pivot.get(axis).getAsDouble() - expected) < EPSILON,
-                    "the GeckoLib bone pivots at " + pivot + ", but the hand is at the negated"
-                            + " third-person translation " + translation + "; the charge will swing"
-                            + " the weapon out of the player's grip");
+            helper.assertTrue(Math.abs(pivot.get(axis).getAsDouble()
+                            + translation.get(axis).getAsDouble()) < EPSILON,
+                    "the bone pivots at " + pivot + ", but the hand is at the negated third-person"
+                            + " translation " + translation);
         }
         helper.assertTrue(!clipHasTrack(helper, "position"),
                 "the charge clip has a position track; translating the bone moves the weapon off"
                         + " the hand the pivot exists to keep it on. Use more rotation instead");
 
+        // The clip carries no seek -- GeckoLib 4.9.2 has none -- so it stays in step with the charge
+        // only because its length equals FIZZLE_TICKS and its keyframes sit on TIER_TICKS. Changing
+        // either constant without re-authoring the clip desyncs the wind-up from the damage with
+        // nothing visible failing, so both are recomputed here rather than written down twice.
         String clip = chargeClip(helper);
         helper.assertTrue(clip.contains("\"charge\""), "the animation file has no charge clip");
         String length = seconds(com.carro1001.mhnw.item.GiantJawbladeItem.FIZZLE_TICKS);
@@ -5887,24 +5823,6 @@ public class MHNWGameTests {
                             + " tiers disagree");
         }
         helper.succeed();
-    }
-
-    /**
-     * Whitespace removed, so a JSON assertion does not depend on how a file happens to be
-     * indented or on whether git checked it out with CRLF. Written as a loop rather than as a
-     * regex on purpose: the backslash in a {@code "\s+"} literal is easy to lose by one level,
-     * and a half-escaped one silently strips spaces but not line breaks -- which is exactly how
-     * this assertion first failed against a file that was correct.
-     */
-    private static String compact(String json) {
-        StringBuilder out = new StringBuilder(json.length());
-        for (int i = 0; i < json.length(); i++) {
-            char c = json.charAt(i);
-            if (!Character.isWhitespace(c)) {
-                out.append(c);
-            }
-        }
-        return out.toString();
     }
 
     private static String chargeClip(GameTestHelper helper) {

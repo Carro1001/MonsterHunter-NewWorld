@@ -76,7 +76,7 @@ import java.util.function.Predicate;
  * for a two-handed charge and this packet adds no player-animation library, so the weapon stays in
  * its normal grip and the charge is communicated by its tier cues and by how hard it slows you.
  */
-public class GiantJawbladeItem extends SwordItem {
+public class GiantJawbladeItem extends SwordItem implements software.bernie.geckolib.animatable.GeoItem {
 
     /**
      * Charge ticks needed to reach tier one, two and three. A greatsword charge is meant to be a
@@ -122,25 +122,6 @@ public class GiantJawbladeItem extends SwordItem {
      */
     public static final int USE_DURATION_TICKS = 72000;
 
-    /**
-     * How many discrete lean poses the charge ramps through, matching the generated
-     * {@code giant_jawblade_charge_N} models.
-     *
-     * <p>48 steps across a 75-tick wind-up is a pose change roughly every one and a half ticks,
-     * which reads as a raise rather than as three lurches; 16 steps (every ~4.7 ticks) visibly
-     * stepped. Raise this further if it still catches the eye -- the models are generated, so the
-     * only cost is a few more small files.
-     *
-     * <p>The ramp is stepped rather than truly continuous because the only render hook that knows
-     * <em>which entity</em> is holding the weapon is an item property function; a custom renderer
-     * and a baked-model wrapper both get the stack without its holder, and would pose every
-     * player's weapon from the local player's charge. Property functions select whole models, so a
-     * smooth lean is spelled as many small steps -- the same way vanilla spells a drawing bow, just
-     * finer. Regenerate the models with {@code node tools/gen_jawblade_charge_models.js} if this
-     * changes; a GameTest fails if the two disagree.
-     */
-    public static final int CHARGE_POSE_STEPS = 48;
-
     /** Recovery after any completed swing, hit or miss. The commitment. */
     public static final int RECOVERY_TICKS = 30;
 
@@ -183,6 +164,107 @@ public class GiantJawbladeItem extends SwordItem {
 
     public GiantJawbladeItem(Properties properties) {
         super(TIER, properties.attributes(createAttributes(TIER, DAMAGE_MODIFIER, SPEED_MODIFIER)));
+    }
+
+    private static final software.bernie.geckolib.animation.RawAnimation CHARGE =
+            software.bernie.geckolib.animation.RawAnimation.begin().thenPlayAndHold("charge");
+
+    private final software.bernie.geckolib.animatable.instance.AnimatableInstanceCache cache =
+            software.bernie.geckolib.util.GeckoLibUtil.createInstanceCache(this);
+
+    /** Separate animation state per display context, so the hotbar icon and the held copy don't share one. */
+    @Override
+    public boolean isPerspectiveAware() {
+        return true;
+    }
+
+    @Override
+    public software.bernie.geckolib.animatable.instance.AnimatableInstanceCache getAnimatableInstanceCache() {
+        return this.cache;
+    }
+
+    /**
+     * <b>The predicate is an anonymous class on purpose, and this is load-bearing.</b> It has to
+     * reach {@code Minecraft} to find who is holding the stack, and a dedicated server refuses to
+     * load any {@code net.minecraft.client} class -- NeoForge's {@code RuntimeDistCleaner} throws
+     * on it. Naming one anywhere in <em>this</em> class's own method bodies is enough: the verifier
+     * resolves it when the class is linked, which happens on the server the moment
+     * {@link com.carro1001.mhnw.registry.ModItems} constructs the item. Observed, not theorised --
+     * a lambda here crashed mod loading on {@code LocalPlayer}.
+     *
+     * <p>An anonymous class is a separate class file, so it is loaded only when this method
+     * actually runs, and this method only runs from GeckoLib's render path. Do not "tidy" it back
+     * into a lambda or a private helper.
+     *
+     * <p>Worse, {@code runGameTestServer} exited zero through that crash -- no test ran and the
+     * build reported success. A dist violation will not be caught by the suite; read the log.
+     */
+    @Override
+    public void registerControllers(
+            software.bernie.geckolib.animation.AnimatableManager.ControllerRegistrar controllers) {
+        controllers.add(new software.bernie.geckolib.animation.AnimationController<>(this, "charge", 0,
+                new software.bernie.geckolib.animation.AnimationController
+                        .AnimationStateHandler<GiantJawbladeItem>() {
+                    @Override
+                    public software.bernie.geckolib.animation.PlayState handle(
+                            software.bernie.geckolib.animation.AnimationState<GiantJawbladeItem> state) {
+                        ItemStack stack = state.getData(
+                                software.bernie.geckolib.constant.DataTickets.ITEMSTACK);
+                        if (stack == null || !isCharging(stack)) {
+                            // Stopping is not rewinding. The controller keeps currentRawAnimation
+                            // across a STOP, and setAnimation only reloads a clip when the reload
+                            // flag is set or a *different* animation is requested -- so without
+                            // this, the second charge resumed the held last frame and the blade
+                            // simply stayed wound up from then on. Observed, and it is why the
+                            // first charge looked right and no later one did.
+                            state.getController().forceAnimationReset();
+                            return software.bernie.geckolib.animation.PlayState.STOP;
+                        }
+                        return state.setAndContinue(CHARGE);
+                    }
+
+                    /**
+                     * Whether this exact stack is mid-charge. The lookup is over
+                     * {@code level.players()} because only a player can use this weapon, and it
+                     * compares by identity rather than by item so two players charging two
+                     * jawblades do not pose each other's.
+                     */
+                    private boolean isCharging(ItemStack stack) {
+                        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+                        if (mc.level == null) {
+                            return false;
+                        }
+                        for (Player player : mc.level.players()) {
+                            if (player.isUsingItem() && player.getUseItem() == stack) {
+                                return true;
+                            }
+                        }
+                        // The first-person hand renderer can hand out a copy rather than the held
+                        // object, so fall back to the one holder that view can belong to.
+                        return mc.player != null && mc.player.isUsingItem()
+                                && ItemStack.isSameItemSameComponents(mc.player.getUseItem(), stack);
+                    }
+                }));
+    }
+
+    /**
+     * GeckoLib's own equivalent of {@code IClientItemExtensions.getCustomRenderer}. Naming the
+     * renderer inside an anonymous class keeps it off a dedicated server for the reason above.
+     */
+    @Override
+    public void createGeoRenderer(
+            java.util.function.Consumer<software.bernie.geckolib.animatable.client.GeoRenderProvider> consumer) {
+        consumer.accept(new software.bernie.geckolib.animatable.client.GeoRenderProvider() {
+            private net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer renderer;
+
+            @Override
+            public net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer getGeoItemRenderer() {
+                if (this.renderer == null) {
+                    this.renderer = new com.carro1001.mhnw.client.MHNWClient.JawbladeRenderer();
+                }
+                return this.renderer;
+            }
+        });
     }
 
     /**

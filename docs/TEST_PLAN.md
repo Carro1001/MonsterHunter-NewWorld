@@ -2,7 +2,7 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 175 tests, all passing**
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 174 tests, all passing**
 (`.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-12, presentation/feel round and the
 corpse-presentation fix, both rebased onto the R3/Izuchi-tail-swipe master; 157 after the corpse fix
 alone, 156 before either, 148 after the R2 field-preparation packet, 123 before that packet, 121
@@ -53,47 +53,24 @@ measured for real, stand near one with `debugCombat` on for a few seconds and se
 - **`GreatIzuchi.MAX_HEALTH` is 120**, the number `DEFERRED.md` always named as the intent. 40 was a
   development convenience; a charged Giant Jawblade ended it in three hits, which leaves no room for
   the armour-then-rematch arc. Still a playtest number — the alpha decides whether it stays.
-- **`mhnw:giant_jawblade_gecko`** is a second, deliberately temporary weapon: the same
-  `GiantJawbladeItem` with the same stats and the same combat, drawn by GeckoLib from the
-  maintainer's converted model instead of by the 48 generated pose models. Both sit next to each
-  other in the creative tab so the two presentations can be held one after the other. One of them
-  is meant to be deleted.
+- **The Giant Jawblade is GeckoLib-animated, and the 48-model approach is gone.** Both shipped side
+  by side for one round so they could be held one after the other; the clip won on 2026-09-13. The
+  48 `giant_jawblade_charge_*.json` models, `tools/gen_jawblade_charge_models.js`, the `mhnw:charge`
+  item property and `CHARGE_POSE_STEPS` were deleted, and `GiantJawbladeGeoItem` folded into
+  `GiantJawbladeItem`. The item id, recipe and stats are unchanged, so nothing on disk moved.
+- **The hunter's arms are posed too**, in third person, for every player -- a custom
+  `HumanoidModel.ArmPose`, no animation library. See `docs/WEAPON_POSING.md`.
 
-### What a human has to judge here — neither side of this can be tested headlessly
+### Playtest results — three rounds, all resolved
 
 | | |
 |---|---|
-| **J1** | Hold each jawblade and charge it in **third person**. Does the GeckoLib one wind up more legibly than the 48-model one? |
-| **J2** | Same in **first person**. The clip poses the weapon, never the arms — confirm that still reads as a charge rather than as the blade drifting. |
-| **J3** | The clip's rotation signs are still a first guess (`animations/item/giant_jawblade.animation.json`, bone `group`). If the blade leans the wrong way, negate the X rotations — one file, no code. Do not add a `position` track to correct placement; that is what un-anchors it from the hand. |
-| **J4** | Hotbar icon, dropped item and item frame. `isPerspectiveAware()` gives each context its own animation state; if the GUI icon animates along with the held copy, that flag is not doing its job. |
-| **J5** | Release the charge. The controller stops rather than blending out, so the blade snaps back to rest. Confirm that reads as a swing and not as a glitch. |
-| **J6** | A **second player** charging nearby. Their wind-up is found by stack identity and plays from its own start, so a charge already in progress when you look at it replays from the beginning. Confirm how bad that actually is. |
-
-### First playtest of the GeckoLib jawblade — two defects, both fixed in assets/one line
-
-Reported after `1stCharge.mp4` / `3rdCharge.mp4`: the first charge read well but the blade was not
-anchored to the hand (the handle visibly swung away as it rotated), and every charge after the
-first left the blade stuck vertical.
-
-- **Not anchored: the bone pivoted on the wrong point.** The converter took the pivot from the
-  `.bbmodel`'s group origin, `[0, 8, 0]` — Blockbench's untouched default, halfway up the blade.
-  The artist's real rotation origin is `[0, -3, 0]`, in the grip: every cube in the `.bbmodel` and
-  every element of the hand-authored `models/item/giant_jawblade.json` (`"origin": [8, -3, 8]`,
-  the same point in Java model space) agrees on it. The geometry now pivots there, and the clip's
-  `position` track is gone entirely — with a correct pivot, translating the bone is what moves the
-  weapon back off the hand. More wind-up means more rotation, never translation.
-  `r3GeckoJawbladeMatchesTheWeaponAndItsChargeClock` now asserts the two files agree on the grip,
-  and that the clip has no position track.
-- **Stuck vertical after the first charge: stopping a controller is not rewinding it.**
-  `AnimationController.setAnimation` reloads a clip only when the reload flag is set or a
-  *different* animation is requested (read in the 4.9.2 sources). Returning `PlayState.STOP` leaves
-  `currentRawAnimation` in place, so the next charge resumed the held last frame of a
-  `hold_on_last_frame` clip — which is the fully-wound pose. `forceAnimationReset()` on the
-  not-charging branch is the fix.
-
-Both are worth re-walking J1-J5 for. J3's caveat still stands: the rotation *signs* were never
-judged, only the pivot they rotate about.
+| **J1** | Third-person charge — **accepted** after three corrections: pivot moved to the hand, swing cut to 3/5 (54 degrees, not 90), grip moved into the top third of the handle. |
+| **J2** | First person — **accepted**. The clip poses the weapon; the arms are not posed there (`applyForgeHandTransform` would, and is priced in `DEFERRED.md`). |
+| **J3** | Rotation signs — **correct as authored**, no negation needed. |
+| **J5** | Release — **accepted**; the snap back to rest reads as the swing. |
+| **J4** | Hotbar icon, dropped item, item frame — **still unchecked**. `isPerspectiveAware()` should keep the GUI copy from animating with the held one; if it does animate, that flag is not working. |
+| **J6** | A **second player** charging nearby — **still unchecked**. Their wind-up is found by stack identity and plays from its own start, so a charge already in progress when you look at it replays from the beginning. |
 
 ### Second playtest of the GeckoLib jawblade — three fixes, all in assets
 

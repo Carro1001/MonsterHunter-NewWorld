@@ -40,6 +40,5 @@
   "message.mhnw.carve.ineligible": "You did not help bring this one down.",
   "message.mhnw.carve.full": "Make room in your inventory first.",
   "message.mhnw.carve.exhausted": "You have carved this one out.",
-  "item.mhnw.giant_jawblade": "Giant Jawblade",
-  "item.mhnw.giant_jawblade_gecko": "Giant Jawblade (GeckoLib)"
+  "item.mhnw.giant_jawblade": "Giant Jawblade"
 }

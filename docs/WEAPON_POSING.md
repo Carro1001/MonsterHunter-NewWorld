@@ -138,7 +138,7 @@ So there are two honest ways to sync a clip to a gameplay timer:
 
 ## 5. Moving the player's arms — what is actually available
 
-### Third person: a custom `ArmPose` — **untried here, API verified**
+### Third person: a custom `ArmPose` — **in use, see `client/MHNWArmPoses`**
 
 `IClientItemExtensions.getArmPose(LivingEntity, InteractionHand, ItemStack)` returns a
 `HumanoidModel.ArmPose`, and `ArmPose` is an `IExtensibleEnum` with a constructor taking an
@@ -154,9 +154,21 @@ charge in this mod already derives its tier from. `isTwoHanded()` is what puts t
 grip too.
 
 **No third-party library. No mixin.** Adding a constant needs NeoForge's enum extension
-(`net.neoforged.fml.common.asm.enumextension`, declared through `neoforge.mods.toml`); `ArmPose`
-currently reports `ExtensionInfo.nonExtended`, so nothing has extended it in this build yet. Verify
-a dedicated server still loads before believing it works — `ArmPose` is a client class.
+(`net.neoforged.fml.common.asm.enumextension`): an `enumextensions.json` naming the enum, the
+constant, the constructor descriptor and a `EnumProxy` field to take the parameters from.
+
+**Two things that cost real time here:**
+
+- **`enumExtensions` goes inside `[[mods]]`, not at the root of `neoforge.mods.toml.`** FML reads it
+  via `IModInfo.getConfig().getConfigElement("enumExtensions")` — the per-mod config. At the root it
+  is silently ignored: no warning, no error, and the first symptom is `EnumProxy.getValue()` throwing
+  inside the render path and crashing the game on right-click.
+- **Never let `getValue()` reach the renderer unguarded.** It throws when the constant was not
+  registered. Catch it, fall back to `null` (which is a legal `getArmPose` answer meaning "ordinary
+  pose"), and log once. A cosmetic stance must not be able to take rendering down.
+
+A dedicated server does load cleanly with this in place — verified, because `ArmPose` is a client
+class and the extension only processes when that class loads, which never happens on a server.
 
 ### First person: `applyForgeHandTransform` — **untried here, call site verified**
 
@@ -185,7 +197,8 @@ perspectives, or the item gets rotated twice. `isPerspectiveAware()` and
   vertically overhead like a trident throw. Recorded in `GiantJawbladeItem`'s class doc. Do not
   re-propose it. `BOW`/`CROSSBOW` pose a drawing hand and `BLOCK` a shield arm; none are closer.
 - **A render hook that receives the holder and the stack together, other than the two above.** An
-  item property function receives the holder (that is what drives the 48-model approach); a BEWLR
+  item property function receives the holder (that is how the superseded 48-model approach worked,
+  and it remains the only such hook); a BEWLR
   and a baked-model wrapper both get the stack alone. GeckoLib's item animation state carries only
   `ITEMSTACK`, `TICK` and `ITEM_RENDER_PERSPECTIVE` — **no holder** — so an item clip that depends on
   who is holding it must recover the holder by stack identity against `level.players()`, the way

@@ -501,76 +501,26 @@ switches.
 **Trigger:** a live capture of the slam's active window. Delete the gate and the config key together
 with fitting the envelope; neither is finished without the other.
 
-### Two Giant Jawblades ship in the alpha, and one of them must be deleted
-**Status:** deliberate and temporary, 2026-09-13. `mhnw:giant_jawblade_gecko` is the same
-`GiantJawbladeItem` -- same stats, same timings, same combat code, asserted equal by
-`r3GeckoJawbladeMatchesTheWeaponAndItsChargeClock` -- drawn through GeckoLib's `GeoItemRenderer`
-from the maintainer's converted model and a fabricated `charge` clip, instead of by the 48 models
-`tools/gen_jawblade_charge_models.js` generates. It exists so the two can be held one after the
-other and one picked.
+### Player animation: the arms are posed, the body is not
+**Status:** arms done 2026-09-13, body still deferred. The Giant Jawblade's charge now poses the
+hunter's arms in third person through a custom `HumanoidModel.ArmPose`
+(`client/MHNWArmPoses`, reached via `IClientItemExtensions.getArmPose`), with **no animation
+library** -- see `docs/WEAPON_POSING.md` section 5 for the mechanism and its traps.
 
-**Two weapons that fight identically is not a shipping state.** Whichever loses, delete it and its
-assets in one commit: either `giant_jawblade_gecko` plus `geo/item/giant_jawblade.geo.json`,
-`animations/item/giant_jawblade.animation.json`, `models/item/giant_jawblade_gecko.json` and
-`GiantJawbladeGeoItem`; or the 48 `giant_jawblade_charge_*.json` models, the generator, the
-`mhnw:charge` item property and `CHARGE_POSE_STEPS`.
+**What is still out of reach:** posing the player's body, legs or stance. That needs KosmX's
+playerAnimator (`dev.kosmx.player-anim`, current NeoForge 1.21.1 build), which is a third external
+dependency on a non-central Maven plus an authored asset per stance, and a soft-dependency fallback
+so the charge stays playable without it. One weapon's wind-up does not carry that.
 
-**Trigger:** the J1-J6 checklist in `TEST_PLAN.md`'s alpha pass 2 section.
+**Also still untried:** `IClientItemExtensions.applyForgeHandTransform`, which moves the arm and
+item together in first person. First person currently shows the weapon posed by the clip and the
+arm unposed, which reads acceptably; the hook is priced in `WEAPON_POSING.md` if it stops doing so.
 
-**What the GeckoLib side still would not do even if it wins:** it poses the weapon, never the
-player's arms. That is the separate entry below, and picking GeckoLib here does not close it.
+**Do not re-propose `UseAnim.SPEAR`.** Tried, rejected on sight -- it raises the weapon vertically
+overhead like a trident throw. Recorded in `GiantJawbladeItem`'s class doc.
 
-### Player animation: the charge has no two-handed stance, and nothing in-house can give it one
-**Status:** deferred with the options priced, 2026-09-13. The Giant Jawblade's charge is currently
-legible through three channels only -- the 48 generated lean models, the three escalating riptide
-cues, and the movement crawl. The player's own body does nothing, in either person.
-
-**The cheap rung is already spent.** `UseAnim.SPEAR` is the only stock pose that does anything
-two-handed-looking, it was tried, and it was rejected on sight: it raises the weapon vertically
-overhead like a trident throw, which reads nothing like shouldering a greatsword. That rejection is
-recorded in `GiantJawbladeItem`'s own class doc; do not re-propose it. `BOW` and `CROSSBOW` pose a
-drawing hand, `BLOCK` a shield arm, and none of the rest are closer.
-
-**Superseded in part, 2026-09-13:** NeoForge does expose arm posing with no library at all --
-`IClientItemExtensions.getArmPose` with a custom extensible `HumanoidModel.ArmPose` for third
-person, and `applyForgeHandTransform` for first. Both are verified APIs, both are still untried
-here, and `docs/WEAPON_POSING.md` section 5 carries the details. What remains true below is that
-posing the player's **whole body** needs a library; the arms do not.
-
-**GeckoLib cannot reach it either, and this is worth knowing before someone tries.** GeckoLib 4.9.2
-does ship `GeoItem` and `GeoItemRenderer` (verified in the installed jar), so the weapon's *own*
-geometry could be animated instead of selected from 48 baked pose models -- one clip replacing a
-generated model set. That is a real and dependency-free improvement to how the blade moves. It is
-not the thing being asked for: it animates the item, never the arms holding it. The player's
-skeleton is `PlayerModel`/`HumanoidModel`, which GeckoLib only touches for *armor*
-(`GeoArmorRenderer`, `HumanoidArmorLayerMixin`), not for pose.
-
-**Posing the player needs a third-party library, and there is exactly one sane candidate.**
-KosmX's playerAnimator (`dev.kosmx.player-anim`, maven `https://maven.kosmx.dev/`) has a current
-NeoForge 1.21.1 build (2.0.4+1.21.1, Dec 2025, whose changelog names first-person and item
-animation fixes) and is the library Better Combat and the Epic Fight family already sit on, so it is
-the one with the most mods actively not breaking against it. It plays keyframed JSON authored in
-Blockbench via its own plugin.
-
-**What it would actually cost** -- pricing it is the point of this entry:
-- A third external dependency, client-relevant, on a non-Maven-Central repo. Today there are two
-  (GeckoLib, TerraBlender), both pinned deliberately per handoff 7.3.
-- An authored animation asset per stance. This is artist work, not code work, and the project's own
-  history says animation deliveries arrive on the artist's schedule.
-- A real decision about degradation: if the library is absent, the charge must still be playable
-  and still legible. That argues for a soft/optional dependency and a no-op fallback, which is more
-  wiring than the one-line changes this weapon has needed so far.
-- It only earns its keep across several stances (charge, swing, carve, sheathe). One weapon's
-  wind-up does not justify a player-animation stack, exactly as one weapon did not justify a
-  moveset abstraction in R3.
-
-**Trigger:** a second weapon, or the carve animation (see "Carving has no animation, sound or
-particle" above) -- at two or three stances the library is cheaper than hand-posing each one.
-
-**Order if it is picked up:** the GeckoLib `GeoItem` conversion first, since it needs no new
-dependency and deletes `tools/gen_jawblade_charge_models.js` plus 48 generated JSON files; then
-playerAnimator, as a soft dependency, with one stance shipped and judged before a second is
-authored.
+**Trigger:** a second or third weapon whose stances differ enough that hand-posing each becomes the
+expensive option.
 
 ## Balance values that are testing placeholders, not decisions
 

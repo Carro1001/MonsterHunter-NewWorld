@@ -24,7 +24,7 @@ import net.neoforged.neoforge.client.IArmPoseTransformer;
  * NeoForge's {@code RuntimeDistCleaner} would refuse it. {@link GiantJawbladeItem} names it only
  * from inside an anonymous class, which is a separate class file and so loads only when a client
  * actually runs it -- the same rule, and for the same reason, as
- * {@link com.carro1001.mhnw.item.GiantJawbladeGeoItem}'s animation predicate.
+ * {@link GiantJawbladeItem}'s own animation predicate.
  *
  * <p>The enum constant itself is declared in {@code META-INF/enumextensions.json} and reaches the
  * game through {@link #mhnw_greatsword_charge}. FML requires that field's name to start with the

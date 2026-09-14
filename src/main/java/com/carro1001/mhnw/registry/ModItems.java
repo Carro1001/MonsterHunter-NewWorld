@@ -110,14 +110,6 @@ public final class ModItems {
     public static final DeferredHolder<Item, Item> GIANT_JAWBLADE =
             ITEMS.register("giant_jawblade", () -> new GiantJawbladeItem(new Item.Properties()));
 
-    /**
-     * The same weapon posed by a GeckoLib clip instead of 48 generated models, registered only so
-     * both can be held side by side and judged. Delete this and its assets once one of the two
-     * approaches wins; see {@link com.carro1001.mhnw.item.GiantJawbladeGeoItem}.
-     */
-    public static final DeferredHolder<Item, Item> GIANT_JAWBLADE_GECKO =
-            ITEMS.register("giant_jawblade_gecko",
-                    () -> new com.carro1001.mhnw.item.GiantJawbladeGeoItem(new Item.Properties()));
 
     /** Vanilla's own filled-bucket properties: one per stack, and an empty bucket on use. */
     private static Item.Properties bucketProperties() {
