@@ -33,9 +33,9 @@ Hold right-click to charge it. The charge builds through three levels -- at roug
 weapon leaning further back. **Let go to swing**, and the level you reached is what lands: 9, 12.5
 or 16 damage.
 
-Let go before the first level and nothing happens at all -- no swing, no cooldown, no wear. Hold
-*past* five seconds and it swings by itself, back down at the first level's damage: overcharging
-wastes the charge rather than banking it.
+Let go before the first level and you get only the weak visual arc -- no strike, cooldown or wear.
+Hold *past* five seconds and the charge fizzles: the blade drops back to rest and it never swings by
+itself. You still release the held input yourself, but a fizzled release does nothing.
 
 Every charged swing reaches 4.5 blocks straight down your crosshair and hits one target only; a wall
 stops it. Charging slows you to a crawl, and whether you hit or miss the weapon needs a second and a

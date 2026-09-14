@@ -47,9 +47,10 @@ import java.util.function.Predicate;
  * <h2>The charge: hold, watch the tier, release</h2>
  * Holding main-hand use builds through three tiers at {@link #TIER_TICKS}, each announced by its
  * own cue. <em>Releasing</em> is what swings, and the tier reached is the damage that lands
- * ({@link #TIER_DAMAGE}). Release before tier one and nothing happens at all -- no strike, no
- * cooldown, no wear. Hold past {@link #OVERCHARGE_TICKS} and the weapon swings by itself, back down
- * at tier one's damage: the charge is wasted, not banked.
+ * ({@link #TIER_DAMAGE}). Release before tier one starts the weakest visual arc but causes no strike,
+ * cooldown or wear. Hold past {@link #FIZZLE_TICKS} and the charge dies where it stands: the blade
+ * drops, a dull cue plays, and releasing afterwards does nothing. The weapon never swings by itself:
+ * overcharging costs you the charge rather than spending it badly.
  *
  * <p>Every strike, at every tier, traces {@link #REACH} blocks down the player's own view vector
  * and hits at most one thing. Hit or miss, the item goes on a {@link #RECOVERY_TICKS} cooldown.
@@ -75,7 +76,7 @@ import java.util.function.Predicate;
  * for a two-handed charge and this packet adds no player-animation library, so the weapon stays in
  * its normal grip and the charge is communicated by its tier cues and by how hard it slows you.
  */
-public class GiantJawbladeItem extends SwordItem {
+public class GiantJawbladeItem extends SwordItem implements software.bernie.geckolib.animatable.GeoItem {
 
     /**
      * Charge ticks needed to reach tier one, two and three. A greatsword charge is meant to be a
@@ -91,36 +92,46 @@ public class GiantJawbladeItem extends SwordItem {
      * any starting state. Keep {@code TIER_TICKS[0] >= 25} if the attack speed ever changes;
      * {@code r3ChargeFromAnUncooledWeaponStillLandsItsTier} fails if it does not.
      */
-    public static final int[] TIER_TICKS = {25, 45, 75};
+    public static final int[] TIER_TICKS = {30, 70, 125};
 
     /** Total attack damage each tier lands, in the same units the tooltip shows. Tier one is simply
      * the weapon's own 9.0, so a short charge buys reach and a long one buys damage as well. */
     public static final float[] TIER_DAMAGE = {9.0F, 12.5F, 16.0F};
 
-    /** Hold this long without releasing and the weapon swings itself, back at tier one's damage. */
-    public static final int OVERCHARGE_TICKS = 100;
+    /**
+     * Hold this long and the charge fizzles out: the weapon does not swing, the blade drops back to
+     * rest, and releasing afterwards does nothing at all.
+     *
+     * <p>It replaced an auto-swing at tier one's damage, which put a hit on the screen that the
+     * player never asked for. Overcharging now costs you the charge instead of spending it badly,
+     * which is the Monster Hunter reading of the same mistake.
+     *
+     * <p>Like every other part of this weapon it is <b>derived, never stored</b>:
+     * {@link #tierFor} simply refuses to name a tier past this point, so "the charge is dead" needs
+     * no field, no component and no packet, and cannot survive a reload.
+     */
+    public static final int FIZZLE_TICKS = TIER_TICKS[TIER_TICKS.length - 1] + 60;
 
     /**
-     * How many discrete lean poses the charge ramps through, matching the generated
-     * {@code giant_jawblade_charge_N} models.
+     * What {@link #getUseDuration} reports: long enough that vanilla never ends the hold on its own.
      *
-     * <p>48 steps across a 75-tick wind-up is a pose change roughly every one and a half ticks,
-     * which reads as a raise rather than as three lurches; 16 steps (every ~4.7 ticks) visibly
-     * stepped. Raise this further if it still catches the eye -- the models are generated, so the
-     * only cost is a few more small files.
-     *
-     * <p>The ramp is stepped rather than truly continuous because the only render hook that knows
-     * <em>which entity</em> is holding the weapon is an item property function; a custom renderer
-     * and a baked-model wrapper both get the stack without its holder, and would pose every
-     * player's weapon from the local player's charge. Property functions select whole models, so a
-     * smooth lean is spelled as many small steps -- the same way vanilla spells a drawing bow, just
-     * finer. Regenerate the models with {@code node tools/gen_jawblade_charge_models.js} if this
-     * changes; a GameTest fails if the two disagree.
+     * <p>The bow's own value, and for the bow's own reason -- the item wants to be held until the
+     * player decides otherwise. {@link #finishUsingItem} is unreachable in practice as a result,
+     * which is exactly the "it shouldn't auto release" contract; the charge count is still derived
+     * from this number minus vanilla's countdown, so nothing else about the timing changes.
      */
-    public static final int CHARGE_POSE_STEPS = 48;
+    public static final int USE_DURATION_TICKS = 72000;
 
-    /** Recovery after any completed swing, hit or miss. The commitment. */
-    public static final int RECOVERY_TICKS = 30;
+    /**
+     * Recovery after a completed strike, hit or miss. The commitment.
+     *
+     * <p>50 ticks as of the alpha, up from 30. What it actually gates is worth being precise about:
+     * it is an {@code ItemCooldowns} entry, and vanilla item cooldowns block <em>use</em>, not
+     * attacks -- so this stops you starting another charge for two and a half seconds, and does
+     * nothing to left-click rate. Throttling left-click would mean lowering {@link #SPEED_MODIFIER}
+     * instead, which drags {@link #TIER_TICKS}[0] up with it (see the attack-strength note below).
+     */
+    public static final int RECOVERY_TICKS = 50;
 
     /** Maximum reach of the charged strike, in blocks. */
     public static final double REACH = 4.5D;
@@ -163,6 +174,202 @@ public class GiantJawbladeItem extends SwordItem {
         super(TIER, properties.attributes(createAttributes(TIER, DAMAGE_MODIFIER, SPEED_MODIFIER)));
     }
 
+    private static final software.bernie.geckolib.animation.RawAnimation CHARGE =
+            software.bernie.geckolib.animation.RawAnimation.begin().thenPlayAndHold("charge");
+
+    /**
+     * One release arc per tier, and the ordinary left-click's arc too -- one weapon, one way of
+     * moving. Each starts at its own tier's wound angle and sweeps further the harder the charge
+     * was, so a tier three release covers roughly twice the ground of a tier one in the same time.
+     *
+     * <p>Its clock is vanilla's own swing, which costs nothing and reaches everyone: {@code swing()}
+     * is already called at the end of every {@link #strike}, and {@code swinging} is synced to every
+     * client that can see the holder. Which arc to play comes from
+     * {@link com.carro1001.mhnw.registry.ModDataComponents#SWING_TIER}, written at the moment of
+     * release and synced with the stack.
+     *
+     * <p><b>All three are the same length, deliberately.</b> The clip moves the weapon and not the
+     * arm -- {@code HumanoidModel.setupAttackAnimation} runs after the arm pose and overwrites it,
+     * with no hook between -- so the blade is stuck with vanilla's swing duration for company. A
+     * heavier charge therefore reads as a <em>wider, faster</em> sweep rather than a slower one; a
+     * genuinely slower follow-through needs the arm, which needs a mixin or a player-animation
+     * library. See {@code docs/WEAPON_POSING.md}.
+     */
+    private static final software.bernie.geckolib.animation.RawAnimation[] SWINGS = {
+            software.bernie.geckolib.animation.RawAnimation.begin().thenPlay("swing_1"),
+            software.bernie.geckolib.animation.RawAnimation.begin().thenPlay("swing_2"),
+            software.bernie.geckolib.animation.RawAnimation.begin().thenPlay("swing_3")};
+
+    /**
+     * Blend ticks between clips -- GeckoLib's lerp, and the only one available.
+     *
+     * <p>It smooths charge-into-swing and swing-into-rest. It cannot smooth a controller
+     * {@code STOP}, which is instant; a gap where neither clip is playing snaps the bone to the
+     * model's rest pose no matter how long this is. See {@link #beginSwing}.
+     */
+    private static final int TRANSITION_TICKS = 2;
+
+    private final software.bernie.geckolib.animatable.instance.AnimatableInstanceCache cache =
+            software.bernie.geckolib.util.GeckoLibUtil.createInstanceCache(this);
+
+    /** Separate animation state per display context, so the hotbar icon and the held copy don't share one. */
+    @Override
+    public boolean isPerspectiveAware() {
+        return true;
+    }
+
+    /**
+     * Whether the charge clip should play in a given render context: only in a hand.
+     *
+     * <p><b>{@link #isPerspectiveAware()} alone does not do this.</b> It gives each display context
+     * its own {@code AnimatableManager}, but every one of them still runs the same predicate -- and
+     * the predicate finds the charge by stack identity, which the hotbar icon and the held copy
+     * share, because they are the same {@code ItemStack} object. So the inventory icon wound itself
+     * up in real time along with the weapon. The icon is meant to be a picture of the item, posed
+     * once by the model's own {@code gui} display transform.
+     *
+     * <p>Deliberately a whitelist of the four hand contexts rather than a blacklist of GUI: an item
+     * frame, a dropped stack, an armour stand's hand and a head slot should all be still too, and a
+     * blacklist would have let each new context animate until someone noticed.
+     *
+     * <p>Common code and a common enum on purpose, so the rule is reachable from a GameTest -- what
+     * renders cannot be checked headlessly, but which contexts are allowed to move can.
+     */
+    public static boolean animatesIn(net.minecraft.world.item.ItemDisplayContext context) {
+        return context == net.minecraft.world.item.ItemDisplayContext.FIRST_PERSON_RIGHT_HAND
+                || context == net.minecraft.world.item.ItemDisplayContext.FIRST_PERSON_LEFT_HAND
+                || context == net.minecraft.world.item.ItemDisplayContext.THIRD_PERSON_RIGHT_HAND
+                || context == net.minecraft.world.item.ItemDisplayContext.THIRD_PERSON_LEFT_HAND;
+    }
+
+    @Override
+    public software.bernie.geckolib.animatable.instance.AnimatableInstanceCache getAnimatableInstanceCache() {
+        return this.cache;
+    }
+
+    /**
+     * <b>The predicate is an anonymous class on purpose, and this is load-bearing.</b> It has to
+     * reach {@code Minecraft} to find who is holding the stack, and a dedicated server refuses to
+     * load any {@code net.minecraft.client} class -- NeoForge's {@code RuntimeDistCleaner} throws
+     * on it. Naming one anywhere in <em>this</em> class's own method bodies is enough: the verifier
+     * resolves it when the class is linked, which happens on the server the moment
+     * {@link com.carro1001.mhnw.registry.ModItems} constructs the item. Observed, not theorised --
+     * a lambda here crashed mod loading on {@code LocalPlayer}.
+     *
+     * <p>An anonymous class is a separate class file, so it is loaded only when this method
+     * actually runs, and this method only runs from GeckoLib's render path. Do not "tidy" it back
+     * into a lambda or a private helper.
+     *
+     * <p>Worse, {@code runGameTestServer} exited zero through that crash -- no test ran and the
+     * build reported success. A dist violation will not be caught by the suite; read the log.
+     */
+    @Override
+    public void registerControllers(
+            software.bernie.geckolib.animation.AnimatableManager.ControllerRegistrar controllers) {
+        controllers.add(new software.bernie.geckolib.animation.AnimationController<>(
+                this, "charge", TRANSITION_TICKS,
+                new software.bernie.geckolib.animation.AnimationController
+                        .AnimationStateHandler<GiantJawbladeItem>() {
+                    @Override
+                    public software.bernie.geckolib.animation.PlayState handle(
+                            software.bernie.geckolib.animation.AnimationState<GiantJawbladeItem> state) {
+                        net.minecraft.world.item.ItemDisplayContext context = state.getData(
+                                software.bernie.geckolib.constant.DataTickets.ITEM_RENDER_PERSPECTIVE);
+                        ItemStack stack = state.getData(
+                                software.bernie.geckolib.constant.DataTickets.ITEMSTACK);
+                        if (context == null || !animatesIn(context) || stack == null) {
+                            return stop(state);
+                        }
+                        if (isCharging(stack)) {
+                            return state.setAndContinue(CHARGE);
+                        }
+                        if (isSwinging(stack)) {
+                            return state.setAndContinue(SWINGS[swingTier(stack)]);
+                        }
+                        return stop(state);
+                    }
+
+                    /**
+                     * Stopping is not rewinding. The controller keeps {@code currentRawAnimation}
+                     * across a STOP, and {@code setAnimation} only reloads a clip when the reload
+                     * flag is set or a <em>different</em> animation is requested -- so without the
+                     * reset, the second charge resumed the held last frame and the blade simply
+                     * stayed wound up from then on. Observed, and it is why the first charge looked
+                     * right and no later one did.
+                     *
+                     * <p>Charge and swing are two different {@code RawAnimation}s, so switching
+                     * between them restarts on its own; only the idle gap needs this.
+                     */
+                    private software.bernie.geckolib.animation.PlayState stop(
+                            software.bernie.geckolib.animation.AnimationState<GiantJawbladeItem> state) {
+                        state.getController().forceAnimationReset();
+                        return software.bernie.geckolib.animation.PlayState.STOP;
+                    }
+
+                    /**
+                     * Whether this exact stack is mid-swing. Matched on the held item rather than
+                     * the used one, because a swing is not a use -- by the time this runs the
+                     * charge has already been released.
+                     */
+                    private boolean isSwinging(ItemStack stack) {
+                        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+                        if (mc.level == null) {
+                            return false;
+                        }
+                        for (Player player : mc.level.players()) {
+                            if (player.swinging && player.getMainHandItem() == stack) {
+                                return true;
+                            }
+                        }
+                        return mc.player != null && mc.player.swinging
+                                && ItemStack.isSameItemSameComponents(mc.player.getMainHandItem(), stack);
+                    }
+
+                    /**
+                     * Whether this exact stack is mid-charge. The lookup is over
+                     * {@code level.players()} because only a player can use this weapon, and it
+                     * compares by identity rather than by item so two players charging two
+                     * jawblades do not pose each other's.
+                     */
+                    private boolean isCharging(ItemStack stack) {
+                        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+                        if (mc.level == null) {
+                            return false;
+                        }
+                        for (Player player : mc.level.players()) {
+                            if (GiantJawbladeItem.isCharging(stack, player)) {
+                                return true;
+                            }
+                        }
+                        // The first-person hand renderer can hand out a copy rather than the held
+                        // object, so fall back to the one holder that view can belong to.
+                        return mc.player != null && GiantJawbladeItem.isCharging(
+                                mc.player.getUseItem(), mc.player)
+                                && ItemStack.isSameItemSameComponents(mc.player.getUseItem(), stack);
+                    }
+                }));
+    }
+
+    /**
+     * GeckoLib's own equivalent of {@code IClientItemExtensions.getCustomRenderer}. Naming the
+     * renderer inside an anonymous class keeps it off a dedicated server for the reason above.
+     */
+    @Override
+    public void createGeoRenderer(
+            java.util.function.Consumer<software.bernie.geckolib.animatable.client.GeoRenderProvider> consumer) {
+        consumer.accept(new software.bernie.geckolib.animatable.client.GeoRenderProvider() {
+            private net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer renderer;
+
+            @Override
+            public net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer getGeoItemRenderer() {
+                if (this.renderer == null) {
+                    this.renderer = new com.carro1001.mhnw.client.MHNWClient.JawbladeRenderer();
+                }
+                return this.renderer;
+            }
+        });
+    }
+
     /**
      * No sweep, ever -- left-click included.
      *
@@ -181,6 +388,53 @@ public class GiantJawbladeItem extends SwordItem {
     public boolean canPerformAction(ItemStack stack, net.neoforged.neoforge.common.ItemAbility ability) {
         return ability != net.neoforged.neoforge.common.ItemAbilities.SWORD_SWEEP
                 && super.canPerformAction(stack, ability);
+    }
+
+    /**
+     * The third-person charge stance: the hunter's arms raise the weapon as the charge builds.
+     *
+     * <p>This is what the vanilla {@link UseAnim} options could not give (see the class note above
+     * on why {@code SPEAR} was rejected), and it needs no animation library: {@code ArmPose} is an
+     * extensible enum, and NeoForge asks the held item which one to use. Both jawblades inherit it,
+     * because how the <em>arms</em> move is independent of whether the weapon itself is drawn by
+     * swapped models or by a GeckoLib clip -- keeping the comparison between those two honest.
+     *
+     * <p>Returning {@code null} outside a charge is what leaves an idle hunter in the ordinary item
+     * pose; the custom pose is only ever active while vanilla's own use countdown is running.
+     *
+     * <p>The anonymous class is deliberate and load-bearing, not a style choice --
+     * {@link com.carro1001.mhnw.client.MHNWArmPoses} reaches {@code HumanoidModel}, and naming it
+     * in this class's own method bodies would link a client class on a dedicated server and crash
+     * mod loading. See that class, and {@code docs/WEAPON_POSING.md}.
+     */
+    @Override
+    public void initializeClient(java.util.function.Consumer<
+            net.neoforged.neoforge.client.extensions.common.IClientItemExtensions> consumer) {
+        consumer.accept(new net.neoforged.neoforge.client.extensions.common.IClientItemExtensions() {
+            @Override
+            public net.minecraft.client.model.HumanoidModel.ArmPose getArmPose(
+                    LivingEntity entity, net.minecraft.world.InteractionHand hand, ItemStack stack) {
+                return chargeProgress(stack, entity) > 0.0F
+                        ? com.carro1001.mhnw.client.MHNWArmPoses.greatswordCharge()
+                        : null;
+            }
+        });
+    }
+
+    /**
+     * An ordinary left-click resets the arc to the weakest one, so a swing nobody charged does not
+     * inherit the last charged release's sweep.
+     *
+     * <p>This covers a left-click that <em>connects</em>. A left-click that swings at thin air after
+     * a charged strike keeps the wider arc until the next attack, because vanilla tells the server
+     * nothing about a missed swing -- {@code LeftClickEmpty} is a client-only event. Closing that
+     * needs a packet of our own for a one-frame cosmetic difference, which is not a trade worth
+     * making; see {@code docs/DEFERRED.md}.
+     */
+    @Override
+    public boolean onLeftClickEntity(ItemStack stack, Player player, net.minecraft.world.entity.Entity target) {
+        stack.set(com.carro1001.mhnw.registry.ModDataComponents.SWING_TIER.get(), 0);
+        return false;
     }
 
     /** Bone, not iron: the tier is iron only for its numbers. */
@@ -202,7 +456,7 @@ public class GiantJawbladeItem extends SwordItem {
      */
     @Override
     public int getUseDuration(ItemStack stack, LivingEntity entity) {
-        return OVERCHARGE_TICKS;
+        return USE_DURATION_TICKS;
     }
 
     /**
@@ -229,12 +483,22 @@ public class GiantJawbladeItem extends SwordItem {
      */
     @Override
     public void onUseTick(Level level, LivingEntity entity, ItemStack stack, int remainingUseDuration) {
+        int charged = USE_DURATION_TICKS - remainingUseDuration;
+        if (charged >= FIZZLE_TICKS) {
+            if (charged == FIZZLE_TICKS && level instanceof ServerLevel serverLevel) {
+                level.playSound(null, entity.getX(), entity.getY(), entity.getZ(),
+                        SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 0.8F, 1.4F);
+                serverLevel.sendParticles(ParticleTypes.SMOKE,
+                        entity.getX(), entity.getEyeY() - 0.2D, entity.getZ(),
+                        12, 0.3D, 0.2D, 0.3D, 0.01D);
+            }
+            return;
+        }
         entity.setDeltaMovement(entity.getDeltaMovement()
                 .multiply(CHARGE_MOVEMENT_SCALE, 1.0D, CHARGE_MOVEMENT_SCALE));
         if (level.isClientSide) {
             return;
         }
-        int charged = OVERCHARGE_TICKS - remainingUseDuration;
         if (!(level instanceof ServerLevel serverLevel)) {
             return;
         }
@@ -283,52 +547,109 @@ public class GiantJawbladeItem extends SwordItem {
      */
     @Override
     public void releaseUsing(ItemStack stack, Level level, LivingEntity entity, int timeCharged) {
-        if (!(entity instanceof Player player) || level.isClientSide) {
+        if (!(entity instanceof Player player)) {
             return;
         }
-        int tier = tierFor(OVERCHARGE_TICKS - timeCharged);
+        int charged = USE_DURATION_TICKS - timeCharged;
+        int tier = tierFor(charged);
+
         if (tier < 0) {
+            // A charge that never reached tier one still swings, at the weakest arc -- letting go
+            // early should look like a wasted swing rather than like nothing happened. It still
+            // costs nothing: no damage, no cooldown, no wear. A charge that already *fizzled* is
+            // excluded, because it announced its own death with a cue and a dropped blade; swinging
+            // again afterwards would undo that.
+            if (charged < FIZZLE_TICKS) {
+                beginSwing(stack, player, 0);
+            }
+            return;
+        }
+
+        beginSwing(stack, player, tier);
+        if (level.isClientSide) {
             return;
         }
         strike(level, player, TIER_DAMAGE[tier] - TIER_DAMAGE[0]);
     }
 
     /**
-     * Held past the overcharge point. Vanilla calls this exactly once, on the server, only on a
-     * hold that ran the whole way -- so this is the "you waited too long" swing, and it lands at
-     * tier one's damage rather than tier three's.
+     * Start the swing on <b>both</b> sides, and record which arc it is.
+     *
+     * <p>The client half is prediction, in vanilla's own style -- {@code Minecraft.startAttack}
+     * swings locally rather than waiting for the server to say so -- and it is load-bearing rather
+     * than an optimisation. Without it there is a gap: the charge ends the instant the button comes
+     * up, but {@code swinging} only becomes true on the client when the server's animate packet
+     * lands a tick or two later. For those ticks the blade is neither charging nor swinging, the
+     * controller stops, and the bone snaps to the model's rest pose -- which for this weapon is
+     * vertical. That read in play as the blade teleporting upright and swinging from there.
+     *
+     * <p><b>No amount of blending fixes that</b>, which is worth knowing before someone reaches for
+     * a longer transition: a controller {@code STOP} is instant, and GeckoLib's transition only
+     * lerps <em>between clips</em>. The fix is to never stop in the first place.
+     *
+     * <p>The tier is computed the same way on both sides from vanilla's own countdown, so the
+     * client picks the right arc immediately instead of reading a component the server has not
+     * synced back yet. The two-argument {@code swing} is deliberate: {@code LocalPlayer} overrides
+     * only the one-argument form, and that override sends a swing packet the server has no use for
+     * here -- it is already swinging this player itself.
      */
-    @Override
-    public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity entity) {
-        if (entity instanceof Player player && !level.isClientSide) {
-            strike(level, player, 0.0D);
-        }
-        return stack;
+    private static void beginSwing(ItemStack stack, Player player, int tier) {
+        stack.set(com.carro1001.mhnw.registry.ModDataComponents.SWING_TIER.get(), tier);
+        // Both sides: the client for its own view, the server so everyone else sees it too. The
+        // flag is vanilla's "tell the swinging player as well", which only the server needs to do.
+        player.swing(InteractionHand.MAIN_HAND, !player.level().isClientSide);
     }
 
     /**
-     * How far along a charge this stack is for whoever is holding it: 0.0 when it is not being
-     * charged, rising smoothly to 1.0 at the top tier and staying there while overcharging.
+     * Unreachable in normal play, and deliberately inert.
      *
-     * <p>Deliberately continuous, unlike the damage, which steps at {@link #TIER_TICKS}. The lean
-     * should look like winding up; the cues and the damage are what mark the tiers.
-     *
-     * <p>This is what the client's model predicate reads to lean the weapon back as the charge
-     * builds, and it is deliberately derived from vanilla's own use countdown here in common code
-     * rather than tracked separately on the client -- the pose and the damage cannot disagree
-     * because they are the same number.
+     * <p>{@link #USE_DURATION_TICKS} is an hour of holding, so vanilla never gets here; the weapon
+     * swings only when the player lets go. It used to swing itself at tier one's damage after the
+     * overcharge window, which is the behaviour {@link #FIZZLE_TICKS} replaced. Left overridden
+     * rather than deleted so that the "never swings on its own" rule is stated where someone
+     * lowering the use duration would read it.
      */
+    @Override
+    public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity entity) {
+        return stack;
+    }
+
+    /** Whether this exact stack has a live charge; fizzling ends it even while vanilla's use is held. */
+    public static boolean isCharging(ItemStack stack, LivingEntity holder) {
+        return holder != null && holder.isUsingItem() && holder.getUseItem() == stack
+                && USE_DURATION_TICKS - holder.getUseItemRemainingTicks() < FIZZLE_TICKS;
+    }
+
+    /** How far along a live charge this stack is, rising smoothly to 1.0 at the top tier. */
     public static float chargeProgress(ItemStack stack, LivingEntity holder) {
-        if (holder == null || !holder.isUsingItem() || holder.getUseItem() != stack) {
+        if (!isCharging(stack, holder)) {
             return 0.0F;
         }
-        int charged = OVERCHARGE_TICKS - holder.getUseItemRemainingTicks();
+        int charged = USE_DURATION_TICKS - holder.getUseItemRemainingTicks();
         int fullyWound = TIER_TICKS[TIER_TICKS.length - 1];
         return Math.min(1.0F, charged / (float) fullyWound);
     }
 
-    /** Which tier a given number of charged ticks has reached, or -1 for "not even tier one". */
+    /**
+     * Which arc the last swing should use: the recorded tier, clamped into range.
+     *
+     * <p>Defaults to the weakest arc, which is also what an ordinary left-click and a released
+     * half-charge get -- a swing nobody paid for should look like the cheapest one.
+     */
+    public static int swingTier(ItemStack stack) {
+        Integer recorded = stack.get(
+                com.carro1001.mhnw.registry.ModDataComponents.SWING_TIER.get());
+        return recorded == null ? 0 : Math.clamp(recorded.intValue(), 0, SWINGS.length - 1);
+    }
+
+    /**
+     * Which tier a given number of charged ticks has reached, or -1 for "no strike": either not yet
+     * tier one, or held so long the charge has fizzled.
+     */
     public static int tierFor(int chargedTicks) {
+        if (chargedTicks >= FIZZLE_TICKS) {
+            return -1;
+        }
         int reached = -1;
         for (int tier = 0; tier < TIER_TICKS.length; tier++) {
             if (chargedTicks >= TIER_TICKS[tier]) {
@@ -370,7 +691,8 @@ public class GiantJawbladeItem extends SwordItem {
                 damage.removeModifier(CHARGE_BONUS_ID);
             }
         }
-        player.swing(InteractionHand.MAIN_HAND, true);
+        // The swing itself is started by beginSwing, on both sides and before this runs, so that
+        // the client never has a tick with neither clip playing.
         player.getCooldowns().addCooldown(this, RECOVERY_TICKS);
     }
 }

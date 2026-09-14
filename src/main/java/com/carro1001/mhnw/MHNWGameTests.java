@@ -1419,6 +1419,18 @@ public class MHNWGameTests {
      * timeout is sized for that, not for a rusher. What is asserted is unchanged -- that damage
      * actually reaches a target in the authored active window -- and {@code r1IzuchiHarass*}
      * owns the shape of the approach.
+     *
+     * <p>The timeout is the original two harass cycles. It was raised to 800 and then 1600
+     * chasing an intermittent failure, and every one of those raises was wrong: the cause was a
+     * stale {@code debugCombat = true} in {@code run/config/}, which used to gate small Izuchi's
+     * unfinished, damage-less tail slam. With logging on the mob picked that slam half the time and
+     * spent 88 ticks landing nothing, so two cycles often produced no damage at all. The gate is
+     * now {@code MHNWConfig.TAIL_SLAM_PREVIEW} and this test no longer depends on a developer's
+     * local config.
+     *
+     * <p>The failure message reports how many swipes were started and how many ticks fell inside
+     * the active window, because "never swung" and "swung and never connected" are different
+     * defects and that distinction is what finally located this one.
      */
     @GameTest(template = ARENA, timeoutTicks = 400)
     public static void izuchiAttacksAndDamagesTarget(GameTestHelper helper) {
@@ -1429,9 +1441,30 @@ public class MHNWGameTests {
         izuchi.setTarget(victim);
         float startingHealth = victim.getHealth();
 
+        // Swipes started, and ticks spent inside the authored active window. A failure that says
+        // "never swung" and one that says "swung four times and never connected" are completely
+        // different defects, and the message is the only place that distinction survives.
+        int[] swipes = {0};
+        int[] activeTicks = {0};
+        boolean[] wasSwiping = {false};
+
+        helper.onEachTick(() -> {
+            boolean swiping = izuchi.getAttackId() == Izuchi.ATTACK_TAIL_SWIPE;
+            if (swiping && !wasSwiping[0]) {
+                swipes[0]++;
+            }
+            wasSwiping[0] = swiping;
+            if (swiping && izuchi.getAttackAge() >= IzuchiHarassGoal.ACTIVE_START
+                    && izuchi.getAttackAge() <= IzuchiHarassGoal.ACTIVE_END) {
+                activeTicks[0]++;
+            }
+        });
+
         helper.succeedWhen(() -> {
             helper.assertTrue(victim.getHealth() < startingHealth,
-                    "Izuchi never damaged a target standing right next to it");
+                    "Izuchi never damaged a target standing right next to it (swipes started: "
+                            + swipes[0] + ", ticks inside the active window: " + activeTicks[0]
+                            + ", phase: " + izuchi.harassPhase() + ")");
             helper.assertTrue(izuchi.getAttackId() == Izuchi.ATTACK_TAIL_SWIPE,
                     "Izuchi damaged a target outside its tail-swipe action");
             helper.assertTrue(izuchi.getAttackAge() >= IzuchiHarassGoal.ACTIVE_START
@@ -2218,6 +2251,23 @@ public class MHNWGameTests {
                 ModEntities.FLASHBUG.get(), 2, 1, 2);
         assertOneSpawnEntry(helper, habitat, net.minecraft.world.entity.MobCategory.AMBIENT,
                 ModEntities.BUG.get(), 2, 1, 2);
+
+        // Alpha: the habitat is ours alone. Vanilla's own plains/forest roster used to sit in this
+        // biome's JSON and drown Great Izuchi's weight-2 entry under eight monsters at weight ~100
+        // each, so the hunt the biome exists for barely happened. Asserted per category rather than
+        // per species so a re-added cow fails this too.
+        for (net.minecraft.world.entity.MobCategory category : java.util.List.of(
+                net.minecraft.world.entity.MobCategory.MONSTER,
+                net.minecraft.world.entity.MobCategory.CREATURE,
+                net.minecraft.world.entity.MobCategory.AMBIENT)) {
+            for (net.minecraft.world.level.biome.MobSpawnSettings.SpawnerData entry :
+                    habitat.getMobSettings().getMobs(category).unwrap()) {
+                helper.assertTrue(net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE
+                                .getKey(entry.type).getNamespace().equals(MHNW.MOD_ID),
+                        "a non-mhnw " + category + " spawn entry is back in the hunting grounds: "
+                                + entry.type.getDescriptionId());
+            }
+        }
 
         // No independent small-Izuchi population: it arrives as an escort or not at all.
         assertNoSpawnEntry(helper, habitat, ModEntities.IZUCHI.get());
@@ -3140,6 +3190,11 @@ public class MHNWGameTests {
         assertCrafts(helper, 3, 3, "HCH" + "B B" + "B B",
                 com.carro1001.mhnw.registry.ModItems.BONE_LEGGING.get());
         assertCrafts(helper, 3, 2, "C C" + "B B", com.carro1001.mhnw.registry.ModItems.BONE_BOOTS.get());
+
+        // The bone half of the set comes from the herbivore as well as from vanilla skeletons, so a
+        // player who has found the habitat but not yet beaten an Izuchi is never short of bone.
+        helper.assertTrue(CarveState.Table.APTONOTH.reward(2).is(net.minecraft.world.item.Items.BONE),
+                "Aptonoth's third carve no longer yields bone");
         helper.succeed();
     }
 
@@ -5328,8 +5383,8 @@ public class MHNWGameTests {
 
         hunter.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
         helper.assertTrue(hunter.getUseItemRemainingTicks()
-                        == com.carro1001.mhnw.item.GiantJawbladeItem.OVERCHARGE_TICKS,
-                "starting the charge did not arm the full overcharge window");
+                        == com.carro1001.mhnw.item.GiantJawbladeItem.USE_DURATION_TICKS,
+                "starting the charge did not arm the open-ended hold window");
 
         helper.startSequence()
                 .thenExecuteFor(maxTierTicks(), () -> tickOnce(hunter))
@@ -5426,27 +5481,60 @@ public class MHNWGameTests {
     }
 
     /**
-     * R3-04: overcharging wastes the charge rather than banking it. Holding past the overcharge
-     * point swings by itself -- vanilla's completion, which is the one path that still runs through
-     * {@code finishUsingItem} -- and lands tier one's damage, not tier three's.
+     * R3-04: overcharging wastes the charge rather than banking it -- and, since 2026-09-13, wastes
+     * it by fizzling rather than by swinging.
+     *
+     * <p>The weapon used to swing itself at tier one's damage once vanilla's use duration ran out.
+     * That put a hit on the screen the player never asked for, so the use duration is now an hour
+     * ({@code USE_DURATION_TICKS}) and {@code finishUsingItem} is unreachable; past
+     * {@code FIZZLE_TICKS} the charge simply dies. Both halves are asserted, because "no damage"
+     * alone would also pass if the charge had silently stayed live.
      */
-    @GameTest(template = ARENA, timeoutTicks = 200)
-    public static void r3OverchargeSwingsItselfAtTierOne(GameTestHelper helper) {
+    @GameTest(template = ARENA, timeoutTicks = 400)
+    public static void r3OverchargeFizzlesInsteadOfSwinging(GameTestHelper helper) {
+        net.minecraft.world.entity.animal.Cow target = inertCow(helper, 8, 2, 10);
         net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 2, 8);
-        float[] tierDamage = com.carro1001.mhnw.item.GiantJawbladeItem.TIER_DAMAGE;
+        net.minecraft.world.phys.Vec3 push = new net.minecraft.world.phys.Vec3(0.5D, 0.0D, 0.0D);
+        aimAt(hunter, target.getBoundingBox().getCenter());
+        float healthBefore = target.getHealth();
 
-        float overcharged = chargeDamageAt(helper, hunter,
-                com.carro1001.mhnw.item.GiantJawbladeItem.OVERCHARGE_TICKS + 2, 8, 2, 10);
+        hunter.setDeltaMovement(push);
+        tickOnce(hunter);
+        double freeSpeed = hunter.getDeltaMovement().horizontalDistance();
+        hunter.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
 
-        retire(hunter);
-        helper.assertTrue(overcharged > 0.0F,
-                "holding past the overcharge point never swung at all");
-        helper.assertTrue(Math.abs(overcharged - tierDamage[0]) < 0.51F,
-                "an overcharged swing dealt " + overcharged + ", expected tier one's "
-                        + tierDamage[0]);
-        helper.assertTrue(overcharged < tierDamage[tierDamage.length - 1] - 0.5F,
-                "an overcharged swing still landed full-tier damage, so overcharging costs nothing");
-        helper.succeed();
+        hunter.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+        helper.startSequence()
+                .thenExecuteFor(com.carro1001.mhnw.item.GiantJawbladeItem.FIZZLE_TICKS + 10,
+                        () -> tickOnce(hunter))
+                .thenExecute(() -> {
+                    // Still held: nothing ended the use for us, which is the "no auto release" half.
+                    helper.assertTrue(hunter.isUsingItem(),
+                            "the hold ended by itself, so the weapon can still swing unprompted");
+                    helper.assertTrue(target.getHealth() == healthBefore,
+                            "holding past the fizzle point swung the weapon by itself");
+                    helper.assertTrue(com.carro1001.mhnw.item.GiantJawbladeItem.chargeProgress(
+                                    hunter.getMainHandItem(), hunter) == 0.0F,
+                            "a fizzled charge still reports progress, so the blade stays wound up");
+                    helper.assertTrue(!com.carro1001.mhnw.item.GiantJawbladeItem.isCharging(
+                                    hunter.getMainHandItem(), hunter),
+                            "a fizzled charge still reports charging, so GeckoLib keeps its charge clip running");
+                    hunter.setDeltaMovement(push);
+                })
+                .thenExecute(() -> tickOnce(hunter))
+                .thenExecute(() -> {
+                    helper.assertTrue(hunter.getDeltaMovement().horizontalDistance() > freeSpeed * 0.6D,
+                            "a fizzled hold still applies the charging crawl");
+                    hunter.releaseUsingItem();
+                })
+                .thenExecuteFor(10, () -> tickOnce(hunter))
+                .thenExecute(() -> {
+                    float after = target.getHealth();
+                    retire(hunter);
+                    helper.assertTrue(after == healthBefore,
+                            "releasing a fizzled charge still struck for " + (healthBefore - after));
+                })
+                .thenSucceed();
     }
 
     /**
@@ -5496,7 +5584,10 @@ public class MHNWGameTests {
                 .thenExecuteFor(com.carro1001.mhnw.item.GiantJawbladeItem.TIER_TICKS[0] - 3,
                         () -> tickOnce(hunter))
                 .thenExecute(hunter::releaseUsingItem)
-                .thenExecuteFor(com.carro1001.mhnw.item.GiantJawbladeItem.OVERCHARGE_TICKS + 5,
+                // Long enough that a strike or a cooldown would have shown up -- the recovery
+                // window plus margin. It used to wait out the whole charge window, which since the
+                // fizzle rework is an order of magnitude longer than anything being observed here.
+                .thenExecuteFor(com.carro1001.mhnw.item.GiantJawbladeItem.RECOVERY_TICKS + 10,
                         () -> tickOnce(hunter))
                 .thenExecute(() -> {
                     boolean cooling = hunter.getCooldowns().isOnCooldown(
@@ -5717,50 +5808,173 @@ public class MHNWGameTests {
     }
 
     /**
-     * The Giant Jawblade's model must never inherit from vanilla's flat-item chain.
+     * The weapon's presentation contract, in one test, because a GameTest server loads no assets and
+     * can never see the result: the model must route to GeckoLib's renderer, the geometry must carry
+     * the bone the clip animates, that bone must pivot on the player's hand, and the clip's timing
+     * must still match the constants the damage tiers come from.
      *
-     * <p>This is a real bug that shipped twice and cost two rounds, and it is invisible to every
-     * other check: the model loads, the item works, a dropped one still casts a shadow, and nothing
-     * is logged. {@code item/handheld} parents {@code item/generated} parents
-     * {@code builtin/generated}, and {@link net.minecraft.client.resources.model.ModelBakery} bakes
-     * any model whose <em>root</em> parent is that marker through {@code ItemModelGenerator}, which
-     * throws the model's own {@code elements} away and builds quads purely from {@code layer0} ..
-     * {@code layer4}. A cuboid model names its texture {@code "0"}, not {@code "layer0"}, so the
-     * generator finds no layers, emits no quads, and the weapon renders as nothing at all.
-     *
-     * <p>A 3D item model therefore declares no parent and carries its own {@code display} block --
-     * which is exactly what the artist's export does, and what a well-meaning "fix" to inherit
-     * vanilla's hand transforms undoes. Checked as text on purpose: model baking is client-only, so
-     * a dedicated server cannot bake this model to count its quads, but it can read the file.
+     * <p>The 48 generated pose models this used to also guard are gone -- the GeckoLib clip won the
+     * comparison on 2026-09-13 and the model-swap approach was deleted with it.
      */
     @GameTest(template = ARENA, timeoutTicks = 40)
-    public static void r3JawbladeModelDoesNotInheritTheFlatItemChain(GameTestHelper helper) {
+    public static void r3JawbladeModelIsGeckoRenderedAndGrippedAtTheHand(GameTestHelper helper) {
         String model = readPackaged(helper, "/assets/mhnw/models/item/giant_jawblade.json");
-        helper.assertTrue(!model.contains("\"parent\""),
-                "the weapon model declares a parent; a 3D item model must not, because vanilla's"
-                        + " item parents resolve to builtin/generated and discard its elements");
-        helper.assertTrue(model.contains("\"elements\"") && model.contains("\"display\""),
-                "the weapon model lost its own elements or display block");
-        helper.assertTrue(model.contains("\"0\":") && !model.contains("layer0"),
-                "the weapon model uses a layer texture key, which only means anything to the flat"
-                        + " item generator this model must not go through");
 
-        // The charge-tier models are the one place a parent is correct: they inherit this model's
-        // geometry so only their held poses differ. That parent must still be ours -- pointing any
-        // of them at a vanilla item model would hand the whole chain back to the flat generator.
-        for (int tier = 1; tier <= com.carro1001.mhnw.item.GiantJawbladeItem.CHARGE_POSE_STEPS; tier++) {
-            String path = "/assets/mhnw/models/item/giant_jawblade_charge_" + tier + ".json";
-            String pose = readPackaged(helper, path);
-            helper.assertTrue(pose.contains("\"mhnw:item/giant_jawblade\""),
-                    path + " does not inherit the weapon's own model");
-            helper.assertTrue(!pose.contains("item/generated") && !pose.contains("item/handheld"),
-                    path + " parents a vanilla item model, which discards the geometry it inherits");
-            helper.assertTrue(model.contains("giant_jawblade_charge_" + tier + "\""),
-                    "the weapon model has no override pointing at charge pose " + tier
-                            + ", so that pose can never be shown. If CHARGE_POSE_STEPS changed,"
-                            + " rerun node tools/gen_jawblade_charge_models.js");
+        // builtin/entity is what makes vanilla hand the stack to a custom renderer at all. Every
+        // other item parent roots at builtin/generated, where ModelBakery discards `elements` and
+        // builds quads from `layer0` -- which a cuboid model does not have, so the weapon rendered
+        // as nothing at all, with a shadow and no geometry and nothing in the log. That is a real
+        // afternoon, guarded here as text because model baking is client-only.
+        helper.assertTrue(model.contains("\"builtin/entity\""),
+                "the weapon model must parent builtin/entity for vanilla to route it to GeckoLib");
+        helper.assertTrue(!model.contains("item/generated") && !model.contains("item/handheld"),
+                "the weapon model parents a flat item model, which discards everything it inherits");
+        helper.assertTrue(model.contains("\"display\""),
+                "the weapon model lost the authored display block, which is also what places the grip");
+
+        String geo = readPackaged(helper, "/assets/mhnw/geo/item/giant_jawblade.geo.json");
+        helper.assertTrue(geo.contains("\"group\""),
+                "the geometry has no bone named group, which is the one the clip animates");
+
+        // The bone pivots on the player's hand, and where that is is derived, not eyeballed: vanilla
+        // applies the display transform, then translate(-0.5) thrice, then draws at 1/16 scale, so a
+        // Java-model point sits on the hand when it equals 8 minus the display translation -- and geo
+        // coordinates are Java minus 8. The hand is exactly the negated third-person translation.
+        // Pivoting anywhere else swings the grip out of the hand mid-charge, which two playtests saw.
+        com.google.gson.JsonArray translation = com.google.gson.JsonParser.parseString(model)
+                .getAsJsonObject().getAsJsonObject("display")
+                .getAsJsonObject("thirdperson_righthand").getAsJsonArray("translation");
+        com.google.gson.JsonArray pivot = com.google.gson.JsonParser.parseString(geo)
+                .getAsJsonObject().getAsJsonArray("minecraft:geometry").get(0).getAsJsonObject()
+                .getAsJsonArray("bones").get(0).getAsJsonObject().getAsJsonArray("pivot");
+        for (int axis = 0; axis < 3; axis++) {
+            helper.assertTrue(Math.abs(pivot.get(axis).getAsDouble()
+                            + translation.get(axis).getAsDouble()) < EPSILON,
+                    "the bone pivots at " + pivot + ", but the hand is at the negated third-person"
+                            + " translation " + translation);
+        }
+        helper.assertTrue(!clipHasTrack(helper, "position"),
+                "the charge clip has a position track; translating the bone moves the weapon off"
+                        + " the hand the pivot exists to keep it on. Use more rotation instead");
+
+        // The clip carries no seek -- GeckoLib 4.9.2 has none -- so it stays in step with the charge
+        // only because its length equals FIZZLE_TICKS and its keyframes sit on TIER_TICKS. Changing
+        // either constant without re-authoring the clip desyncs the wind-up from the damage with
+        // nothing visible failing, so both are recomputed here rather than written down twice.
+        String clip = chargeClip(helper);
+        helper.assertTrue(clip.contains("\"charge\""), "the animation file has no charge clip");
+        // The release arc rides vanilla's own swing, which is why strike() must keep calling
+        // swing(): that flag is the clip's entire clock, and it is what syncs it to other players.
+        // One arc per tier, each starting at that tier's own wound angle so the swing flows out of
+        // the charge. The count is read off the item rather than written down, so adding a tier
+        // without authoring its arc fails here instead of falling back to a narrower one in play.
+        for (int tier = 1; tier <= com.carro1001.mhnw.item.GiantJawbladeItem.TIER_TICKS.length; tier++) {
+            helper.assertTrue(clip.contains("\"swing_" + tier + "\""),
+                    "the animation file has no swing_" + tier + " arc, so tier " + tier
+                            + " releases would fall back to another tier's sweep");
+        }
+        String length = seconds(com.carro1001.mhnw.item.GiantJawbladeItem.FIZZLE_TICKS);
+        helper.assertTrue(clip.contains("\"animation_length\": " + length),
+                "the charge clip is not " + length + "s long, so it no longer matches the"
+                        + " FIZZLE_TICKS window it is kept in step with by duration alone");
+        for (int ticks : com.carro1001.mhnw.item.GiantJawbladeItem.TIER_TICKS) {
+            helper.assertTrue(clip.contains("\"" + seconds(ticks) + "\":"),
+                    "the charge clip has no keyframe at " + seconds(ticks) + "s, the boundary for a"
+                            + " " + ticks + "-tick tier; re-author it or the pose and the damage"
+                            + " tiers disagree");
         }
         helper.succeed();
+    }
+
+    /**
+     * The charge clip animates in a hand and nowhere else.
+     *
+     * <p>The inventory icon used to wind itself up in real time along with the held weapon: the
+     * hotbar and the hand render the same {@code ItemStack} object, so the predicate's identity
+     * check was true in both, and {@code isPerspectiveAware()} only separates their animation
+     * state, not their answer. An icon is meant to be a picture, posed once by the model's own
+     * {@code gui} transform.
+     *
+     * <p>Every context is enumerated rather than spot-checking a couple, so a context added by a
+     * future Minecraft version fails here rather than quietly animating.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void r3JawbladeAnimatesOnlyInAHand(GameTestHelper helper) {
+        for (net.minecraft.world.item.ItemDisplayContext context
+                : net.minecraft.world.item.ItemDisplayContext.values()) {
+            boolean inHand = switch (context) {
+                case FIRST_PERSON_RIGHT_HAND, FIRST_PERSON_LEFT_HAND,
+                        THIRD_PERSON_RIGHT_HAND, THIRD_PERSON_LEFT_HAND -> true;
+                default -> false;
+            };
+            helper.assertTrue(
+                    com.carro1001.mhnw.item.GiantJawbladeItem.animatesIn(context) == inHand,
+                    "the charge clip " + (inHand ? "must" : "must not") + " play in " + context
+                            + "; a still context that animates is an inventory icon winding itself up");
+        }
+        helper.succeed();
+    }
+
+    /**
+     * R3-04b: a release below tier one still swings, and still costs nothing.
+     *
+     * <p>Letting go early should look like a wasted swing rather than like the input was dropped,
+     * so it plays the weakest arc -- but it must not strike, cool down or wear the weapon, which is
+     * what {@code r3CancelledChargeChangesNothing} covers from the other side. A charge that already
+     * fizzled is excluded: it announced its own death, and swinging afterwards would undo that.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void r3FailedReleaseSwingsAtTheWeakestArc(GameTestHelper helper) {
+        net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 2, 8);
+        hunter.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+
+        helper.startSequence()
+                .thenExecuteFor(com.carro1001.mhnw.item.GiantJawbladeItem.TIER_TICKS[0] - 5,
+                        () -> tickOnce(hunter))
+                .thenExecute(() -> {
+                    hunter.releaseUsingItem();
+                    helper.assertTrue(hunter.swinging,
+                            "a release short of tier one did not swing at all");
+                    helper.assertTrue(com.carro1001.mhnw.item.GiantJawbladeItem.swingTier(
+                                    hunter.getMainHandItem()) == 0,
+                            "a release short of tier one did not use the weakest arc");
+                    retire(hunter);
+                })
+                .thenSucceed();
+    }
+
+    /** The recorded arc rises with the tier, so a heavier charge really does sweep further. */
+    @GameTest(template = ARENA, timeoutTicks = 400)
+    public static void r3SwingArcFollowsTheChargeTier(GameTestHelper helper) {
+        net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 2, 8);
+        int[] tiers = com.carro1001.mhnw.item.GiantJawbladeItem.TIER_TICKS;
+
+        helper.startSequence()
+                .thenExecute(() -> hunter.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND))
+                .thenExecuteFor(tiers[tiers.length - 1] + 2, () -> tickOnce(hunter))
+                .thenExecute(() -> {
+                    hunter.releaseUsingItem();
+                    helper.assertTrue(com.carro1001.mhnw.item.GiantJawbladeItem.swingTier(
+                                    hunter.getMainHandItem()) == tiers.length - 1,
+                            "a full charge did not record the widest arc");
+                    retire(hunter);
+                })
+                .thenSucceed();
+    }
+
+    private static String chargeClip(GameTestHelper helper) {
+        return readPackaged(helper, "/assets/mhnw/animations/item/giant_jawblade.animation.json");
+    }
+
+    private static boolean clipHasTrack(GameTestHelper helper, String track) {
+        return chargeClip(helper).contains("\"" + track + "\"");
+    }
+
+    /** Ticks as the clip spells them: seconds at 20 ticks each, one decimal place minimum. */
+    private static String seconds(int ticks) {
+        double value = ticks / 20.0D;
+        String text = java.math.BigDecimal.valueOf(value).stripTrailingZeros().toPlainString();
+        return text.contains(".") ? text : text + ".0";
     }
 
     /** Read a packaged client resource as text, or fail the test saying which one was missing. */
@@ -5991,4 +6205,5 @@ public class MHNWGameTests {
             }
         }
     }
+
 }

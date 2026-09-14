@@ -53,22 +53,25 @@ public final class MHNWClient {
     }
 
     /**
-     * Leans the Giant Jawblade back as its charge builds, the same way vanilla's bow swaps to its
-     * pulling models.
+     * The Giant Jawblade's renderer. One {@code DefaultedItemGeoModel} resolves
+     * {@code geo/item/giant_jawblade.geo.json} and {@code animations/item/giant_jawblade.animation.json}
+     * by convention; only the texture needs pointing by hand, because it keeps the legacy
+     * {@code giant_jawblade_model.png} name the original 2D model already referenced.
      *
-     * <p>Registers one {@code mhnw:charge} property whose value the weapon itself computes from
-     * vanilla's use countdown ({@link com.carro1001.mhnw.item.GiantJawbladeItem#chargeProgress}),
-     * and the item model's own {@code overrides} pick a per-tier model from it. No renderer class,
-     * no animation controller and no packet: the client already knows how long the holder has been
-     * using the item, so the pose needs nothing sent to it.
+     * <p>Reached through GeckoLib's {@code GeoRenderProvider} rather than registered anywhere --
+     * see {@link com.carro1001.mhnw.item.GiantJawbladeItem#createGeoRenderer}. It is public only so
+     * that item class can name it.
      */
-    @SubscribeEvent
-    private static void onClientSetup(net.neoforged.fml.event.lifecycle.FMLClientSetupEvent event) {
-        event.enqueueWork(() -> net.minecraft.client.renderer.item.ItemProperties.register(
-                ModItems.GIANT_JAWBLADE.get(),
-                ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, "charge"),
-                (stack, level, holder, seed) ->
-                        com.carro1001.mhnw.item.GiantJawbladeItem.chargeProgress(stack, holder)));
+    public static final class JawbladeRenderer
+            extends software.bernie.geckolib.renderer.GeoItemRenderer<
+                    com.carro1001.mhnw.item.GiantJawbladeItem> {
+        public JawbladeRenderer() {
+            super(new software.bernie.geckolib.model.DefaultedItemGeoModel<
+                            com.carro1001.mhnw.item.GiantJawbladeItem>(
+                    ResourceLocation.fromNamespaceAndPath(MHNW.MOD_ID, "giant_jawblade"))
+                    .withAltTexture(ResourceLocation.fromNamespaceAndPath(
+                            MHNW.MOD_ID, "giant_jawblade_model")));
+        }
     }
 
     /**

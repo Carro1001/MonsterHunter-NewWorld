@@ -265,14 +265,21 @@ public class IzuchiHarassGoal extends Goal {
     /**
      * Which of the two attacks to commit to.
      *
-     * <p>The slam is behind {@code debugCombat} deliberately and temporarily: its damage envelope
-     * has not been measured, so it lands nothing, and letting it into ordinary combat would mean
-     * half of a pack's attacks silently whiffing. Behind the diagnostics switch it still plays in
-     * full, which is exactly what a {@code BoneProbe} capture of its active window needs. Delete
-     * this gate together with fitting the envelope -- neither is finished without the other.
+     * <p>The slam is gated deliberately and temporarily: its damage envelope has not been measured,
+     * so it lands nothing, and letting it into ordinary combat would mean half of a pack's attacks
+     * silently whiffing. Behind the switch it still plays in full, which is exactly what a
+     * {@code BoneProbe} capture of its active window needs. Delete this gate together with fitting
+     * the envelope -- neither is finished without the other.
+     *
+     * <p><b>The gate is {@link MHNWConfig#TAIL_SLAM_PREVIEW}, not {@code debugCombat}.</b> It rode
+     * on the diagnostics flag until 2026-09-13, which meant that turning on logging -- which
+     * {@code CLAUDE.md} tells you to do for any hurtbox work -- quietly halved a pack's effective
+     * attacks, and made the GameTest suite depend on whatever was left in {@code run/config/}. A
+     * stale {@code debugCombat = true} there is what made {@code izuchiAttacksAndDamagesTarget}
+     * fail intermittently; three timeout raises and four fixture theories went past it first.
      */
     private void chooseAttack() {
-        if (MHNWConfig.DEBUG_COMBAT.get() && this.mob.getRandom().nextBoolean()) {
+        if (MHNWConfig.TAIL_SLAM_PREVIEW.get() && this.mob.getRandom().nextBoolean()) {
             this.mob.beginTailSlam();
             return;
         }
