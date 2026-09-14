@@ -61,6 +61,14 @@ measured for real, stand near one with `debugCombat` on for a few seconds and se
 - **The hunter's arms are posed too**, in third person, for every player -- a custom
   `HumanoidModel.ArmPose`, no animation library. See `docs/WEAPON_POSING.md`.
 
+### Recovery raised to 50 ticks (2026-09-13)
+
+Up from 30, at the maintainer's direction. Worth knowing what it gates: it is an `ItemCooldowns`
+entry, and vanilla item cooldowns block **use**, not attacks — so it stops you starting another
+charge for two and a half seconds and does nothing to left-click rate. Throttling left-click means
+lowering the attack-speed attribute instead, which drags `TIER_TICKS[0]` up with it, since tier one
+must not be shorter than the swing timer (the PR #10 damage defect).
+
 ### Release swing, per tier (added 2026-09-13, unjudged)
 
 The weapon now has its own arc on release, and on an ordinary left-click too -- one weapon, one way

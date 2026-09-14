@@ -122,8 +122,16 @@ public class GiantJawbladeItem extends SwordItem implements software.bernie.geck
      */
     public static final int USE_DURATION_TICKS = 72000;
 
-    /** Recovery after any completed swing, hit or miss. The commitment. */
-    public static final int RECOVERY_TICKS = 30;
+    /**
+     * Recovery after a completed strike, hit or miss. The commitment.
+     *
+     * <p>50 ticks as of the alpha, up from 30. What it actually gates is worth being precise about:
+     * it is an {@code ItemCooldowns} entry, and vanilla item cooldowns block <em>use</em>, not
+     * attacks -- so this stops you starting another charge for two and a half seconds, and does
+     * nothing to left-click rate. Throttling left-click would mean lowering {@link #SPEED_MODIFIER}
+     * instead, which drags {@link #TIER_TICKS}[0] up with it (see the attack-strength note below).
+     */
+    public static final int RECOVERY_TICKS = 50;
 
     /** Maximum reach of the charged strike, in blocks. */
     public static final double REACH = 4.5D;

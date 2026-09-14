@@ -490,7 +490,10 @@ does nothing. **The weapon never swings unprompted.** Every part of it is borrow
   method resolves a `PartEntity` to its parent for durability and post-attack effects.
 
 There is no cone, sweep, cleave or combo, and no weapon/moveset abstraction: one weapon does not
-tell you what two weapons would share. The 30-tick recovery cooldown applies on a hit and on a miss.
+tell you what two weapons would share. The 50-tick recovery cooldown applies on a hit and on a miss
+(30 before the alpha). It is an `ItemCooldowns` entry, so what it actually blocks is starting
+another **charge** -- vanilla item cooldowns do not gate left-click attacks at all; that would be
+the attack-speed attribute, and lowering it drags `TIER_TICKS[0]` up with it.
 (Charge tiers and their damage multiplier *were* on that exclusion list until 2026-09-13, when the
 maintainer replaced the packet's single fixed strike after playing it -- the superseded contract is
 marked as such in `docs/R3_BONE_GREATSWORD_HANDOFF.md` rather than left to contradict the code.)
