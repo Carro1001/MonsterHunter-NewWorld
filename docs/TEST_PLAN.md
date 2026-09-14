@@ -1595,6 +1595,11 @@ Also fixed a few rounds ago: same culling fix as Rathian/Great Izuchi.
 Izuchi/Rathian — works independently of the broken attack clips above, since it's just a presentation
 clip with no attack-volume mechanics of its own.
 
+**R4b Peaceful hardening (2026-09-13):** Rathalos deliberately survives Peaceful, so its thin
+`RathalosCombatGoal` wrapper now rejects Peaceful both before starting vanilla melee and while a
+fight is active. A focused GameTest covers the shared precondition without changing the test
+world's global difficulty.
+
 - [ ] Renders, spawns via egg, idles/walks/runs (walk uses `walk_normal`/`walk_aggro`, no separate
       "run" clip exists for this species — expected, not a bug)
 - [ ] **F3+B: closer now?** Flag any part that's still clearly off — that's the one worth a live

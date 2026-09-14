@@ -12,6 +12,7 @@ import com.carro1001.mhnw.entity.HuntingSpawnRules;
 import com.carro1001.mhnw.entity.Lagiacrus;
 import com.carro1001.mhnw.entity.LagiacrusPursuitGoal;
 import com.carro1001.mhnw.entity.MonsterPart;
+import com.carro1001.mhnw.entity.RathalosCombatGoal;
 import com.carro1001.mhnw.entity.Toad;
 import com.carro1001.mhnw.registry.ModBiomes;
 import com.carro1001.mhnw.registry.ModEntities;
@@ -1727,6 +1728,22 @@ public class MHNWGameTests {
 
         helper.succeedWhen(() -> helper.assertTrue(victim.getHealth() < startingHealth,
                 "Rathalos never damaged a target standing right next to it"));
+    }
+
+    /** Rathalos survives peaceful, so its own combat precondition must reject it. */
+    @GameTest(template = ARENA, timeoutTicks = 40)
+    public static void rathalosCombatRejectsPeacefulDifficulty(GameTestHelper helper) {
+        com.carro1001.mhnw.entity.Rathalos rathalos = helper.spawn(ModEntities.RATHALOS.get(), 8, 2, 8);
+        Cow target = helper.spawn(EntityType.COW, 8, 2, 9);
+        target.setNoAi(true);
+
+        helper.assertTrue(!RathalosCombatGoal.canFight(
+                        rathalos, target, net.minecraft.world.Difficulty.PEACEFUL),
+                "Rathalos would keep fighting a live target on peaceful difficulty");
+        helper.assertTrue(RathalosCombatGoal.canFight(
+                        rathalos, target, net.minecraft.world.Difficulty.EASY),
+                "the peaceful guard also rejected an ordinary difficulty");
+        helper.succeed();
     }
 
     /** Same pillager-targeting goal as Great Izuchi/Rathian/Izuchi; see {@code rathianTargetsAPillagerOnSight}. */
