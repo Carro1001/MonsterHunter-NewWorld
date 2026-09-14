@@ -441,15 +441,16 @@ Its one addition is a charged strike -- **three tiers, held and released**, whic
 overrides the R3 packet's own "no charge tiers, no damage multiplier" contract at the maintainer's
 direction after play. Tiers land at 30/70/125 ticks for 9.0/12.5/16.0 damage -- each segment
 deliberately longer than the last, because a heavier charge should wind slower. Releasing is what
-swings; releasing below tier one does nothing at all; and holding past `FIZZLE_TICKS` (60 ticks
-after tier three) kills the charge outright -- a dull cue, the blade drops, and releasing afterwards
-does nothing. **The weapon never swings unprompted.** Every part of it is borrowed:
+swings; releasing below tier one has only the weak visual arc and no strike; and holding past
+`FIZZLE_TICKS` (60 ticks after tier three) kills the charge outright -- a dull cue, the blade drops,
+and releasing afterwards does nothing. **The weapon never swings unprompted.** Every part of it is
+borrowed:
 
 - **The charge is vanilla's held use.** `getUseDuration` is the bow's hour-long value, so vanilla
   never ends the hold and `finishUsingItem` is unreachable -- that is the "no auto release" contract
   structurally rather than as a check. `releaseUsing` is what swings. Same shape as R2's BBQ spit,
-  for the same reason: "releasing early does nothing" needs no cancellation code, because a release
-  below tier one simply finds no tier to swing. **Nothing is stored anywhere**: no field, no
+  for the same reason: the sub-tier release finds no tier to strike, so its weak visual arc needs no
+  cancellation code. **Nothing is stored anywhere**: no field, no
   component, no attachment, no packet, so a reload cannot resume or cash in a charge, and both the
   tier and the fizzle are derived from vanilla's own countdown rather than tracked -- `tierFor`
   simply refuses to name a tier past the fizzle point.

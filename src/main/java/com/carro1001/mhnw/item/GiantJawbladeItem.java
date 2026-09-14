@@ -337,13 +337,14 @@ public class GiantJawbladeItem extends SwordItem implements software.bernie.geck
                             return false;
                         }
                         for (Player player : mc.level.players()) {
-                            if (player.isUsingItem() && player.getUseItem() == stack) {
+                            if (GiantJawbladeItem.isCharging(stack, player)) {
                                 return true;
                             }
                         }
                         // The first-person hand renderer can hand out a copy rather than the held
                         // object, so fall back to the one holder that view can belong to.
-                        return mc.player != null && mc.player.isUsingItem()
+                        return mc.player != null && GiantJawbladeItem.isCharging(
+                                mc.player.getUseItem(), mc.player)
                                 && ItemStack.isSameItemSameComponents(mc.player.getUseItem(), stack);
                     }
                 }));
@@ -482,12 +483,22 @@ public class GiantJawbladeItem extends SwordItem implements software.bernie.geck
      */
     @Override
     public void onUseTick(Level level, LivingEntity entity, ItemStack stack, int remainingUseDuration) {
+        int charged = USE_DURATION_TICKS - remainingUseDuration;
+        if (charged >= FIZZLE_TICKS) {
+            if (charged == FIZZLE_TICKS && level instanceof ServerLevel serverLevel) {
+                level.playSound(null, entity.getX(), entity.getY(), entity.getZ(),
+                        SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 0.8F, 1.4F);
+                serverLevel.sendParticles(ParticleTypes.SMOKE,
+                        entity.getX(), entity.getEyeY() - 0.2D, entity.getZ(),
+                        12, 0.3D, 0.2D, 0.3D, 0.01D);
+            }
+            return;
+        }
         entity.setDeltaMovement(entity.getDeltaMovement()
                 .multiply(CHARGE_MOVEMENT_SCALE, 1.0D, CHARGE_MOVEMENT_SCALE));
         if (level.isClientSide) {
             return;
         }
-        int charged = USE_DURATION_TICKS - remainingUseDuration;
         if (!(level instanceof ServerLevel serverLevel)) {
             return;
         }
@@ -514,16 +525,6 @@ public class GiantJawbladeItem extends SwordItem implements software.bernie.geck
             boolean maxed = tier == TIER_TICKS.length - 1;
             serverLevel.sendParticles(maxed ? ParticleTypes.ENCHANTED_HIT : ParticleTypes.CRIT,
                     blade.x, blade.y, blade.z, 4 + tier * 3, 0.22D, 0.22D, 0.22D, 0.01D);
-        }
-
-        // The charge dying is the one moment the player most needs to hear, so it gets its own cue
-        // rather than simply going quiet: a dull failure, deliberately not one of the rising ones.
-        if (charged == FIZZLE_TICKS) {
-            level.playSound(null, entity.getX(), entity.getY(), entity.getZ(),
-                    SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 0.8F, 1.4F);
-            serverLevel.sendParticles(ParticleTypes.SMOKE,
-                    entity.getX(), entity.getEyeY() - 0.2D, entity.getZ(),
-                    12, 0.3D, 0.2D, 0.3D, 0.01D);
         }
 
         for (int reached = 0; reached < TIER_TICKS.length; reached++) {
@@ -613,29 +614,18 @@ public class GiantJawbladeItem extends SwordItem implements software.bernie.geck
         return stack;
     }
 
-    /**
-     * How far along a charge this stack is for whoever is holding it: 0.0 when it is not being
-     * charged, rising smoothly to 1.0 at the top tier and staying there while overcharging.
-     *
-     * <p>Deliberately continuous, unlike the damage, which steps at {@link #TIER_TICKS}. The lean
-     * should look like winding up; the cues and the damage are what mark the tiers.
-     *
-     * <p>This is what the client's model predicate reads to lean the weapon back as the charge
-     * builds, and it is deliberately derived from vanilla's own use countdown here in common code
-     * rather than tracked separately on the client -- the pose and the damage cannot disagree
-     * because they are the same number.
-     */
+    /** Whether this exact stack has a live charge; fizzling ends it even while vanilla's use is held. */
+    public static boolean isCharging(ItemStack stack, LivingEntity holder) {
+        return holder != null && holder.isUsingItem() && holder.getUseItem() == stack
+                && USE_DURATION_TICKS - holder.getUseItemRemainingTicks() < FIZZLE_TICKS;
+    }
+
+    /** How far along a live charge this stack is, rising smoothly to 1.0 at the top tier. */
     public static float chargeProgress(ItemStack stack, LivingEntity holder) {
-        if (holder == null || !holder.isUsingItem() || holder.getUseItem() != stack) {
+        if (!isCharging(stack, holder)) {
             return 0.0F;
         }
         int charged = USE_DURATION_TICKS - holder.getUseItemRemainingTicks();
-        if (charged >= FIZZLE_TICKS) {
-            // Fizzled: the blade drops back to rest, which is the whole visual tell that the
-            // charge is gone. Every consumer of this -- the lean models, the GeckoLib clip and the
-            // arm stance -- reads it, so they cannot disagree about whether a charge is still live.
-            return 0.0F;
-        }
         int fullyWound = TIER_TICKS[TIER_TICKS.length - 1];
         return Math.min(1.0F, charged / (float) fullyWound);
     }

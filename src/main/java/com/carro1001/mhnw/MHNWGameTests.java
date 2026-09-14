@@ -5458,8 +5458,14 @@ public class MHNWGameTests {
     public static void r3OverchargeFizzlesInsteadOfSwinging(GameTestHelper helper) {
         net.minecraft.world.entity.animal.Cow target = inertCow(helper, 8, 2, 10);
         net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 2, 8);
+        net.minecraft.world.phys.Vec3 push = new net.minecraft.world.phys.Vec3(0.5D, 0.0D, 0.0D);
         aimAt(hunter, target.getBoundingBox().getCenter());
         float healthBefore = target.getHealth();
+
+        hunter.setDeltaMovement(push);
+        tickOnce(hunter);
+        double freeSpeed = hunter.getDeltaMovement().horizontalDistance();
+        hunter.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
 
         hunter.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
         helper.startSequence()
@@ -5474,6 +5480,15 @@ public class MHNWGameTests {
                     helper.assertTrue(com.carro1001.mhnw.item.GiantJawbladeItem.chargeProgress(
                                     hunter.getMainHandItem(), hunter) == 0.0F,
                             "a fizzled charge still reports progress, so the blade stays wound up");
+                    helper.assertTrue(!com.carro1001.mhnw.item.GiantJawbladeItem.isCharging(
+                                    hunter.getMainHandItem(), hunter),
+                            "a fizzled charge still reports charging, so GeckoLib keeps its charge clip running");
+                    hunter.setDeltaMovement(push);
+                })
+                .thenExecute(() -> tickOnce(hunter))
+                .thenExecute(() -> {
+                    helper.assertTrue(hunter.getDeltaMovement().horizontalDistance() > freeSpeed * 0.6D,
+                            "a fizzled hold still applies the charging crawl");
                     hunter.releaseUsingItem();
                 })
                 .thenExecuteFor(10, () -> tickOnce(hunter))

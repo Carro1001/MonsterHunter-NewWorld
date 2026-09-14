@@ -139,7 +139,7 @@ reads as a failed swing. All of it lives in `animations/item/giant_jawblade.anim
   separate class file and so loads only when the render path runs it. A lambda is not.
 - **GeckoLib 4.9.2 supports no `anim_time_update` MoLang field** (checked in the sources jar, as
   with the no-public-seek finding). So the charge clip is kept in step with the charge by matching
-  its length to `OVERCHARGE_TICKS` and its keyframes to `TIER_TICKS`, and
+  its length to `FIZZLE_TICKS` and its keyframes to `TIER_TICKS`, and
   `r3GeckoJawbladeMatchesTheWeaponAndItsChargeClock` recomputes both from the constants rather than
   hardcoding seconds.
 
@@ -662,14 +662,14 @@ with "no damage multiplier" and an explicit exclusion of "charge tiers". All thr
 | | Packet contract | Now |
 |---|---|---|
 | Firing | auto-fires when the 30-tick hold completes | **release to swing** |
-| Tiers | none, explicitly excluded | **three**, at 25 / 45 / 75 ticks |
+| Tiers | none, explicitly excluded | **three**, at 30 / 70 / 125 ticks |
 | Damage | fixed 9.0, "reach not damage" | **9.0 / 12.5 / 16.0** by tier |
-| Overhold | n/a | **100 ticks auto-swings at tier one's damage** — the charge is wasted |
+| Overhold | n/a | **185 ticks fizzle** — the held input remains until release, but no swing occurs |
 | Pose | `UseAnim.SPEAR` | `UseAnim.NONE` — SPEAR is the trident raise and read wrong |
 | Movement | vanilla's 20% input scaling only | that **× 0.35 per tick**, a heavy crawl |
 
 What did **not** change: one `Player.attack` per swing, one target, 4.5 blocks, block-clipped trace,
-no sweep, 30-tick recovery on hit or miss. The tier bonus is a transient `ATTACK_DAMAGE` modifier
+no sweep, 50-tick recovery on hit or miss. The tier bonus is a transient `ATTACK_DAMAGE` modifier
 applied around that one call and removed in a `finally`, so enchantments, durability, attack events
 and carve attribution still scale on vanilla's own pipeline rather than on arithmetic of ours.
 
