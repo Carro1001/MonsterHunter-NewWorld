@@ -10,7 +10,6 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
-import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
@@ -48,8 +47,8 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * editor, or a new authored clip, before any attack presentation is possible. See
  * {@code docs/DEFERRED.md}.
  *
- * <p>Until then: ordinary vanilla {@link MeleeAttackGoal}, same interim {@link Izuchi} still uses
- * for the same reason (Rathian has since moved off this to {@link RathianCombatGoal}, but only
+ * <p>Until then: {@link RathalosCombatGoal}, a thin peaceful-difficulty guard around vanilla melee
+ * (Rathian has since moved off vanilla melee to {@link RathianCombatGoal}, but only
  * because {@code attack_charge_bite_right} exists and animates real bones in Rathian's own model;
  * that option isn't available here until this species' own attack clips are retargeted or replaced).
  *
@@ -167,7 +166,7 @@ public class Rathalos extends Monster implements GeoEntity, Roarable {
         // Sits above the melee goal deliberately (see RoarGoal's own doc): the opening roar must
         // freeze the fight, not play underneath an attack goal that keeps moving/swinging.
         this.goalSelector.addGoal(1, new RoarGoal<>(this));
-        this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.0D, true));
+        this.goalSelector.addGoal(2, new RathalosCombatGoal(this));
         this.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 0.7D));
         this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 10.0F));
         this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));

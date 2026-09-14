@@ -2,8 +2,9 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 177 tests, all passing**
-(`.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-12, presentation/feel round and the
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 179 tests, all passing**
+(`.\gradlew.bat --no-daemon clean build runGameTestServer`, 2026-09-13, Rathian/Rathalos Peaceful hardening,
+presentation/feel round and the
 corpse-presentation fix, both rebased onto the R3/Izuchi-tail-swipe master; 157 after the corpse fix
 alone, 156 before either, 148 after the R2 field-preparation packet, 123 before that packet, 121
 before the R1 PR #6 review round, 97 before
@@ -1661,6 +1662,10 @@ range and deals damage the instant it touches, which read as a body-slam that on
 a bite clip, rather than a bite that actually connects. `RathianCombatGoal` is the same
 windup/active/recovery shape as `GreatIzuchiCombatGoal`.
 
+**R4 hardening (2026-09-13):** Rathian deliberately survives peaceful difficulty, so its custom
+combat goal now rejects peaceful both before pursuit starts and while a bite is already committed.
+One focused GameTest covers both states without changing the shared test world's global difficulty.
+
 **This round: the strike volume and phase timing were replaced with a real measured path**, baked
 from a live capture, plus two behaviour fixes reported from that same session. The round-one
 estimate (a static point close to the body, active ticks 11-20) turned out wrong on both counts:
@@ -1729,6 +1734,11 @@ Also fixed a few rounds ago: same culling fix as Rathian/Great Izuchi.
 **MHW-style opening roar wired this round**, same shared `RoarGoal`/`Roarable` mechanic as Great
 Izuchi/Rathian — works independently of the broken attack clips above, since it's just a presentation
 clip with no attack-volume mechanics of its own.
+
+**R4b Peaceful hardening (2026-09-13):** Rathalos deliberately survives Peaceful, so its thin
+`RathalosCombatGoal` wrapper now rejects Peaceful both before starting vanilla melee and while a
+fight is active. A focused GameTest covers the shared precondition without changing the test
+world's global difficulty.
 
 - [ ] Renders, spawns via egg, idles/walks/runs (walk uses `walk_normal`/`walk_aggro`, no separate
       "run" clip exists for this species — expected, not a bug)

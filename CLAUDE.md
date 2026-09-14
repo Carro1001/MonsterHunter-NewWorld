@@ -240,8 +240,9 @@ measured `attack_charge_bite_right` path rather than its own capture, on the rea
 right bite's real data already showed no consistent left/right bias — replace it with its own
 measurement if a capture of the left clip ever shows that assumption was wrong.
 
-Rathalos still fights with ordinary vanilla `MeleeAttackGoal`/`Mob.doHurtTarget` and has **no custom
-attack presentation** — a deliberate, documented P4 gap (`docs/DEFERRED.md`), not an oversight:
+Rathalos still fights through ordinary vanilla `MeleeAttackGoal`/`Mob.doHurtTarget` mechanics,
+wrapped only by `RathalosCombatGoal` to stop combat on Peaceful, and has **no custom attack
+presentation** — a deliberate, documented P4 gap (`docs/DEFERRED.md`), not an oversight:
 - Rathalos's real attack clips exist in its `.geo.json`/animation files but aren't wired to any
   attack volume; its four melee clips reference 14-17 bone names each that don't exist anywhere in
   its own geometry (confirmed, not assumed — a model-editor retarget or a new clip is needed before
