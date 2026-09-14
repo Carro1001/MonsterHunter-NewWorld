@@ -47,8 +47,8 @@ import java.util.function.Predicate;
  * <h2>The charge: hold, watch the tier, release</h2>
  * Holding main-hand use builds through three tiers at {@link #TIER_TICKS}, each announced by its
  * own cue. <em>Releasing</em> is what swings, and the tier reached is the damage that lands
- * ({@link #TIER_DAMAGE}). Release before tier one and nothing happens at all -- no strike, no
- * cooldown, no wear. Hold past {@link #FIZZLE_TICKS} and the charge dies where it stands: the blade
+ * ({@link #TIER_DAMAGE}). Release before tier one starts the weakest visual arc but causes no strike,
+ * cooldown or wear. Hold past {@link #FIZZLE_TICKS} and the charge dies where it stands: the blade
  * drops, a dull cue plays, and releasing afterwards does nothing. The weapon never swings by itself:
  * overcharging costs you the charge rather than spending it badly.
  *

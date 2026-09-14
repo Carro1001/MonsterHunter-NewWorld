@@ -685,7 +685,7 @@ so the surviving clip recovers one by stack identity. See `docs/WEAPON_POSING.md
 
 - [ ] **Confirm it renders and reads right**, now that there is an authored pose rather than a
       borrowed placeholder or a missing one: first/third person both hands, GUI, ground, item frame.
-- [ ] **Feel of the charge.** Do 25/45/75-tick tiers read as a deliberate wind-up? Is the lean
+- [ ] **Feel of the charge.** Do 30/70/125-tick tiers read as a deliberate wind-up? Is the lean
       smooth at 48 steps, and does the crawl feel like commitment rather than like a bug?
 - [ ] **Tier cues.** Rising riptide sound per tier, particles off the weapon side that are visible
       in first person, and `ENCHANTED_HIT` instead of `CRIT` once waiting stops paying.
