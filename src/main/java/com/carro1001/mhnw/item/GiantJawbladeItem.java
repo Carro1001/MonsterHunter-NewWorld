@@ -169,6 +169,29 @@ public class GiantJawbladeItem extends SwordItem implements software.bernie.geck
     private static final software.bernie.geckolib.animation.RawAnimation CHARGE =
             software.bernie.geckolib.animation.RawAnimation.begin().thenPlayAndHold("charge");
 
+    /**
+     * The release arc, and the ordinary left-click's arc too -- one weapon, one way of moving.
+     *
+     * <p>Its clock is vanilla's own swing, which costs nothing and reaches everyone: {@code swing()}
+     * is already called at the end of every {@link #strike}, and {@code swinging} is synced to every
+     * client that can see the holder. So no field, no packet and no cooldown read is needed, and a
+     * second player's swing animates for you exactly as it does for them.
+     *
+     * <p>It only moves the <em>weapon</em>. The player's arm keeps vanilla's swing, because nothing
+     * short of a mixin or a player-animation library can replace that -- see
+     * {@code docs/WEAPON_POSING.md}. Matching vanilla's own swing length is therefore deliberate:
+     * a longer blade arc would visibly outrun the arm carrying it.
+     */
+    private static final software.bernie.geckolib.animation.RawAnimation SWING =
+            software.bernie.geckolib.animation.RawAnimation.begin().thenPlay("swing");
+
+    /**
+     * Blend ticks between clips. Non-zero so that releasing a <em>part</em>-charged swing flows out
+     * of wherever the blade actually was instead of snapping to the swing's first frame -- the
+     * wound-back angle differs per tier, so there is no single pose the arc could start from.
+     */
+    private static final int TRANSITION_TICKS = 2;
+
     private final software.bernie.geckolib.animatable.instance.AnimatableInstanceCache cache =
             software.bernie.geckolib.util.GeckoLibUtil.createInstanceCache(this);
 
@@ -226,7 +249,8 @@ public class GiantJawbladeItem extends SwordItem implements software.bernie.geck
     @Override
     public void registerControllers(
             software.bernie.geckolib.animation.AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new software.bernie.geckolib.animation.AnimationController<>(this, "charge", 0,
+        controllers.add(new software.bernie.geckolib.animation.AnimationController<>(
+                this, "charge", TRANSITION_TICKS,
                 new software.bernie.geckolib.animation.AnimationController
                         .AnimationStateHandler<GiantJawbladeItem>() {
                     @Override
@@ -236,18 +260,52 @@ public class GiantJawbladeItem extends SwordItem implements software.bernie.geck
                                 software.bernie.geckolib.constant.DataTickets.ITEM_RENDER_PERSPECTIVE);
                         ItemStack stack = state.getData(
                                 software.bernie.geckolib.constant.DataTickets.ITEMSTACK);
-                        if (context == null || !animatesIn(context)
-                                || stack == null || !isCharging(stack)) {
-                            // Stopping is not rewinding. The controller keeps currentRawAnimation
-                            // across a STOP, and setAnimation only reloads a clip when the reload
-                            // flag is set or a *different* animation is requested -- so without
-                            // this, the second charge resumed the held last frame and the blade
-                            // simply stayed wound up from then on. Observed, and it is why the
-                            // first charge looked right and no later one did.
-                            state.getController().forceAnimationReset();
-                            return software.bernie.geckolib.animation.PlayState.STOP;
+                        if (context == null || !animatesIn(context) || stack == null) {
+                            return stop(state);
                         }
-                        return state.setAndContinue(CHARGE);
+                        if (isCharging(stack)) {
+                            return state.setAndContinue(CHARGE);
+                        }
+                        if (isSwinging(stack)) {
+                            return state.setAndContinue(SWING);
+                        }
+                        return stop(state);
+                    }
+
+                    /**
+                     * Stopping is not rewinding. The controller keeps {@code currentRawAnimation}
+                     * across a STOP, and {@code setAnimation} only reloads a clip when the reload
+                     * flag is set or a <em>different</em> animation is requested -- so without the
+                     * reset, the second charge resumed the held last frame and the blade simply
+                     * stayed wound up from then on. Observed, and it is why the first charge looked
+                     * right and no later one did.
+                     *
+                     * <p>Charge and swing are two different {@code RawAnimation}s, so switching
+                     * between them restarts on its own; only the idle gap needs this.
+                     */
+                    private software.bernie.geckolib.animation.PlayState stop(
+                            software.bernie.geckolib.animation.AnimationState<GiantJawbladeItem> state) {
+                        state.getController().forceAnimationReset();
+                        return software.bernie.geckolib.animation.PlayState.STOP;
+                    }
+
+                    /**
+                     * Whether this exact stack is mid-swing. Matched on the held item rather than
+                     * the used one, because a swing is not a use -- by the time this runs the
+                     * charge has already been released.
+                     */
+                    private boolean isSwinging(ItemStack stack) {
+                        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+                        if (mc.level == null) {
+                            return false;
+                        }
+                        for (Player player : mc.level.players()) {
+                            if (player.swinging && player.getMainHandItem() == stack) {
+                                return true;
+                            }
+                        }
+                        return mc.player != null && mc.player.swinging
+                                && ItemStack.isSameItemSameComponents(mc.player.getMainHandItem(), stack);
                     }
 
                     /**

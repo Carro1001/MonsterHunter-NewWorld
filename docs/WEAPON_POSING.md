@@ -199,10 +199,29 @@ If a weapon uses this, its GeckoLib clip should return `PlayState.STOP` for the 
 perspectives, or the item gets rotated twice. `isPerspectiveAware()` and
 `DataTickets.ITEM_RENDER_PERSPECTIVE` are how the predicate tells which context it is in.
 
+### Swings: the weapon can have its own arc, the arm cannot
+
+`LivingEntity.swinging` and `swingTime` are vanilla's swing clock, and they are **synced to every
+client that can see the holder** — so a GeckoLib clip keyed off them animates other players' swings
+correctly with no field, no packet and no cooldown read. `Player.swing(hand)` is what starts it, and
+any weapon that swings through its own code path has to call it anyway. This is the cheapest real
+animation hook in the whole document; reach for it before anything else.
+
+**But it moves the weapon only.** The arm's swing is `HumanoidModel.setupAttackAnimation`, which
+runs *after* `poseRightArm` — so it overwrites whatever a custom `ArmPose` did, and there is no hook
+between them. Replacing the arm's swing needs a mixin or a player-animation library.
+
+That is why the blade's arc should **match vanilla's swing length** (`getCurrentSwingDuration()`,
+6 ticks before haste/fatigue) rather than running longer: a longer blade arc visibly outruns the arm
+carrying it. Give the controller a small transition instead of a longer clip when the motion needs
+to flow out of a pose that varies — a part-charged release starts from a different angle each time,
+and a 2-tick blend covers that where a fixed first keyframe cannot.
+
 ### What is **not** available
 
-- **Posing the player's body, legs or stance.** Needs KosmX's playerAnimator or equivalent. Priced
-  in `DEFERRED.md`; still a third external dependency plus an authored asset per stance.
+- **Posing the player's body, legs or stance,** and **replacing the arm's swing.** Both need
+  KosmX's playerAnimator or a mixin. Priced in `DEFERRED.md`; still a third external dependency plus
+  an authored asset per stance.
 - **`UseAnim.SPEAR` as a greatsword wind-up.** Tried, rejected on sight: it raises the weapon
   vertically overhead like a trident throw. Recorded in `GiantJawbladeItem`'s class doc. Do not
   re-propose it. `BOW`/`CROSSBOW` pose a drawing hand and `BLOCK` a shield arm; none are closer.

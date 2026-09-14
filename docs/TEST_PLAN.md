@@ -61,6 +61,19 @@ measured for real, stand near one with `debugCombat` on for a few seconds and se
 - **The hunter's arms are posed too**, in third person, for every player -- a custom
   `HumanoidModel.ArmPose`, no animation library. See `docs/WEAPON_POSING.md`.
 
+### Release swing (added 2026-09-13, unjudged)
+
+The weapon now has its own arc on release, and on an ordinary left-click too -- one weapon, one way
+of moving. Its clock is vanilla's `swinging` flag, already set by `strike()` and already synced to
+everyone, so a second player's swing animates correctly with no state of ours.
+
+**It moves the blade, not the arm.** `HumanoidModel.setupAttackAnimation` runs after the arm pose
+and overwrites it, so vanilla's arm swing stays; the clip is deliberately the same length as
+vanilla's swing (6 ticks) so the blade does not outrun the arm. A **human still has to judge** it:
+whether the arc reads as a greatsword falling rather than a flick, and whether a part-charged
+release flows out of its wound angle (a 2-tick controller transition covers the varying start).
+Both live in `animations/item/giant_jawblade.animation.json` and `TRANSITION_TICKS`.
+
 ### Playtest results — three rounds, all resolved
 
 | | |

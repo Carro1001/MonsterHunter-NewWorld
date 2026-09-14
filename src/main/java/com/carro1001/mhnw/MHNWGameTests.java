@@ -5812,6 +5812,9 @@ public class MHNWGameTests {
         // nothing visible failing, so both are recomputed here rather than written down twice.
         String clip = chargeClip(helper);
         helper.assertTrue(clip.contains("\"charge\""), "the animation file has no charge clip");
+        // The release arc rides vanilla's own swing, which is why strike() must keep calling
+        // swing(): that flag is the clip's entire clock, and it is what syncs it to other players.
+        helper.assertTrue(clip.contains("\"swing\""), "the animation file has no swing clip");
         String length = seconds(com.carro1001.mhnw.item.GiantJawbladeItem.FIZZLE_TICKS);
         helper.assertTrue(clip.contains("\"animation_length\": " + length),
                 "the charge clip is not " + length + "s long, so it no longer matches the"
