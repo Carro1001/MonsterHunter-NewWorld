@@ -170,27 +170,34 @@ public class GiantJawbladeItem extends SwordItem implements software.bernie.geck
             software.bernie.geckolib.animation.RawAnimation.begin().thenPlayAndHold("charge");
 
     /**
-     * The release arc, and the ordinary left-click's arc too -- one weapon, one way of moving.
+     * One release arc per tier, and the ordinary left-click's arc too -- one weapon, one way of
+     * moving. Each starts at its own tier's wound angle and sweeps further the harder the charge
+     * was, so a tier three release covers roughly twice the ground of a tier one in the same time.
      *
      * <p>Its clock is vanilla's own swing, which costs nothing and reaches everyone: {@code swing()}
      * is already called at the end of every {@link #strike}, and {@code swinging} is synced to every
-     * client that can see the holder. So no field, no packet and no cooldown read is needed, and a
-     * second player's swing animates for you exactly as it does for them.
+     * client that can see the holder. Which arc to play comes from
+     * {@link com.carro1001.mhnw.registry.ModDataComponents#SWING_TIER}, written at the moment of
+     * release and synced with the stack.
      *
-     * <p>It only moves the <em>weapon</em>. The player's arm keeps vanilla's swing, because nothing
-     * short of a mixin or a player-animation library can replace that -- see
-     * {@code docs/WEAPON_POSING.md}. Matching vanilla's own swing length is therefore deliberate:
-     * a longer blade arc would visibly outrun the arm carrying it.
+     * <p><b>All three are the same length, deliberately.</b> The clip moves the weapon and not the
+     * arm -- {@code HumanoidModel.setupAttackAnimation} runs after the arm pose and overwrites it,
+     * with no hook between -- so the blade is stuck with vanilla's swing duration for company. A
+     * heavier charge therefore reads as a <em>wider, faster</em> sweep rather than a slower one; a
+     * genuinely slower follow-through needs the arm, which needs a mixin or a player-animation
+     * library. See {@code docs/WEAPON_POSING.md}.
      */
-    private static final software.bernie.geckolib.animation.RawAnimation SWING =
-            software.bernie.geckolib.animation.RawAnimation.begin().thenPlay("swing");
+    private static final software.bernie.geckolib.animation.RawAnimation[] SWINGS = {
+            software.bernie.geckolib.animation.RawAnimation.begin().thenPlay("swing_1"),
+            software.bernie.geckolib.animation.RawAnimation.begin().thenPlay("swing_2"),
+            software.bernie.geckolib.animation.RawAnimation.begin().thenPlay("swing_3")};
 
     /**
-     * Blend ticks between clips. Non-zero so that releasing a <em>part</em>-charged swing flows out
-     * of wherever the blade actually was instead of snapping to the swing's first frame -- the
-     * wound-back angle differs per tier, so there is no single pose the arc could start from.
+     * Blend ticks between clips. One is enough now that each arc begins at its own tier's wound
+     * angle rather than at a single shared first frame; it only has to cover the uncharged case,
+     * where the blade starts from rest.
      */
-    private static final int TRANSITION_TICKS = 2;
+    private static final int TRANSITION_TICKS = 1;
 
     private final software.bernie.geckolib.animatable.instance.AnimatableInstanceCache cache =
             software.bernie.geckolib.util.GeckoLibUtil.createInstanceCache(this);
@@ -267,7 +274,7 @@ public class GiantJawbladeItem extends SwordItem implements software.bernie.geck
                             return state.setAndContinue(CHARGE);
                         }
                         if (isSwinging(stack)) {
-                            return state.setAndContinue(SWING);
+                            return state.setAndContinue(SWINGS[swingTier(stack)]);
                         }
                         return stop(state);
                     }
@@ -403,6 +410,22 @@ public class GiantJawbladeItem extends SwordItem implements software.bernie.geck
         });
     }
 
+    /**
+     * An ordinary left-click resets the arc to the weakest one, so a swing nobody charged does not
+     * inherit the last charged release's sweep.
+     *
+     * <p>This covers a left-click that <em>connects</em>. A left-click that swings at thin air after
+     * a charged strike keeps the wider arc until the next attack, because vanilla tells the server
+     * nothing about a missed swing -- {@code LeftClickEmpty} is a client-only event. Closing that
+     * needs a packet of our own for a one-frame cosmetic difference, which is not a trade worth
+     * making; see {@code docs/DEFERRED.md}.
+     */
+    @Override
+    public boolean onLeftClickEntity(ItemStack stack, Player player, net.minecraft.world.entity.Entity target) {
+        stack.set(com.carro1001.mhnw.registry.ModDataComponents.SWING_TIER.get(), 0);
+        return false;
+    }
+
     /** Bone, not iron: the tier is iron only for its numbers. */
     @Override
     public boolean isValidRepairItem(ItemStack stack, ItemStack repairCandidate) {
@@ -516,10 +539,21 @@ public class GiantJawbladeItem extends SwordItem implements software.bernie.geck
         if (!(entity instanceof Player player) || level.isClientSide) {
             return;
         }
-        int tier = tierFor(USE_DURATION_TICKS - timeCharged);
+        int charged = USE_DURATION_TICKS - timeCharged;
+        int tier = tierFor(charged);
         if (tier < 0) {
+            // A charge that never reached tier one still swings, at the weakest arc -- letting go
+            // early should look like a wasted swing rather than like nothing happened. It still
+            // costs nothing: no damage, no cooldown, no wear. A charge that already *fizzled* is
+            // excluded, because it announced its own death with a cue and a dropped blade; swinging
+            // again afterwards would undo that.
+            if (charged < FIZZLE_TICKS) {
+                stack.set(com.carro1001.mhnw.registry.ModDataComponents.SWING_TIER.get(), 0);
+                player.swing(InteractionHand.MAIN_HAND, true);
+            }
             return;
         }
+        stack.set(com.carro1001.mhnw.registry.ModDataComponents.SWING_TIER.get(), tier);
         strike(level, player, TIER_DAMAGE[tier] - TIER_DAMAGE[0]);
     }
 
@@ -562,6 +596,18 @@ public class GiantJawbladeItem extends SwordItem implements software.bernie.geck
         }
         int fullyWound = TIER_TICKS[TIER_TICKS.length - 1];
         return Math.min(1.0F, charged / (float) fullyWound);
+    }
+
+    /**
+     * Which arc the last swing should use: the recorded tier, clamped into range.
+     *
+     * <p>Defaults to the weakest arc, which is also what an ordinary left-click and a released
+     * half-charge get -- a swing nobody paid for should look like the cheapest one.
+     */
+    public static int swingTier(ItemStack stack) {
+        Integer recorded = stack.get(
+                com.carro1001.mhnw.registry.ModDataComponents.SWING_TIER.get());
+        return recorded == null ? 0 : Math.clamp(recorded.intValue(), 0, SWINGS.length - 1);
     }
 
     /**

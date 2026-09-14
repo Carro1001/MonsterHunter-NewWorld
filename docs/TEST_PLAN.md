@@ -2,7 +2,7 @@
 
 What still needs a human at a screen. Everything else (damage semantics, timing windows,
 state-machine wedging, save/reload of gameplay facts, navigation) is covered by headless GameTests
-via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 175 tests, all passing**
+via `gradlew runGameTestServer` — see `MHNWGameTests.java`, **currently 177 tests, all passing**
 (`.\gradlew.bat --no-daemon build runGameTestServer`, 2026-09-12, presentation/feel round and the
 corpse-presentation fix, both rebased onto the R3/Izuchi-tail-swipe master; 157 after the corpse fix
 alone, 156 before either, 148 after the R2 field-preparation packet, 123 before that packet, 121
@@ -61,18 +61,24 @@ measured for real, stand near one with `debugCombat` on for a few seconds and se
 - **The hunter's arms are posed too**, in third person, for every player -- a custom
   `HumanoidModel.ArmPose`, no animation library. See `docs/WEAPON_POSING.md`.
 
-### Release swing (added 2026-09-13, unjudged)
+### Release swing, per tier (added 2026-09-13, unjudged)
 
 The weapon now has its own arc on release, and on an ordinary left-click too -- one weapon, one way
 of moving. Its clock is vanilla's `swinging` flag, already set by `strike()` and already synced to
 everyone, so a second player's swing animates correctly with no state of ours.
 
+There is one arc per tier, each beginning at that tier's own wound angle so the swing flows
+straight out of the charge, and sweeping further the harder the charge was -- tier three covers
+roughly twice the ground of tier one. A release **below** tier one swings too, at the weakest arc,
+so letting go early looks like a wasted swing rather than a dropped input; it still costs no damage,
+no cooldown and no durability. A release after the charge has already **fizzled** does not swing,
+because the fizzle announced itself.
+
 **It moves the blade, not the arm.** `HumanoidModel.setupAttackAnimation` runs after the arm pose
 and overwrites it, so vanilla's arm swing stays; the clip is deliberately the same length as
 vanilla's swing (6 ticks) so the blade does not outrun the arm. A **human still has to judge** it:
-whether the arc reads as a greatsword falling rather than a flick, and whether a part-charged
-release flows out of its wound angle (a 2-tick controller transition covers the varying start).
-Both live in `animations/item/giant_jawblade.animation.json` and `TRANSITION_TICKS`.
+whether the three arcs are distinguishable from each other in play, and whether the weakest one
+reads as a failed swing. All of it lives in `animations/item/giant_jawblade.animation.json`.
 
 ### Playtest results — three rounds, all resolved
 

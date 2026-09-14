@@ -5814,7 +5814,14 @@ public class MHNWGameTests {
         helper.assertTrue(clip.contains("\"charge\""), "the animation file has no charge clip");
         // The release arc rides vanilla's own swing, which is why strike() must keep calling
         // swing(): that flag is the clip's entire clock, and it is what syncs it to other players.
-        helper.assertTrue(clip.contains("\"swing\""), "the animation file has no swing clip");
+        // One arc per tier, each starting at that tier's own wound angle so the swing flows out of
+        // the charge. The count is read off the item rather than written down, so adding a tier
+        // without authoring its arc fails here instead of falling back to a narrower one in play.
+        for (int tier = 1; tier <= com.carro1001.mhnw.item.GiantJawbladeItem.TIER_TICKS.length; tier++) {
+            helper.assertTrue(clip.contains("\"swing_" + tier + "\""),
+                    "the animation file has no swing_" + tier + " arc, so tier " + tier
+                            + " releases would fall back to another tier's sweep");
+        }
         String length = seconds(com.carro1001.mhnw.item.GiantJawbladeItem.FIZZLE_TICKS);
         helper.assertTrue(clip.contains("\"animation_length\": " + length),
                 "the charge clip is not " + length + "s long, so it no longer matches the"
@@ -5855,6 +5862,53 @@ public class MHNWGameTests {
                             + "; a still context that animates is an inventory icon winding itself up");
         }
         helper.succeed();
+    }
+
+    /**
+     * R3-04b: a release below tier one still swings, and still costs nothing.
+     *
+     * <p>Letting go early should look like a wasted swing rather than like the input was dropped,
+     * so it plays the weakest arc -- but it must not strike, cool down or wear the weapon, which is
+     * what {@code r3CancelledChargeChangesNothing} covers from the other side. A charge that already
+     * fizzled is excluded: it announced its own death, and swinging afterwards would undo that.
+     */
+    @GameTest(template = ARENA, timeoutTicks = 200)
+    public static void r3FailedReleaseSwingsAtTheWeakestArc(GameTestHelper helper) {
+        net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 2, 8);
+        hunter.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+
+        helper.startSequence()
+                .thenExecuteFor(com.carro1001.mhnw.item.GiantJawbladeItem.TIER_TICKS[0] - 5,
+                        () -> tickOnce(hunter))
+                .thenExecute(() -> {
+                    hunter.releaseUsingItem();
+                    helper.assertTrue(hunter.swinging,
+                            "a release short of tier one did not swing at all");
+                    helper.assertTrue(com.carro1001.mhnw.item.GiantJawbladeItem.swingTier(
+                                    hunter.getMainHandItem()) == 0,
+                            "a release short of tier one did not use the weakest arc");
+                    retire(hunter);
+                })
+                .thenSucceed();
+    }
+
+    /** The recorded arc rises with the tier, so a heavier charge really does sweep further. */
+    @GameTest(template = ARENA, timeoutTicks = 400)
+    public static void r3SwingArcFollowsTheChargeTier(GameTestHelper helper) {
+        net.minecraft.server.level.ServerPlayer hunter = wielder(helper, 8, 2, 8);
+        int[] tiers = com.carro1001.mhnw.item.GiantJawbladeItem.TIER_TICKS;
+
+        helper.startSequence()
+                .thenExecute(() -> hunter.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND))
+                .thenExecuteFor(tiers[tiers.length - 1] + 2, () -> tickOnce(hunter))
+                .thenExecute(() -> {
+                    hunter.releaseUsingItem();
+                    helper.assertTrue(com.carro1001.mhnw.item.GiantJawbladeItem.swingTier(
+                                    hunter.getMainHandItem()) == tiers.length - 1,
+                            "a full charge did not record the widest arc");
+                    retire(hunter);
+                })
+                .thenSucceed();
     }
 
     private static String chargeClip(GameTestHelper helper) {

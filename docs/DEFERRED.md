@@ -501,6 +501,18 @@ switches.
 **Trigger:** a live capture of the slam's active window. Delete the gate and the config key together
 with fitting the envelope; neither is finished without the other.
 
+### A missed left-click keeps the previous swing arc
+**Status:** accepted, 2026-09-13. `ModDataComponents.SWING_TIER` records how hard the last swing
+was so the blade's arc can match it, and an ordinary left-click resets it to the weakest arc through
+`onLeftClickEntity`. That hook only fires on a left-click that **connects**. A left-click swung at
+thin air right after a charged strike therefore replays the wider arc once.
+
+**Why it is not fixed:** vanilla tells the server nothing about a missed swing --
+`PlayerInteractEvent.LeftClickEmpty` is client-only. Closing it means a packet of our own, sent on
+every whiffed swing, for a difference that lasts six ticks and that nobody is looking at while
+missing. If a future weapon needs the server to know about missed swings for a real reason, send one
+packet for both.
+
 ### Player animation: the arms are posed, the body is not
 **Status:** arms done 2026-09-13, body still deferred. The Giant Jawblade's charge now poses the
 hunter's arms in third person through a custom `HumanoidModel.ArmPose`
